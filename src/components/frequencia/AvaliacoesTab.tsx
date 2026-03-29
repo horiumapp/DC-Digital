@@ -4,6 +4,7 @@ import Captcha from '../common/Captcha';
 import { useTurma, Avaliacao } from '../../contexts/TurmaContext';
 import { useCaptcha } from '../../hooks/useCaptcha';
 import { getBimestrePorData } from '../../utils/dateUtils';
+import { formatMatricula } from '../../utils/formatters';
 
 export default function AvaliacoesTab() {
   const { turmaAtiva, alunos, avaliacoes, loading, salvarAvaliacao, removerAvaliacao, salvarNotas } = useTurma();
@@ -302,7 +303,7 @@ export default function AvaliacoesTab() {
                     <td className="px-8 py-6 text-slate-400 font-bold tabular-nums">{String(index + 1).padStart(2, '0')}</td>
                     <td className="px-8 py-6">
                       <p className="text-base font-bold text-slate-700">{aluno.nome}</p>
-                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mt-1">Matrícula: {aluno.id}</p>
+                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mt-1">Matrícula: {formatMatricula(aluno.id)}</p>
                     </td>
                     <td className="px-8 py-6">
                       <div className="relative max-w-[140px] mx-auto">
