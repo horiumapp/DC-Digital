@@ -4,6 +4,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Background from '../components/Background';
 import { useAuth, UserRole } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { translateSupabaseError } from '../utils/supabaseErrors';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -37,11 +38,7 @@ export default function Login() {
       navigate('/turmas');
 
     } catch (err: any) {
-      if (err.message.includes("Invalid login credentials")) {
-        setError('E-mail ou senha incorretos.');
-      } else {
-        setError(err.message || 'Erro ao efetuar login.');
-      }
+      setError(translateSupabaseError(err.message));
     } finally {
       setIsLoading(false);
     }

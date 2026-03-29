@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Background from '../components/Background';
 import { supabase } from '../lib/supabase';
 import { UserRole } from '../contexts/AuthContext';
+import { translateSupabaseError } from '../utils/supabaseErrors';
 
 export default function Cadastro() {
   const navigate = useNavigate();
@@ -51,7 +52,7 @@ export default function Cadastro() {
       });
 
     } catch (err: any) {
-      setError(err.message || 'Ocorreu um erro ao criar a conta.');
+      setError(translateSupabaseError(err.message));
     } finally {
       setLoading(false);
     }

@@ -8,7 +8,7 @@ import TabProfessores from './administracao/TabProfessores';
 
 export default function Administracao() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState(user?.role === 'ADMIN' ? 'escolas' : 'alunos');
+  const [activeTab, setActiveTab] = useState(user?.role === 'ADMIN' ? 'escolas' : 'turmas');
 
   return (
     <div className="relative z-10 p-8 max-w-7xl mx-auto space-y-6">
@@ -18,8 +18,8 @@ export default function Administracao() {
           <h1 className="text-2xl font-bold text-slate-800">Painel Administrativo</h1>
           <p className="text-sm text-slate-500 mt-1">
             {user?.role === 'ADMIN'
-              ? 'Gerencie escolas, turmas e professores do sistema.'
-              : 'Gerencie turmas e professores do sistema.'}
+              ? 'Gerencie escolas, turmas, professores e alunos do sistema.'
+              : 'Gerencie turmas, professores e alunos do sistema.'}
           </p>
         </div>
 
@@ -35,13 +35,6 @@ export default function Administracao() {
             </button>
           )}
           <button
-            onClick={() => setActiveTab('alunos')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium transition ${activeTab === 'alunos' ? 'bg-white text-blue-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'}`}
-          >
-            <User className="w-5 h-5" />
-            Alunos
-          </button>
-          <button
             onClick={() => setActiveTab('turmas')}
             className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium transition ${activeTab === 'turmas' ? 'bg-white text-blue-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'}`}
           >
@@ -54,6 +47,13 @@ export default function Administracao() {
           >
             <GraduationCap className="w-5 h-5" />
             Professores
+          </button>
+          <button
+            onClick={() => setActiveTab('alunos')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium transition ${activeTab === 'alunos' ? 'bg-white text-blue-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'}`}
+          >
+            <User className="w-5 h-5" />
+            Alunos
           </button>
         </div>
 
