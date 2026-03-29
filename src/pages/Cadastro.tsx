@@ -22,7 +22,7 @@ export default function Cadastro() {
     let role = formData.get('role') as UserRole;
 
     // Regra de segurança: O Administrador é apenas o dono do sistema
-    const adminEmails = ['pro.jackison@gmail.com', 'jackison1985@hotmail.com'];
+    const adminEmails = ['prof.jackison@gmail.com', 'jackison1985@hotmail.com'];
     if (adminEmails.includes(email.toLowerCase())) {
       role = 'ADMIN';
     }
