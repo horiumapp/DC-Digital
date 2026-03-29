@@ -24,15 +24,13 @@ export default function TabProfessores() {
   }, []);
 
   const fetchProfessores = async () => {
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from('professores')
       .select('*, professor_alocacoes(id, escola_id, turno, escolas(nome))')
       .order('nome');
       
     if (error) {
-      console.warn("Tabela 'professor_alocacoes' pode não existir ainda. Fallback para listagem simples.", error);
-      const fallback = await supabase.from('professores').select('*').order('nome');
-      data = fallback.data;
+      console.error("Erro ao carregar professores e alocações:", error);
     }
     
     if (data) {
