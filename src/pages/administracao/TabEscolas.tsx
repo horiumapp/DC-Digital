@@ -150,74 +150,68 @@ export default function TabEscolas() {
             escolasFiltradas.map((escola) => (
               <div 
                 key={escola.id} 
-                className="group relative flex flex-col bg-white border border-slate-200 rounded-3xl p-6 text-left hover:border-blue-300 hover:shadow-xl hover:shadow-blue-600/5 transition-all duration-300 transform hover:-translate-y-1 overflow-hidden"
+                className="group relative flex flex-col bg-white border border-slate-200 rounded-2xl p-5 text-left hover:border-blue-300 hover:shadow-xl hover:shadow-blue-600/5 transition-all duration-300 transform hover:-translate-y-1 overflow-hidden"
               >
+                {/* Actions (Top Right - Hover Only) */}
+                <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all translate-y-[-10px] group-hover:translate-y-0 duration-300 z-10">
+                  <button 
+                    onClick={() => handleEditEscola(escola)}
+                    className="p-2 bg-white/80 backdrop-blur-sm text-slate-400 hover:text-blue-600 shadow-sm border border-slate-100 rounded-lg transition-colors"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={() => setEscolaParaExcluir(escola)}
+                    className="p-2 bg-white/80 backdrop-blur-sm text-slate-400 hover:text-red-600 shadow-sm border border-slate-100 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+
                 {/* Background Decoration */}
-                <div className="absolute -top-4 -right-4 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                  <Building2 className="w-24 h-24 text-blue-900" />
+                <div className="absolute -top-4 -right-4 p-4 opacity-5 pointer-events-none">
+                  <Building2 className="w-20 h-20 text-blue-900" />
                 </div>
 
-                {/* Status Badge */}
-                <div className="absolute top-6 right-6">
-                  <span className={`inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
-                    escola.status === 'Ativa' 
-                      ? 'bg-emerald-50 text-emerald-600' 
-                      : 'bg-slate-100 text-slate-500'
-                  }`}>
-                    {escola.status}
-                  </span>
+                <div className="flex items-start justify-between mb-4">
+                  {/* Main Icon */}
+                  <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+
+                  {/* Status Badge */}
+                  <div className="opacity-100 group-hover:opacity-0 transition-opacity">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest ${
+                      escola.status === 'Ativa' 
+                        ? 'bg-emerald-50 text-emerald-600' 
+                        : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {escola.status}
+                    </span>
+                  </div>
                 </div>
 
-                {/* Main Icon */}
-                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
-                  <Building2 className="w-6 h-6" />
+                {/* Nome e INEP */}
+                <div className="mb-4">
+                  <h3 className="font-black text-slate-800 text-base leading-tight group-hover:text-blue-700 transition-colors pr-10">
+                    {escola.nome}
+                  </h3>
+                  <div className="flex items-center gap-1 mt-1 text-slate-400">
+                    <span className="text-[10px] font-bold uppercase tracking-tighter">INEP:</span>
+                    <span className="text-[10px] font-black tabular-nums">{escola.inep || '---'}</span>
+                  </div>
                 </div>
-
-                {/* Nome */}
-                <h3 className="font-black text-slate-800 text-lg leading-tight mb-4 group-hover:text-blue-700 transition-colors pr-12 line-clamp-2 min-h-[3.5rem]">
-                  {escola.nome}
-                </h3>
 
                 {/* Meta Info */}
-                <div className="space-y-3.5 mb-6 text-slate-500">
-                  <div className="flex items-start gap-2.5">
-                    <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                    <span className="text-[13px] font-medium leading-tight">{escola.distrito || 'Endereço não cadastrado'}</span>
+                <div className="space-y-2 mt-auto text-slate-500">
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                    <span className="text-[11px] font-medium leading-tight line-clamp-2">{escola.distrito || 'Endereço não cadastrado'}</span>
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <User className="w-4 h-4 text-slate-400 shrink-0" />
-                    <span className="text-[13px] font-bold text-slate-600">{escola.diretor || 'Diretor N/D'}</span>
+                  <div className="flex items-center gap-2">
+                    <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="text-[11px] font-bold text-slate-600 truncate">{escola.diretor || 'Diretor N/D'}</span>
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <Hash className="w-4 h-4 text-slate-400 shrink-0" />
-                    <span className="text-[13px] font-bold text-slate-500 tabular-nums">INEP: {escola.inep || '---'}</span>
-                  </div>
-                </div>
-
-                {/* Actions Bottom Bar (Discrete & Animated) */}
-                <div className="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-300">
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => handleEditEscola(escola)}
-                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Editar Escola"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={() => setEscolaParaExcluir(escola)}
-                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Excluir Escola"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <button 
-                    onClick={() => {/* Poderia ser uma navegação para estatísticas da escola */}}
-                    className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all"
-                  >
-                    Detalhes <ChevronRight className="w-3 h-3" />
-                  </button>
                 </div>
               </div>
             ))
