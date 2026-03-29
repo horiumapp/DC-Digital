@@ -1,5 +1,6 @@
 import { ArrowLeft, ChevronDown, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { formatMatricula } from '../utils/formatters';
 
 export default function RelatorioMedias() {
   const alunos = [
@@ -147,7 +148,7 @@ export default function RelatorioMedias() {
               <tbody className="divide-y divide-slate-100">
                 {alunos.map((aluno) => (
                   <tr key={aluno.id} className="hover:bg-slate-50 transition">
-                    <td className="px-4 py-5 text-slate-400 font-medium">{aluno.id}</td>
+                    <td className="px-4 py-5 text-slate-400 font-medium">{formatMatricula(aluno.id)}</td>
                     <td className="px-6 py-5 text-slate-700 font-medium uppercase border-l">{aluno.nome}</td>
                     <td className="px-6 py-5 border-l"></td>
                     <td className="px-6 py-5 border-l"></td>

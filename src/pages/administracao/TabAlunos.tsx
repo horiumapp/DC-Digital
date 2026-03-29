@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Search, Plus, Edit2, Trash2, Users, Building2 } from 'lucide-react';
+import { formatMatricula } from '../../utils/formatters';
 import NovoAlunoModal from '../../components/NovoAlunoModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import { formatCpfObscured } from '../../utils/formatters';
@@ -155,8 +156,8 @@ export default function TabAlunos() {
               {alunosFiltrados.map((aluno) => (
                 <tr key={aluno.id} className="group hover:bg-blue-50/30 transition-colors duration-150">
                   <td className="px-6 py-3.5 whitespace-nowrap">
-                    <span className="text-xs font-bold text-blue-600 tabular-nums bg-blue-50 px-2 py-1 rounded-md border border-blue-100">
-                      2026{aluno.id.toString().replace(/[^0-9]/g, '').substring(0, 7).padStart(7, '0')}
+                    <span className="text-slate-400 font-medium tabular-nums px-3 py-1 bg-slate-100 rounded-lg text-xs">
+                      {formatMatricula(aluno.id)}
                     </span>
                   </td>
                   <td className="px-6 py-3.5 whitespace-nowrap">

@@ -3,6 +3,7 @@ import { Search, Check, Trash2, ArrowLeft } from 'lucide-react';
 import Captcha from '../common/Captcha';
 import { useTurma, Aluno } from '../../contexts/TurmaContext';
 import { useCaptcha } from '../../hooks/useCaptcha';
+import { formatMatricula } from '../../utils/formatters';
 
 interface FrequenciaTabProps {
   selectedDate: string;
@@ -165,7 +166,7 @@ export default function FrequenciaTab({
               <tbody className="divide-y divide-slate-100">
                 {studentData.map((aluno, index) => (
                   <tr key={aluno.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}>
-                    <td className="px-4 py-3 text-slate-500">{aluno.id}</td>
+                    <td className="px-4 py-3 text-slate-500">{formatMatricula(aluno.id)}</td>
                     <td className="px-4 py-3 text-slate-700">{aluno.nome}</td>
                     <td className="px-4 py-3 text-center">
                       <button
