@@ -1,31 +1,81 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 import { Search, Plus, Edit2, Trash2 } from 'lucide-react';
 import NovoAlunoModal from '../../components/NovoAlunoModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import { formatCpfObscured } from '../../utils/formatters';
 
 export default function TabAlunos() {
+  const { user } = useAuth();
   const [buscaAluno, setBuscaAluno] = useState('');
   const [isNovoAlunoModalOpen, setIsNovoAlunoModalOpen] = useState(false);
   const [alunoParaEditar, setAlunoParaEditar] = useState<any>(null);
   const [alunoParaExcluir, setAlunoParaExcluir] = useState<any>(null);
+  const [alunos, setAlunos] = useState<any[]>([]);
 
-  const [alunos, setAlunos] = useState([
-    { id: 1, nome: 'João da Silva', dataNascimento: '2010-05-15', cpf: '123.456.789-00', sexo: 'Masculino', nomeResponsavel: 'Maria da Silva', telefone: '(92) 99999-9999', endereco: 'Rua das Flores, 123, Centro', status: 'Ativo' },
-    { id: 2, nome: 'Ana Maria Souza', dataNascimento: '2011-08-22', cpf: '', sexo: 'Feminino', nomeResponsavel: 'José Souza', telefone: '(92) 98888-8888', endereco: 'Av. Principal, 456, Bairro Novo', status: 'Ativo' }
-  ]);
+  useEffect(() => {
+    fetchAlunos();
+  }, []);
 
-  const handleSaveAluno = (novoAluno: any) => {
-    if (alunoParaEditar) {
-      const alunosAtualizados = alunos.map((a) =>
-        a.id === alunoParaEditar.id ? { ...a, ...novoAluno } : a
-      );
-      setAlunos(alunosAtualizados);
-    } else {
-      const newId = alunos.length > 0 ? Math.max(...alunos.map((a) => a.id)) + 1 : 1;
-      setAlunos([...alunos, { id: newId, ...novoAluno }]);
+  const fetchAlunos = async () => {
+    const { data, error } = await supabase
+      .from('alunos')
+      .select('*, escolas(nome), turmas(nome, turno)')
+      .order('nome');
+      
+    if (!error && data) {
+      setAlunos(data);
     }
-    setAlunoParaEditar(null);
+  };
+
+  const handleSaveAluno = async (novoAluno: any) => {
+    if (alunoParaEditar) {
+      const { error } = await supabase
+        .from('alunos')
+        .update({
+          escola_id: novoAluno.escola_id,
+          turma_id: novoAluno.turma_id,
+          nome: novoAluno.nome,
+          data_nascimento: novoAluno.data_nascimento,
+          cpf: novoAluno.cpf,
+          sexo: novoAluno.sexo,
+          nome_responsavel: novoAluno.nome_responsavel,
+          telefone: novoAluno.telefone,
+          endereco: novoAluno.endereco,
+          status: novoAluno.status
+        })
+        .eq('id', alunoParaEditar.id);
+
+      if (error) alert("Erro ao editar aluno: " + error.message);
+      else {
+        fetchAlunos();
+        setAlunoParaEditar(null);
+        setIsNovoAlunoModalOpen(false);
+      }
+    } else {
+      const { error } = await supabase
+        .from('alunos')
+        .insert([{
+          escola_id: novoAluno.escola_id,
+          turma_id: novoAluno.turma_id,
+          nome: novoAluno.nome,
+          data_nascimento: novoAluno.data_nascimento,
+          cpf: novoAluno.cpf,
+          sexo: novoAluno.sexo,
+          nome_responsavel: novoAluno.nome_responsavel,
+          telefone: novoAluno.telefone,
+          endereco: novoAluno.endereco,
+          status: novoAluno.status
+        }]);
+
+      if (error) alert("Erro ao criar aluno: " + error.message);
+      else {
+        fetchAlunos();
+        setAlunoParaEditar(null);
+        setIsNovoAlunoModalOpen(false);
+      }
+    }
   };
 
   const handleEditAluno = (aluno: any) => {
@@ -33,17 +83,27 @@ export default function TabAlunos() {
     setIsNovoAlunoModalOpen(true);
   };
 
-  const confirmDeleteAluno = () => {
+  const confirmDeleteAluno = async () => {
     if (alunoParaExcluir) {
-      setAlunos(alunos.filter((a) => a.id !== alunoParaExcluir.id));
-      setAlunoParaExcluir(null);
+      const { error } = await supabase
+        .from('alunos')
+        .delete()
+        .eq('id', alunoParaExcluir.id);
+
+      if (error) alert("Erro ao excluir aluno: " + error.message);
+      else {
+        fetchAlunos();
+        setAlunoParaExcluir(null);
+      }
     }
   };
 
   const alunosFiltrados = alunos.filter(a =>
     a.nome.toLowerCase().includes(buscaAluno.toLowerCase()) ||
     (a.cpf && a.cpf.includes(buscaAluno)) ||
-    (a.nomeResponsavel && a.nomeResponsavel.toLowerCase().includes(buscaAluno.toLowerCase()))
+    (a.nome_responsavel && a.nome_responsavel.toLowerCase().includes(buscaAluno.toLowerCase())) ||
+    (a.escolas?.nome && a.escolas.nome.toLowerCase().includes(buscaAluno.toLowerCase())) ||
+    (a.turmas?.nome && a.turmas.nome.toLowerCase().includes(buscaAluno.toLowerCase()))
   );
 
   return (
@@ -61,52 +121,67 @@ export default function TabAlunos() {
             className="block w-full pl-11 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 bg-white"
           />
         </div>
-        <button
-          onClick={() => {
-            setAlunoParaEditar(null);
-            setIsNovoAlunoModalOpen(true);
-          }}
-          className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          Novo Aluno
-        </button>
+        {user?.role === 'ADMIN' && (
+          <button
+            onClick={() => {
+              setAlunoParaEditar(null);
+              setIsNovoAlunoModalOpen(true);
+            }}
+            className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Novo Aluno
+          </button>
+        )}
       </div>
 
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-white">
             <tr>
-              <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500">Nome do Aluno</th>
-              <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500">Responsável</th>
-              <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500">Telefone</th>
-              <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500">CPF</th>
+              <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500">Aluno</th>
+              <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500">Matrícula (Turma/Escola)</th>
+              <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500">Responsável / Contato</th>
               <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500">Status</th>
-              <th scope="col" className="px-6 py-4 text-right text-xs font-bold text-slate-500">Ações</th>
+              {user?.role === 'ADMIN' && (
+                <th scope="col" className="px-6 py-4 text-right text-xs font-bold text-slate-500">Ações</th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">
             {alunosFiltrados.map((aluno) => (
               <tr key={aluno.id} className="hover:bg-slate-50/50 transition">
-                <td className="px-6 py-5 whitespace-nowrap text-sm font-semibold text-slate-800">{aluno.nome}</td>
-                <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-500">{aluno.nomeResponsavel}</td>
-                <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-500">{aluno.telefone}</td>
-                <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-500">{aluno.cpf ? formatCpfObscured(aluno.cpf) : '-'}</td>
+                <td className="px-6 py-5 whitespace-nowrap">
+                  <div className="text-sm font-bold text-slate-800">{aluno.nome}</div>
+                  <div className="text-xs text-slate-500 mt-0.5">CPF: {aluno.cpf ? formatCpfObscured(aluno.cpf) : 'Não informado'}</div>
+                </td>
+                <td className="px-6 py-5 whitespace-nowrap">
+                  <div className="text-sm font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded inline-block">
+                    {aluno.turmas?.nome || 'Sem Turma'}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">{aluno.escolas?.nome || 'Sem Escola'}</div>
+                </td>
+                <td className="px-6 py-5 whitespace-nowrap">
+                  <div className="text-sm text-slate-700">{aluno.nome_responsavel}</div>
+                  <div className="text-xs text-slate-500 mt-0.5">{aluno.telefone}</div>
+                </td>
                 <td className="px-6 py-5 whitespace-nowrap">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${(aluno.status || 'Ativo') === 'Ativo' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
                     {aluno.status || 'Ativo'}
                   </span>
                 </td>
-                <td className="px-6 py-5 whitespace-nowrap text-right text-sm">
-                  <div className="flex items-center justify-end gap-3">
-                    <button onClick={() => handleEditAluno(aluno)} className="text-slate-400 hover:text-blue-600 transition" title="Editar">
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => setAlunoParaExcluir(aluno)} className="text-slate-400 hover:text-red-600 transition" title="Excluir">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </td>
+                {user?.role === 'ADMIN' && (
+                  <td className="px-6 py-5 whitespace-nowrap text-right text-sm">
+                    <div className="flex items-center justify-end gap-3">
+                      <button onClick={() => handleEditAluno(aluno)} className="text-slate-400 hover:text-blue-600 transition" title="Editar">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => setAlunoParaExcluir(aluno)} className="text-slate-400 hover:text-red-600 transition" title="Excluir">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
