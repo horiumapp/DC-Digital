@@ -17,19 +17,52 @@ export default function ObjetoConhecimentoTab({
   tempoAula,
   setTempoAula,
 }: ObjetoConhecimentoTabProps) {
-  const { registrarLancamento, removerLancamento } = useTurma();
+  const { registrarLancamento, removerLancamento, salvarConteudo, buscarConteudo, removerConteudo, lancamentos } = useTurma();
+
+  const isLancado = lancamentos.some(l => 
+    l.data === selectedDate && 
+    l.tempo === tempoAula && 
+    l.tipo === 'conteudo'
+  );
 
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [isAddingObjeto, setIsAddingObjeto] = useState(false);
   const [objetoSalvo, setObjetoSalvo] = useState(false);
   const [objetoData, setObjetoData] = useState<{ descricao: string; observacao: string; status: string } | null>(null);
+  
   const [objetoUnidade, setObjetoUnidade] = useState('AS ORIGENS, O PENSAMENTO RACIONAL E O PENSAMENTO..');
   const [objetoConhecimento, setObjetoConhecimento] = useState('O MITO (GREGOS E AMAZÔNICOS)');
   const [objetoObservacao, setObjetoObservacao] = useState('');
   const [objetoStatus, setObjetoStatus] = useState('Ministrado');
+  
   const [showObjetoTable, setShowObjetoTable] = useState(false);
   const [showNoRecordsObjeto, setShowNoRecordsObjeto] = useState(false);
   const [showDeleteObjetoModal, setShowDeleteObjetoModal] = useState(false);
+
+  // Carregar do banco de dados ao mudar data ou tempo
+  React.useEffect(() => {
+    const carregar = async () => {
+      if (turmaAtiva && selectedDate && tempoAula) {
+        const dados = await buscarConteudo(selectedDate, tempoAula);
+        if (dados) {
+          setObjetoSalvo(true);
+          setObjetoData({
+            descricao: dados.objetos[0] || '',
+            observacao: dados.descricao || '',
+            status: 'Ministrado' // Simplificado para o exemplo
+          });
+          setObjetoConhecimento(dados.objetos[0] || '');
+          setObjetoUnidade(dados.habilidades[0] || '');
+          setObjetoObservacao(dados.descricao || '');
+        } else {
+          setObjetoSalvo(false);
+          setObjetoData(null);
+          setShowObjetoTable(false);
+        }
+      }
+    };
+    carregar();
+  }, [selectedDate, tempoAula, turmaAtiva]);
 
   const {
     generatedCaptcha,
@@ -40,10 +73,8 @@ export default function ObjetoConhecimentoTab({
     validateCaptcha
   } = useCaptcha();
 
-  const handleExcluirObjeto = () => {
-    if (turmaAtiva) {
-      removerLancamento({ turmaId: turmaAtiva.id, data: selectedDate, tipo: 'conteudo', tempo: tempoAula });
-    }
+  const handleExcluirObjeto = async () => {
+    await removerConteudo(selectedDate, tempoAula);
     setObjetoSalvo(false);
     setObjetoData(null);
     setShowObjetoTable(false);
@@ -54,14 +85,17 @@ export default function ObjetoConhecimentoTab({
     setShowDeleteObjetoModal(false);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (validateCaptcha()) {
-      registrarLancamento({
+      await salvarConteudo({
         turmaId: turmaAtiva?.id || 0,
         data: selectedDate,
-        tipo: 'conteudo',
-        tempo: tempoAula
+        tempo: tempoAula,
+        objetos: [objetoConhecimento],
+        habilidades: [objetoUnidade],
+        descricao: objetoObservacao
       });
+
       setObjetoData({ descricao: objetoConhecimento, observacao: objetoObservacao, status: objetoStatus });
       setShowSuccessAlert(true);
       setObjetoSalvo(true);

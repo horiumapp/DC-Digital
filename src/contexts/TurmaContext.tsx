@@ -51,6 +51,16 @@ export interface Avaliacao {
   valorMaximo?: number;
 }
 
+export interface Conteudo {
+  id?: string;
+  turmaId: string | number;
+  data: string;
+  tempo: string;
+  objetos: any[];
+  habilidades: any[];
+  descricao: string;
+}
+
 interface TurmaContextType {
   turmaAtiva: Turma | null;
   selecionarTurma: (turma: Turma) => void;
@@ -63,6 +73,12 @@ interface TurmaContextType {
   salvarAvaliacao: (av: Avaliacao) => Promise<void>;
   removerAvaliacao: (id: string) => Promise<void>;
   salvarNotas: (avaliacaoId: string, notas: { alunoId: string, valor: string }[]) => Promise<void>;
+  salvarFrequencia: (data: string, tempo: string, alunosFreq: Aluno[]) => Promise<void>;
+  salvarConteudo: (cont: Conteudo) => Promise<void>;
+  buscarFrequencia: (data: string, tempo: string) => Promise<void>;
+  buscarConteudo: (data: string, tempo: string) => Promise<Conteudo | null>;
+  removerFrequencia: (data: string, tempo: string) => Promise<void>;
+  removerConteudo: (data: string, tempo: string) => Promise<void>;
 }
 
 const TurmaContext = createContext<TurmaContextType | undefined>(undefined);
@@ -87,9 +103,40 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     await Promise.all([
       fetchAlunos(turmaId),
-      fetchAvaliacoes(turmaId)
+      fetchAvaliacoes(turmaId),
+      fetchLancamentos(turmaId)
     ]);
     setLoading(false);
+  };
+
+  const fetchLancamentos = async (turmaId: string | number) => {
+    try {
+      const [freqRes, contRes] = await Promise.all([
+        supabase.from('frequencias').select('data, tempo').eq('turma_id', turmaId.toString()),
+        supabase.from('conteudos').select('data, tempo').eq('turma_id', turmaId.toString())
+      ]);
+
+      const novosLancamentos: Lancamento[] = [];
+
+      if (freqRes.data) {
+        // Usamos um Set para evitar duplicatas de tempo/data
+        const uniqueFreqs = new Set(freqRes.data.map(f => `${f.data}|${f.tempo}`));
+        uniqueFreqs.forEach(val => {
+          const [data, tempo] = val.split('|');
+          novosLancamentos.push({ turmaId, data, tempo, tipo: 'frequencia' });
+        });
+      }
+
+      if (contRes.data) {
+        contRes.data.forEach(c => {
+          novosLancamentos.push({ turmaId, data: c.data, tempo: c.tempo, tipo: 'conteudo' });
+        });
+      }
+
+      setLancamentos(novosLancamentos);
+    } catch (err) {
+      console.error('Erro ao carregar lançamentos:', err);
+    }
   };
 
   const fetchAlunos = async (turmaId: string | number) => {
@@ -243,12 +290,172 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const salvarFrequencia = async (data: string, tempo: string, alunosFreq: Aluno[]) => {
+    try {
+      if (!turmaAtiva) return;
+      
+      const upserts = alunosFreq.map(aluno => ({
+        turma_id: turmaAtiva.id.toString(),
+        aluno_id: aluno.id,
+        data,
+        tempo,
+        status: aluno.freq || 'P',
+        participacao: aluno.part || 'Presencial'
+      }));
+
+      const { error } = await supabase.from('frequencias').upsert(upserts, { 
+        onConflict: 'turma_id,aluno_id,data,tempo' 
+      });
+      
+      if (error) throw error;
+      
+      // Atualiza lista de lançamentos local para mostrar o check verde
+      registrarLancamento({ turmaId: turmaAtiva.id, data, tipo: 'frequencia', tempo });
+    } catch (err) {
+      console.error('Erro ao salvar frequência:', err);
+      alert('Erro ao salvar frequência no banco de dados.');
+    }
+  };
+
+  const salvarConteudo = async (cont: Conteudo) => {
+    try {
+      if (!turmaAtiva) return;
+      
+      const payload = {
+        turma_id: turmaAtiva.id.toString(),
+        data: cont.data,
+        tempo: cont.tempo,
+        objetos: cont.objetos,
+        habilidades: cont.habilidades,
+        descricao: cont.descricao
+      };
+
+      const { error } = await supabase.from('conteudos').upsert(payload, { 
+        onConflict: 'turma_id,data,tempo' 
+      });
+      
+      if (error) throw error;
+      
+      registrarLancamento({ turmaId: turmaAtiva.id, data: cont.data, tipo: 'conteudo', tempo: cont.tempo });
+    } catch (err) {
+      console.error('Erro ao salvar conteúdo:', err);
+      alert('Erro ao salvar conteúdo no banco de dados.');
+    }
+  };
+
+  const buscarFrequencia = async (data: string, tempo: string) => {
+    try {
+      if (!turmaAtiva) return;
+      
+      const { data: freqData, error } = await supabase
+        .from('frequencias')
+        .select('*')
+        .eq('turma_id', turmaAtiva.id.toString())
+        .eq('data', data)
+        .eq('tempo', tempo);
+
+      if (error) throw error;
+
+      if (freqData && freqData.length > 0) {
+        setAlunos(prev => prev.map(aluno => {
+          const f = freqData.find(fd => fd.aluno_id === aluno.id);
+          if (f) {
+            return { ...aluno, freq: f.status, part: f.participacao };
+          }
+          return aluno;
+        }));
+        // Marca como lançado
+        registrarLancamento({ turmaId: turmaAtiva.id, data, tipo: 'frequencia', tempo });
+      } else {
+        // Reset se não houver dados para esta data/tempo específico
+        setAlunos(prev => prev.map(aluno => ({ ...aluno, freq: '', part: 'Presencial' })));
+      }
+    } catch (err) {
+      console.error('Erro ao buscar frequência:', err);
+    }
+  };
+
+  const buscarConteudo = async (data: string, tempo: string): Promise<Conteudo | null> => {
+    try {
+      if (!turmaAtiva) return null;
+      
+      const { data: contData, error } = await supabase
+        .from('conteudos')
+        .select('*')
+        .eq('turma_id', turmaAtiva.id.toString())
+        .eq('data', data)
+        .eq('tempo', tempo)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      if (contData) {
+        registrarLancamento({ turmaId: turmaAtiva.id, data, tipo: 'conteudo', tempo });
+        return {
+          id: contData.id.toString(),
+          turmaId: contData.turma_id,
+          data: contData.data,
+          tempo: contData.tempo,
+          objetos: contData.objetos || [],
+          habilidades: contData.habilidades || [],
+          descricao: contData.descricao || ''
+        };
+      }
+      return null;
+    } catch (err) {
+      console.error('Erro ao buscar conteúdo:', err);
+      return null;
+    }
+  };
+
+  const removerFrequencia = async (data: string, tempo: string) => {
+    try {
+      if (!turmaAtiva) return;
+      const { error } = await supabase
+        .from('frequencias')
+        .delete()
+        .eq('turma_id', turmaAtiva.id.toString())
+        .eq('data', data)
+        .eq('tempo', tempo);
+
+      if (error) throw error;
+      
+      removerLancamento({ turmaId: turmaAtiva.id, data, tempo, tipo: 'frequencia' });
+      // Reset alunos local
+      setAlunos(prev => prev.map(a => ({ ...a, freq: '', part: 'Presencial' })));
+    } catch (err) {
+      console.error('Erro ao remover frequência:', err);
+      alert('Erro ao excluir frequência do banco de dados.');
+    }
+  };
+
+  const removerConteudo = async (data: string, tempo: string) => {
+    try {
+      if (!turmaAtiva) return;
+      const { error } = await supabase
+        .from('conteudos')
+        .delete()
+        .eq('turma_id', turmaAtiva.id.toString())
+        .eq('data', data)
+        .eq('tempo', tempo);
+
+      if (error) throw error;
+      
+      removerLancamento({ turmaId: turmaAtiva.id, data, tempo, tipo: 'conteudo' });
+    } catch (err) {
+      console.error('Erro ao remover conteúdo:', err);
+      alert('Erro ao excluir conteúdo do banco de dados.');
+    }
+  };
+
   return (
     <TurmaContext.Provider value={{ 
       turmaAtiva, selecionarTurma, 
       lancamentos, registrarLancamento, removerLancamento,
       alunos, avaliacoes, loading, 
-      salvarAvaliacao, removerAvaliacao, salvarNotas 
+      salvarAvaliacao, removerAvaliacao, salvarNotas,
+      salvarFrequencia, salvarConteudo, buscarFrequencia, buscarConteudo,
+      removerFrequencia, removerConteudo
     }}>
       {children}
     </TurmaContext.Provider>

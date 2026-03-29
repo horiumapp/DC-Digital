@@ -16,13 +16,18 @@ export default function FrequenciaTab({
   tempoAula,
   setTempoAula,
 }: FrequenciaTabProps) {
-  const { turmaAtiva, alunos, registrarLancamento, removerLancamento } = useTurma();
+  const { turmaAtiva, alunos, registrarLancamento, removerLancamento, salvarFrequencia, buscarFrequencia, removerFrequencia, lancamentos } = useTurma();
   
   const [studentData, setStudentData] = useState<Aluno[]>([]);
   const [isLaunching, setIsLaunching] = useState(false);
-  const [frequenciaSalva, setFrequenciaSalva] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [showDeleteFreqModal, setShowDeleteFreqModal] = useState(false);
+
+  const isLancado = lancamentos.some(l => 
+    l.data === selectedDate && 
+    l.tempo === tempoAula && 
+    l.tipo === 'frequencia'
+  );
 
   const {
     generatedCaptcha,
@@ -33,7 +38,14 @@ export default function FrequenciaTab({
     validateCaptcha
   } = useCaptcha();
 
-  // Reset student data when students list changes
+  // Carregar frequência do banco quando a data ou o tempo mudar
+  useEffect(() => {
+    if (turmaAtiva && selectedDate && tempoAula) {
+      buscarFrequencia(selectedDate, tempoAula);
+    }
+  }, [selectedDate, tempoAula, turmaAtiva]);
+
+  // Sincronizar o estado local com os alunos do contexto (que agora vêm do banco)
   useEffect(() => {
     setStudentData(alunos.map(a => ({ ...a })));
   }, [alunos]);
@@ -53,13 +65,11 @@ export default function FrequenciaTab({
     setStudentData(prev => prev.map(s => s.id === id ? { ...s, part } : s));
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (validateCaptcha()) {
       if (turmaAtiva) {
-        // Na prática, aqui enviaríamos o `studentData` para a API/Contexto
-        registrarLancamento({ turmaId: turmaAtiva.id, data: selectedDate, tipo: 'frequencia', tempo: tempoAula });
+        await salvarFrequencia(selectedDate, tempoAula, studentData);
         setShowSuccessAlert(true);
-        setFrequenciaSalva(true);
         setIsLaunching(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -68,15 +78,12 @@ export default function FrequenciaTab({
     }
   };
 
-  const handleExcluirFrequencia = () => {
-    if (turmaAtiva) {
-      removerLancamento({ turmaId: turmaAtiva.id, data: selectedDate, tipo: 'frequencia', tempo: tempoAula });
-    }
-    setStudentData(alunos.map(a => ({ ...a })));
+  const handleExcluirFrequencia = async () => {
+    await removerFrequencia(selectedDate, tempoAula);
     setShowSuccessAlert(false);
-    setFrequenciaSalva(false);
     generateNewCaptcha();
     setShowDeleteFreqModal(false);
+    setIsLaunching(false);
   };
 
   return (
@@ -111,15 +118,6 @@ export default function FrequenciaTab({
             Efetuar lançamento
           </button>
         )}
-        {!isLaunching && frequenciaSalva && (
-          <button
-            onClick={() => setShowDeleteFreqModal(true)}
-            className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-red-700 transition h-[38px]"
-          >
-            <Trash2 className="w-4 h-4" />
-            Excluir frequência
-          </button>
-        )}
       </div>
 
       {isLaunching && (
@@ -127,6 +125,15 @@ export default function FrequenciaTab({
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium text-slate-800">Alunos</h3>
             <div className="flex items-center gap-4">
+              {isLancado && (
+                <button
+                  onClick={() => setShowDeleteFreqModal(true)}
+                  className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-red-700 transition h-[38px]"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Excluir frequência
+                </button>
+              )}
               <div className="flex items-center gap-2 border border-slate-200 rounded-lg px-4 py-2 bg-white">
                 <span className="text-sm text-slate-600">Frequência(s) lançada(s):</span>
                 <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white">
