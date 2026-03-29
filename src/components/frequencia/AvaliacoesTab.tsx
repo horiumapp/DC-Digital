@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, Pencil, Trash2, List, Save, Check, Calendar as CalendarIcon, Plus, Loader2, X } from 'lucide-react';
+import { Eye, Pencil, Trash2, List, Save, Check, Calendar as CalendarIcon, Plus, Loader2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Captcha from '../common/Captcha';
 import { useTurma, Avaliacao } from '../../contexts/TurmaContext';
 import { useCaptcha } from '../../hooks/useCaptcha';
@@ -18,6 +18,8 @@ export default function AvaliacoesTab() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [avaliacaoToDelete, setAvaliacaoToDelete] = useState<any>(null);
   const [localNotas, setLocalNotas] = useState<Record<string, string>>({}); // alunoId -> valor string
+  const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
+  const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
 
   const {
     generatedCaptcha,
@@ -71,7 +73,7 @@ export default function AvaliacoesTab() {
 
     const payload: Avaliacao = {
       id: selectedAvaliacao ? selectedAvaliacao.id : `temp_${Date.now()}`,
-      turmaId: turmaAtiva?.id || '', 
+      turmaId: turmaAtiva?.id || '',
       tipo: selectedAvaliacao ? selectedAvaliacao.tipo : `AV${String(avaliacoes.length + 1).padStart(2, '0')}`,
       data: selectedDate,
       instrumento: instrumentoAvaliacao,
@@ -146,6 +148,7 @@ export default function AvaliacoesTab() {
             </button>
           </div>
 
+          {avaliacoes.length > 0 && (
           <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white">
             <table className="w-full text-sm text-left">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase">
@@ -157,50 +160,40 @@ export default function AvaliacoesTab() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {avaliacoes.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
-                      <List className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                      Nenhuma avaliação registrada
-                    </td>
-                  </tr>
-                ) : (
-                  <>
-                    {['1º Bimestre', '2º Bimestre', '3º Bimestre', '4º Bimestre'].map(bim => {
-                      const avsBim = avaliacoes.filter(av => av.bimestre === bim);
-                      if (avsBim.length === 0) return null;
-                      return (
-                        <React.Fragment key={bim}>
-                          <tr className="bg-blue-50/50">
-                            <td colSpan={4} className="px-6 py-2 font-black text-blue-600 text-[10px] uppercase tracking-tighter">{bim}</td>
-                          </tr>
-                          {avsBim.map((av) => (
-                            <tr key={av.id} className="hover:bg-slate-50 transition-colors">
-                              <td className="px-6 py-4 text-slate-900 font-bold">{av.tipo}</td>
-                              <td className="px-6 py-4 text-slate-600 font-medium uppercase">{av.data}</td>
-                              <td className="px-6 py-4 text-slate-500 text-xs font-semibold">{av.instrumento}</td>
-                              <td className="px-6 py-4">
-                                <div className="flex items-center justify-center gap-2">
-                                  <button onClick={() => { setSelectedAvaliacao(av); setAvaliacaoViewMode('details'); }}
-                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"><Eye className="w-4 h-4" /></button>
-                                  <button onClick={() => { setSelectedAvaliacao(av); setSelectedDate(av.data); setInstrumentoAvaliacao(av.instrumento || 'AVALIACAO ESCRITA'); setObjetosAvaliacao(av.objetos || []); setAvaliacaoViewMode('edit'); }}
-                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"><Pencil className="w-4 h-4" /></button>
-                                  <button onClick={() => { setAvaliacaoToDelete(av); setShowDeleteModal(true); }}
-                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"><Trash2 className="w-4 h-4" /></button>
-                                  <button onClick={() => { setSelectedAvaliacao(av); setAvaliacaoViewMode('grades'); }}
-                                    className="px-4 py-2 bg-blue-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-blue-700 transition shadow-md shadow-blue-600/20">Notas</button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </React.Fragment>
-                      );
-                    })}
-                  </>
-                )}
+                {['1º Bimestre', '2º Bimestre', '3º Bimestre', '4º Bimestre'].map(bim => {
+                  const avsBim = avaliacoes.filter(av => av.bimestre === bim);
+                  if (avsBim.length === 0) return null;
+                  return (
+                    <React.Fragment key={bim}>
+                      <tr className="bg-blue-50/50">
+                        <td colSpan={4} className="px-6 py-2 font-black text-blue-600 text-[10px] uppercase tracking-tighter">{bim}</td>
+                      </tr>
+                      {avsBim.map((av) => (
+                        <tr key={av.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-6 py-4 text-slate-900 font-bold">{av.tipo}</td>
+                          <td className="px-6 py-4 text-slate-600 font-medium uppercase">{av.data}</td>
+                          <td className="px-6 py-4 text-slate-500 text-xs font-semibold">{av.instrumento}</td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center justify-center gap-2">
+                              <button onClick={() => { setSelectedAvaliacao(av); setAvaliacaoViewMode('details'); }}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"><Eye className="w-4 h-4" /></button>
+                              <button onClick={() => { setSelectedAvaliacao(av); setSelectedDate(av.data); setInstrumentoAvaliacao(av.instrumento || 'AVALIACAO ESCRITA'); setObjetosAvaliacao(av.objetos || []); setAvaliacaoViewMode('edit'); }}
+                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"><Pencil className="w-4 h-4" /></button>
+                              <button onClick={() => { setAvaliacaoToDelete(av); setShowDeleteModal(true); }}
+                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"><Trash2 className="w-4 h-4" /></button>
+                              <button onClick={() => { setSelectedAvaliacao(av); setAvaliacaoViewMode('grades'); }}
+                                className="px-4 py-2 bg-blue-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-blue-700 transition shadow-md shadow-blue-600/20">Notas</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+          )}
         </div>
       )}
 
@@ -222,19 +215,75 @@ export default function AvaliacoesTab() {
                 <div className="relative">
                   <input type="text" value={selectedDate} readOnly onClick={() => setIsDatePickerOpen(!isDatePickerOpen)} placeholder="DD/MM/AAAA" className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-600/10 cursor-pointer" />
                   <CalendarIcon className="w-4 h-4 text-blue-600 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  {isDatePickerOpen && (
-                    <div className="absolute top-full left-0 mt-4 bg-white border border-slate-100 rounded-3xl shadow-2xl z-50 w-80 p-6 animate-in fade-in zoom-in-95 duration-200">
-                      <div className="grid grid-cols-7 gap-2 mb-4">
-                        {['D','S','T','Q','Q','S','S'].map((d, i) => <div key={i} className="text-[10px] font-black text-slate-300 text-center py-2">{d}</div>)}
-                        {Array.from({length: 31}, (_, i) => {
-                          const dateStr = `${String(i+1).padStart(2,'0')}/03/2026`;
-                          return (
-                            <button key={i} onClick={() => { setSelectedDate(dateStr); setIsDatePickerOpen(false); }} className={`aspect-square flex items-center justify-center text-xs font-bold rounded-xl transition-all ${selectedDate === dateStr ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-600 hover:bg-blue-50 hover:text-blue-600'}`}>{i + 1}</button>
-                          );
-                        })}
+                  {isDatePickerOpen && (() => {
+                    const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+                    const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+                    const diasNoMes = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+                    const primeiroDia = new Date(calendarYear, calendarMonth, 1).getDay();
+                    const hoje = new Date();
+
+                    const handlePrevMonth = () => {
+                      if (calendarMonth === 0) { setCalendarMonth(11); setCalendarYear(y => y - 1); }
+                      else setCalendarMonth(m => m - 1);
+                    };
+                    const handleNextMonth = () => {
+                      if (calendarMonth === 11) { setCalendarMonth(0); setCalendarYear(y => y + 1); }
+                      else setCalendarMonth(m => m + 1);
+                    };
+
+                    return (
+                      <div className="absolute top-full left-0 mt-4 bg-white border border-slate-100 rounded-3xl shadow-2xl z-50 w-80 p-6 animate-in fade-in zoom-in-95 duration-200">
+                        {/* Navegação Mês/Ano */}
+                        <div className="flex items-center justify-between mb-5">
+                          <button onClick={handlePrevMonth} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition">
+                            <ChevronLeft className="w-4 h-4" />
+                          </button>
+                          <div className="flex items-center gap-2">
+                            <select value={calendarMonth} onChange={(e) => setCalendarMonth(Number(e.target.value))} className="bg-slate-50 border-none rounded-xl px-3 py-1.5 text-sm font-black text-slate-700 cursor-pointer appearance-none text-center focus:ring-2 focus:ring-blue-600/10">
+                              {meses.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                            </select>
+                            <select value={calendarYear} onChange={(e) => setCalendarYear(Number(e.target.value))} className="bg-slate-50 border-none rounded-xl px-3 py-1.5 text-sm font-black text-slate-700 cursor-pointer appearance-none text-center focus:ring-2 focus:ring-blue-600/10">
+                              {Array.from({ length: 21 }, (_, i) => 2020 + i).map(y => <option key={y} value={y}>{y}</option>)}
+                            </select>
+                          </div>
+                          <button onClick={handleNextMonth} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition">
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {/* Cabeçalho dias da semana */}
+                        <div className="grid grid-cols-7 gap-1 mb-2">
+                          {diasSemana.map((d, i) => <div key={i} className="text-[10px] font-black text-slate-400 text-center py-1.5 uppercase tracking-wider">{d}</div>)}
+                        </div>
+
+                        {/* Grid dos dias */}
+                        <div className="grid grid-cols-7 gap-1">
+                          {Array.from({ length: primeiroDia }, (_, i) => <div key={`empty-${i}`} />)}
+                          {Array.from({ length: diasNoMes }, (_, i) => {
+                            const dia = i + 1;
+                            const dateStr = `${String(dia).padStart(2, '0')}/${String(calendarMonth + 1).padStart(2, '0')}/${calendarYear}`;
+                            const isSelected = selectedDate === dateStr;
+                            const isToday = dia === hoje.getDate() && calendarMonth === hoje.getMonth() && calendarYear === hoje.getFullYear();
+                            return (
+                              <button
+                                key={dia}
+                                onClick={() => { setSelectedDate(dateStr); setIsDatePickerOpen(false); }}
+                                className={`aspect-square flex items-center justify-center text-xs font-bold rounded-xl transition-all ${
+                                  isSelected
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                                    : isToday
+                                      ? 'bg-blue-50 text-blue-600 ring-2 ring-blue-600/20'
+                                      : 'text-slate-600 hover:bg-blue-50 hover:text-blue-600'
+                                }`}
+                              >
+                                {dia}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
                 {selectedDate && <p className="text-[10px] font-bold text-blue-600 ml-1">BIMESTRE: {getBimestrePorData(selectedDate)}</p>}
               </div>
@@ -270,22 +319,22 @@ export default function AvaliacoesTab() {
       {avaliacaoViewMode === 'grades' && selectedAvaliacao && (
         <div className="space-y-6">
           <div className="bg-slate-900 p-8 rounded-[32px] text-white shadow-2xl relative overflow-hidden">
-             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 blur-[100px] rounded-full -mr-20 -mt-20"></div>
-             <div className="relative z-10">
-               <div className="flex items-center gap-4 mb-4">
-                 <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center">
-                   <List className="w-6 h-6 text-blue-400" />
-                 </div>
-                 <div>
-                   <h3 className="text-2xl font-black uppercase tracking-tight">Lançamento de Notas</h3>
-                   <p className="text-slate-400 text-sm font-medium">{selectedAvaliacao.tipo} • {selectedAvaliacao.instrumento}</p>
-                 </div>
-               </div>
-               <div className="flex gap-6">
-                 <div className="bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10">Data: {selectedAvaliacao.data}</div>
-                 <div className="bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10">Escala: 0 a 10,0</div>
-               </div>
-             </div>
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 blur-[100px] rounded-full -mr-20 -mt-20"></div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center">
+                  <List className="w-6 h-6 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black uppercase tracking-tight">Lançamento de Notas</h3>
+                  <p className="text-slate-400 text-sm font-medium">{selectedAvaliacao.tipo} • {selectedAvaliacao.instrumento}</p>
+                </div>
+              </div>
+              <div className="flex gap-6">
+                <div className="bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10">Data: {selectedAvaliacao.data}</div>
+                <div className="bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10">Escala: 0 a 10,0</div>
+              </div>
+            </div>
           </div>
 
           <div className="border border-slate-200 rounded-[32px] overflow-hidden bg-white shadow-sm">
@@ -334,7 +383,7 @@ export default function AvaliacoesTab() {
                 <Trash2 className="w-12 h-12" />
               </div>
               <h3 className="text-2xl font-black text-slate-800 mb-3">Remover?</h3>
-              <p className="text-slate-500 font-medium leading-relaxed">As notas também serão apagadas. <br/>Deseja continuar?</p>
+              <p className="text-slate-500 font-medium leading-relaxed">As notas também serão apagadas. <br />Deseja continuar?</p>
             </div>
             <div className="bg-slate-50 p-8 flex gap-4">
               <button onClick={() => setShowDeleteModal(false)} className="flex-1 px-6 py-4 bg-white text-slate-600 font-black uppercase text-[10px] tracking-widest rounded-2xl hover:bg-slate-200 transition">Voltar</button>
