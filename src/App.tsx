@@ -6,6 +6,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Login from './pages/Login';
+import Cadastro from './pages/Cadastro';
 import Turmas from './pages/Turmas';
 import Diario from './pages/Diario';
 import RelatorioNotas from './pages/RelatorioNotas';
@@ -27,6 +28,7 @@ export default function App() {
         <Router>
           <Routes>
             <Route path="/" element={<Login />} />
+            <Route path="/cadastro" element={<Cadastro />} />
           <Route element={<Layout />}>
             <Route path="/turmas" element={<Turmas />} />
             <Route path="/diario" element={<Diario />} />
