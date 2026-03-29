@@ -7,9 +7,10 @@ interface NovaTurmaModalProps {
   onClose: () => void;
   onSave: (turma: any) => void;
   turmaParaEditar?: any;
+  fixedEscolaId?: string;
 }
 
-export default function NovaTurmaModal({ isOpen, onClose, onSave, turmaParaEditar }: NovaTurmaModalProps) {
+export default function NovaTurmaModal({ isOpen, onClose, onSave, turmaParaEditar, fixedEscolaId }: NovaTurmaModalProps) {
   const [escolas, setEscolas] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -43,14 +44,14 @@ export default function NovaTurmaModal({ isOpen, onClose, onSave, turmaParaEdita
   useEffect(() => {
     if (turmaParaEditar) {
       setFormData({
-        escola_id: turmaParaEditar.escola_id || (escolas.length > 0 ? escolas[0].id : ''),
+        escola_id: turmaParaEditar.escola_id || fixedEscolaId || (escolas.length > 0 ? escolas[0].id : ''),
         nome: turmaParaEditar.nome || '',
         turno: turmaParaEditar.turno || 'Manhã',
         ano_letivo: turmaParaEditar.ano_letivo || new Date().getFullYear().toString(),
       });
     } else {
       setFormData({
-        escola_id: escolas.length > 0 ? escolas[0].id : '',
+        escola_id: fixedEscolaId || (escolas.length > 0 ? escolas[0].id : ''),
         nome: '',
         turno: 'Manhã',
         ano_letivo: new Date().getFullYear().toString(),
@@ -94,10 +95,10 @@ export default function NovaTurmaModal({ isOpen, onClose, onSave, turmaParaEdita
             </label>
             <select
               required
-              disabled={loading}
+              disabled={loading || !!fixedEscolaId}
               value={formData.escola_id}
               onChange={(e) => setFormData({ ...formData, escola_id: e.target.value })}
-              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all bg-white"
+              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all bg-white disabled:bg-slate-50 disabled:text-slate-500"
             >
               {loading ? (
                 <option value="">Carregando escolas...</option>
