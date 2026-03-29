@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { getBimestrePorData } from '../utils/dateUtils';
 
 export interface TurmaMetricas {
-  frequencia: number; // Porcentagem (0 a 100)
+  frequencia: number;
   objetosMinistrados: number;
   objetosPlanejados: number;
   avaliacoesCadastradas: number;
@@ -20,13 +21,13 @@ export interface Turma {
   escola: string;
   turno: string;
   metricas: TurmaMetricas;
-  diasDeAula: number[]; // 0 = Dom, 1 = Seg, 2 = Ter, 3 = Qua, 4 = Qui, 5 = Sex, 6 = Sáb
-  tempos: string[]; // Ex: ['1º TEMPO', '3º TEMPO']
+  diasDeAula: number[];
+  tempos: string[];
 }
 
 export interface Lancamento {
   turmaId: number;
-  data: string; // Formato DD/MM/YYYY
+  data: string;
   tipo: 'frequencia' | 'conteudo';
   tempo: string;
 }
@@ -36,6 +37,7 @@ export interface Aluno {
   nome: string;
   freq: string;
   part: string;
+  notas?: Record<string, string>; // ID da avaliação -> valor da nota
 }
 
 export interface Avaliacao {
@@ -45,6 +47,8 @@ export interface Avaliacao {
   data: string;
   instrumento: string;
   objetos: any[];
+  bimestre?: string;
+  valorMaximo?: number;
 }
 
 interface TurmaContextType {
@@ -55,45 +59,38 @@ interface TurmaContextType {
   removerLancamento: (lancamento: Omit<Lancamento, 'turmaId'> & { turmaId: number }) => void;
   alunos: Aluno[];
   avaliacoes: Avaliacao[];
-  salvarAvaliacao: (av: Avaliacao) => void;
-  removerAvaliacao: (id: string) => void;
+  loading: boolean;
+  salvarAvaliacao: (av: Avaliacao) => Promise<void>;
+  removerAvaliacao: (id: string) => Promise<void>;
+  salvarNotas: (avaliacaoId: string, notas: { alunoId: string, valor: string }[]) => Promise<void>;
 }
 
 const TurmaContext = createContext<TurmaContextType | undefined>(undefined);
-
-const alunosMockados: Aluno[] = [
-  { id: '01', nome: 'Adeilson Soares Dos Santos', freq: 'P', part: 'Presencial' },
-  { id: '02', nome: 'Alcemir Silva Barros', freq: 'P', part: 'Presencial' },
-  { id: '03', nome: 'Aline Dos Santos Lopes', freq: 'P', part: 'Presencial' },
-  { id: '04', nome: 'Ana Lia Viana Cordovil', freq: 'P', part: 'Presencial' },
-  { id: '07', nome: 'Antonia Raquel Lima Da Silva', freq: 'P', part: 'Presencial' },
-  { id: '08', nome: 'Antonio Elison Oliveira Montei', freq: 'P', part: 'Presencial' },
-  { id: '09', nome: 'Emily Souza Da Silva', freq: 'P', part: 'Presencial' },
-  { id: '10', nome: 'Iago Moreira Sena', freq: 'P', part: 'Presencial' },
-  { id: '30', nome: 'Raimundo Deividy De Souza Alme', freq: 'P', part: 'Presencial' },
-  { id: '31', nome: 'Riquelme Melo De Oliveira', freq: 'P', part: 'Presencial' },
-  { id: '32', nome: 'Stefany Galdino Da Silva', freq: 'P', part: 'Presencial' },
-  { id: '33', nome: 'Taisson Mesquita De Lima', freq: 'P', part: 'Presencial' },
-  { id: '34', nome: 'Tiago Mendes Do Nascimento', freq: 'P', part: 'Presencial' },
-  { id: '35', nome: 'Valdy Filho Gomes De Oliveira', freq: 'P', part: 'Presencial' },
-  { id: '36', nome: 'Vitoria Aparecida Vieira Da Si', freq: 'P', part: 'Presencial' },
-  { id: '37', nome: 'Wesley Cardoso Da Silva', freq: 'P', part: 'Presencial' },
-  { id: '38', nome: 'Ylanna Gomes Winhork', freq: 'P', part: 'Presencial' },
-].sort((a, b) => a.nome.localeCompare(b.nome));
 
 export function TurmaProvider({ children }: { children: ReactNode }) {
   const [turmaAtiva, setTurmaAtiva] = useState<Turma | null>(null);
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (turmaAtiva) {
-      fetchAlunos(turmaAtiva.id);
+      cargarDadosTurma(turmaAtiva.id);
     } else {
       setAlunos([]);
+      setAvaliacoes([]);
     }
   }, [turmaAtiva]);
+
+  const cargarDadosTurma = async (turmaId: number) => {
+    setLoading(true);
+    await Promise.all([
+      fetchAlunos(turmaId),
+      fetchAvaliacoes(turmaId)
+    ]);
+    setLoading(false);
+  };
 
   const fetchAlunos = async (turmaId: number) => {
     try {
@@ -108,11 +105,56 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
           id: a.id.toString(),
           nome: a.nome,
           freq: 'P',
-          part: 'Presencial'
+          part: 'Presencial',
+          notas: {}
         })));
       }
     } catch (err) {
       console.error('Erro ao carregar alunos:', err);
+    }
+  };
+
+  const fetchAvaliacoes = async (turmaId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('avaliacoes')
+        .select('*')
+        .eq('turma_id', turmaId)
+        .order('data', { ascending: false });
+
+      if (data) {
+        setAvaliacoes(data.map(av => ({
+          id: av.id.toString(),
+          turmaId: av.turma_id,
+          tipo: av.tipo,
+          data: av.data,
+          instrumento: av.instrumento,
+          objetos: av.objetos || [],
+          bimestre: av.bimestre || getBimestrePorData(av.data),
+          valorMaximo: av.valor_maximo
+        })));
+
+        // Carregar notas para estas avaliações
+        const avaliacaoIds = data.map(av => av.id);
+        if (avaliacaoIds.length > 0) {
+          const { data: notasData } = await supabase
+            .from('notas')
+            .select('*')
+            .in('avaliacao_id', avaliacaoIds);
+
+          if (notasData) {
+            setAlunos(prevAlunos => prevAlunos.map(aluno => {
+              const notasAluno: Record<string, string> = {};
+              notasData.filter(n => n.aluno_id.toString() === aluno.id).forEach(n => {
+                notasAluno[n.avaliacao_id.toString()] = n.valor.toString().replace('.', ',');
+              });
+              return { ...aluno, notas: notasAluno };
+            }));
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao carregar avaliações:', err);
     }
   };
 
@@ -142,23 +184,67 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     ));
   };
 
-  const salvarAvaliacao = (av: Avaliacao) => {
-    setAvaliacoes(prev => {
-      const existe = prev.some(a => a.id === av.id);
-      if (existe) return prev.map(a => a.id === av.id ? av : a);
-      return [...prev, av];
-    });
+  const salvarAvaliacao = async (av: Avaliacao) => {
+    try {
+      const payload = {
+        turma_id: turmaAtiva?.id,
+        tipo: av.tipo,
+        data: av.data,
+        instrumento: av.instrumento,
+        objetos: av.objetos,
+        bimestre: av.bimestre || getBimestrePorData(av.data),
+        valor_maximo: av.valorMaximo || 10
+      };
+
+      let result;
+      if (av.id && !av.id.includes('.')) { // Se id não for temporário (timestamp)
+        result = await supabase.from('avaliacoes').update(payload).eq('id', av.id);
+      } else {
+        result = await supabase.from('avaliacoes').insert([payload]);
+      }
+
+      if (result.error) throw result.error;
+      if (turmaAtiva) await fetchAvaliacoes(turmaAtiva.id);
+    } catch (err) {
+      console.error('Erro ao salvar avaliação:', err);
+      alert('Erro ao salvar avaliação no banco de dados.');
+    }
   };
 
-  const removerAvaliacao = (id: string) => {
-    setAvaliacoes(prev => prev.filter(a => a.id !== id));
+  const removerAvaliacao = async (id: string) => {
+    try {
+      const { error } = await supabase.from('avaliacoes').delete().eq('id', id);
+      if (error) throw error;
+      setAvaliacoes(prev => prev.filter(a => a.id !== id));
+    } catch (err) {
+      console.error('Erro ao remover avaliação:', err);
+    }
+  };
+
+  const salvarNotas = async (avaliacaoId: string, notas: { alunoId: string, valor: string }[]) => {
+    try {
+      const upserts = notas.map(n => ({
+        avaliacao_id: avaliacaoId,
+        aluno_id: n.alunoId,
+        valor: parseFloat(n.valor.replace(',', '.'))
+      }));
+
+      const { error } = await supabase.from('notas').upsert(upserts, { onConflict: 'avaliacao_id,aluno_id' });
+      if (error) throw error;
+      
+      if (turmaAtiva) await fetchAvaliacoes(turmaAtiva.id);
+    } catch (err) {
+      console.error('Erro ao salvar notas:', err);
+      alert('Erro ao salvar notas no banco de dados.');
+    }
   };
 
   return (
     <TurmaContext.Provider value={{ 
       turmaAtiva, selecionarTurma, 
       lancamentos, registrarLancamento, removerLancamento,
-      alunos, avaliacoes, salvarAvaliacao, removerAvaliacao 
+      alunos, avaliacoes, loading, 
+      salvarAvaliacao, removerAvaliacao, salvarNotas 
     }}>
       {children}
     </TurmaContext.Provider>
