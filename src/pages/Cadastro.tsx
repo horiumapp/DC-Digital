@@ -10,6 +10,25 @@ export default function Cadastro() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<UserRole>('PROFESSOR');
+  
+  // Mascaras locais de formatação para UX
+  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length > 11) value = value.slice(0, 11);
+    value = value.replace(/(\d{3})(\d)/, '$1.$2');
+    value = value.replace(/(\d{3})(\d)/, '$1.$2');
+    value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    e.target.value = value;
+  };
+
+  const handleTelefoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length > 11) value = value.slice(0, 11);
+    value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
+    value = value.replace(/(\d)(\d{4})$/, '$1-$2');
+    e.target.value = value;
+  };
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -21,6 +40,11 @@ export default function Cadastro() {
     const password = formData.get('password') as string;
     const name = formData.get('name') as string;
     let role = formData.get('role') as UserRole;
+    
+    // Pegando dados adicionais (caso existam)
+    const cpf = formData.get('cpf') as string | null;
+    const telefone = formData.get('telefone') as string | null;
+    const vinculo = formData.get('vinculo') as string | null;
 
     // Regra de segurança: O Administrador é apenas o dono do sistema
     const adminEmails = ['prof.jackison@gmail.com', 'jackison1985@hotmail.com'];
@@ -36,6 +60,9 @@ export default function Cadastro() {
           data: {
             full_name: name,
             role: role,
+            ...(cpf && { cpf }),
+            ...(telefone && { telefone }),
+            ...(vinculo && { vinculo }),
           },
         },
       });
@@ -131,6 +158,8 @@ export default function Cadastro() {
                 id="role"
                 name="role"
                 required
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value as UserRole)}
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors outline-none text-base bg-white"
               >
                 <option value="PROFESSOR">Professor</option>
@@ -138,6 +167,54 @@ export default function Cadastro() {
                 <option value="SECRETARIO">Secretário</option>
               </select>
             </div>
+
+            {/* Sub-Forms Condicionais Baseados no Role */}
+            {selectedRole === 'PROFESSOR' && (
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-4">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Dados do Docente</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2 col-span-2 sm:col-span-1">
+                    <label htmlFor="cpf" className="block text-sm font-medium text-slate-700">CPF</label>
+                    <input 
+                      type="text" 
+                      id="cpf" 
+                      name="cpf" 
+                      onChange={handleCpfChange}
+                      placeholder="000.000.000-00" 
+                      required 
+                      className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors outline-none text-sm" 
+                    />
+                  </div>
+
+                  <div className="space-y-2 col-span-2 sm:col-span-1">
+                    <label htmlFor="telefone" className="block text-sm font-medium text-slate-700">Telefone / WhatsApp</label>
+                    <input 
+                      type="tel" 
+                      id="telefone" 
+                      name="telefone" 
+                      onChange={handleTelefoneChange}
+                      placeholder="(99) 99999-9999" 
+                      required 
+                      className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors outline-none text-sm" 
+                    />
+                  </div>
+
+                  <div className="space-y-2 col-span-2">
+                    <label htmlFor="vinculo" className="block text-sm font-medium text-slate-700">Vínculo Contratual</label>
+                    <select
+                      id="vinculo"
+                      name="vinculo"
+                      required
+                      className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors outline-none text-sm bg-white"
+                    >
+                      <option value="Efetivo">Efetivo</option>
+                      <option value="Contratado">Contratado</option>
+                      <option value="Substituto">Substituto</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="pt-4">
               <button 
