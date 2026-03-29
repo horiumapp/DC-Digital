@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 import { Search, Plus, Edit2, Trash2 } from 'lucide-react';
 import NovoProfessorModal from '../../components/NovoProfessorModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
@@ -12,41 +13,68 @@ export default function TabProfessores() {
   const [professorParaEditar, setProfessorParaEditar] = useState<any>(null);
   const [professorParaExcluir, setProfessorParaExcluir] = useState<any>(null);
 
-  const [professores, setProfessores] = useState([
-    { id: 1, nome: 'Francisco Hudson Galvao Maia', email: 'francisco.hudson@escola.com', cpf: '111.222.333-44', telefone: '(92) 98888-7777', vinculo: 'Efetivo', status: 'Ativo' },
-    { id: 2, nome: 'Ana Paula Souza', email: 'ana.paula@escola.com', cpf: '555.666.777-88', telefone: '(92) 97777-6666', vinculo: 'Temporário', status: 'Ativo' }
-  ]);
+  const [professores, setProfessores] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleSaveProfessor = (novoProfessor: any) => {
-    if (professorParaEditar) {
-      const professoresAtualizados = professores.map((p) =>
-        p.id === professorParaEditar.id
-          ? {
-            ...p,
-            nome: novoProfessor.nome,
-            email: novoProfessor.email,
-            cpf: novoProfessor.cpf,
-            telefone: novoProfessor.telefone,
-            vinculo: novoProfessor.vinculo,
-            status: novoProfessor.status
-          }
-          : p
-      );
-      setProfessores(professoresAtualizados);
-    } else {
-      const newId = professores.length > 0 ? Math.max(...professores.map((p) => p.id)) + 1 : 1;
-      const professorFormatado = {
-        id: newId,
-        nome: novoProfessor.nome,
-        email: novoProfessor.email,
-        cpf: novoProfessor.cpf,
-        telefone: novoProfessor.telefone,
-        vinculo: novoProfessor.vinculo,
-        status: novoProfessor.status
-      };
-      setProfessores([...professores, professorFormatado]);
+  useEffect(() => {
+    fetchProfessores();
+  }, []);
+
+  const fetchProfessores = async () => {
+    const { data, error } = await supabase
+      .from('professores')
+      .select('*')
+      .order('nome');
+      
+    if (!error && data) {
+      setProfessores(data);
     }
-    setProfessorParaEditar(null);
+    setLoading(false);
+  };
+
+  const handleSaveProfessor = async (novoProfessor: any) => {
+    if (professorParaEditar) {
+      const { error } = await supabase
+        .from('professores')
+        .update({
+          nome: novoProfessor.nome,
+          email: novoProfessor.email,
+          cpf: novoProfessor.cpf,
+          telefone: novoProfessor.telefone,
+          vinculo: novoProfessor.vinculo,
+          status: novoProfessor.status
+        })
+        .eq('id', professorParaEditar.id);
+
+      if (error) {
+        console.error("Erro ao atualizar:", error);
+        alert("Erro ao atualizar professor: " + error.message);
+      } else {
+        fetchProfessores();
+        setProfessorParaEditar(null);
+        setIsNovoProfessorModalOpen(false);
+      }
+    } else {
+      const { error } = await supabase
+        .from('professores')
+        .insert([{
+          nome: novoProfessor.nome,
+          email: novoProfessor.email,
+          cpf: novoProfessor.cpf,
+          telefone: novoProfessor.telefone,
+          vinculo: novoProfessor.vinculo,
+          status: novoProfessor.status
+        }]);
+
+      if (error) {
+        console.error("Erro ao inserir:", error);
+        alert("Erro ao criar professor: " + error.message);
+      } else {
+        fetchProfessores();
+        setProfessorParaEditar(null);
+        setIsNovoProfessorModalOpen(false);
+      }
+    }
   };
 
   const handleEditProfessor = (professor: any) => {
@@ -54,10 +82,20 @@ export default function TabProfessores() {
     setIsNovoProfessorModalOpen(true);
   };
 
-  const confirmDeleteProfessor = () => {
+  const confirmDeleteProfessor = async () => {
     if (professorParaExcluir) {
-      setProfessores(professores.filter((p) => p.id !== professorParaExcluir.id));
-      setProfessorParaExcluir(null);
+      const { error } = await supabase
+        .from('professores')
+        .delete()
+        .eq('id', professorParaExcluir.id);
+
+      if (error) {
+        console.error("Erro ao deletar:", error);
+        alert("Erro ao deletar professor: " + error.message);
+      } else {
+        fetchProfessores();
+        setProfessorParaExcluir(null);
+      }
     }
   };
 

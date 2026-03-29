@@ -44,7 +44,14 @@ export default function TabEscolas() {
         })
         .eq('id', escolaParaEditar.id);
 
-      if (!error) fetchEscolas();
+      if (error) {
+        console.error("Erro ao atualizar:", error);
+        alert("Erro ao atualizar escola: " + error.message);
+      } else {
+        fetchEscolas();
+        setEscolaParaEditar(null);
+        setIsNovaEscolaModalOpen(false);
+      }
     } else {
       const { error } = await supabase
         .from('escolas')
@@ -56,9 +63,15 @@ export default function TabEscolas() {
           status: novaEscola.ativo ? 'Ativa' : 'Inativa'
         }]);
 
-      if (!error) fetchEscolas();
+      if (error) {
+        console.error("Erro ao inserir:", error);
+        alert("Erro ao criar escola: " + error.message);
+      } else {
+        fetchEscolas();
+        setEscolaParaEditar(null);
+        setIsNovaEscolaModalOpen(false);
+      }
     }
-    setEscolaParaEditar(null);
   };
 
   const handleEditEscola = (escola: any) => {
