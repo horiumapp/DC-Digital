@@ -13,7 +13,7 @@ export interface TurmaMetricas {
 }
 
 export interface Turma {
-  id: number;
+  id: string | number;
   ensino: string;
   fase: string;
   componente: string;
@@ -26,7 +26,7 @@ export interface Turma {
 }
 
 export interface Lancamento {
-  turmaId: number;
+  turmaId: string | number;
   data: string;
   tipo: 'frequencia' | 'conteudo';
   tempo: string;
@@ -42,7 +42,7 @@ export interface Aluno {
 
 export interface Avaliacao {
   id: string;
-  turmaId: number;
+  turmaId: string | number;
   tipo: string;
   data: string;
   instrumento: string;
@@ -56,7 +56,7 @@ interface TurmaContextType {
   selecionarTurma: (turma: Turma) => void;
   lancamentos: Lancamento[];
   registrarLancamento: (lancamento: Lancamento) => void;
-  removerLancamento: (lancamento: Omit<Lancamento, 'turmaId'> & { turmaId: number }) => void;
+  removerLancamento: (lancamento: Lancamento) => void;
   alunos: Aluno[];
   avaliacoes: Avaliacao[];
   loading: boolean;
@@ -83,7 +83,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     }
   }, [turmaAtiva]);
 
-  const cargarDadosTurma = async (turmaId: number) => {
+  const cargarDadosTurma = async (turmaId: string | number) => {
     setLoading(true);
     await Promise.all([
       fetchAlunos(turmaId),
@@ -92,12 +92,12 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   };
 
-  const fetchAlunos = async (turmaId: number) => {
+  const fetchAlunos = async (turmaId: string | number) => {
     try {
       const { data, error } = await supabase
         .from('alunos')
         .select('*')
-        .eq('turma_id', turmaId)
+        .eq('turma_id', turmaId.toString()) // Garante que UUID string funcione
         .order('nome');
 
       if (data) {
@@ -114,12 +114,12 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const fetchAvaliacoes = async (turmaId: number) => {
+  const fetchAvaliacoes = async (turmaId: string | number) => {
     try {
       const { data, error } = await supabase
         .from('avaliacoes')
         .select('*')
-        .eq('turma_id', turmaId)
+        .eq('turma_id', turmaId.toString())
         .order('data', { ascending: false });
 
       if (data) {
@@ -187,7 +187,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const salvarAvaliacao = async (av: Avaliacao) => {
     try {
       const payload = {
-        turma_id: turmaAtiva?.id,
+        turma_id: turmaAtiva?.id.toString(),
         tipo: av.tipo,
         data: av.data,
         instrumento: av.instrumento,
@@ -196,18 +196,22 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
         valor_maximo: av.valorMaximo || 10
       };
 
-      let result;
-      if (av.id && !av.id.includes('.')) { // Se id não for temporário (timestamp)
-        result = await supabase.from('avaliacoes').update(payload).eq('id', av.id);
+      let error;
+      // Se o ID começar com 'temp_' ou não existir, é um novo registro (INSERT)
+      if (!av.id || av.id.startsWith('temp_')) {
+        const { error: insError } = await supabase.from('avaliacoes').insert([payload]);
+        error = insError;
       } else {
-        result = await supabase.from('avaliacoes').insert([payload]);
+        // Já possui um ID numérico real do banco, então faz UPDATE
+        const { error: updError } = await supabase.from('avaliacoes').update(payload).eq('id', av.id);
+        error = updError;
       }
 
-      if (result.error) throw result.error;
+      if (error) throw error;
       if (turmaAtiva) await fetchAvaliacoes(turmaAtiva.id);
     } catch (err) {
       console.error('Erro ao salvar avaliação:', err);
-      alert('Erro ao salvar avaliação no banco de dados.');
+      alert('Erro ao salvar avaliação no banco de dados. Verifique sua conexão.');
     }
   };
 

@@ -6,7 +6,7 @@ import { useCaptcha } from '../../hooks/useCaptcha';
 import { getBimestrePorData } from '../../utils/dateUtils';
 
 export default function AvaliacoesTab() {
-  const { alunos, avaliacoes, loading, salvarAvaliacao, removerAvaliacao, salvarNotas } = useTurma();
+  const { turmaAtiva, alunos, avaliacoes, loading, salvarAvaliacao, removerAvaliacao, salvarNotas } = useTurma();
 
   const [avaliacaoViewMode, setAvaliacaoViewMode] = useState<'list' | 'details' | 'edit' | 'grades'>('list');
   const [selectedAvaliacao, setSelectedAvaliacao] = useState<any>(null);
@@ -69,8 +69,8 @@ export default function AvaliacoesTab() {
     }
 
     const payload: Avaliacao = {
-      id: selectedAvaliacao ? selectedAvaliacao.id : String(Date.now()),
-      turmaId: 1, 
+      id: selectedAvaliacao ? selectedAvaliacao.id : `temp_${Date.now()}`,
+      turmaId: turmaAtiva?.id || '', 
       tipo: selectedAvaliacao ? selectedAvaliacao.tipo : `AV${String(avaliacoes.length + 1).padStart(2, '0')}`,
       data: selectedDate,
       instrumento: instrumentoAvaliacao,
