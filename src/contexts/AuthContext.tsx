@@ -6,16 +6,15 @@ export type UserRole = 'ADMIN' | 'GESTOR' | 'SECRETARIO' | 'PROFESSOR';
 export interface User {
   id: string;
   name: string;
+  email: string; // Adicionado campo de e-mail real
   role: UserRole;
   title: string;
-  isSimulated?: boolean; // Flag para sabermos que é uma conta falsa (de botão)
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (role: UserRole) => void;         // Login Simulado
-  logout: () => Promise<void>;             // Logout Real e Simulado
+  logout: () => Promise<void>;             // Logout Real
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,9 +32,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser({
           id: session.user.id,
           name: metadata.full_name || 'Usuário Sem Nome',
+          email: session.user.email || '',
           role: (metadata.role as UserRole) || 'PROFESSOR',
           title: (metadata.role as UserRole) || 'Usuário Real',
-          isSimulated: false,
         });
       }
       setLoading(false);
@@ -48,14 +47,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser({
           id: session.user.id,
           name: metadata.full_name || 'Usuário Sem Nome',
+          email: session.user.email || '',
           role: (metadata.role as UserRole) || 'PROFESSOR',
           title: (metadata.role as UserRole) || 'Usuário Real',
-          isSimulated: false,
         });
       } else {
-        // Se a mudança for de logout real e o usuário atual *não for* simulado
-        // nós zeramos. (Se for simulado a gente mantém pra não quebrar a brincadeira)
-        setUser((prev) => (prev?.isSimulated ? prev : null));
+        setUser(null);
       }
       setLoading(false);
     });
@@ -63,26 +60,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // LOGIN MOCK/SIMULADO (Usado nos 4 botões de teste)
-  const login = (role: UserRole) => {
-    let mockUser: User;
-    switch (role) {
-      case 'ADMIN':
-        mockUser = { id: 'mock-1', name: 'Simulação - Admin do Sistema', role: 'ADMIN', title: 'Administrador', isSimulated: true };
-        break;
-      case 'GESTOR':
-        mockUser = { id: 'mock-2', name: 'Simulação - Gestor Escolar', role: 'GESTOR', title: 'Gestor(a)', isSimulated: true };
-        break;
-      case 'SECRETARIO':
-        mockUser = { id: 'mock-3', name: 'Simulação - Secretário Acadêmico', role: 'SECRETARIO', title: 'Secretário(a)', isSimulated: true };
-        break;
-      case 'PROFESSOR':
-      default:
-        mockUser = { id: 'mock-4', name: 'Simulação - Francisco Hudson', role: 'PROFESSOR', title: 'Docente', isSimulated: true };
-        break;
-    }
-    setUser(mockUser);
-  };
 
   // LOGOUT
   const logout = async () => {
@@ -91,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, logout }}>
       {!loading && children}
     </AuthContext.Provider>
   );

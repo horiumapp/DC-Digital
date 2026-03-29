@@ -10,7 +10,7 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const successMessage = location.state?.successMessage;
-  const { login } = useAuth();
+  const { user } = useAuth();
   
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -44,12 +44,6 @@ export default function Login() {
     }
   };
 
-  // Mantido só para facilitar seus testes como dev:
-  const handleSimulatedLogin = (e: React.MouseEvent, role: UserRole) => {
-    e.preventDefault();
-    login(role); // Entra estaticamente num state sem bater no servidor
-    navigate('/turmas');
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 relative overflow-hidden">
@@ -139,45 +133,6 @@ export default function Login() {
             </div>
           </form>
 
-          {/* ÁREA DE TESTE DO DESENVOLVEDOR (MOCKS) */}
-          <div className="pt-8 mt-8 border-t border-slate-100 flex flex-col gap-3">
-            <div className="flex items-center mb-2 justify-center">
-              <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full tracking-widest uppercase">
-                Acesso Rápido para Testes
-              </span>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <button 
-                type="button"
-                onClick={(e) => handleSimulatedLogin(e, 'ADMIN')}
-                className="w-full bg-slate-800 hover:bg-slate-900 text-white text-[11px] font-semibold py-2 px-3 rounded-md shadow-sm opacity-80 hover:opacity-100 transition-all"
-              >
-                Como ADMIN
-              </button>
-              <button 
-                type="button"
-                onClick={(e) => handleSimulatedLogin(e, 'GESTOR')}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-semibold py-2 px-3 rounded-md shadow-sm opacity-80 hover:opacity-100 transition-all"
-              >
-                Como GESTOR
-              </button>
-              <button 
-                type="button"
-                onClick={(e) => handleSimulatedLogin(e, 'SECRETARIO')}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold py-2 px-3 rounded-md shadow-sm opacity-80 hover:opacity-100 transition-all"
-              >
-                Como SECRETÁRIO
-              </button>
-              <button 
-                type="button"
-                onClick={(e) => handleSimulatedLogin(e, 'PROFESSOR')}
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white text-[11px] font-semibold py-2 px-3 rounded-md shadow-sm opacity-80 hover:opacity-100 transition-all"
-              >
-                Como PROFESSOR
-              </button>
-            </div>
-          </div>
 
           <div className="mt-8 pt-6 border-t border-slate-100 text-center">
             <p className="text-sm text-slate-500">

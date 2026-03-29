@@ -34,7 +34,7 @@ export default function Turmas() {
       const { data: professorData } = await supabase
         .from('professores')
         .select('id')
-        .eq('email', user.isSimulated ? 'prof.jns@gmail.com' : user.id) // Fallback para o teste do usuário
+        .eq('email', user.email) 
         .single();
 
       if (professorData) {
