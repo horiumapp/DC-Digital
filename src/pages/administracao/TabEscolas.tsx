@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 import { Search, Plus, Edit2, Trash2 } from 'lucide-react';
 import NovaEscolaModal from '../../components/NovaEscolaModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
@@ -11,49 +12,75 @@ export default function TabEscolas() {
   const [escolaParaEditar, setEscolaParaEditar] = useState<any>(null);
   const [escolaParaExcluir, setEscolaParaExcluir] = useState<any>(null);
 
-  const [escolas, setEscolas] = useState([
-    { id: 1, nome: 'E.M.E.F. Machado de Assis', distrito: 'Centro', inep: '12345678', diretor: 'Maria Silva', status: 'Ativa' },
-    { id: 2, nome: 'E.M.E.I. Monteiro Lobato', distrito: 'Zona Norte', inep: '87654321', diretor: 'João Carlos', status: 'Ativa' }
-  ]);
+  const [escolas, setEscolas] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleSaveEscola = (novaEscola: any) => {
+  useEffect(() => {
+    fetchEscolas();
+  }, []);
+
+  const fetchEscolas = async () => {
+    const { data, error } = await supabase
+      .from('escolas')
+      .select('*')
+      .order('nome');
+    
+    if (!error && data) {
+      setEscolas(data);
+    }
+    setLoading(false);
+  };
+
+  const handleSaveEscola = async (novaEscola: any) => {
     if (escolaParaEditar) {
-      const escolasAtualizadas = escolas.map((e) =>
-        e.id === escolaParaEditar.id
-          ? {
-            ...e,
-            nome: novaEscola.nome,
-            distrito: novaEscola.localizacao,
-            inep: novaEscola.inep,
-            diretor: novaEscola.gestor,
-            status: novaEscola.ativo ? 'Ativa' : 'Inativa'
-          }
-          : e
-      );
-      setEscolas(escolasAtualizadas);
+      const { error } = await supabase
+        .from('escolas')
+        .update({
+          nome: novaEscola.nome,
+          distrito: novaEscola.localizacao,
+          inep: novaEscola.inep,
+          diretor: novaEscola.gestor,
+          status: novaEscola.ativo ? 'Ativa' : 'Inativa'
+        })
+        .eq('id', escolaParaEditar.id);
+
+      if (!error) fetchEscolas();
     } else {
-      const newId = escolas.length > 0 ? Math.max(...escolas.map((e) => e.id)) + 1 : 1;
-      const escolaFormatada = {
-        id: newId,
-        nome: novaEscola.nome,
-        distrito: novaEscola.localizacao,
-        inep: novaEscola.inep,
-        diretor: novaEscola.gestor,
-        status: novaEscola.ativo ? 'Ativa' : 'Inativa'
-      };
-      setEscolas([...escolas, escolaFormatada]);
+      const { error } = await supabase
+        .from('escolas')
+        .insert([{
+          nome: novaEscola.nome,
+          distrito: novaEscola.localizacao,
+          inep: novaEscola.inep,
+          diretor: novaEscola.gestor,
+          status: novaEscola.ativo ? 'Ativa' : 'Inativa'
+        }]);
+
+      if (!error) fetchEscolas();
     }
     setEscolaParaEditar(null);
   };
 
   const handleEditEscola = (escola: any) => {
-    setEscolaParaEditar(escola);
+    // NovaEscolaModal expects 'localizacao' instead of 'distrito', etc.
+    const escolaParaModal = {
+      ...escola,
+      localizacao: escola.distrito,
+      gestor: escola.diretor,
+      ativo: escola.status === 'Ativa'
+    };
+    setEscolaParaEditar(escolaParaModal);
     setIsNovaEscolaModalOpen(true);
   };
 
-  const confirmDeleteEscola = () => {
+  const confirmDeleteEscola = async () => {
     if (escolaParaExcluir) {
-      setEscolas(escolas.filter((e) => e.id !== escolaParaExcluir.id));
+      const { error } = await supabase
+        .from('escolas')
+        .delete()
+        .eq('id', escolaParaExcluir.id);
+
+      if (!error) fetchEscolas();
       setEscolaParaExcluir(null);
     }
   };
