@@ -37,8 +37,10 @@ export default function Frequencia() {
             </Link>
             <div className="flex items-center gap-3">
               <h2 className="text-slate-800 text-base font-medium">{turmaAtiva?.ensino} - {turmaAtiva?.fase}</h2>
-              <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full border border-green-200">Ano: 2026</span>
-              <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full border border-blue-200">Período: 1. BIMESTRE</span>
+              <span className="bg-emerald-50 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-md border border-emerald-100 uppercase tracking-widest">Ano: 2026</span>
+              <span className="bg-blue-50 text-blue-700 text-[10px] font-black px-2 py-0.5 rounded-md border border-blue-100 uppercase tracking-widest">
+                {turmaAtiva?.ensino.includes('Médio') ? 'Ensino Médio' : 'Ensino Fundamental'}
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -71,25 +73,25 @@ export default function Frequencia() {
                   <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs text-slate-500">Escola</p>
-                    <p className="text-sm font-medium text-slate-800">EE THOME MEDEIROS RAPOSO</p>
+                    <p className="text-sm font-medium text-slate-800 truncate">{turmaAtiva?.escola}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs text-slate-500">Turno</p>
-                    <p className="text-sm font-medium text-slate-800">NOTURNO</p>
+                    <p className="text-sm font-medium text-slate-800 uppercase">{turmaAtiva?.turno}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs text-slate-500">Período</p>
                     <p className="text-sm font-medium text-slate-800">1. BIMESTRE</p>
                   </div>
@@ -98,9 +100,9 @@ export default function Frequencia() {
                   <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs text-slate-500">Componente</p>
-                    <p className="text-sm font-medium text-slate-800 uppercase">{turmaAtiva?.componente}</p>
+                    <p className="text-sm font-medium text-slate-800 uppercase truncate">{turmaAtiva?.componente}</p>
                   </div>
                 </div>
               </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Plus, Edit2, Trash2 } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Users, Building2 } from 'lucide-react';
 import NovoAlunoModal from '../../components/NovoAlunoModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import { formatCpfObscured } from '../../utils/formatters';
@@ -135,57 +135,102 @@ export default function TabAlunos() {
         )}
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-white">
-            <tr>
-              <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500">Aluno</th>
-              <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500">Matrícula (Turma/Escola)</th>
-              <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500">Responsável / Contato</th>
-              <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500">Status</th>
-              {user?.role === 'ADMIN' && (
-                <th scope="col" className="px-6 py-4 text-right text-xs font-bold text-slate-500">Ações</th>
-              )}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 bg-white">
-            {alunosFiltrados.map((aluno) => (
-              <tr key={aluno.id} className="hover:bg-slate-50/50 transition">
-                <td className="px-6 py-5 whitespace-nowrap">
-                  <div className="text-sm font-bold text-slate-800">{aluno.nome}</div>
-                  <div className="text-xs text-slate-500 mt-0.5">CPF: {aluno.cpf ? formatCpfObscured(aluno.cpf) : 'Não informado'}</div>
-                </td>
-                <td className="px-6 py-5 whitespace-nowrap">
-                  <div className="text-sm font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded inline-block">
-                    {aluno.turmas?.nome || 'Sem Turma'}
-                  </div>
-                  <div className="text-xs text-slate-500 mt-1">{aluno.escolas?.nome || 'Sem Escola'}</div>
-                </td>
-                <td className="px-6 py-5 whitespace-nowrap">
-                  <div className="text-sm text-slate-700">{aluno.nome_responsavel}</div>
-                  <div className="text-xs text-slate-500 mt-0.5">{aluno.telefone}</div>
-                </td>
-                <td className="px-6 py-5 whitespace-nowrap">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${(aluno.status || 'Ativo') === 'Ativo' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
-                    {aluno.status || 'Ativo'}
-                  </span>
-                </td>
+      <div className="flex-1 overflow-hidden bg-white border-t border-slate-100">
+        <div className="overflow-x-auto h-full scrollbar-thin scrollbar-thumb-slate-200">
+          <table className="min-w-full divide-y divide-slate-100 border-separate border-spacing-0">
+            <thead className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-md">
+              <tr>
+                <th scope="col" className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Cód./Matrícula</th>
+                <th scope="col" className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Aluno</th>
+                <th scope="col" className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Unidade / Turma</th>
+                <th scope="col" className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Responsável</th>
+                <th scope="col" className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Data Cadastro</th>
+                <th scope="col" className="px-6 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Status</th>
                 {user?.role === 'ADMIN' && (
-                  <td className="px-6 py-5 whitespace-nowrap text-right text-sm">
-                    <div className="flex items-center justify-end gap-3">
-                      <button onClick={() => handleEditAluno(aluno)} className="text-slate-400 hover:text-blue-600 transition" title="Editar">
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => setAlunoParaExcluir(aluno)} className="text-slate-400 hover:text-red-600 transition" title="Excluir">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+                  <th scope="col" className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Ações</th>
                 )}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-50 bg-white">
+              {alunosFiltrados.map((aluno) => (
+                <tr key={aluno.id} className="group hover:bg-blue-50/30 transition-colors duration-150">
+                  <td className="px-6 py-3.5 whitespace-nowrap">
+                    <span className="text-xs font-bold text-blue-600 tabular-nums bg-blue-50 px-2 py-1 rounded-md border border-blue-100">
+                      2026{aluno.id.toString().replace(/[^0-9]/g, '').substring(0, 7).padStart(7, '0')}
+                    </span>
+                  </td>
+                  <td className="px-6 py-3.5 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-bold text-xs border border-blue-100/50 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                        {aluno.nome.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-slate-700 truncate">{aluno.nome}</p>
+                        <p className="text-[10px] text-slate-400 font-medium">CPF: {aluno.cpf ? formatCpfObscured(aluno.cpf) : '---'}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-3.5 whitespace-nowrap">
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-1.5">
+                        <Building2 className="w-3 h-3 text-slate-300" />
+                        <span className="text-xs font-bold text-slate-600 truncate max-w-[150px]">{aluno.escolas?.nome || 'N/D'}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <Users className="w-3 h-3 text-blue-300" />
+                        <span className="text-[10px] font-black text-blue-600 uppercase tracking-tight">{aluno.turmas?.nome || 'SEM TURMA'}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-3.5 whitespace-nowrap">
+                    <p className="text-xs font-semibold text-slate-600 truncate max-w-[180px]">{aluno.nome_responsavel || '---'}</p>
+                    <p className="text-[10px] text-slate-400 tabular-nums">{aluno.telefone || '---'}</p>
+                  </td>
+                  <td className="px-6 py-3.5 whitespace-nowrap">
+                    <span className="text-xs font-medium text-slate-500 tabular-nums">
+                      {aluno.created_at ? new Date(aluno.created_at).toLocaleDateString('pt-BR') : '---'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-3.5 whitespace-nowrap text-center">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border ${
+                      (aluno.status || 'Ativo') === 'Ativo' 
+                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+                        : 'bg-slate-50 text-slate-400 border-slate-200'
+                    }`}>
+                      {aluno.status || 'Ativo'}
+                    </span>
+                  </td>
+                  {user?.role === 'ADMIN' && (
+                    <td className="px-6 py-3.5 whitespace-nowrap text-right text-sm">
+                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => handleEditAluno(aluno)} 
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                          title="Editar"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => setAlunoParaExcluir(aluno)} 
+                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                          title="Excluir"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {alunosFiltrados.length === 0 && (
+            <div className="py-20 text-center">
+              <Users className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+              <p className="text-slate-500 font-medium italic">Nenhum aluno encontrado para sua busca.</p>
+            </div>
+          )}
+        </div>
       </div>
 
       <NovoAlunoModal

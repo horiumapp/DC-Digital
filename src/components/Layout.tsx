@@ -55,39 +55,37 @@ export default function Layout() {
             >
               Estatísticas
             </Link>
+            
             <div className="relative group">
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium flex items-center space-x-1 hover:bg-blue-700">
-                <span>Exibir</span>
-                <ChevronDown className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="relative group">
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium flex items-center space-x-1 hover:bg-blue-700 peer">
+              <button className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium flex items-center space-x-1 hover:bg-blue-700 transition-colors">
                 <span>Relatórios</span>
-                <ChevronDown className="w-4 h-4" />
+                <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
               </button>
               {/* Dropdown menu */}
-              <div className="absolute left-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 border border-slate-100 dark:border-slate-700">
-                <div className="py-1">
-                  <Link to="/relatorio-notas" className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-700 hover:text-blue-700 dark:hover:text-blue-400">
+              <div className="absolute left-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 border border-slate-100 dark:border-slate-700 transform origin-top-left scale-95 group-hover:scale-100">
+                <div className="py-2">
+                  <div className="px-4 py-1.5 mb-1">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Documentação</span>
+                  </div>
+                  <Link to="/relatorio-notas" className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-700 hover:text-blue-700 dark:hover:text-blue-400 transition-colors">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
                     Notas das Avaliações
                   </Link>
-                  <Link to="/relatorio-medias" className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-700 hover:text-blue-700 dark:hover:text-blue-400">
+                  <Link to="/relatorio-medias" className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-700 hover:text-blue-700 dark:hover:text-blue-400 transition-colors">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
                     Médias do Componente
                   </Link>
                 </div>
               </div>
             </div>
+
             {user?.role !== 'ADMIN' && (
-              <div className="relative group">
-                <button
-                  onClick={() => setIsScheduleModalOpen(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium flex items-center space-x-1 hover:bg-blue-700"
-                >
-                  <span>Horários</span>
-                  <ChevronDown className="w-4 h-4" />
-                </button>
-              </div>
+              <button
+                onClick={() => setIsScheduleModalOpen(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition"
+              >
+                Horários
+              </button>
             )}
           </nav>
         </div>

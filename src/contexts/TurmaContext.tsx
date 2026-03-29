@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 export interface TurmaMetricas {
   frequencia: number; // Porcentagem (0 a 100)
@@ -83,8 +84,37 @@ const alunosMockados: Aluno[] = [
 export function TurmaProvider({ children }: { children: ReactNode }) {
   const [turmaAtiva, setTurmaAtiva] = useState<Turma | null>(null);
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
-  const [alunos] = useState<Aluno[]>(alunosMockados);
+  const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
+
+  useEffect(() => {
+    if (turmaAtiva) {
+      fetchAlunos(turmaAtiva.id);
+    } else {
+      setAlunos([]);
+    }
+  }, [turmaAtiva]);
+
+  const fetchAlunos = async (turmaId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('alunos')
+        .select('*')
+        .eq('turma_id', turmaId)
+        .order('nome');
+
+      if (data) {
+        setAlunos(data.map(a => ({
+          id: a.id.toString(),
+          nome: a.nome,
+          freq: 'P',
+          part: 'Presencial'
+        })));
+      }
+    } catch (err) {
+      console.error('Erro ao carregar alunos:', err);
+    }
+  };
 
   const selecionarTurma = (turma: Turma) => {
     setTurmaAtiva(turma);

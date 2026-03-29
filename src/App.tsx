@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -20,6 +15,7 @@ import Aparata from './pages/Aparata';
 import AparataDetalhes from './pages/AparataDetalhes';
 import { AuthProvider } from './contexts/AuthContext';
 import { TurmaProvider } from './contexts/TurmaContext';
+import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
   return (
@@ -29,21 +25,29 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
-          <Route element={<Layout />}>
-            <Route path="/turmas" element={<Turmas />} />
-            <Route path="/diario" element={<Diario />} />
-            <Route path="/relatorio-notas" element={<RelatorioNotas />} />
-            <Route path="/relatorio-medias" element={<RelatorioMedias />} />
-            <Route path="/frequencia" element={<Frequencia />} />
-            <Route path="/estatisticas" element={<Estatisticas />} />
-            <Route path="/pendencias-lancamento" element={<PendenciasLancamento />} />
-            <Route path="/pendencias-frequencia" element={<PendenciasFrequencia />} />
-            <Route path="/administracao" element={<Administracao />} />
-            <Route path="/aparata" element={<Aparata />} />
-            <Route path="/aparata-detalhes" element={<AparataDetalhes />} />
-          </Route>
-        </Routes>
-      </Router>
+            
+            {/* Rotas Privadas (Qualquer Usuário Logado) */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<Layout />}>
+                <Route path="/turmas" element={<Turmas />} />
+                <Route path="/diario" element={<Diario />} />
+                <Route path="/relatorio-notas" element={<RelatorioNotas />} />
+                <Route path="/relatorio-medias" element={<RelatorioMedias />} />
+                <Route path="/frequencia" element={<Frequencia />} />
+                <Route path="/estatisticas" element={<Estatisticas />} />
+                <Route path="/pendencias-lancamento" element={<PendenciasLancamento />} />
+                <Route path="/pendencias-frequencia" element={<PendenciasFrequencia />} />
+                <Route path="/aparata" element={<Aparata />} />
+                <Route path="/aparata-detalhes" element={<AparataDetalhes />} />
+                
+                {/* Rotas Restritas (Apenas Administrativo) */}
+                <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'GESTOR', 'SECRETARIO']} />}>
+                  <Route path="/administracao" element={<Administracao />} />
+                </Route>
+              </Route>
+            </Route>
+          </Routes>
+        </Router>
       </TurmaProvider>
     </AuthProvider>
   );

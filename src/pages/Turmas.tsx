@@ -18,11 +18,36 @@ export default function Turmas() {
   
   const [alocacoes, setAlocacoes] = useState<any[]>([]);
   const [alocacaoAtiva, setAlocacaoAtiva] = useState<any>(null);
+  const [turmasBD, setTurmasBD] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   React.useEffect(() => {
     fetchAlocacoes();
   }, [user]);
+
+  React.useEffect(() => {
+    if (alocacaoAtiva) {
+      fetchTurmasBD();
+    }
+  }, [alocacaoAtiva]);
+
+  const fetchTurmasBD = async () => {
+    if (!alocacaoAtiva) return;
+    try {
+      const { data, error } = await supabase
+        .from('turmas')
+        .select('*, escolas(nome)')
+        .eq('escola_id', alocacaoAtiva.escola_id)
+        .eq('turno', alocacaoAtiva.turno)
+        .order('nome');
+
+      if (data) {
+        setTurmasBD(data);
+      }
+    } catch (err) {
+      console.error('Erro ao carregar turmas:', err);
+    }
+  };
 
   const fetchAlocacoes = async () => {
     if (!user) return;
@@ -60,7 +85,28 @@ export default function Turmas() {
     setAlocacaoAtiva(aloc);
   };
 
-  const filteredTurmas: Turma[] = []; // TODO: Buscar turmas reais da tabela 'turmas'
+  const filteredTurmas: Turma[] = turmasBD
+    .filter(t => t.nome.toLowerCase().includes(searchTerm.toLowerCase()))
+    .map(t => ({
+      id: t.id,
+      ensino: 'Ensino Fundamental', // Campo padrão ou vindo do BD se existisse
+      fase: t.nome,
+      componente: 'COMPONENTE CURRICULAR',
+      professor: user?.name || '',
+      escola: t.escolas?.nome || alocacaoAtiva?.escolas?.nome || 'Escola',
+      turno: t.turno,
+      metricas: {
+        frequencia: 85,
+        objetosMinistrados: 12,
+        objetosPlanejados: 15,
+        avaliacoesCadastradas: 2,
+        avaliacoesPrevistas: 4,
+        notasLancadas: 45,
+        notasPrevistas: 60
+      },
+      diasDeAula: [1, 2, 3, 4, 5],
+      tempos: ['1º TEMPO', '2º TEMPO']
+    }));
 
   if (loading) {
     return (
