@@ -3,6 +3,7 @@ import { Search, ChevronDown, ChevronRight, ChevronLeft, Edit2, GraduationCap, B
 import { Link, useNavigate } from 'react-router-dom';
 import { useTurma, Turma } from '../contexts/TurmaContext';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 export default function Turmas() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -15,86 +16,59 @@ export default function Turmas() {
     navigate('/diario');
   };
   
-  const turmas: Turma[] = [
-    { 
-      id: 1, 
-      ensino: 'Ensino Médio - NEM', 
-      fase: '3 SÉRIE / 01', 
-      componente: 'FILOSOFIA',
-      professor: 'FRANCISCO HUDSON GALVAO MAIA',
-      escola: 'EE THOME MEDEIROS RAPOSO',
-      turno: 'INTEGRAL',
-      diasDeAula: [1], // Segunda
-      tempos: ['2º TEMPO'],
-      metricas: { frequencia: 100, objetosMinistrados: 8, objetosPlanejados: 10, avaliacoesCadastradas: 0, avaliacoesPrevistas: 2, notasLancadas: 0, notasPrevistas: 3 }
-    },
-    { 
-      id: 2, 
-      ensino: 'Ensino Médio - NEM', 
-      fase: '3 SÉRIE / 02', 
-      componente: 'FILOSOFIA',
-      professor: 'FRANCISCO HUDSON GALVAO MAIA',
-      escola: 'EE THOME MEDEIROS RAPOSO',
-      turno: 'INTEGRAL',
-      diasDeAula: [1], // Segunda
-      tempos: ['4º TEMPO'],
-      metricas: { frequencia: 90, objetosMinistrados: 7, objetosPlanejados: 10, avaliacoesCadastradas: 1, avaliacoesPrevistas: 2, notasLancadas: 1, notasPrevistas: 3 }
-    },
-    { 
-      id: 3, 
-      ensino: 'Ensino Médio - NEM', 
-      fase: '2 SÉRIE / 02', 
-      componente: 'FILOSOFIA',
-      professor: 'FRANCISCO HUDSON GALVAO MAIA',
-      escola: 'EE THOME MEDEIROS RAPOSO',
-      turno: 'INTEGRAL',
-      diasDeAula: [1], // Segunda
-      tempos: ['3º TEMPO'],
-      metricas: { frequencia: 85, objetosMinistrados: 5, objetosPlanejados: 10, avaliacoesCadastradas: 1, avaliacoesPrevistas: 2, notasLancadas: 0, notasPrevistas: 3 }
-    },
-    { 
-      id: 4, 
-      ensino: 'Ensino Médio - NEM', 
-      fase: '2 SÉRIE / 01', 
-      componente: 'FILOSOFIA',
-      professor: 'FRANCISCO HUDSON GALVAO MAIA',
-      escola: 'EE THOME MEDEIROS RAPOSO',
-      turno: 'INTEGRAL',
-      diasDeAula: [5], // Sexta
-      tempos: ['2º TEMPO'],
-      metricas: { frequencia: 92, objetosMinistrados: 6, objetosPlanejados: 10, avaliacoesCadastradas: 1, avaliacoesPrevistas: 2, notasLancadas: 1, notasPrevistas: 3 }
-    },
-    { 
-      id: 5, 
-      ensino: 'Ensino Médio - NEM', 
-      fase: '1 SÉRIE / 01', 
-      componente: 'FILOSOFIA',
-      professor: 'FRANCISCO HUDSON GALVAO MAIA',
-      escola: 'EE THOME MEDEIROS RAPOSO',
-      turno: 'INTEGRAL',
-      diasDeAula: [5], // Sexta
-      tempos: ['3º TEMPO'],
-      metricas: { frequencia: 95, objetosMinistrados: 9, objetosPlanejados: 10, avaliacoesCadastradas: 1, avaliacoesPrevistas: 1, notasLancadas: 1, notasPrevistas: 1 }
-    },
-    { 
-      id: 6, 
-      ensino: 'Ensino Médio - NEM', 
-      fase: '1 SÉRIE / 02', 
-      componente: 'FILOSOFIA',
-      professor: 'FRANCISCO HUDSON GALVAO MAIA',
-      escola: 'EE THOME MEDEIROS RAPOSO',
-      turno: 'INTEGRAL',
-      diasDeAula: [5], // Sexta
-      tempos: ['4º TEMPO'],
-      metricas: { frequencia: 88, objetosMinistrados: 4, objetosPlanejados: 10, avaliacoesCadastradas: 2, avaliacoesPrevistas: 2, notasLancadas: 2, notasPrevistas: 4 }
-    },
-  ];
+  const [alocacoes, setAlocacoes] = useState<any[]>([]);
+  const [alocacaoAtiva, setAlocacaoAtiva] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const filteredTurmas = turmas.filter(turma => 
-    turma.ensino.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    turma.fase.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    turma.componente.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  React.useEffect(() => {
+    fetchAlocacoes();
+  }, [user]);
+
+  const fetchAlocacoes = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      // 1. Encontrar o registro do professor vinculado ao usuário logado
+      // Usamos o e-mail como chave de busca pois o ID do Auth e o da tabela professores podem divergir
+      const { data: professorData } = await supabase
+        .from('professores')
+        .select('id')
+        .eq('email', user.isSimulated ? 'prof.jns@gmail.com' : user.id) // Fallback para o teste do usuário
+        .single();
+
+      if (professorData) {
+        // 2. Buscar as alocações (escolas e turnos) desse professor
+        const { data: alocData } = await supabase
+          .from('professor_alocacoes')
+          .select('id, escola_id, turno, escolas(nome)')
+          .eq('professor_id', professorData.id);
+
+        if (alocData && alocData.length > 0) {
+          setAlocacoes(alocData);
+          setAlocacaoAtiva(alocData[0]); // Seleciona a primeira por padrão
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao carregar lotações:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const shiftToActiveAlocacao = (aloc: any) => {
+    setAlocacaoAtiva(aloc);
+  };
+
+  const filteredTurmas: Turma[] = []; // TODO: Buscar turmas reais da tabela 'turmas'
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-slate-500 animate-pulse font-medium">Carregando sua lotação...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 relative">
@@ -104,10 +78,23 @@ export default function Turmas() {
             <h1 className="text-xl font-medium text-slate-800 dark:text-slate-100">Turmas/Componentes</h1>
             <span className="bg-emerald-50 text-emerald-600 text-sm font-bold px-3 py-1 rounded border border-emerald-100 uppercase tracking-tight">Ano: 2026</span>
           </div>
-          <button className="flex items-center gap-2 px-4 py-1.5 bg-blue-600 text-white rounded-md text-sm font-medium shadow-sm hover:bg-blue-700">
-            <Edit2 className="w-4 h-4" />
-            Alterar lotação
-          </button>
+          {alocacoes.length > 1 && (
+            <div className="flex gap-2">
+              {alocacoes.map(a => (
+                <button
+                  key={a.id}
+                  onClick={() => setAlocacaoAtiva(a)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                    alocacaoAtiva?.id === a.id 
+                    ? 'bg-blue-600 text-white shadow-md' 
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  {a.turno}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <main className="px-6 pb-12">
@@ -130,7 +117,9 @@ export default function Turmas() {
                 </div>
                 <div>
                   <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase leading-tight tracking-wider">Escola</p>
-                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">EE THOME MEDEIROS RAPOSO</p>
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    {alocacaoAtiva?.escolas?.nome || 'SELECIONE UMA ESCOLA'}
+                  </p>
                 </div>
               </div>
               
@@ -140,7 +129,9 @@ export default function Turmas() {
                 </div>
                 <div>
                   <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase leading-tight tracking-wider">Turno</p>
-                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">INTEGRAL</p>
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    {alocacaoAtiva?.turno?.toUpperCase() || 'N/A'}
+                  </p>
                 </div>
               </div>
             </div>
