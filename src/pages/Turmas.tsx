@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { Search, ChevronDown, ChevronRight, ChevronLeft, Edit2, GraduationCap, Building2, Clock } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTurma, Turma } from '../contexts/TurmaContext';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Turmas() {
   const [searchTerm, setSearchTerm] = useState('');
   const { selecionarTurma } = useTurma();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const handleSelectTurma = (turma: Turma) => {
@@ -118,7 +120,7 @@ export default function Turmas() {
                 </div>
                 <div>
                   <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase leading-tight tracking-wider">Professor</p>
-                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">FRANCISCO HUDSON GALVAO MAIA</p>
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{user?.name?.toUpperCase() || 'NÃO IDENTIFICADO'}</p>
                 </div>
               </div>
               

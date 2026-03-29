@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Calendar as CalendarIcon } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
+import { useAuth } from '../contexts/AuthContext';
 
 import FrequenciaTab from '../components/frequencia/FrequenciaTab';
 import ObjetoConhecimentoTab from '../components/frequencia/ObjetoConhecimentoTab';
@@ -10,6 +11,7 @@ import AvaliacoesTab from '../components/frequencia/AvaliacoesTab';
 
 export default function Frequencia() {
   const { turmaAtiva } = useTurma();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const selectedDateParam = searchParams.get('date') || '06/02/2026';
 
@@ -62,7 +64,7 @@ export default function Frequencia() {
                   </div>
                   <div>
                     <p className="text-xs text-slate-500">Professor</p>
-                    <p className="text-sm font-medium text-slate-800">FRANCISCO HUDSON GALVAO MAIA</p>
+                    <p className="text-sm font-medium text-slate-800">{user?.name?.toUpperCase() || 'NÃO IDENTIFICADO'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
