@@ -41,7 +41,8 @@ export default function FrequenciaTab({
   const toggleFreq = (id: string) => {
     setStudentData(prev => prev.map(s => {
       if (s.id === id) {
-        const nextFreq = s.freq === 'P' ? 'F' : s.freq === 'F' ? 'FJ' : 'P';
+        // Ciclo: P -> F -> FJ -> '' (Cinza) -> P
+        const nextFreq = s.freq === 'P' ? 'F' : s.freq === 'F' ? 'FJ' : s.freq === 'FJ' ? '' : 'P';
         return { ...s, freq: nextFreq };
       }
       return s;
@@ -166,8 +167,11 @@ export default function FrequenciaTab({
               <tbody className="divide-y divide-slate-100">
                 {studentData.map((aluno, index) => (
                   <tr key={aluno.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}>
-                    <td className="px-4 py-3 text-slate-500">{formatMatricula(aluno.id)}</td>
-                    <td className="px-4 py-3 text-slate-700">{aluno.nome}</td>
+                    <td className="px-4 py-3 text-slate-500 font-bold tabular-nums">{String(index + 1).padStart(2, '0')}</td>
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-medium text-slate-700">{aluno.nome}</p>
+                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mt-1">Matrícula: {formatMatricula(aluno.id)}</p>
+                    </td>
                     <td className="px-4 py-3 text-center">
                       <button
                         onClick={() => toggleFreq(aluno.id)}
@@ -180,14 +184,16 @@ export default function FrequenciaTab({
                       </button>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center justify-center rounded-md overflow-hidden border border-blue-200 w-fit mx-auto">
+                      <div className={`flex items-center justify-center rounded-md overflow-hidden border w-fit mx-auto transition-all ${!aluno.freq ? 'opacity-30 grayscale pointer-events-none border-slate-200' : 'border-blue-200'}`}>
                         <button
+                          disabled={!aluno.freq}
                           onClick={() => togglePart(aluno.id, 'Presencial')}
                           className={`px-3 py-1 text-xs font-medium transition-colors ${aluno.part === 'Presencial' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 hover:bg-blue-50'}`}
                         >
                           Presencial
                         </button>
                         <button
+                          disabled={!aluno.freq}
                           onClick={() => togglePart(aluno.id, 'Remoto')}
                           className={`px-3 py-1 text-xs font-medium transition-colors border-l border-blue-200 ${aluno.part === 'Remoto' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 hover:bg-blue-50'}`}
                         >
