@@ -1,49 +1,80 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, GraduationCap, Building2, Clock, BookOpen, Printer, Search } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
-
-// Alunos mockados para demonstração
-const ALUNOS_MOCK = [
-  { n: 1,  nome: 'Adellson Fernandes Lopes',          matricula: '2026/0588874' },
-  { n: 2,  nome: 'Adriano Domingos Da Silva',          matricula: '2026/0588865' },
-  { n: 3,  nome: 'Adrielly Ferreira Da Costa',         matricula: '2026/0588855' },
-  { n: 4,  nome: 'Amanda Lima Da Silva',               matricula: '2026/0588860' },
-  { n: 5,  nome: 'Ana Beatriz Souza Ferreira',         matricula: '2026/0588863' },
-  { n: 6,  nome: 'Ana Paula De Oliveira',              matricula: '2026/0588868' },
-  { n: 7,  nome: 'André Luiz Costa Ramos',             matricula: '2026/0588873' },
-  { n: 8,  nome: 'Beatriz Cristina Melo',              matricula: '2026/0588859' },
-  { n: 9,  nome: 'Carlos Eduardo Santos Lima',         matricula: '2026/0588875' },
-  { n: 10, nome: 'Eloa Cristiny Da Silva Cunha',       matricula: '2026/0588864' },
-  { n: 11, nome: 'Felipe Oliveira Da Silva',           matricula: '2026/0588851' },
-  { n: 12, nome: 'Gabriel Maia Ramos',                 matricula: '2026/0588853' },
-  { n: 13, nome: 'Heitor Do Carmo De Oliveira',        matricula: '2026/0588861' },
-  { n: 14, nome: 'Jaisson Castro Damascena',           matricula: '2026/0588856' },
-  { n: 15, nome: 'Joseff Cordovil De Oliveira',        matricula: '2026/0588867' },
-  { n: 16, nome: 'Laysila Nogueira Barros',            matricula: '2026/0588857' },
-  { n: 17, nome: 'Luciana Marcely Dos Santos Nascimento', matricula: '2026/0588852' },
-  { n: 18, nome: 'Maira Rodrigues De Araujo',          matricula: '2026/0588866' },
-  { n: 19, nome: 'Mariana Da Silva Do Nascimento',     matricula: '2026/0588871' },
-  { n: 20, nome: 'Mayra Andrade De Souza',             matricula: '2026/0656956' },
-  { n: 21, nome: 'Milena Maria Dos Santos Silva',      matricula: '2026/0588862' },
-  { n: 22, nome: 'Nayra Da Silva Ferreira',            matricula: '2026/0588869' },
-  { n: 23, nome: 'Raylla Queiroz Dos Santos',          matricula: '2026/0588850' },
-  { n: 24, nome: 'Rihanna Vitoria Araujo Ferreira',    matricula: '2026/0588872' },
-  { n: 26, nome: 'Stenio Silva Castro',                matricula: '2026/0588854' },
-  { n: 27, nome: 'Tayna Fernandes Mariano Apurina',    matricula: '2026/0588870' },
-  { n: 28, nome: 'Urias De Araujo Falcao',             matricula: '2026/0588858' },
-  { n: 29, nome: 'Zilda Maria Costa De Oliveira',      matricula: '2026/0599576' },
-];
+import { supabase } from '../lib/supabase';
 
 export default function AparataDetalhes() {
-  const { turmaAtiva } = useTurma();
+  const { turmaAtiva, alunos, avaliacoes, lancamentos } = useTurma();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [faltasMap, setFaltasMap] = useState<Record<string, number>>({});
+
+  // Buscar histórico de faltas para todos os alunos da turma
+  useEffect(() => {
+    async function fetchFaltas() {
+      if (!turmaAtiva) return;
+      try {
+        const { data, error } = await supabase
+          .from('frequencias')
+          .select('aluno_id, status')
+          .eq('turma_id', turmaAtiva.id.toString())
+          .in('status', ['F', 'FJ']);
+
+        if (error) throw error;
+        
+        const map: Record<string, number> = {};
+        data?.forEach(f => {
+          map[f.aluno_id] = (map[f.aluno_id] || 0) + 1;
+        });
+        setFaltasMap(map);
+      } catch (err) {
+        console.error('Erro ao buscar faltas totais:', err);
+      }
+    }
+    fetchFaltas();
+  }, [turmaAtiva]);
+
+  // Cálculo de Aulas Dadas (Lançamentos únicos de frequência)
+  const aulasDadas = useMemo(() => {
+    if (!lancamentos) return 0;
+    const uniq = new Set(lancamentos.filter(l => l.tipo === 'frequencia').map(l => `${l.data}|${l.tempo}`));
+    return uniq.size;
+  }, [lancamentos]);
+
+  // Regra de AVs Planejadas
+  const aulasSemanais = (turmaAtiva?.diasDeAula?.length || 0) * (turmaAtiva?.tempos?.length || 0);
+  const avsPlanejadas = aulasSemanais <= 3 ? 2 : 3;
 
   const hoje = new Date();
   const dataHoje = `${hoje.getDate().toString().padStart(2, '0')}/${(hoje.getMonth() + 1).toString().padStart(2, '0')}/${hoje.getFullYear()}`;
 
-  const alunosFiltrados = ALUNOS_MOCK.filter(a =>
+  const alunosDetalhados = useMemo(() => {
+    return (alunos || []).map((aluno, index) => {
+      // Cálculo da Média (Soma das notas dividida pelo total de avaliações existentes)
+      const notasValues = Object.values(aluno.notas || {}) as string[];
+      const soma = notasValues.reduce((acc, val) => {
+        const num = parseFloat(val.replace(',', '.'));
+        return isNaN(num) ? acc : acc + num;
+      }, 0);
+      
+      const media = (avaliacoes.length > 0) 
+        ? (soma / avaliacoes.length).toFixed(2).replace('.', ',') 
+        : '0,00';
+      
+      const faltas = faltasMap[aluno.id] || 0;
+
+      return {
+        ...aluno,
+        n: index + 1,
+        matricula: aluno.id.startsWith('temp_') ? '---' : `2026/${aluno.id.slice(-7)}`, // Mock matricula based on ID
+        media,
+        faltas
+      };
+    });
+  }, [alunos, avaliacoes, faltasMap]);
+
+  const alunosFiltrados = alunosDetalhados.filter(a =>
     search === '' ||
     a.nome.toLowerCase().includes(search.toLowerCase()) ||
     a.matricula.includes(search)
@@ -191,11 +222,11 @@ export default function AparataDetalhes() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Aulas dadas</label>
-                  <div className="border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-slate-50">0</div>
+                  <div className="border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-slate-50">{aulasDadas}</div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Qtde de AVs Planej</label>
-                  <div className="border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-slate-50">0</div>
+                  <div className="border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-slate-50">{avsPlanejadas}</div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Usuário</label>
@@ -230,15 +261,19 @@ export default function AparataDetalhes() {
                   </thead>
                   <tbody>
                     {alunosFiltrados.map((aluno, i) => (
-                      <tr key={aluno.matricula} className={`border-b border-slate-100 hover:bg-slate-50 transition ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}>
+                      <tr key={aluno.id} className={`border-b border-slate-100 hover:bg-slate-50 transition ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}>
                         <td className="px-4 py-2.5 text-slate-500 text-sm">{aluno.n}</td>
                         <td className="px-4 py-2.5 text-blue-600 font-medium text-sm hover:underline cursor-pointer">{aluno.nome}</td>
-                        <td className="px-4 py-2.5 text-slate-700 text-sm">{aluno.matricula}</td>
+                        <td className="px-4 py-2.5 text-slate-700 text-sm font-mono uppercase">{aluno.matricula}</td>
                         <td className="px-4 py-2.5">
-                          <span className="inline-block bg-red-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[42px] text-center">0,00</span>
+                          <span className={`inline-block text-white text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[42px] text-center ${parseFloat(aluno.media.replace(',', '.')) >= 6 ? 'bg-emerald-500' : 'bg-red-500'}`}>
+                            {aluno.media}
+                          </span>
                         </td>
                         <td className="px-4 py-2.5">
-                          <span className="inline-block bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[32px] text-center">0</span>
+                          <span className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[32px] text-center ${aluno.faltas > 0 ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-blue-100 text-blue-700'}`}>
+                            {aluno.faltas}
+                          </span>
                         </td>
                       </tr>
                     ))}
