@@ -6,6 +6,36 @@ import { useCaptcha } from '../../hooks/useCaptcha';
 import { getBimestrePorData } from '../../utils/dateUtils';
 import { formatMatricula } from '../../utils/formatters';
 
+// Dados de referência para Objetos de Conhecimento
+const PERIODOS_LETIVOS = [
+  { id: '1bim', label: '1. BIMESTRE 05/02/2026 - 23/04/2026' },
+  { id: '2bim', label: '2. BIMESTRE 28/04/2026 - 07/07/2026' },
+  { id: '3bim', label: '3. BIMESTRE 21/07/2026 - 24/09/2026' },
+  { id: '4bim', label: '4. BIMESTRE 28/09/2026 - 18/12/2026' }
+];
+
+const UNIDADES_DIDATICAS: Record<string, string[]> = {
+  '1bim': ['GEOMETRIA PLANA', 'ÁLGEBRA LINEAR', 'ARITMÉTICA BÁSICA'],
+  '2bim': ['GEOMETRIA ESPACIAL', 'EQUAÇÕES DO 2º GRAU', 'PROBABILIDADE'],
+  '3bim': ['TRIGONOMETRIA', 'ESTATÍSTICA', 'FUNÇÕES'],
+  '4bim': ['MATEMÁTICA FINANCEIRA', 'COMBINATÓRIA', 'PROGRESSÕES']
+};
+
+const OBJETOS_CONHECIMENTO: Record<string, string[]> = {
+  'GEOMETRIA PLANA': ['POLÍGONOS REGULARES: DEFINIÇÃO E PROPRIEDADES (NÚMERO DE LADOS, ÂNGULOS INTERNOS E EXTERNOS); ELEMENTOS', 'ÁREAS DE FIGURAS PLANAS', 'PERÍMETRO E CIRCUNFERÊNCIA'],
+  'ÁLGEBRA LINEAR': ['SISTEMAS LINEARES', 'MATRIZES E DETERMINANTES', 'VETORES NO PLANO'],
+  'ARITMÉTICA BÁSICA': ['OPERAÇÕES FUNDAMENTAIS', 'DIVISIBILIDADE E NÚMEROS PRIMOS', 'MMC E MDC'],
+  'GEOMETRIA ESPACIAL': ['PRISMAS E PIRÂMIDES', 'CILINDROS E CONES', 'ESFERAS'],
+  'EQUAÇÕES DO 2º GRAU': ['FÓRMULA DE BHASKARA', 'SOMA E PRODUTO DAS RAÍZES', 'PROBLEMAS ENVOLVENDO EQUAÇÕES'],
+  'PROBABILIDADE': ['ESPAÇO AMOSTRAL', 'EVENTOS E PROBABILIDADES', 'PROBABILIDADE CONDICIONAL'],
+  'TRIGONOMETRIA': ['RAZÕES TRIGONOMÉTRICAS', 'CÍRCULO TRIGONOMÉTRICO', 'FUNÇÕES TRIGONOMÉTRICAS'],
+  'ESTATÍSTICA': ['MEDIDAS DE TENDÊNCIA CENTRAL', 'MEDIDAS DE DISPERSÃO', 'GRÁFICOS ESTATÍSTICOS'],
+  'FUNÇÕES': ['FUNÇÃO AFIM', 'FUNÇÃO QUADRÁTICA', 'FUNÇÃO EXPONENCIAL'],
+  'MATEMÁTICA FINANCEIRA': ['JUROS SIMPLES', 'JUROS COMPOSTOS', 'DESCONTOS'],
+  'COMBINATÓRIA': ['PRINCÍPIO FUNDAMENTAL DA CONTAGEM', 'PERMUTAÇÕES', 'COMBINAÇÕES'],
+  'PROGRESSÕES': ['PROGRESSÃO ARITMÉTICA', 'PROGRESSÃO GEOMÉTRICA', 'SÉRIES']
+};
+
 export default function AvaliacoesTab() {
   const { turmaAtiva, alunos, avaliacoes, loading, salvarAvaliacao, removerAvaliacao, salvarNotas } = useTurma();
 
@@ -15,6 +45,9 @@ export default function AvaliacoesTab() {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [instrumentoAvaliacao, setInstrumentoAvaliacao] = useState('AVALIACAO ESCRITA');
   const [objetosAvaliacao, setObjetosAvaliacao] = useState<any[]>([]);
+  const [periodoLetivo, setPeriodoLetivo] = useState('');
+  const [unidadeDidatica, setUnidadeDidatica] = useState('');
+  const [objetoConhecimento, setObjetoConhecimento] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [avaliacaoToDelete, setAvaliacaoToDelete] = useState<any>(null);
   const [localNotas, setLocalNotas] = useState<Record<string, string>>({}); // alunoId -> valor string
@@ -92,8 +125,43 @@ export default function AvaliacoesTab() {
     setObjetosAvaliacao([]);
     setSelectedAvaliacao(null);
     setCaptchaInput('');
+    setPeriodoLetivo('');
+    setUnidadeDidatica('');
+    setObjetoConhecimento('');
     generateNewCaptcha();
   };
+
+  const handleAdicionarObjeto = () => {
+    if (!unidadeDidatica || !objetoConhecimento) {
+      alert('Selecione a Unidade Didática e o Objeto de Conhecimento!');
+      return;
+    }
+    const novoObjeto = { unidade: unidadeDidatica, objeto: objetoConhecimento };
+    const jáExiste = objetosAvaliacao.some(o => o.unidade === novoObjeto.unidade && o.objeto === novoObjeto.objeto);
+    if (jáExiste) {
+      alert('Este objeto já foi adicionado!');
+      return;
+    }
+    setObjetosAvaliacao(prev => [...prev, novoObjeto]);
+  };
+
+  const handleRemoverObjeto = (index: number) => {
+    setObjetosAvaliacao(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Determinar período letivo pela data
+  useEffect(() => {
+    if (selectedDate) {
+      const bim = getBimestrePorData(selectedDate);
+      const map: Record<string, string> = {
+        '1º Bimestre': '1bim', '2º Bimestre': '2bim',
+        '3º Bimestre': '3bim', '4º Bimestre': '4bim'
+      };
+      setPeriodoLetivo(map[bim] || '1bim');
+      setUnidadeDidatica('');
+      setObjetoConhecimento('');
+    }
+  }, [selectedDate]);
 
   const handleConfirmGrades = async () => {
     if (!validateCaptcha()) {
@@ -194,6 +262,72 @@ export default function AvaliacoesTab() {
             </table>
           </div>
           )}
+        </div>
+      )}
+      {avaliacaoViewMode === 'details' && selectedAvaliacao && (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
+            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-8">
+              <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                <Eye className="w-5 h-5" />
+              </div>
+              Identificação da Avaliação
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Código da Avaliação</label>
+                <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700">AV-{String(selectedAvaliacao.id).padStart(6, '0')}</div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Data da avaliação</label>
+                <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700">{selectedAvaliacao.data}</div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Valor da avaliação</label>
+                <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700">10,00</div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Instrumento pedagógico</label>
+                <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700">{selectedAvaliacao.instrumento}</div>
+              </div>
+            </div>
+
+            <h4 className="text-sm font-bold text-slate-700 mb-4">Objetos de Conhecimento da Avaliação</h4>
+            <div className="border border-slate-200 rounded-2xl overflow-hidden">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase">
+                  <tr>
+                    <th className="px-6 py-3 font-black text-[10px] tracking-widest">Unidade Didática</th>
+                    <th className="px-6 py-3 font-black text-[10px] tracking-widest">Objeto de Conhecimento da avaliação</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {(!selectedAvaliacao.objetos || selectedAvaliacao.objetos.length === 0) ? (
+                    <tr>
+                      <td colSpan={2} className="px-6 py-5 text-center text-slate-400 text-sm font-medium">
+                        Nenhum objeto de conhecimento vinculado
+                      </td>
+                    </tr>
+                  ) : (
+                    selectedAvaliacao.objetos.map((obj: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 text-slate-700 font-bold text-xs">{obj.unidade || '-'}</td>
+                        <td className="px-6 py-4 text-slate-600 text-xs">{obj.objeto || '-'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <button
+            onClick={() => { setAvaliacaoViewMode('list'); setSelectedAvaliacao(null); }}
+            className="bg-blue-600 text-white px-8 py-3 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-600/20"
+          >
+            Voltar
+          </button>
         </div>
       )}
 
@@ -304,6 +438,111 @@ export default function AvaliacoesTab() {
                 <div className="w-full bg-slate-100 rounded-2xl px-5 py-4 text-sm font-black text-slate-400 select-none">10,00</div>
               </div>
             </div>
+          </div>
+
+          {/* Objetos de Conhecimento da Avaliação */}
+          <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
+            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                <List className="w-5 h-5" />
+              </div>
+              Objetos de Conhecimento da Avaliação
+            </h3>
+
+            {!selectedDate ? (
+              <div className="bg-slate-50 rounded-2xl px-6 py-4 text-sm font-medium text-slate-400">
+                Selecione uma data para mostrar os Objetos de conhecimento
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Dropdowns */}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Período letivo</label>
+                      <select
+                        value={periodoLetivo}
+                        onChange={(e) => { setPeriodoLetivo(e.target.value); setUnidadeDidatica(''); setObjetoConhecimento(''); }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-600/10 cursor-pointer"
+                      >
+                        <option value="">Selecione...</option>
+                        {PERIODOS_LETIVOS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Unidade didática</label>
+                      <select
+                        value={unidadeDidatica}
+                        onChange={(e) => { setUnidadeDidatica(e.target.value); setObjetoConhecimento(''); }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-600/10 cursor-pointer"
+                        disabled={!periodoLetivo}
+                      >
+                        <option value="">Selecione...</option>
+                        {periodoLetivo && (UNIDADES_DIDATICAS[periodoLetivo] || []).map(u => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex gap-4 items-end">
+                    <div className="flex-1 space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Objeto de Conhecimento</label>
+                      <select
+                        value={objetoConhecimento}
+                        onChange={(e) => setObjetoConhecimento(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-600/10 cursor-pointer"
+                        disabled={!unidadeDidatica}
+                      >
+                        <option value="">Selecione...</option>
+                        {unidadeDidatica && (OBJETOS_CONHECIMENTO[unidadeDidatica] || []).map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <button
+                      onClick={handleAdicionarObjeto}
+                      disabled={!objetoConhecimento}
+                      className="bg-blue-600 text-white px-6 py-3.5 rounded-2xl text-sm font-bold hover:bg-blue-700 transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-blue-600/20 whitespace-nowrap"
+                    >
+                      <Plus className="w-4 h-4" /> Adicionar
+                    </button>
+                  </div>
+                </div>
+
+                {/* Tabela de objetos adicionados */}
+                <div className="border border-slate-200 rounded-2xl overflow-hidden">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase">
+                      <tr>
+                        <th className="px-6 py-3 font-black text-[10px] tracking-widest">Unidade Didática</th>
+                        <th className="px-6 py-3 font-black text-[10px] tracking-widest">Objeto de Conhecimento da avaliação</th>
+                        <th className="px-6 py-3 font-black text-[10px] tracking-widest text-center w-28">Ação</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {objetosAvaliacao.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="px-6 py-5 text-center text-slate-400 text-sm font-medium">
+                            Clique em Adicionar para inserir os Objetos de conhecimento na tabela
+                          </td>
+                        </tr>
+                      ) : (
+                        objetosAvaliacao.map((obj, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-6 py-4 text-slate-700 font-bold text-xs">{obj.unidade}</td>
+                            <td className="px-6 py-4 text-slate-600 text-xs">{obj.objeto}</td>
+                            <td className="px-6 py-4 text-center">
+                              <button
+                                onClick={() => handleRemoverObjeto(idx)}
+                                className="bg-red-600 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase hover:bg-red-700 transition flex items-center gap-1.5 mx-auto shadow-md shadow-red-600/20"
+                              >
+                                Excluir <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
