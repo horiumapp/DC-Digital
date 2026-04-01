@@ -557,7 +557,7 @@ export default function AvaliacoesTab() {
 
       {avaliacaoViewMode === 'grades' && selectedAvaliacao && (
         <div className="space-y-6">
-          <div className="bg-slate-900 p-8 rounded-[32px] text-white shadow-2xl relative overflow-hidden">
+          <div className="bg-blue-600 p-8 rounded-[32px] text-white shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 blur-[100px] rounded-full -mr-20 -mt-20"></div>
             <div className="relative z-10">
               <div className="flex items-center gap-4 mb-4">
