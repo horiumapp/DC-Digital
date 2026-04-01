@@ -149,7 +149,6 @@ export default function CalendarWidget({
               >
                 <div className="flex flex-col justify-between">
                   <span className="text-base font-medium text-slate-700">{day}</span>
-                  {status === 'pending' && <span className="text-[9px] font-bold text-amber-700 bg-amber-200/50 px-1.5 py-0.5 rounded uppercase mt-auto">Pendente</span>}
                 </div>
                 <div className="flex flex-col gap-1 items-end">
                   <span className={`w-5 h-5 rounded-full ${fColor} text-white flex items-center justify-center text-[10px] font-black shadow-sm`}>F</span>
