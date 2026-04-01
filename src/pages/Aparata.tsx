@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
 
 const PERIODOS = [
-  { value: '', label: '' },
   { value: '1. BIMESTRE', label: '1. BIMESTRE' },
   { value: '2. BIMESTRE', label: '2. BIMESTRE' },
   { value: '3. BIMESTRE', label: '3. BIMESTRE' },
@@ -14,7 +13,7 @@ const PERIODOS = [
 
 export default function Aparata() {
   const { turmaAtiva } = useTurma();
-  const [periodoSelecionado, setPeriodoSelecionado] = useState('');
+  const [periodoSelecionado, setPeriodoSelecionado] = useState('1. BIMESTRE');
   const [showDados, setShowDados] = useState(false);
   const [searchMovimentacao, setSearchMovimentacao] = useState('');
 

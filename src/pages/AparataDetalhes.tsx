@@ -3,6 +3,7 @@ import { ArrowLeft, GraduationCap, Building2, Clock, BookOpen, Printer, Search }
 import { Link, useNavigate } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
 import { supabase } from '../lib/supabase';
+import { formatMatricula } from '../utils/formatters';
 
 export default function AparataDetalhes() {
   const { turmaAtiva, alunos, avaliacoes, lancamentos } = useTurma();
@@ -67,7 +68,7 @@ export default function AparataDetalhes() {
       return {
         ...aluno,
         n: index + 1,
-        matricula: aluno.matricula, 
+        matricula: formatMatricula(aluno.id), 
         media,
         faltas
       };
