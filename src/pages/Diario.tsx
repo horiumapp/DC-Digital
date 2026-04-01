@@ -134,11 +134,10 @@ export default function Diario() {
 
   const { pFreq, pObj } = calcProgressStats();
 
-  // Cor dinâmica por porcentagem
+  // Cor dinâmica por porcentagem (Seguindo referência visual: Verde para alto, Vermelho para baixo)
   const barColor = (pct: number) => {
-    if (pct >= 80) return 'bg-emerald-500';
-    if (pct >= 50) return 'bg-amber-400';
-    return 'bg-red-500';
+    if (pct >= 80) return 'bg-emerald-600';
+    return 'bg-red-600';
   };
 
   // ─── Cálculo de Avaliações e Notas ───────────────────────────────────────
@@ -292,60 +291,68 @@ export default function Diario() {
         {/* Progress Section */}
         <div className="grid grid-cols-12 gap-6">
           <div className="col-span-4 space-y-6">
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-              <h4 className="text-base font-bold text-slate-700 mb-6">Lançamentos da Turma</h4>
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm transition-all">
+              <h4 className="text-base font-bold text-slate-700 mb-6 uppercase tracking-tight">Lançamentos da Turma</h4>
+              
               <div className="space-y-4">
+                {/* Frequência */}
                 <div>
-                  <div className="flex justify-between text-xs font-bold text-slate-500 mb-1">
+                  <div className="flex justify-between text-[12px] font-bold text-slate-500 mb-1.5 uppercase">
                     <span>Frequências</span> <span>{pFreq}%</span>
                   </div>
                   <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                     <div className={`h-full ${barColor(pFreq)} transition-all duration-1000`} style={{ width: `${pFreq}%` }}></div>
                   </div>
                 </div>
+
+                {/* Objetos */}
                 <div>
-                  <div className="flex justify-between text-xs font-bold text-slate-500 mb-1">
+                  <div className="flex justify-between text-[12px] font-bold text-slate-500 mb-1.5 uppercase">
                     <span>Objetos de Conhecimento Ministrados</span> <span>{pObj}%</span>
                   </div>
                   <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                     <div className={`h-full ${barColor(pObj)} transition-all duration-1000`} style={{ width: `${pObj}%` }}></div>
                   </div>
                 </div>
+
+                {/* Avaliações */}
                 <div>
-                  <div className="flex justify-between text-xs font-bold text-slate-500 mb-1">
+                  <div className="flex justify-between text-[12px] font-bold text-slate-500 mb-1.5 uppercase">
                     <span>Avaliações</span> <span>{pAvaliacoes}%</span>
                   </div>
                   <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 transition-all duration-1000" style={{ width: `${pAvaliacoes}%` }}></div>
+                    <div className={`h-full ${barColor(pAvaliacoes)} transition-all duration-1000`} style={{ width: `${pAvaliacoes}%` }}></div>
                   </div>
                 </div>
+
+                {/* Notas */}
                 <div>
-                  <div className="flex justify-between text-xs font-bold text-slate-500 mb-1">
+                  <div className="flex justify-between text-[12px] font-bold text-slate-500 mb-1.5 uppercase">
                     <span>Notas</span> <span>{pNotas}%</span>
                   </div>
                   <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-indigo-500 transition-all duration-1000" style={{ width: `${pNotas}%` }}></div>
+                    <div className={`h-full ${barColor(pNotas)} transition-all duration-1000`} style={{ width: `${pNotas}%` }}></div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-              <div className="p-4 flex items-center justify-between border-b border-slate-100">
-                <h4 className="text-base font-bold text-slate-700">Aparata</h4>
-                <Link to="/aparata" className="bg-blue-600 hover:bg-blue-700 transition text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1">
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+              <div className="p-4 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
+                <h4 className="text-sm font-bold text-slate-700 uppercase tracking-tight">Aparata</h4>
+                <Link to="/aparata" className="bg-blue-600 hover:bg-blue-700 transition text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 shadow-sm">
                   <Folder className="w-4 h-4" /> 
                   Ver aparata
                 </Link>
               </div>
-              <div className="p-4 space-y-3">
-                <div className="flex justify-between items-center text-xs font-bold text-slate-500">
+              <div className="p-4 space-y-4">
+                <div className="flex justify-between items-center text-[12px] font-bold text-slate-500 uppercase">
                   <span>Situação</span>
-                  <span className="bg-emerald-500 text-white px-2 py-0.5 rounded-full">ABERTO</span>
+                  <span className="bg-emerald-500 text-white px-2.5 py-1 rounded-full text-[10px]">ABERTO</span>
                 </div>
-                <div className="flex justify-between items-center text-xs font-bold text-slate-500">
+                <div className="flex justify-between items-center text-[12px] font-bold text-slate-500 uppercase">
                   <span>Sincronização</span>
-                  <span className="bg-red-500 text-white px-2 py-0.5 rounded-full uppercase">Não</span>
+                  <span className="bg-red-500 text-white px-2.5 py-1 rounded-full text-[10px]">NÃO</span>
                 </div>
               </div>
             </div>
