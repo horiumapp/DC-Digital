@@ -67,7 +67,7 @@ export default function AparataDetalhes() {
       return {
         ...aluno,
         n: index + 1,
-        matricula: aluno.id.startsWith('temp_') ? '---' : `2026/${aluno.id.slice(-7)}`, // Mock matricula based on ID
+        matricula: aluno.matricula, 
         media,
         faltas
       };

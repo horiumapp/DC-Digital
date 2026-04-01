@@ -35,6 +35,7 @@ export interface Lancamento {
 export interface Aluno {
   id: string;
   nome: string;
+  matricula: string;
   freq: string;
   part: string;
   notas?: Record<string, string>; // ID da avaliação -> valor da nota
@@ -151,6 +152,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
         setAlunos(data.map(a => ({
           id: a.id.toString(),
           nome: a.nome,
+          matricula: a.matricula || `2026/${a.id.toString().slice(-7)}`, 
           freq: 'P',
           part: 'Presencial',
           notas: {}
