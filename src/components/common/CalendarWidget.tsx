@@ -137,7 +137,7 @@ export default function CalendarWidget({
 
             const fColor = temFrequencia ? 'bg-emerald-500' : 'bg-red-500';
             const cmColor = temConteudo ? 'bg-emerald-500' : 'bg-red-500';
-            const aColor = 'bg-red-500'; // Geralmente vermelho indicando "Agendado" no print
+            const aColor = avaliacoesLancadas ? 'bg-emerald-500' : 'bg-red-500';
             
             const bgColor = status === 'none' ? 'bg-red-100/60' : (status === 'pending' ? 'bg-amber-100/60' : 'bg-emerald-100/60');
             
@@ -155,7 +155,7 @@ export default function CalendarWidget({
                   <span className={`w-5 h-5 rounded-full ${fColor} text-white flex items-center justify-center text-[10px] font-black shadow-sm`}>F</span>
                   <span className={`w-5 h-5 rounded-full ${cmColor} text-white flex items-center justify-center text-[10px] font-black shadow-sm`}>CM</span>
                   {temAvaliacao && (
-                    <span className={`w-5 h-5 rounded-full ${aColor} text-white flex items-center justify-center text-[10px] font-black shadow-sm animate-pulse`}>A</span>
+                    <span className={`w-5 h-5 rounded-full ${aColor} text-white flex items-center justify-center text-[10px] font-black shadow-sm`}>A</span>
                   )}
                 </div>
               </Link>
