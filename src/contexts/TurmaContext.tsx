@@ -367,8 +367,8 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
         // Marca como lançado
         registrarLancamento({ turmaId: turmaAtiva.id, data, tipo: 'frequencia', tempo });
       } else {
-        // Reset se não houver dados para esta data/tempo específico
-        setAlunos(prev => prev.map(aluno => ({ ...aluno, freq: '', part: 'Presencial' })));
+        // Reset para 'P' (Presença) por padrão se não houver dados salvos
+        setAlunos(prev => prev.map(aluno => ({ ...aluno, freq: 'P', part: 'Presencial' })));
       }
     } catch (err) {
       console.error('Erro ao buscar frequência:', err);
