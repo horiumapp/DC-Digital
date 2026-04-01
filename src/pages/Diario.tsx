@@ -142,8 +142,11 @@ export default function Diario() {
   };
 
   // ─── Cálculo de Avaliações e Notas ───────────────────────────────────────
+  const aulasSemanais = (turmaAtiva.diasDeAula?.length || 0) * (turmaAtiva.tempos?.length || 0);
   const avaliacoesCadastradas = avaliacoes.length;
-  const avaliacoesPrevistas = turmaAtiva.metricas.avaliacoesPrevistas || 4;
+  
+  // Regra: 3 aulas semanais = 2 avaliações | 4 ou 5 aulas semanais = 3 avaliações
+  const avaliacoesPrevistas = aulasSemanais <= 3 ? 2 : 3;
   const pAvaliacoes = calcPercent(avaliacoesCadastradas, avaliacoesPrevistas);
 
   // Notas lançadas: total de (aluno x avaliacao) que possuem valor
