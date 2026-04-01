@@ -141,8 +141,23 @@ export default function Diario() {
     return 'bg-red-500';
   };
 
-  const pAvaliacoes = calcPercent(turmaAtiva.metricas.avaliacoesCadastradas, turmaAtiva.metricas.avaliacoesPrevistas);
-  const pNotas = calcPercent(turmaAtiva.metricas.notasLancadas, turmaAtiva.metricas.notasPrevistas);
+  // ─── Cálculo de Avaliações e Notas ───────────────────────────────────────
+  const avaliacoesCadastradas = avaliacoes.length;
+  const avaliacoesPrevistas = turmaAtiva.metricas.avaliacoesPrevistas || 4;
+  const pAvaliacoes = calcPercent(avaliacoesCadastradas, avaliacoesPrevistas);
+
+  // Notas lançadas: total de (aluno x avaliacao) que possuem valor
+  let notasLancadasCount = 0;
+  avaliacoes.forEach(av => {
+    alunos.forEach(aluno => {
+      if (aluno.notas && aluno.notas[av.id]) {
+        notasLancadasCount++;
+      }
+    });
+  });
+
+  const totalNotasEsperadas = avaliacoes.length * alunos.length;
+  const pNotas = totalNotasEsperadas > 0 ? Math.min(100, Math.round((notasLancadasCount / totalNotasEsperadas) * 100)) : 0;
 
 
   return (
