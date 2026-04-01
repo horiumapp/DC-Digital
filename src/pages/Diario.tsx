@@ -5,7 +5,7 @@ import { useTurma } from '../contexts/TurmaContext';
 import CalendarWidget from '../components/common/CalendarWidget';
 
 export default function Diario() {
-  const { turmaAtiva, lancamentos } = useTurma();
+  const { turmaAtiva, lancamentos, avaliacoes, alunos } = useTurma();
   const [currentMonth, setCurrentMonth] = useState(1); // 1 = February (0-indexed)
   const year = 2026;
 
@@ -351,8 +351,8 @@ export default function Diario() {
               onMonthChange={setCurrentMonth}
               turmaAtiva={turmaAtiva}
               lancamentos={lancamentos}
-              dataInicioValida={dataInicioValida}
-              dataFimValida={dataFimValida}
+              avaliacoes={avaliacoes}
+              alunos={alunos}
             />
           </div>
         </div>

@@ -8,8 +8,8 @@ interface CalendarWidgetProps {
   onMonthChange: (month: number) => void;
   turmaAtiva: any;
   lancamentos: any[];
-  dataInicioValida: Date;
-  dataFimValida: Date;
+  avaliacoes: any[];
+  alunos: any[];
 }
 
 export default function CalendarWidget({ 
@@ -18,9 +18,29 @@ export default function CalendarWidget({
   onMonthChange,
   turmaAtiva, 
   lancamentos,
-  dataInicioValida,
-  dataFimValida
+  avaliacoes,
+  alunos
 }: CalendarWidgetProps) {
+
+  // Re-calcular datas do período baseadas no Bimestre selecionado (poderiam vir de props, mas mantemos isolado)
+  const periodosLetivos = [
+    { id: 1, nome: '1º Bimestre', dataInicio: '2026-02-05', dataFim: '2026-04-23' },
+    { id: 2, nome: '2º Bimestre', dataInicio: '2026-04-24', dataFim: '2026-07-07' },
+    { id: 3, nome: '3º Bimestre', dataInicio: '2026-07-16', dataFim: '2026-09-24' },
+    { id: 4, nome: '4º Bimestre', dataInicio: '2026-09-25', dataFim: '2026-12-14' },
+  ];
+
+  // Identificar em qual período estamos (heurística baseada no mês atual)
+  // Nota: Isso é uma redundância para manter o widget funcionando se as props de data sumirem.
+  const periodoAtual = periodosLetivos.find(p => {
+    const [y, m, d] = p.dataInicio.split('-');
+    return parseInt(m, 10) - 1 <= currentMonth;
+  }) || periodosLetivos[0];
+
+  const [aiY, aiM, aiD] = periodoAtual.dataInicio.split('-');
+  const dataInicioValida = new Date(Number(aiY), Number(aiM) - 1, Number(aiD));
+  const [afY, afM, afD] = periodoAtual.dataFim.split('-');
+  const dataFimValida = new Date(Number(afY), Number(afM) - 1, Number(afD));
 
   const monthNames = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -100,14 +120,26 @@ export default function CalendarWidget({
             const lancamentosDoDia = lancamentos.filter(l => l.data === dayStr && l.turmaId === turmaAtiva?.id);
             const temFrequencia = lancamentosDoDia.some(l => l.tipo === 'frequencia');
             const temConteudo = lancamentosDoDia.some(l => l.tipo === 'conteudo');
+            
+            // Buscar avaliações no dia
+            const avaliacoesDoDia = avaliacoes.filter(av => av.data === dayStr && av.turmaId === turmaAtiva?.id);
+            const temAvaliacao = avaliacoesDoDia.length > 0;
+            
+            // Verificar se as avaliações têm notas para todos (ou maioria) dos alunos
+            const avaliacoesLancadas = temAvaliacao && avaliacoesDoDia.every(av => {
+              const notasDessaAv = alunos.filter(a => a.notas && a.notas[av.id]);
+              return notasDessaAv.length > 0; // Se tiver pelo menos uma nota, consideramos "lançada" na legenda visual
+            });
 
-            let status: 'none' | 'partial' | 'full' = 'none';
-            if (temFrequencia && temConteudo) status = 'full';
-            else if (temFrequencia || temConteudo) status = 'partial';
+            let status: 'none' | 'pending' | 'full' = 'none';
+            if (temFrequencia && temConteudo && (!temAvaliacao || avaliacoesLancadas)) status = 'full';
+            else if (temFrequencia || temConteudo || temAvaliacao) status = 'pending';
 
             const fColor = temFrequencia ? 'bg-emerald-500' : 'bg-red-500';
             const cmColor = temConteudo ? 'bg-emerald-500' : 'bg-red-500';
-            const bgColor = status === 'none' ? 'bg-red-100/60' : (status === 'partial' ? 'bg-amber-100/60' : 'bg-emerald-100/60');
+            const aColor = 'bg-red-500'; // Geralmente vermelho indicando "Agendado" no print
+            
+            const bgColor = status === 'none' ? 'bg-red-100/60' : (status === 'pending' ? 'bg-amber-100/60' : 'bg-emerald-100/60');
             
             return (
               <Link 
@@ -115,10 +147,16 @@ export default function CalendarWidget({
                 to={`/frequencia?date=${dayStr}&turmaId=${turmaAtiva?.id}`}
                 className={`min-h-[120px] p-3 border-b border-r border-slate-200 flex justify-between ${bgColor} transition-all group relative hover:shadow-md hover:brightness-95`}
               >
-                <span className="text-base font-medium text-slate-700">{day}</span>
+                <div className="flex flex-col justify-between">
+                  <span className="text-base font-medium text-slate-700">{day}</span>
+                  {status === 'pending' && <span className="text-[9px] font-bold text-amber-700 bg-amber-200/50 px-1.5 py-0.5 rounded uppercase mt-auto">Pendente</span>}
+                </div>
                 <div className="flex flex-col gap-1 items-end">
-                  <span className={`w-6 h-6 rounded-full ${fColor} text-white flex items-center justify-center text-[10px] font-bold shadow-sm`}>F</span>
-                  <span className={`w-6 h-6 rounded-full ${cmColor} text-white flex items-center justify-center text-[10px] font-bold shadow-sm`}>CM</span>
+                  <span className={`w-5 h-5 rounded-full ${fColor} text-white flex items-center justify-center text-[10px] font-black shadow-sm`}>F</span>
+                  <span className={`w-5 h-5 rounded-full ${cmColor} text-white flex items-center justify-center text-[10px] font-black shadow-sm`}>CM</span>
+                  {temAvaliacao && (
+                    <span className={`w-5 h-5 rounded-full ${aColor} text-white flex items-center justify-center text-[10px] font-black shadow-sm animate-pulse`}>A</span>
+                  )}
                 </div>
               </Link>
             );
