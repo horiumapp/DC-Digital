@@ -5,7 +5,7 @@ import { useTurma } from '../contexts/TurmaContext';
 import CalendarWidget from '../components/common/CalendarWidget';
 
 export default function Diario() {
-  const { turmaAtiva, lancamentos, avaliacoes, alunos } = useTurma();
+  const { turmaAtiva, lancamentos, avaliacoes, alunos, horarioTurma } = useTurma();
   const [currentMonth, setCurrentMonth] = useState(1); // 1 = February (0-indexed)
   const year = 2026;
 
@@ -103,16 +103,16 @@ export default function Diario() {
     const inicio = dataInicioValida;
     const fim = dataFimValida < today ? dataFimValida : today;
 
-    const cursor = new Date(inicio);
-    while (cursor <= fim) {
-      const dow = cursor.getDay(); // 0=Dom … 6=Sáb
-      if (turmaAtiva.diasDeAula.includes(dow)) {
-        totalDiasLetivos++;
-      }
-      cursor.setDate(cursor.getDate() + 1);
+    const curso = new Date(inicio);
+    while (curso <= fim) {
+      const dow = curso.getDay(); // 0=Dom ... 6=Sáb
+      // Contamos quantos tempos (slots) esta turma tem neste dia da semana
+      const temposNoDia = horarioTurma?.filter(h => h.dia_semana === dow).length || 0;
+      totalDiasLetivos += temposNoDia;
+      curso.setDate(curso.getDate() + 1);
     }
 
-    const totalEsperado = totalDiasLetivos * tempos;
+    const totalEsperado = totalDiasLetivos; // Cada slot em horarioTurma já é um "tempo"
 
     // Lançamentos reais da turma dentro do período
     const lancamentosDaTurma = lancamentos.filter(l => {
@@ -378,6 +378,7 @@ export default function Diario() {
               lancamentos={lancamentos}
               avaliacoes={avaliacoes}
               alunos={alunos}
+              horarioTurma={horarioTurma}
             />
           </div>
         </div>

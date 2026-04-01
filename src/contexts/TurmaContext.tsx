@@ -62,6 +62,11 @@ export interface Conteudo {
   descricao: string;
 }
 
+export interface Horario {
+  dia_semana: number;
+  tempo_ordem: number;
+}
+
 interface TurmaContextType {
   turmaAtiva: Turma | null;
   selecionarTurma: (turma: Turma) => void;
@@ -70,6 +75,7 @@ interface TurmaContextType {
   removerLancamento: (lancamento: Lancamento) => void;
   alunos: Aluno[];
   avaliacoes: Avaliacao[];
+  horarioTurma: Horario[];
   loading: boolean;
   salvarAvaliacao: (av: Avaliacao) => Promise<void>;
   removerAvaliacao: (id: string) => Promise<void>;
@@ -89,6 +95,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
+  const [horarioTurma, setHorarioTurma] = useState<Horario[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -97,6 +104,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     } else {
       setAlunos([]);
       setAvaliacoes([]);
+      setHorarioTurma([]);
     }
   }, [turmaAtiva]);
 
@@ -105,9 +113,25 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     await Promise.all([
       fetchAlunos(turmaId),
       fetchAvaliacoes(turmaId),
-      fetchLancamentos(turmaId)
+      fetchLancamentos(turmaId),
+      fetchHorario(turmaId)
     ]);
     setLoading(false);
+  };
+
+  const fetchHorario = async (turmaId: string | number) => {
+    try {
+      const { data, error } = await supabase
+        .from('professor_horarios')
+        .select('dia_semana, tempo_ordem')
+        .eq('turma_id', turmaId.toString());
+
+      if (data) {
+        setHorarioTurma(data);
+      }
+    } catch (err) {
+      console.error('Erro ao carregar horário da turma:', err);
+    }
   };
 
   const fetchLancamentos = async (turmaId: string | number) => {
@@ -454,7 +478,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     <TurmaContext.Provider value={{ 
       turmaAtiva, selecionarTurma, 
       lancamentos, registrarLancamento, removerLancamento,
-      alunos, avaliacoes, loading, 
+      alunos, avaliacoes, horarioTurma, loading, 
       salvarAvaliacao, removerAvaliacao, salvarNotas,
       salvarFrequencia, salvarConteudo, buscarFrequencia, buscarConteudo,
       removerFrequencia, removerConteudo

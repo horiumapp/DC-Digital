@@ -10,6 +10,7 @@ interface CalendarWidgetProps {
   lancamentos: any[];
   avaliacoes: any[];
   alunos: any[];
+  horarioTurma?: any[];
 }
 
 export default function CalendarWidget({ 
@@ -19,7 +20,8 @@ export default function CalendarWidget({
   turmaAtiva, 
   lancamentos,
   avaliacoes,
-  alunos
+  alunos,
+  horarioTurma
 }: CalendarWidgetProps) {
 
   // Re-calcular datas do período baseadas no Bimestre selecionado (poderiam vir de props, mas mantemos isolado)
@@ -113,7 +115,10 @@ export default function CalendarWidget({
 
           const isWithinPeriod = currentDate >= dataInicioValida && currentDate <= dataFimValida;
           const isPastOrToday = currentDate <= today;
-          const isDiaDeAula = turmaAtiva?.diasDeAula?.includes(dayOfWeek) && isWithinPeriod && isPastOrToday;
+          
+          // Agora verificamos se o dia da semana existe no horário cadastrado para esta turma
+          const temAulaHoje = horarioTurma?.some(h => h.dia_semana === dayOfWeek);
+          const isDiaDeAula = temAulaHoje && isWithinPeriod && isPastOrToday;
           
           if (isDiaDeAula) {
             const dayStr = `${day.toString().padStart(2, '0')}/${(currentMonth + 1).toString().padStart(2, '0')}/${year}`;
