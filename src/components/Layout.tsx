@@ -27,16 +27,8 @@ export default function Layout() {
       <Background />
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center justify-between sticky top-0 z-50 shadow-sm transition-colors duration-200">
         <div className="flex items-center space-x-8">
-          <Link to="/turmas" className="flex items-center space-x-2">
-            {isDiario ? (
-              <div className="w-8 h-8 rounded-full border-2 border-emerald-500 flex items-center justify-center">
-                <Check className="w-5 h-5 text-emerald-500" />
-              </div>
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
-              </div>
-            )}
+          <Link to="/turmas" className="flex items-center space-x-3 group">
+            <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain transition-transform group-hover:scale-105" />
             <span className="text-xl font-bold text-indigo-900 dark:text-indigo-100 tracking-tight">Diário Digital</span>
           </Link>
 

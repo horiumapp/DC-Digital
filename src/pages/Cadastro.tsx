@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, UserPlus, ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Background from '../components/Background';
 import { supabase } from '../lib/supabase';
@@ -101,8 +101,8 @@ export default function Cadastro() {
           </div>
 
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-50 text-blue-600 rounded-xl mb-4">
-              <UserPlus className="w-8 h-8" />
+            <div className="flex justify-center mb-6">
+              <img src="/logo.png" alt="Logo Diário Digital" className="h-16 w-auto object-contain" />
             </div>
             <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Criar Conta</h1>
             <p className="text-slate-500 mt-2 text-sm">Preencha os dados abaixo para se cadastrar</p>

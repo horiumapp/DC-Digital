@@ -136,8 +136,9 @@ export default function Diario() {
 
   // Cor dinâmica por porcentagem (Seguindo referência visual: Verde para alto, Vermelho para baixo)
   const barColor = (pct: number) => {
-    if (pct >= 80) return 'bg-emerald-600';
-    return 'bg-red-600';
+    if (pct > 75) return 'bg-emerald-500';
+    if (pct > 50) return 'bg-amber-400';
+    return 'bg-red-500';
   };
 
   // ─── Cálculo de Avaliações e Notas ───────────────────────────────────────

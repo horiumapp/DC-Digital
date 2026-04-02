@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Background from '../components/Background';
 import { useAuth, UserRole } from '../contexts/AuthContext';
@@ -54,8 +54,8 @@ export default function Login() {
       <main className="relative w-full max-w-md z-10">
         <section className="bg-white p-8 md:p-10 shadow-xl border border-slate-100 rounded-xl">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-50 text-blue-600 rounded-xl mb-4">
-              <BookOpen className="w-8 h-8" />
+            <div className="flex justify-center mb-6">
+              <img src="/logo.png" alt="Logo Diário Digital" className="h-20 w-auto object-contain" />
             </div>
             <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Diário de Classe Digital</h1>
             <p className="text-slate-500 mt-2 text-sm">Entre com suas credenciais de acesso</p>
