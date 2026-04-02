@@ -57,7 +57,7 @@ export default function Login() {
             <div className="flex justify-center mb-6">
               <img src="/logo.png" alt="Logo Diário Digital" className="h-20 w-auto object-contain" />
             </div>
-            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Diário de Classe Digital</h1>
+            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Diário Digital</h1>
             <p className="text-slate-500 mt-2 text-sm">Entre com suas credenciais de acesso</p>
           </div>
 
@@ -146,7 +146,7 @@ export default function Login() {
         </section>
 
         <footer className="mt-6 text-center text-slate-400 text-xs">
-          © 2026 Diário de Classe Digital. Todos os direitos reservados.
+          © 2026 Diário Digital. Todos os direitos reservados.
         </footer>
       </main>
     </div>
