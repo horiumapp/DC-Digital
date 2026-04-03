@@ -45,26 +45,26 @@ export default function CustomDatePicker({
   return (
     <div className="absolute top-full left-0 mt-4 bg-white border border-slate-100 rounded-3xl shadow-2xl z-50 w-80 p-6 animate-in fade-in zoom-in-95 duration-200">
       <div className="flex items-center justify-between mb-5">
-        <button onClick={handlePrevMonth} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition">
+        <button onClick={handlePrevMonth} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#eef2ff] text-slate-400 hover:text-[#0f2851] transition">
           <ChevronLeft className="w-4 h-4" />
         </button>
         <div className="flex items-center gap-2">
           <select 
             value={calendarMonth} 
             onChange={(e) => onSetCalendarMonth(Number(e.target.value))} 
-            className="bg-slate-50 border-none rounded-xl px-3 py-1.5 text-sm font-black text-slate-700 cursor-pointer appearance-none text-center focus:ring-2 focus:ring-blue-600/10"
+            className="bg-slate-50 border-none rounded-xl px-3 py-1.5 text-sm font-bold text-slate-700 cursor-pointer appearance-none text-center focus:ring-2 focus:ring-[#0f2851]/10"
           >
             {meses.map((m, i) => <option key={i} value={i}>{m}</option>)}
           </select>
           <select 
             value={calendarYear} 
             onChange={(e) => onSetCalendarYear(Number(e.target.value))} 
-            className="bg-slate-50 border-none rounded-xl px-3 py-1.5 text-sm font-black text-slate-700 cursor-pointer appearance-none text-center focus:ring-2 focus:ring-blue-600/10"
+            className="bg-slate-50 border-none rounded-xl px-3 py-1.5 text-sm font-bold text-slate-700 cursor-pointer appearance-none text-center focus:ring-2 focus:ring-[#0f2851]/10"
           >
             {Array.from({ length: 21 }, (_, i) => 2020 + i).map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
-        <button onClick={handleNextMonth} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition">
+        <button onClick={handleNextMonth} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#eef2ff] text-slate-400 hover:text-[#0f2851] transition">
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
@@ -86,10 +86,10 @@ export default function CustomDatePicker({
               onClick={() => onSelectDate(dateStr)}
               className={`aspect-square flex items-center justify-center text-xs font-bold rounded-xl transition-all ${
                 isSelected
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                  ? 'bg-[#0f2851] text-white shadow-lg shadow-[#0f2851]/30'
                   : isToday
-                    ? 'bg-blue-50 text-blue-600 ring-2 ring-blue-600/20'
-                    : 'text-slate-600 hover:bg-blue-50 hover:text-blue-600'
+                    ? 'bg-[#eef2ff] text-[#0f2851] ring-2 ring-[#0f2851]/20'
+                    : 'text-slate-600 hover:bg-[#eef2ff] hover:text-[#0f2851]'
               }`}
             >
               {dia}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pencil, Calendar as CalendarIcon, X, List, Plus, Save, Trash2 } from 'lucide-react';
+import { Pencil, Calendar as CalendarIcon, X, List, Plus, Save, Trash2, Check } from 'lucide-react';
 import Captcha from '../../common/Captcha';
 import { getBimestrePorData } from '../../../utils/dateUtils';
 import CustomDatePicker from './CustomDatePicker';
@@ -74,16 +74,16 @@ export default function AvaliacaoForm({
       <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
         <div className="flex justify-between items-center mb-8">
           <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center">
               <Pencil className="w-5 h-5" />
             </div>
             {selectedAvaliacao ? (selectedAvaliacao.parent_id ? 'Agendar Recuperação Paralela (RP)' : 'Alterar Avaliação') : 'Cadastrar Nova Avaliação'}
           </h3>
           <div className="flex items-center gap-4">
             {selectedAvaliacao && (
-              <div className="px-4 py-2 bg-blue-50 border border-blue-100 rounded-xl">
-                <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest block leading-none mb-1">Tipo</span>
-                <span className="text-sm font-black text-blue-700 uppercase">{selectedAvaliacao.tipo}</span>
+              <div className="px-4 py-2 bg-[#eef2ff] border border-blue-100 rounded-xl">
+                <span className="text-[10px] font-bold text-[#0f2851]/60 uppercase tracking-widest block leading-none mb-1">Tipo</span>
+                <span className="text-sm font-bold text-[#0f2851] uppercase">{selectedAvaliacao.tipo}</span>
               </div>
             )}
             <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 transition"><X /></button>
@@ -100,9 +100,9 @@ export default function AvaliacaoForm({
                 readOnly 
                 onClick={() => onSetIsDatePickerOpen(!isDatePickerOpen)} 
                 placeholder="DD/MM/AAAA" 
-                className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-600/10 cursor-pointer" 
+                className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer" 
               />
-              <CalendarIcon className="w-4 h-4 text-blue-600 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <CalendarIcon className="w-4 h-4 text-[#0f2851] absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
               
               {isDatePickerOpen && (
                 <CustomDatePicker
@@ -115,7 +115,7 @@ export default function AvaliacaoForm({
                 />
               )}
             </div>
-            {selectedDate && <p className="text-[10px] font-bold text-blue-600 ml-1">BIMESTRE: {getBimestrePorData(selectedDate)}</p>}
+            {selectedDate && <p className="text-[10px] font-bold text-[#0f2851] ml-1">BIMESTRE: {getBimestrePorData(selectedDate)}</p>}
           </div>
 
           <div className="space-y-2">
@@ -123,7 +123,7 @@ export default function AvaliacaoForm({
             <select 
               value={instrumentoAvaliacao} 
               onChange={(e) => onSetInstrumentoAvaliacao(e.target.value)} 
-              className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-600/10 cursor-pointer appearance-none"
+              className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer appearance-none"
             >
               <option value="AVALIACAO ESCRITA">AVALIAÇÃO ESCRITA</option>
               <option value="AVALIACAO ORAL">AVALIAÇÃO ORAL</option>
@@ -143,7 +143,7 @@ export default function AvaliacaoForm({
       {/* Objetos de Conhecimento da Avaliação */}
       <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
         <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center">
             <List className="w-5 h-5" />
           </div>
           Objetos de Conhecimento da Avaliação
@@ -162,7 +162,7 @@ export default function AvaliacaoForm({
                   <select
                     value={periodoLetivo}
                     onChange={(e) => { onSetPeriodoLetivo(e.target.value); onSetUnidadeDidatica(''); onSetObjetoConhecimento(''); }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-600/10 cursor-pointer"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer"
                     disabled
                   >
                     <option value="">Selecione...</option>
@@ -176,7 +176,7 @@ export default function AvaliacaoForm({
                   <select
                     value={unidadeDidatica}
                     onChange={(e) => { onSetUnidadeDidatica(e.target.value); onSetObjetoConhecimento(''); }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-600/10 cursor-pointer"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer"
                     disabled={!periodoLetivo || unidadesOpcoes.length === 0}
                   >
                     <option value="">{unidadesOpcoes.length > 0 ? "Selecione..." : "Nenhuma unidade lançada"}</option>
@@ -190,7 +190,7 @@ export default function AvaliacaoForm({
                   <select
                     value={objetoConhecimento}
                     onChange={(e) => onSetObjetoConhecimento(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-600/10 cursor-pointer"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer"
                     disabled={!unidadeDidatica || objetosOpcoes.length === 0}
                   >
                     <option value="">{objetosOpcoes.length > 0 ? "Selecione..." : "Nenhum objeto lançado"}</option>
@@ -200,7 +200,7 @@ export default function AvaliacaoForm({
                 <button
                   onClick={onAddObjeto}
                   disabled={!objetoConhecimento}
-                  className="bg-blue-600 text-white px-6 py-3.5 rounded-2xl text-sm font-bold hover:bg-blue-700 transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-blue-600/20 whitespace-nowrap"
+                  className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-3.5 rounded-2xl text-sm font-bold hover:bg-[#e0e7ff] transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm active:scale-95 whitespace-nowrap"
                 >
                   <Plus className="w-4 h-4" /> Adicionar
                 </button>
@@ -258,9 +258,9 @@ export default function AvaliacaoForm({
         <div className="flex gap-4">
           <button 
             onClick={onSave} 
-            className="flex-1 bg-blue-600 text-white py-4 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-600/20 flex items-center justify-center gap-3"
+            className="flex-1 bg-[#0f2851] text-white py-4 rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20 flex items-center justify-center gap-3 active:scale-95"
           >
-            <Save className="w-5 h-5" /> Salvar Avaliação
+            <Check className="w-5 h-5 text-emerald-400" /> Salvar Avaliação
           </button>
           <button onClick={onCancel} className="px-10 bg-slate-100 text-slate-500 py-4 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-slate-200 transition">Sair</button>
         </div>

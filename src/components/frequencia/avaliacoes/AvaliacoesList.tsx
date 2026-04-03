@@ -35,7 +35,7 @@ export default function AvaliacoesList({
       <div className="flex items-end shadow-sm mb-2">
         <button
           onClick={onAddAvaliacao}
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition flex items-center gap-2"
+          className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded-lg text-sm font-bold hover:bg-[#e0e7ff] transition flex items-center gap-2 shadow-sm active:scale-95"
         >
           <Plus className="w-4 h-4" /> Adicionar Avaliação
         </button>
@@ -44,12 +44,12 @@ export default function AvaliacoesList({
       {avaliacoes.length > 0 && (
         <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white">
           <table className="w-full text-sm text-left">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase">
+            <thead className="bg-[#f8f9fa] border-b border-slate-200">
               <tr>
-                <th className="px-6 py-4 font-black text-[10px] tracking-widest">Tipo</th>
-                <th className="px-6 py-4 font-black text-[10px] tracking-widest">Data</th>
-                <th className="px-6 py-4 font-black text-[10px] tracking-widest">Instrumento</th>
-                <th className="px-6 py-4 font-black text-[10px] tracking-widest text-center">Ações</th>
+                <th className="px-6 py-4 font-bold text-[#0f2851] text-[11px] tracking-wider uppercase">Tipo</th>
+                <th className="px-6 py-4 font-bold text-[#0f2851] text-[11px] tracking-wider uppercase">Data</th>
+                <th className="px-6 py-4 font-bold text-[#0f2851] text-[11px] tracking-wider uppercase">Instrumento</th>
+                <th className="px-6 py-4 font-bold text-[#0f2851] text-[11px] tracking-wider uppercase text-center">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -58,8 +58,8 @@ export default function AvaliacoesList({
                 if (avsBim.length === 0) return null;
                 return (
                   <React.Fragment key={bim}>
-                    <tr className="bg-blue-50/50">
-                      <td colSpan={4} className="px-6 py-2 font-black text-blue-600 text-[10px] uppercase tracking-tighter">{bim}</td>
+                    <tr className="bg-[#eef2ff]/30">
+                      <td colSpan={4} className="px-6 py-2 font-bold text-[#0f2851] text-[11px] uppercase tracking-wider">{bim}</td>
                     </tr>
                     {avsBim.map((av) => (
                       <React.Fragment key={av.id}>
@@ -84,7 +84,7 @@ export default function AvaliacoesList({
                           <td className="px-6 py-4">
                             <div className="flex items-center justify-center gap-2">
                               <button onClick={() => onViewDetails(av)}
-                                className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
+                                className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#0f2851] hover:bg-[#e0e7ff] rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
                                 <Eye className="w-3.5 h-3.5" /> Detalhes
                               </button>
                               
@@ -104,14 +104,14 @@ export default function AvaliacoesList({
                               }) && !avaliacoes.some(rp => String(rp.parent_id) === String(av.id)) && (
                                 <button 
                                   onClick={() => onAddRP(av)}
-                                  className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-bold text-[10px] uppercase transition-all"
+                                  className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-white text-[#0f2851] border border-blue-100 hover:bg-[#eef2ff] rounded-lg font-bold text-[10px] uppercase transition-all"
                                 >
-                                  <Plus className="w-3.5 h-3.5 text-slate-500" /> ADICIONAR RP
+                                  <Plus className="w-3.5 h-3.5 text-[#0f2851]" /> ADICIONAR RP
                                 </button>
                               )}
 
                               <button onClick={() => onShowGrades(av)}
-                                className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
+                                className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#0f2851] hover:bg-[#e0e7ff] rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
                                 <List className="w-3.5 h-3.5" /> Notas
                               </button>
                               
@@ -123,8 +123,8 @@ export default function AvaliacoesList({
                                 if (hasGrades && hasAbsences && !alreadyHasSecondCall) {
                                   return (
                                     <button onClick={() => onSecondCall(av)}
-                                      className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-blue-600/10">
-                                      <div className="w-5 h-5 bg-blue-800 text-white rounded-full flex items-center justify-center text-[10px] scale-90">2</div> 2ª chamada
+                                      className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#0f2851] hover:bg-[#e0e7ff] rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100 shadow-sm">
+                                      <div className="w-5 h-5 bg-[#0f2851] text-white rounded-full flex items-center justify-center text-[10px] scale-90">2</div> 2ª chamada
                                     </button>
                                   );
                                 }
@@ -159,7 +159,7 @@ export default function AvaliacoesList({
                                 <td className="px-6 py-5">
                                   <div className="flex items-center justify-center gap-2">
                                     <button onClick={() => onViewDetails(rp)}
-                                      className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all">
+                                      className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#0f2851] hover:bg-[#e0e7ff] rounded-lg font-bold text-[10px] uppercase transition-all">
                                       <Eye className="w-3.5 h-3.5" /> Detalhes
                                     </button>
                                     
@@ -174,7 +174,7 @@ export default function AvaliacoesList({
                                     </button>
 
                                     <button onClick={() => onShowGrades(rp)}
-                                      className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
+                                      className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#0f2851] hover:bg-[#e0e7ff] rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
                                       <List className="w-3.5 h-3.5" /> Notas
                                     </button>
                                   </div>
