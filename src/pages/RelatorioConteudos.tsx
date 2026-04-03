@@ -129,19 +129,15 @@ export default function RelatorioConteudos() {
     setDataLoading(true);
     try {
       const [turmaId, componente] = selectedTurmaId.split('|');
-      
       let dateStart = '';
       let dateEnd = '';
-
+      
       if (opcaoFiltro === 'Período') {
-        const bimestreMap: Record<string, [string, string]> = {
-          '1. BIMESTRE': [`${APP_CONFIG.YEAR}-02-01`, `${APP_CONFIG.YEAR}-04-30`],
-          '2. BIMESTRE': [`${APP_CONFIG.YEAR}-05-01`, `${APP_CONFIG.YEAR}-06-30`],
-          '3. BIMESTRE': [`${APP_CONFIG.YEAR}-07-01`, `${APP_CONFIG.YEAR}-09-30`],
-          '4. BIMESTRE': [`${APP_CONFIG.YEAR}-10-01`, `${APP_CONFIG.YEAR}-12-31`],
-          'RECUPERAÇÃO': [`${APP_CONFIG.YEAR}-12-20`, `${APP_CONFIG.YEAR}-12-31`],
-        };
-        [dateStart, dateEnd] = bimestreMap[periodoSelecionado] || [``, ``];
+        const period = APP_CONFIG.BIMESTRES.find(b => b.label === periodoSelecionado);
+        if (period) {
+          dateStart = period.dataInicio;
+          dateEnd = period.dataFim;
+        }
       } else {
         const mesesMap: Record<string, number> = {
           'JANEIRO': 1, 'FEVEREIRO': 2, 'MARÇO': 3, 'ABRIL': 4,
@@ -151,15 +147,17 @@ export default function RelatorioConteudos() {
         const mes = mesesMap[periodoSelecionado];
         if (mes) {
           dateStart = `${APP_CONFIG.YEAR}-${mes.toString().padStart(2, '0')}-01`;
-          dateEnd = `${APP_CONFIG.YEAR}-${mes.toString().padStart(2, '0')}-31`; // Simplificado
+          dateEnd = `${APP_CONFIG.YEAR}-${mes.toString().padStart(2, '0')}-31`;
         }
       }
+
+      console.log('Buscando conteúdos com:', { turmaId, componente, dateStart, dateEnd });
 
       const { data: contentsRes, error } = await supabase
         .from('conteudos')
         .select('*')
         .eq('turma_id', turmaId)
-        .eq('disciplina', componente)
+        .ilike('disciplina', componente)
         .gte('data', dateStart)
         .lte('data', dateEnd)
         .order('data', { ascending: true });
@@ -253,11 +251,11 @@ export default function RelatorioConteudos() {
                   <tbody className="divide-y divide-slate-100">
                     {loading ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-slate-400 animate-pulse font-medium">Carregando turmas...</td>
+                        <td colSpan={4} className="px-4 py-8 text-center text-slate-400 animate-pulse font-medium">Carregando turmas...</td>
                       </tr>
                     ) : filteredTurmas.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-slate-400">Nenhuma turma encontrada.</td>
+                        <td colSpan={4} className="px-4 py-8 text-center text-slate-400">Nenhuma turma encontrada.</td>
                       </tr>
                     ) : (
                       filteredTurmas.map((t) => (
@@ -266,19 +264,17 @@ export default function RelatorioConteudos() {
                           className={`hover:bg-[#f8faff] transition-colors cursor-pointer ${selectedTurmaId === t.id ? 'bg-[#eef2ff]' : ''}`}
                           onClick={() => setSelectedTurmaId(t.id)}
                         >
-                          <td className="px-4 py-4 border-r border-slate-100 text-slate-600">{t.ensino}</td>
-                          <td className="px-4 py-4 border-r border-slate-100 text-slate-600">-</td>
-                          <td className="px-4 py-4 border-r border-slate-100 text-slate-600">{t.fase}</td>
-                          <td className="px-4 py-4 border-r border-slate-100 text-slate-600">{t.numero}</td>
-                          <td className="px-4 py-4 border-r border-slate-100 text-slate-600 uppercase font-black text-[12px]">{t.componente}</td>
-                          <td className="px-4 py-4 text-center">
+                          <td className="px-6 py-4 border-r border-slate-100 text-slate-600">{t.ensino}</td>
+                          <td className="px-6 py-4 border-r border-slate-100 text-slate-600 font-bold">{t.fase}</td>
+                          <td className="px-6 py-4 border-r border-slate-100 text-slate-600 uppercase font-black text-[12px]">{t.componente}</td>
+                          <td className="px-6 py-4 text-center">
                             <div className="flex justify-center">
                               <input 
                                 type="radio" 
                                 name="turma-select" 
                                 checked={selectedTurmaId === t.id}
                                 onChange={() => setSelectedTurmaId(t.id)}
-                                className="w-4 h-4 text-[#0f2851] border-slate-300 focus:ring-[#0f2851]"
+                                className="w-5 h-5 text-[#0f2851] border-slate-300 focus:ring-[#0f2851]"
                               />
                             </div>
                           </td>
