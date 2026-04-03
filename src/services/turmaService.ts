@@ -187,6 +187,17 @@ export const TurmaService = {
     return freqData || [];
   },
 
+  fetchAllFrequencias: async (turmaId: string | number, disciplina: string): Promise<any[]> => {
+    const tid = turmaId.toString().split('_')[0];
+    const { data: freqData, error } = await supabase
+      .from('frequencias')
+      .select('data, aluno_id, status')
+      .eq('turma_id', tid)
+      .eq('disciplina', disciplina);
+    if (error) throw error;
+    return freqData || [];
+  },
+
   buscarFrequenciaPorDia: async (turmaId: string | number, disciplina: string, data: string): Promise<any[]> => {
     const tid = turmaId.toString().split('_')[0];
     const { data: freqData, error } = await supabase

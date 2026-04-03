@@ -118,17 +118,28 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
         try {
           const rawId = turmaAtiva.id.toString().split('_')[0];
-          const [ls, hs, alumnosData, conts] = await Promise.all([
+          const [ls, hs, alumnosData, conts, freqs] = await Promise.all([
             TurmaService.fetchLancamentos(rawId, turmaAtiva.componente),
             TurmaService.fetchHorario(rawId, turmaAtiva.componente),
             TurmaService.fetchAlunos(rawId),
-            TurmaService.fetchAllConteudos(rawId, turmaAtiva.componente)
+            TurmaService.fetchAllConteudos(rawId, turmaAtiva.componente),
+            TurmaService.fetchAllFrequencias(rawId, turmaAtiva.componente)
           ]);
           
           setLancamentos(ls);
           setHorarioTurma(hs);
           setAlunos(alumnosData);
           setConteudos(conts);
+
+          // Processar frequências para faltasPorData
+          const faltasMap: Record<string, Set<string>> = {};
+          freqs.forEach((f: any) => {
+            if (f.status === 'F') {
+              if (!faltasMap[f.data]) faltasMap[f.data] = new Set();
+              faltasMap[f.data].add(f.aluno_id.toString());
+            }
+          });
+          setFaltasPorData(faltasMap);
           
           // Busca avaliações (depende de alunos para notas)
           await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alumnosData);
@@ -212,9 +223,40 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const salvarFrequencia = async (data: string, tempo: string, alunosFreq: Aluno[]) => {
     if (!turmaAtiva) return;
-    const rawId = turmaAtiva.id.toString().split('_')[0];
-    await TurmaService.salvarFrequencia(rawId, turmaAtiva.componente, data, tempo, alunosFreq);
-    registrarLancamento({ turmaId: rawId, data, tipo: 'frequencia', tempo });
+    await TurmaService.salvarFrequencia(turmaAtiva.id, turmaAtiva.componente, data, tempo, alunosFreq);
+    
+    // Atualizar lançamentos (UI)
+    registrarLancamento({
+      turmaId: turmaAtiva.id,
+      data,
+      tipo: 'frequencia',
+      tempo
+    });
+
+    // Atualizar faltasPorData em tempo real
+    setFaltasPorData(prev => {
+      const newMap = { ...prev };
+      // Para a data específica, precisamos reavaliar. 
+      // Como salvarFrequencia envia TODOS os alunos, podemos reconstruir o Set para esta data/tempo?
+      // Na verdade, fetchAllFrequencias retornou tudo. Se salvarmos aqui, o ideal é atualizar o Set.
+      // Mas lembre-se: um aluno pode ter Falta num tempo e Presença noutro. 
+      // Se ele tiver Falta em QUALQUER tempo daquele dia, ele é considerado faltoso para a avaliação.
+      
+      const currentAlunosFaltosos = new Set(newMap[data] || []);
+      alunosFreq.forEach(a => {
+        if (a.freq === 'F') {
+          currentAlunosFaltosos.add(a.id);
+        } else if (a.freq === 'P') {
+          // Só removemos se não houver FALTA em OUTRO tempo do mesmo dia.
+          // Mas como não temos os outros tempos aqui, o ideal seria recarregar as faltas do dia.
+        }
+      });
+      newMap[data] = currentAlunosFaltosos;
+      return newMap;
+    });
+
+    // Recarregar faltas do dia para garantir precisão
+    await carregarFaltasDaData(data);
   };
 
   const salvarConteudo = async (cont: Conteudo) => {

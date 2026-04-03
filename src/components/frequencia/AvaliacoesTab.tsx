@@ -398,25 +398,35 @@ export default function AvaliacoesTab() {
                                   className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-blue-600/20">
                                   <List className="w-3.5 h-3.5" /> Notas
                                 </button>
-
-                                <button onClick={() => { 
-                                    setSelectedAvaliacao(av); 
-                                    const rows: any = {};
-                                    alunos.forEach(a => {
-                                      const notaOriginal = a.notas?.[av.id];
-                                      rows[a.id] = { 
-                                        selected: !notaOriginal, // Seleciona automaticamente quem não tem nota
-                                        date: new Date().toISOString().split('T')[0],
-                                        grade: ''
-                                      };
-                                    });
-                                    setSecondCallRows(rows);
-                                    setAvaliacaoViewMode('second_call'); 
-                                    generateNewCaptcha();
-                                  }}
-                                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-blue-600/10">
-                                  <div className="w-5 h-5 bg-blue-800 text-white rounded-full flex items-center justify-center text-[10px] scale-90">2</div> 2ª chamada
-                                </button>
+                                
+                                {(() => {
+                                  const hasGrades = alunos.some(a => a.notas?.[av.id]);
+                                  const hasAbsences = (faltasPorData[av.data] || new Set()).size > 0;
+                                  
+                                  if (hasGrades && hasAbsences) {
+                                    return (
+                                      <button onClick={() => { 
+                                          setSelectedAvaliacao(av); 
+                                          const rows: any = {};
+                                          alunos.forEach(a => {
+                                            const notaOriginal = a.notas?.[av.id];
+                                            rows[a.id] = { 
+                                              selected: !notaOriginal,
+                                              date: new Date().toISOString().split('T')[0],
+                                              grade: ''
+                                            };
+                                          });
+                                          setSecondCallRows(rows);
+                                          setAvaliacaoViewMode('second_call'); 
+                                          generateNewCaptcha();
+                                        }}
+                                        className="flex items-center gap-1.5 px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-blue-600/10">
+                                        <div className="w-5 h-5 bg-blue-800 text-white rounded-full flex items-center justify-center text-[10px] scale-90">2</div> 2ª chamada
+                                      </button>
+                                    );
+                                  }
+                                  return null;
+                                })()}
                               </div>
                             </td>
                           </tr>
