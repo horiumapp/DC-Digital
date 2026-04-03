@@ -16,7 +16,7 @@ export default function AvaliacaoDetailsView({
     <div className="space-y-6">
       <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
         <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center">
             <Eye className="w-5 h-5" />
           </div>
           Identificação da Avaliação
@@ -74,9 +74,9 @@ export default function AvaliacaoDetailsView({
 
       <button
         onClick={onBack}
-        className="bg-blue-600 text-white px-8 py-3 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-600/20"
+        className="bg-[#0f2851] text-white px-8 py-3 rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20 active:scale-95"
       >
-        Voltar
+        Voltar para a listagem
       </button>
     </div>
   );
