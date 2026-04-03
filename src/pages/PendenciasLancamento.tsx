@@ -1,16 +1,38 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Printer, Search } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export default function PendenciasLancamento() {
   const navigate = useNavigate();
   const [distrito, setDistrito] = useState('LABREA');
-  const [escola, setEscola] = useState('CETI AGOSTINHO ERNESTO DE ALMEIDA');
+  const [escola, setEscola] = useState('');
+  const [escolas, setEscolas] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   
   const periodos = [
     '1. SEMESTRE', '2. SEMESTRE', '1. BIMESTRE', '2. BIMESTRE', 
     '3. BIMESTRE', '4. BIMESTRE', 'RECUPERAÇÃO', 'ÚNICO'
   ];
+
+  useEffect(() => {
+    fetchEscolas();
+  }, []);
+
+  const fetchEscolas = async () => {
+    const { data, error } = await supabase
+      .from('escolas')
+      .select('id, nome')
+      .order('nome');
+    
+    if (!error && data) {
+      setEscolas(data);
+      if (data.length > 0) {
+        setEscola(data[0].nome);
+      }
+    }
+    setLoading(false);
+  };
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-slate-50 dark:bg-slate-900">
@@ -54,15 +76,21 @@ export default function PendenciasLancamento() {
                 value={escola}
                 onChange={(e) => setEscola(e.target.value)}
                 className="w-full px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 rounded-md text-sm text-blue-800 dark:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={loading}
               >
-                <option value="CETI AGOSTINHO ERNESTO DE ALMEIDA">CETI AGOSTINHO ERNESTO DE ALMEIDA</option>
-                <option value="EDUCANDARIO SANTA RITA">EDUCANDARIO SANTA RITA</option>
-                <option value="ESCOLA ESTADUAL PROFª BALBINA MESTRINHO">ESCOLA ESTADUAL PROFª BALBINA MESTRINHO</option>
-                <option value="ESCOLA ESTADUAL SANTO AGOSTINHO">ESCOLA ESTADUAL SANTO AGOSTINHO</option>
-                <option value="ESCOLA ESTADUAL THOME DE MEDEIROS RAPOSO">ESCOLA ESTADUAL THOME DE MEDEIROS RAPOSO</option>
+                {loading ? (
+                  <option>Carregando escolas...</option>
+                ) : escolas.length > 0 ? (
+                  escolas.map((e) => (
+                    <option key={e.id} value={e.nome}>{e.nome}</option>
+                  ))
+                ) : (
+                  <option>Nenhuma escola cadastrada</option>
+                )}
               </select>
             </div>
           </div>
+
 
           <div className="mb-6">
             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">Período</label>
