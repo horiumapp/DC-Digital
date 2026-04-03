@@ -61,9 +61,6 @@ export default function Frequencia() {
             <div className="flex items-center gap-3">
               <h2 className="text-slate-800 text-base font-medium">{turmaAtiva?.ensino} - {turmaAtiva?.fase}</h2>
               <span className="bg-emerald-50 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-md border border-emerald-100 uppercase tracking-widest">Ano: 2026</span>
-              <span className="bg-blue-50 text-blue-700 text-[10px] font-black px-2 py-0.5 rounded-md border border-blue-100 uppercase tracking-widest">
-                {turmaAtiva?.ensino.includes('Médio') ? 'Ensino Médio' : 'Ensino Fundamental'}
-              </span>
             </div>
           </div>
           <div className="flex items-center gap-2">
