@@ -208,7 +208,7 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-white">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center shadow-inner">
+            <div className="w-12 h-12 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center shadow-inner">
               <LogIn className="w-6 h-6" />
             </div>
             <div>
@@ -222,7 +222,7 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
               !isEditing ? (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-600/20 active:scale-95"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-[#0f2851] hover:bg-[#1a3a6d] text-white rounded-xl text-sm font-bold uppercase tracking-widest transition-all shadow-lg shadow-[#0f2851]/20 active:scale-95"
                 >
                   <Edit2 className="w-4 h-4" />
                   Editar Grade
@@ -260,8 +260,8 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
         <div className="flex-1 overflow-auto p-0 relative min-h-[500px]">
           {loading ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[1px] z-50">
-              <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
-              <p className="text-slate-500 font-black text-xs uppercase tracking-[0.2em]">Carregando Grade...</p>
+              <Loader2 className="w-12 h-12 text-[#0f2851] animate-spin mb-4" />
+              <p className="text-slate-500 font-bold text-xs uppercase tracking-[0.2em]">Carregando Grade...</p>
             </div>
           ) : (
             <table className="w-full border-separate border-spacing-0 table-fixed">
@@ -293,7 +293,7 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
                         <td 
                           key={dia} 
                           className={`border-r border-b border-slate-50 p-2 align-top last:border-r-0 transition-colors ${
-                            isEditing ? 'hover:bg-blue-50/30' : 'bg-transparent'
+                            isEditing ? 'hover:bg-[#eef2ff]/30' : 'bg-transparent'
                           }`}
                         >
                           {isEditing ? (
@@ -301,7 +301,7 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
                               <select
                                 value={cellData?.id || ''}
                                 onChange={(e) => handleTurmaSelect(diaIdx, slot, e.target.value)}
-                                className="w-full bg-white border border-slate-200 rounded-lg p-2 text-[10px] font-bold text-slate-600 focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
+                                className="w-full bg-white border border-slate-200 rounded-lg p-2 text-[10px] font-bold text-slate-600 focus:outline-none focus:border-[#0f2851] transition-all cursor-pointer"
                               >
                                 <option value="">+ Turma</option>
                                 {turmas.map(t => (
@@ -331,17 +331,17 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
                               {cellData ? (
                                 <>
                                   <div className="space-y-1">
-                                    <div className="flex items-center gap-1.5 text-[9px] font-black text-blue-600 uppercase tracking-tighter">
-                                      <Building2 className="w-3 h-3" />
+                                    <div className="flex items-center gap-1.5 text-[9px] font-bold text-[#0f2851] uppercase tracking-tighter">
+                                      <Building2 className="w-3 h-3 text-[#0f2851]/60" />
                                       {cellData.turno || 'GERAL'}
                                     </div>
-                                    <div className="flex items-center gap-1.5 text-[12px] font-black text-slate-800 uppercase tracking-tight leading-tight">
+                                    <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-800 uppercase tracking-tight leading-tight">
                                       {cellData.nome}
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-1.5 mt-2 bg-blue-50/50 border border-blue-100 rounded-md px-1.5 py-1">
-                                    <BookOpen className="w-3 h-3 text-blue-400" />
-                                    <span className="text-[9px] font-black text-[#0f2851] uppercase tracking-widest leading-none truncate">
+                                  <div className="flex items-center gap-1.5 mt-2 bg-[#eef2ff] border border-blue-100 rounded-md px-1.5 py-1">
+                                    <BookOpen className="w-3 h-3 text-[#0f2851]/40" />
+                                    <span className="text-[9px] font-bold text-[#0f2851] uppercase tracking-widest leading-none truncate">
                                       {cellData.componente_horario || 'N/A'}
                                     </span>
                                   </div>
@@ -367,12 +367,12 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
         <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
           <div className="flex gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-blue-500" />
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Escola</span>
+              <div className="w-2 h-2 rounded-full bg-[#0f2851]" />
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Escola</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-blue-500" />
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Turma</span>
+              <div className="w-2 h-2 rounded-full bg-[#0f2851]/60" />
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Turma</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-purple-500" />

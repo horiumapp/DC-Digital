@@ -45,7 +45,7 @@ export default function Aparata() {
           </div>
           <h2 className="text-xl font-bold text-slate-800 mb-2">Nenhuma turma selecionada</h2>
           <p className="text-slate-600 mb-6">Por favor, volte ao diário e selecione uma turma.</p>
-          <Link to="/diario" className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition">
+          <Link to="/diario" className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#0f2851] text-white font-bold rounded-xl hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20">
             <ArrowLeft className="w-5 h-5" />
             Voltar ao Diário
           </Link>
@@ -63,7 +63,7 @@ export default function Aparata() {
           <div className="flex items-center gap-4">
             <Link
               to="/diario"
-              className="flex items-center gap-1 px-4 py-2 bg-blue-100 text-blue-800 text-sm font-medium rounded-lg border border-blue-200 hover:bg-blue-200 transition"
+              className="flex items-center gap-1 px-4 py-2 bg-[#eef2ff] text-[#0f2851] text-sm font-bold rounded-lg border border-blue-100 hover:bg-[#e0e7ff] transition"
             >
               <ArrowLeft className="w-4 h-4" />
               Voltar
@@ -78,45 +78,45 @@ export default function Aparata() {
           <div className="bg-white/70 rounded-2xl p-6 border border-slate-200">
             {/* Info da Turma */}
             <div className="grid grid-cols-4 gap-4">
-              <div className="flex items-center gap-3 bg-blue-50/50 p-4 rounded-2xl">
-                <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center text-blue-700">
+              <div className="flex items-center gap-3 bg-[#eef2ff]/40 p-4 rounded-2xl border border-blue-50">
+                <div className="w-10 h-10 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#0f2851]">
                   <GraduationCap className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase">Professor</p>
-                  <p className="text-sm font-bold text-slate-800" title={turmaAtiva.professor}>
+                  <p className="text-sm font-bold text-[#0f2851]" title={turmaAtiva.professor}>
                     {turmaAtiva.professor.length > 20 ? turmaAtiva.professor.substring(0, 18) + '...' : turmaAtiva.professor}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 bg-blue-50/50 p-4 rounded-2xl">
-                <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center text-blue-700">
+              <div className="flex items-center gap-3 bg-[#eef2ff]/40 p-4 rounded-2xl border border-blue-50">
+                <div className="w-10 h-10 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#0f2851]">
                   <Building2 className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase">Escola</p>
-                  <p className="text-sm font-bold text-slate-800">{turmaAtiva.escola}</p>
+                  <p className="text-sm font-bold text-[#0f2851]">{turmaAtiva.escola}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 bg-blue-50/50 p-4 rounded-2xl">
-                <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center text-blue-700">
+              <div className="flex items-center gap-3 bg-[#eef2ff]/40 p-4 rounded-2xl border border-blue-50">
+                <div className="w-10 h-10 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#0f2851]">
                   <Clock className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase">Turno</p>
-                  <p className="text-sm font-bold text-slate-800">{turmaAtiva.turno}</p>
+                  <p className="text-sm font-bold text-[#0f2851]">{turmaAtiva.turno}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 bg-blue-50/50 p-4 rounded-2xl">
-                <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center text-blue-700">
+              <div className="flex items-center gap-3 bg-[#eef2ff]/40 p-4 rounded-2xl border border-blue-50">
+                <div className="w-10 h-10 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#0f2851]">
                   <BookOpen className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase">Componente</p>
-                  <p className="text-sm font-bold text-slate-800 uppercase">{turmaAtiva.componente}</p>
+                  <p className="text-sm font-bold text-[#0f2851] uppercase">{turmaAtiva.componente}</p>
                 </div>
               </div>
             </div>
@@ -128,7 +128,7 @@ export default function Aparata() {
                 <select
                   value={periodoSelecionado}
                   onChange={(e) => { setPeriodoSelecionado(e.target.value); setShowDados(false); }}
-                  className="w-56 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-56 border-none bg-slate-50 rounded-xl px-4 py-2 text-sm text-[#0f2851] font-bold focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer"
                 >
                   {PERIODOS.map(p => (
                     <option key={p.value} value={p.value}>{p.label}</option>
@@ -136,7 +136,7 @@ export default function Aparata() {
                 </select>
                 <button
                   onClick={handleExibir}
-                  className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition"
+                  className="px-8 py-2 bg-[#0f2851] text-white text-sm font-bold rounded-xl hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20 active:scale-95"
                 >
                   Exibir
                 </button>
@@ -185,13 +185,13 @@ export default function Aparata() {
 
                     <div className="relative mb-4">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="Pesquisar"
-                        value={searchMovimentacao}
-                        onChange={(e) => setSearchMovimentacao(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:border-blue-500 bg-white"
-                      />
+                        <input
+                          type="text"
+                          placeholder="Pesquisar registros..."
+                          value={searchMovimentacao}
+                          onChange={(e) => setSearchMovimentacao(e.target.value)}
+                          className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-[#0f2851] font-bold focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10"
+                        />
                     </div>
 
                     <div className="border border-slate-200 rounded-xl overflow-hidden">
@@ -214,18 +214,18 @@ export default function Aparata() {
                             </tr>
                           ) : movimentacoesFiltradas.map((mov) => (
                             <tr key={mov.seq} className="bg-white hover:bg-slate-50 transition">
-                              <td className="px-4 py-3 text-blue-600 font-semibold">{mov.seq}</td>
-                              <td className="px-4 py-3 text-slate-700">{mov.data}</td>
+                              <td className="px-4 py-3 text-[#0f2851] font-bold tabular-nums">{String(mov.seq).padStart(2, '0')}</td>
+                              <td className="px-4 py-3 text-slate-700 font-medium">{mov.data}</td>
                               <td className="px-4 py-3">
-                                <span className="bg-blue-50 text-blue-700 text-xs font-semibold px-2.5 py-1 rounded">{mov.operacao}</span>
+                                <span className="bg-[#eef2ff] text-[#0f2851] text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest border border-blue-100">{mov.operacao}</span>
                               </td>
-                              <td className="px-4 py-3 text-slate-700">{mov.usuario}</td>
+                              <td className="px-4 py-3 text-slate-600 font-medium">{mov.usuario}</td>
                               <td className="px-4 py-3">
                                 <Link
                                   to="/aparata-detalhes"
-                                  className="bg-blue-600 text-white text-sm font-semibold px-5 py-2 rounded-lg hover:bg-blue-700 transition inline-flex items-center justify-center gap-2 w-32"
+                                  className="bg-[#0f2851] text-white text-[10px] font-bold px-5 py-2 rounded-xl hover:bg-[#1a3a6d] transition inline-flex items-center justify-center gap-2 w-32 uppercase tracking-widest shadow-md shadow-[#0f2851]/20 active:scale-95"
                                 >
-                                  <Eye className="w-4 h-4" />
+                                  <Eye className="w-3.5 h-3.5" />
                                   Detalhes
                                 </Link>
                               </td>
@@ -251,7 +251,7 @@ export default function Aparata() {
                             <button className="px-3 py-1 border border-slate-200 rounded text-xs text-slate-500 hover:bg-slate-50 transition disabled:opacity-40" disabled>
                               ← Anterior
                             </button>
-                            <button className="px-3 py-1 bg-blue-600 text-white rounded text-xs font-bold">1</button>
+                            <button className="px-3 py-1 bg-[#0f2851] text-white rounded-lg text-xs font-bold">1</button>
                             <button className="px-3 py-1 border border-slate-200 rounded text-xs text-slate-500 hover:bg-slate-50 transition disabled:opacity-40" disabled>
                               Seguinte →
                             </button>
