@@ -165,7 +165,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
           return baseAlunos.map(aluno => {
             const notasAluno: Record<string, string> = {};
             notasData.filter((n: any) => n.aluno_id.toString() === aluno.id).forEach((n: any) => {
-              notasAluno[n.avaliacao_id.toString()] = n.valor.toString().replace('.', ',');
+              notasAluno[n.avaliacao_id.toString()] = parseFloat(n.valor).toFixed(2).replace('.', ',');
             });
             return { ...aluno, notas: notasAluno };
           });
