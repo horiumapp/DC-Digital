@@ -357,17 +357,17 @@ export default function AvaliacoesTab() {
                             <td className="px-6 py-4">
                               <div className="flex items-center justify-center gap-2">
                                 <button onClick={() => { setSelectedAvaliacao(av); setAvaliacaoViewMode('details'); }}
-                                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-blue-600/20">
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
                                   <Eye className="w-3.5 h-3.5" /> Detalhes
                                 </button>
                                 
                                 <button onClick={() => { setSelectedAvaliacao(av); setSelectedDate(av.data); setInstrumentoAvaliacao(av.instrumento || 'AVALIACAO ESCRITA'); setObjetosAvaliacao(av.objetos || []); setAvaliacaoViewMode('edit'); }}
-                                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all">
-                                  <Pencil className="w-3.5 h-3.5" /> Alterar
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-lg font-bold text-[10px] uppercase transition-all">
+                                  <Pencil className="w-3.5 h-3.5 text-slate-500" /> Alterar
                                 </button>
 
                                 <button onClick={() => { setAvaliacaoToDelete(av); setShowDeleteModal(true); }}
-                                  className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-red-600/20">
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-red-100">
                                   <Trash2 className="w-3.5 h-3.5" /> Remover
                                 </button>
 
@@ -394,14 +394,14 @@ export default function AvaliacoesTab() {
                                       setObjetosAvaliacao(novoRP.objetos);
                                       setAvaliacaoViewMode('edit');
                                     }}
-                                    className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-bold text-[10px] uppercase transition-all"
+                                    className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-bold text-[10px] uppercase transition-all"
                                   >
-                                    <Plus className="w-3.5 h-3.5" /> ADICIONAR RP
+                                    <Plus className="w-3.5 h-3.5 text-slate-500" /> ADICIONAR RP
                                   </button>
                                 )}
 
                                 <button onClick={() => { setSelectedAvaliacao(av); setAvaliacaoViewMode('grades'); }}
-                                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-blue-600/20">
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
                                   <List className="w-3.5 h-3.5" /> Notas
                                 </button>
                                 
@@ -468,17 +468,17 @@ export default function AvaliacoesTab() {
                                       </button>
                                       
                                       <button onClick={() => { setSelectedAvaliacao(rp); setSelectedDate(rp.data); setInstrumentoAvaliacao(rp.instrumento); setObjetosAvaliacao(rp.objetos); setAvaliacaoViewMode('edit'); }}
-                                        className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-600 hover:bg-amber-50 hover:text-amber-600 rounded-lg font-bold text-[10px] uppercase transition-all">
-                                        <Pencil className="w-3.5 h-3.5" /> Alterar
+                                        className="flex items-center gap-1.5 px-4 py-2 bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-lg font-bold text-[10px] uppercase transition-all">
+                                        <Pencil className="w-3.5 h-3.5 text-slate-500" /> Alterar
                                       </button>
                                       
                                       <button onClick={() => { setAvaliacaoToDelete(rp); setShowDeleteModal(true); }}
-                                        className="flex items-center gap-1.5 px-4 py-2 bg-white text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-lg font-bold text-[10px] uppercase transition-all border border-slate-100">
+                                        className="flex items-center gap-1.5 px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-red-100">
                                         <Trash2 className="w-3.5 h-3.5" /> Remover
                                       </button>
 
                                       <button onClick={() => { setSelectedAvaliacao(rp); setAvaliacaoViewMode('grades'); }}
-                                        className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-blue-600/20">
+                                        className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
                                         <List className="w-3.5 h-3.5" /> Notas
                                       </button>
                                     </div>
