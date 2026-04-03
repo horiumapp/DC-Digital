@@ -347,8 +347,15 @@ export default function AvaliacoesTab() {
                               </div>
                               <span className="text-slate-900 font-bold text-base">{av.tipo}</span>
                             </td>
-                            <td className="px-6 py-4 text-slate-600 font-medium uppercase">{av.data}</td>
-                            <td className="px-6 py-4 text-slate-500 text-xs font-semibold">{av.instrumento}</td>
+                             <td className="px-6 py-4">
+                               <div className="flex items-center gap-2 text-slate-600 font-bold uppercase text-xs">
+                                 <CalendarIcon className="w-3.5 h-3.5 text-slate-400" />
+                                 {av.data}
+                               </div>
+                             </td>
+                             <td className="px-6 py-4">
+                               <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-wider">{av.instrumento}</span>
+                             </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center justify-center gap-2">
                                 <button onClick={() => { setSelectedAvaliacao(av); setAvaliacaoViewMode('details'); }}
@@ -369,7 +376,7 @@ export default function AvaliacoesTab() {
                                 {alunos.some(aluno => {
                                   const nota = parseFloat((aluno.notas?.[av.id] || '').replace(',', '.'));
                                   return !isNaN(nota) && nota < 6.0;
-                                }) && (
+                                }) && !avaliacoes.some(rp => String(rp.parent_id) === String(av.id)) && (
                                   <button 
                                     onClick={() => {
                                       const rpsCount = avaliacoes.filter(rp => rp.parent_id === av.id).length;
@@ -437,7 +444,7 @@ export default function AvaliacoesTab() {
                             <>
 
                               {avaliacoes.filter(rp => String(rp.parent_id) === String(av.id)).map(rp => (
-                                <tr key={rp.id} className="bg-white border-b border-slate-50 group/rp">
+                                <tr key={rp.id} className="bg-amber-50/40 border-b border-slate-50 group/rp transition-colors hover:bg-amber-50/60">
                                   <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
                                       <div className="w-6 h-6 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
