@@ -157,30 +157,27 @@ export default function RelatorioFrequencia() {
       // 1. Buscar Alunos
       const alunosList = await TurmaService.fetchAlunos(turmaId);
       
-      // 2. Buscar Frequências
-      const { data: freqData, error: freqError } = await supabase
+      // 2. Buscar Frequências de forma ampla (seguindo padrão do Relatório de Conteúdos)
+      // Buscamos todos da turma e filtramos em memória para evitar erros de formato de data/string no SQL
+      const { data: rawFreqs, error: freqError } = await supabase
         .from('frequencias')
         .select('*')
-        .eq('turma_id', turmaId)
-        .eq('disciplina', componente)
-        .gte('data', dateStart.split('-').reverse().join('/')) // Tenta formato BR
-        .lte('data', dateEnd.split('-').reverse().join('/'));
+        .eq('turma_id', turmaId);
 
-      // Se não vier nada pelo formato BR, tenta ISO
-      let finalFreqs = freqData || [];
-      if (finalFreqs.length === 0) {
-          const { data: isoFreqs } = await supabase
-            .from('frequencias')
-            .select('*')
-            .eq('turma_id', turmaId)
-            .eq('disciplina', componente)
-            .gte('data', dateStart)
-            .lte('data', dateEnd);
-          finalFreqs = isoFreqs || [];
-      }
+      if (freqError) throw freqError;
+
+      // Filtragem em Memória (JS)
+      const finalFreqs = (rawFreqs || []).filter(f => {
+        const fDateISO = formatarDataParaISO(f.data);
+        if (!fDateISO || fDateISO === 'Invalid Date') return false;
+        
+        const matchProp = String(f.disciplina || '').trim().toUpperCase() === componente.trim().toUpperCase();
+        const matchDate = fDateISO >= dateStart && fDateISO <= dateEnd;
+        return matchProp && matchDate;
+      });
 
       if (finalFreqs.length === 0) {
-        alert('Nenhuma frequência encontrada para este período.');
+        alert('Nenhuma frequência encontrada para os critérios selecionados.');
         setDataLoading(false);
         return;
       }
@@ -188,8 +185,6 @@ export default function RelatorioFrequencia() {
       // 3. Processar Colunas (Datas/Tempos)
       const colunasUnicas = new Set<string>();
       finalFreqs.forEach(f => {
-        const d = f.data.substring(0, 5); // DD/MM
-        const t = f.tempo?.charAt(0) || '1'; // 1T
         colunasUnicas.add(`${f.data}|${f.tempo}`);
       });
 
