@@ -59,16 +59,35 @@ export default function Layout() {
             {/* Dropdown menu */}
             <div className="absolute left-1/2 -translate-x-1/2 mt-3 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 border border-slate-100 dark:border-slate-700 transform origin-top scale-95 group-hover:scale-100 p-1">
               <div className="py-2">
-                <div className="px-4 py-1.5 mb-1 text-center">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Documentação</span>
-                </div>
-                <Link to="/relatorio-notas" className="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-700 hover:text-blue-700 dark:hover:text-blue-400 rounded-xl transition-colors">
-                  <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-200" />
-                  Notas das Avaliações
+                <Link to="#" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                  Conteúdos Ministrados
                 </Link>
-                <Link to="/relatorio-medias" className="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-700 hover:text-blue-700 dark:hover:text-blue-400 rounded-xl transition-colors">
-                  <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-200" />
+                <Link to="#" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                  Datas com Conteúdos Não Lançados
+                </Link>
+                <Link to="#" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                  Conteúdos Planejados x Ministrados
+                </Link>
+                <Link to="#" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                  Conteúdos Cadastrados
+                </Link>
+                <Link to="#" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                  Aspectos Socioafetivos
+                </Link>
+                <Link to="/relatorio-medias" className="flex items-center px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                   Médias do Componente
+                </Link>
+                <Link to="#" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                  Anotações Complementares
+                </Link>
+                <Link to="#" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                  Nutricional
+                </Link>
+                <Link to="#" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                  Frequências da Turma
+                </Link>
+                <Link to="/relatorio-notas" className="flex items-center px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                  Notas da Turma
                 </Link>
               </div>
             </div>
