@@ -5,6 +5,7 @@ import { useTurma, Avaliacao } from '../../contexts/TurmaContext';
 import { useCaptcha } from '../../hooks/useCaptcha';
 import { getBimestrePorData } from '../../utils/dateUtils';
 import { formatMatricula } from '../../utils/formatters';
+import { formatarDataParaISO } from '../../utils/dateUtils';
 
 export default function AvaliacoesTab() {
   const { turmaAtiva, alunos, avaliacoes, conteudos, loading, salvarAvaliacao, removerAvaliacao, salvarNotas, carregarFaltasDaData, faltasPorData } = useTurma();
@@ -401,7 +402,7 @@ export default function AvaliacoesTab() {
                                 
                                 {(() => {
                                   const hasGrades = alunos.some(a => a.notas?.[av.id]);
-                                  const hasAbsences = (faltasPorData[av.data] || new Set()).size > 0;
+                                  const hasAbsences = (faltasPorData[formatarDataParaISO(av.data)] || new Set()).size > 0;
                                   
                                   if (hasGrades && hasAbsences) {
                                     return (
@@ -940,7 +941,7 @@ export default function AvaliacoesTab() {
                     </td>
                     <td className="px-8 py-6">
                       <div className="relative max-w-[140px] mx-auto">
-                        {faltasPorData[selectedAvaliacao.data]?.has(aluno.id) ? (
+                        {faltasPorData[formatarDataParaISO(selectedAvaliacao.data)]?.has(aluno.id) ? (
                           <div className="w-full bg-red-50 border-2 border-red-100 rounded-2xl px-4 py-3 text-center text-sm font-black text-red-600 uppercase tracking-widest flex items-center justify-center gap-2">
                             <AlertCircle className="w-4 h-4" /> Falta
                           </div>

@@ -26,3 +26,11 @@ export const getDayOfWeek = (dataStr: string): number => {
   const [dia, mes, ano] = dataStr.split('/').map(Number);
   return new Date(ano, mes - 1, dia).getDay();
 };
+
+export const formatarDataParaISO = (dataStr: string): string => {
+  if (!dataStr) return '';
+  if (dataStr.includes('-')) return dataStr; // Já está no formato ISO
+  const [dia, mes, ano] = dataStr.split('/');
+  if (!dia || !mes || !ano) return dataStr;
+  return `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+};

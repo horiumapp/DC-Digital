@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { getBimestrePorData } from '../utils/dateUtils';
+import { getBimestrePorData, formatarDataParaISO } from '../utils/dateUtils';
 import { TurmaService } from '../services/turmaService';
 
 export interface TurmaMetricas {
@@ -135,8 +135,9 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
           const faltasMap: Record<string, Set<string>> = {};
           freqs.forEach((f: any) => {
             if (f.status === 'F') {
-              if (!faltasMap[f.data]) faltasMap[f.data] = new Set();
-              faltasMap[f.data].add(f.aluno_id.toString());
+              const normalizedDate = formatarDataParaISO(f.data);
+              if (!faltasMap[normalizedDate]) faltasMap[normalizedDate] = new Set();
+              faltasMap[normalizedDate].add(f.aluno_id.toString());
             }
           });
           setFaltasPorData(faltasMap);
@@ -236,22 +237,14 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     // Atualizar faltasPorData em tempo real
     setFaltasPorData(prev => {
       const newMap = { ...prev };
-      // Para a data específica, precisamos reavaliar. 
-      // Como salvarFrequencia envia TODOS os alunos, podemos reconstruir o Set para esta data/tempo?
-      // Na verdade, fetchAllFrequencias retornou tudo. Se salvarmos aqui, o ideal é atualizar o Set.
-      // Mas lembre-se: um aluno pode ter Falta num tempo e Presença noutro. 
-      // Se ele tiver Falta em QUALQUER tempo daquele dia, ele é considerado faltoso para a avaliação.
-      
-      const currentAlunosFaltosos = new Set(newMap[data] || []);
+      const normalizedDate = formatarDataParaISO(data);
+      const currentAlunosFaltosos = new Set(newMap[normalizedDate] || []);
       alunosFreq.forEach(a => {
         if (a.freq === 'F') {
           currentAlunosFaltosos.add(a.id);
-        } else if (a.freq === 'P') {
-          // Só removemos se não houver FALTA em OUTRO tempo do mesmo dia.
-          // Mas como não temos os outros tempos aqui, o ideal seria recarregar as faltas do dia.
         }
       });
-      newMap[data] = currentAlunosFaltosos;
+      newMap[normalizedDate] = currentAlunosFaltosos;
       return newMap;
     });
 
@@ -320,7 +313,8 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       const rawId = turmaAtiva.id.toString().split('_')[0];
       const resp = await TurmaService.buscarFrequenciaPorDia(rawId, turmaAtiva.componente, data);
       const idsFaltosos = new Set(resp.filter((f: any) => f.status === 'F').map((f: any) => f.aluno_id.toString()));
-      setFaltasPorData(prev => ({ ...prev, [data]: idsFaltosos }));
+      const normalizedDate = formatarDataParaISO(data);
+      setFaltasPorData(prev => ({ ...prev, [normalizedDate]: idsFaltosos }));
     } catch (err) {
       console.error('Erro ao carregar faltas:', err);
     }
