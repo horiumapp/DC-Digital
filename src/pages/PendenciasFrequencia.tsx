@@ -31,8 +31,14 @@ export default function PendenciasFrequencia() {
   }, []);
 
   useEffect(() => {
-    // Não disparar busca automática para respeitar o botão "Consultar"
-  }, [escolaId]);
+    if (escolaId) {
+      // Atualizar o endereço (distrito) automaticamente com base na escola selecionada
+      const escolaSelecionada = escolas.find(e => e.id === escolaId);
+      if (escolaSelecionada && escolaSelecionada.distrito) {
+        setDistrito(escolaSelecionada.distrito);
+      }
+    }
+  }, [escolaId, escolas]);
 
   const fetchInitialData = async () => {
     setLoading(true);
@@ -141,26 +147,24 @@ export default function PendenciasFrequencia() {
               >
                 {loading ? (
                   <option>Carregando escolas...</option>
-                ) : escolasPorDistrito.length > 0 ? (
-                  escolasPorDistrito.map((e) => (
+                ) : escolas.length > 0 ? (
+                  escolas.map((e) => (
                     <option key={e.id} value={e.id}>{e.nome}</option>
                   ))
                 ) : (
-                  <option>Nenhuma escola neste endereço</option>
+                  <option>Nenhuma escola cadastrada</option>
                 )}
               </select>
             </div>
             <div>
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Endereço</label>
-              <select 
-                value={distrito}
-                onChange={(e) => setDistrito(e.target.value)}
-                className="w-full px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 rounded-lg text-sm text-blue-800 dark:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-              >
-                {distritos.map(d => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
+               <select 
+                 value={distrito}
+                 readOnly
+                 className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-500 dark:text-slate-400 focus:outline-none cursor-not-allowed shadow-sm appearance-none"
+               >
+                 <option value={distrito}>{distrito || 'Endereço não disponível'}</option>
+               </select>
             </div>
           </div>
 
