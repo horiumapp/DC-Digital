@@ -89,6 +89,8 @@ interface TurmaContextType {
   buscarConteudo: (data: string, tempo: string) => Promise<Conteudo | null>;
   removerFrequencia: (data: string, tempo: string) => Promise<void>;
   removerConteudo: (data: string, tempo: string) => Promise<void>;
+  carregarFaltasDaData: (data: string) => Promise<void>;
+  faltasPorData: Record<string, Set<string>>;
 }
 
 const TurmaContext = createContext<TurmaContextType | undefined>(undefined);
@@ -101,6 +103,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const [conteudos, setConteudos] = useState<Conteudo[]>([]);
   const [horarioTurma, setHorarioTurma] = useState<Horario[]>([]);
   const [loading, setLoading] = useState(false);
+  const [faltasPorData, setFaltasPorData] = useState<Record<string, Set<string>>>({});
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -269,6 +272,18 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     setConteudos(conts);
   };
 
+  const carregarFaltasDaData = async (data: string) => {
+    if (!turmaAtiva) return;
+    try {
+      const rawId = turmaAtiva.id.toString().split('_')[0];
+      const resp = await TurmaService.buscarFrequenciaPorDia(rawId, turmaAtiva.componente, data);
+      const idsFaltosos = new Set(resp.filter((f: any) => f.status === 'F').map((f: any) => f.aluno_id.toString()));
+      setFaltasPorData(prev => ({ ...prev, [data]: idsFaltosos }));
+    } catch (err) {
+      console.error('Erro ao carregar faltas:', err);
+    }
+  };
+
   return (
     <TurmaContext.Provider value={{ 
       turmaAtiva, selecionarTurma, 
@@ -276,7 +291,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       alunos, avaliacoes, conteudos, horarioTurma, loading, 
       salvarAvaliacao, removerAvaliacao, salvarNotas,
       salvarFrequencia, salvarConteudo, buscarFrequencia, buscarConteudo,
-      removerFrequencia, removerConteudo
+      removerFrequencia, removerConteudo, carregarFaltasDaData, faltasPorData
     }}>
       {children}
     </TurmaContext.Provider>

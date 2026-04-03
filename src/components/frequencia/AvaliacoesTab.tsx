@@ -7,7 +7,7 @@ import { getBimestrePorData } from '../../utils/dateUtils';
 import { formatMatricula } from '../../utils/formatters';
 
 export default function AvaliacoesTab() {
-  const { turmaAtiva, alunos, avaliacoes, conteudos, loading, salvarAvaliacao, removerAvaliacao, salvarNotas } = useTurma();
+  const { turmaAtiva, alunos, avaliacoes, conteudos, loading, salvarAvaliacao, removerAvaliacao, salvarNotas, carregarFaltasDaData, faltasPorData } = useTurma();
 
   const [avaliacaoViewMode, setAvaliacaoViewMode] = useState<'list' | 'details' | 'edit' | 'grades' | 'second_call'>('list');
   const [selectedAvaliacao, setSelectedAvaliacao] = useState<any>(null);
@@ -930,7 +930,19 @@ export default function AvaliacoesTab() {
                     </td>
                     <td className="px-8 py-6">
                       <div className="relative max-w-[140px] mx-auto">
-                        <input type="text" placeholder="0,00" value={localNotas[aluno.id] || ''} onChange={(e) => handleNotaChange(aluno.id, e.target.value)} className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-center text-lg font-black text-blue-600 focus:ring-2 focus:ring-blue-600/20 transition-all group-hover:bg-white placeholder:text-slate-200" />
+                        {faltasPorData[selectedAvaliacao.data]?.has(aluno.id) ? (
+                          <div className="w-full bg-red-50 border-2 border-red-100 rounded-2xl px-4 py-3 text-center text-sm font-black text-red-600 uppercase tracking-widest flex items-center justify-center gap-2">
+                            <AlertCircle className="w-4 h-4" /> Falta
+                          </div>
+                        ) : (
+                          <input 
+                            type="text" 
+                            placeholder="0,00" 
+                            value={localNotas[aluno.id] || ''} 
+                            onChange={(e) => handleNotaChange(aluno.id, e.target.value)} 
+                            className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-center text-lg font-black text-blue-600 focus:ring-2 focus:ring-blue-600/20 transition-all group-hover:bg-white placeholder:text-slate-200" 
+                          />
+                        )}
                       </div>
                     </td>
                   </tr>
