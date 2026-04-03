@@ -49,7 +49,10 @@ export default function RelatorioNotas() {
               allDisciplinas = [...allDisciplinas, ...p.disciplinas];
             }
           });
-          const componente = allDisciplinas.length > 0 ? allDisciplinas.join(', ') : 'POLIVALENTE';
+          // Garantir valores únicos de disciplinas ou POLIVALENTE
+          let componentes = [...new Set(allDisciplinas)];
+          if (componentes.length === 0) componentes = ['POLIVALENTE'];
+
           const profIds = profs.map(p => p.id);
 
           const { data: alocs } = await supabase
@@ -66,18 +69,17 @@ export default function RelatorioNotas() {
               .order('nome');
 
             if (turmasAlocadas) {
-              const uniqueMap = new Map();
+              const finalTurmas: any[] = [];
               turmasAlocadas.forEach(t => {
-                const key = `${t.id}-${componente}`;
-                if (!uniqueMap.has(key)) {
-                  uniqueMap.set(key, { ...t, componente });
-                }
+                // Criar uma entrada para cada disciplina alocada àquela turma
+                componentes.forEach(comp => {
+                  finalTurmas.push({ ...t, componente: comp });
+                });
               });
               
-              const finalTurmas = Array.from(uniqueMap.values());
               setTurmas(finalTurmas);
               if (finalTurmas.length > 0) {
-                setSelectedTurma(`${finalTurmas[0].id}|${componente}`);
+                setSelectedTurma(`${finalTurmas[0].id}|${finalTurmas[0].componente}`);
               }
             }
           } else {
