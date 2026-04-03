@@ -112,7 +112,7 @@ export default function AparataDetalhes() {
           <div className="flex items-center gap-3">
             <Link
               to="/aparata"
-              className="flex items-center gap-1 px-4 py-2 bg-[#eef2ff] text-[#0f2851] text-sm font-bold rounded-lg border border-blue-100 hover:bg-[#e0e7ff] transition"
+              className="flex items-center gap-1 px-4 py-2 bg-[#eef2ff] text-[#0f2851] text-sm font-bold rounded-xl border border-blue-100 hover:bg-[#e0e7ff] transition shadow-sm"
             >
               <ArrowLeft className="w-4 h-4" />
               Voltar

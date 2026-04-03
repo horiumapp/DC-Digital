@@ -94,7 +94,7 @@ export default function Cadastro() {
         <section className="bg-white p-8 md:p-10 shadow-xl border border-slate-100 rounded-xl">
           
           <div className="mb-6">
-            <Link to="/" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
+            <Link to="/" className="inline-flex items-center text-sm font-bold text-[#0f2851] hover:underline transition-all">
               <ArrowLeft className="w-4 h-4 mr-1" />
               Voltar para o Login
             </Link>
@@ -123,7 +123,7 @@ export default function Cadastro() {
                 name="name" 
                 placeholder="Ex: João da Silva" 
                 required 
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors outline-none text-base" 
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
               />
             </div>
 
@@ -135,7 +135,7 @@ export default function Cadastro() {
                 name="email" 
                 placeholder="seu@email.com" 
                 required 
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors outline-none text-base" 
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
               />
             </div>
 
@@ -148,7 +148,7 @@ export default function Cadastro() {
                 placeholder="Mínimo 6 caracteres" 
                 minLength={6}
                 required 
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors outline-none text-base" 
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
               />
             </div>
 
@@ -160,7 +160,7 @@ export default function Cadastro() {
                 required
                 value={selectedRole}
                 onChange={(e) => setSelectedRole(e.target.value as UserRole)}
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors outline-none text-base bg-white"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
               >
                 <option value="PROFESSOR">Professor</option>
                 <option value="GESTOR">Gestor</option>
@@ -182,7 +182,7 @@ export default function Cadastro() {
                       onChange={handleCpfChange}
                       placeholder="000.000.000-00" 
                       required 
-                      className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors outline-none text-sm" 
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all font-medium bg-white"
                     />
                   </div>
 
@@ -195,7 +195,7 @@ export default function Cadastro() {
                       onChange={handleTelefoneChange}
                       placeholder="(99) 99999-9999" 
                       required 
-                      className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors outline-none text-sm" 
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all font-medium bg-white"
                     />
                   </div>
 
@@ -205,7 +205,7 @@ export default function Cadastro() {
                       id="vinculo"
                       name="vinculo"
                       required
-                      className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors outline-none text-sm bg-white"
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all font-medium bg-white"
                     >
                       <option value="Efetivo">Efetivo</option>
                       <option value="Contratado">Contratado</option>
@@ -220,7 +220,7 @@ export default function Cadastro() {
               <button 
                 type="submit"
                 disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-base font-semibold py-3 px-4 rounded-lg shadow-sm transition-all flex items-center justify-center"
+                className="w-full bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-4 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all flex items-center justify-center active:scale-95"
               >
                 {loading ? (
                   <>

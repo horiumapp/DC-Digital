@@ -56,7 +56,7 @@ export default function Frequencia() {
         {/* SubHeader */}
         <div className="bg-blue-50/10 px-8 py-3 flex items-center justify-between border-b border-blue-100/50">
           <div className="flex items-center gap-4">
-            <Link to="/diario" className="bg-[#eef2ff] text-[#0f2851] px-4 py-1.5 rounded flex items-center gap-2 text-sm font-semibold border border-blue-100 hover:bg-[#e0e7ff] transition">
+            <Link to="/diario" className="bg-[#eef2ff] text-[#0f2851] px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold border border-blue-100 hover:bg-[#e0e7ff] transition shadow-sm">
               <ArrowLeft className="w-4 h-4" /> Voltar
             </Link>
             <div className="flex items-center gap-3">

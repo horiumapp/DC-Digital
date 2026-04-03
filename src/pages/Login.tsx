@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Background from '../components/Background';
-import { useAuth, UserRole } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import { APP_CONFIG } from '../config/appConfig';
 import { supabase } from '../lib/supabase';
 import { translateSupabaseError } from '../utils/supabaseErrors';
@@ -27,15 +27,13 @@ export default function Login() {
     const password = formData.get('password') as string;
 
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (signInError) throw signInError;
       
-      // Deu certo, o onAuthStateChange global vai carregar o user automaticamente
-      // Só empurramos pra tela seguinte
       navigate('/turmas');
 
     } catch (err: any) {
@@ -45,15 +43,13 @@ export default function Login() {
     }
   };
 
-
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Modelo Educacional de Fundo */}
       <Background />
       <div className="absolute inset-0 bg-gradient-to-b from-white/80 to-slate-50/40 pointer-events-none" />
 
       <main className="relative w-full max-w-md z-10">
-        <section className="bg-white p-8 md:p-10 shadow-xl border border-slate-100 rounded-xl">
+        <section className="bg-white p-8 md:p-10 shadow-xl border border-slate-100 rounded-2xl">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-6">
               <img src="/logo.png" alt="Logo Diário Digital" className="h-20 w-auto object-contain" />
@@ -63,40 +59,39 @@ export default function Login() {
           </div>
 
           {successMessage && (
-            <div className="mb-6 p-4 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium border border-emerald-100 text-center">
+            <div className="mb-6 p-4 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-medium border border-emerald-100 text-center">
               {successMessage}
             </div>
           )}
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-lg text-sm font-medium border border-red-100 text-center">
+            <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl text-sm font-medium border border-red-100 text-center">
               {error}
             </div>
           )}
 
-          {/* FORMULÁRIO DE LOGIN ORIGINAL */}
           <form onSubmit={handleRealLogin} className="space-y-6">
             <div className="space-y-2">
-              <label htmlFor="email" className="block text-base font-medium text-slate-700">E-mail</label>
+              <label htmlFor="email" className="block text-sm font-bold text-slate-700 uppercase tracking-wide">E-mail</label>
               <input 
                 type="email" 
                 id="email" 
                 name="email" 
                 placeholder="seu@email.com" 
                 required 
-                className="w-full flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-3 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all active:scale-95"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
               />
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="password" className="block text-base font-medium text-slate-700">Senha</label>
+              <label htmlFor="password" className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Senha</label>
               <input 
                 type="password" 
                 id="password" 
                 name="password" 
                 placeholder="••••••••" 
                 required 
-                className="w-full flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-3 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all active:scale-95"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
               />
             </div>
 
@@ -106,14 +101,14 @@ export default function Login() {
                   type="checkbox" 
                   id="remember_me" 
                   name="remember_me" 
-                className="w-full flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-3 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all active:scale-95"
+                  className="h-5 w-5 text-[#0f2851] focus:ring-[#0f2851] border-slate-300 rounded" 
                 />
-                <label htmlFor="remember_me" className="ml-2 block text-base text-slate-600 select-none">
+                <label htmlFor="remember_me" className="ml-2 block text-sm font-bold text-slate-600 select-none">
                   Lembrar-me
                 </label>
               </div>
-              <div className="text-base">
-                className="w-full flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-3 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all active:scale-95"
+              <div className="text-sm">
+                <Link to="/recuperar-senha" className="font-bold text-[#0f2851] hover:underline transition-all">
                   Esqueceu a senha?
                 </Link>
               </div>
@@ -123,7 +118,7 @@ export default function Login() {
               <button 
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-3 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all active:scale-95"
+                className="w-full flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-4 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all active:scale-95"
               >
                 {isLoading ? (
                   <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Entrando...</>
@@ -134,11 +129,10 @@ export default function Login() {
             </div>
           </form>
 
-
           <div className="mt-8 pt-6 border-t border-slate-100 text-center">
             <p className="text-sm text-slate-500">
               Não possui uma conta?{' '}
-                className="w-full flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-3 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all active:scale-95"
+              <Link to="/cadastro" className="text-[#0f2851] font-bold hover:underline transition-all">Criar conta</Link>
             </p>
             <p className="mt-4 text-[10px] text-slate-400 uppercase tracking-widest">
               Protegido por Supabase Auth

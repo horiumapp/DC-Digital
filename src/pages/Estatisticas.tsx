@@ -10,7 +10,7 @@ export default function Estatisticas() {
       <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 flex items-center gap-4">
         <button 
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors text-sm font-medium"
+          className="flex items-center gap-2 px-4 py-2 bg-[#eef2ff] text-[#0f2851] rounded-xl hover:bg-[#e0e7ff] transition-all text-sm font-bold border border-blue-100"
         >
           <ArrowLeft className="w-4 h-4" />
           Voltar

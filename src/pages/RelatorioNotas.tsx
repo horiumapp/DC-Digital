@@ -165,7 +165,7 @@ export default function RelatorioNotas() {
         {/* SubHeader */}
         <div className="bg-white/80 backdrop-blur-md px-8 py-3 flex items-center justify-between border-b border-blue-100 shadow-sm sticky top-0 z-20">
           <div className="flex items-center gap-4">
-            <Link to="/diario" className="bg-[#eef2ff] text-[#0f2851] px-4 py-1.5 rounded flex items-center gap-2 text-sm font-semibold border border-blue-100 hover:bg-[#e0e7ff] transition-all">
+            <Link to="/diario" className="bg-[#eef2ff] text-[#0f2851] px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold border border-blue-100 hover:bg-[#e0e7ff] transition-all shadow-sm">
               <ArrowLeft className="w-4 h-4" /> Voltar
             </Link>
             <h1 className="text-xl font-semibold text-[#0f2851]">Relatório de Notas</h1>

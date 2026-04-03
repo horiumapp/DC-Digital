@@ -90,7 +90,7 @@ export default function RedefinirSenha() {
                 placeholder="••••••••" 
                 required 
                 minLength={6}
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors outline-none text-base" 
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
               />
             </div>
 
@@ -103,7 +103,7 @@ export default function RedefinirSenha() {
                 placeholder="••••••••" 
                 required 
                 minLength={6}
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors outline-none text-base" 
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
               />
             </div>
 
@@ -111,7 +111,7 @@ export default function RedefinirSenha() {
               <button 
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center items-center bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-base font-semibold py-3 px-4 rounded-lg shadow-sm transition-all"
+                className="w-full flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-4 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all active:scale-95"
               >
                 {isLoading ? (
                   <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Atualizando...</>
