@@ -13,6 +13,8 @@ export default function PendenciasLancamento() {
   const [escolas, setEscolas] = useState<any[]>([]);
   const [docentes, setDocentes] = useState<any[]>([]);
   const [buscaDocente, setBuscaDocente] = useState('');
+  const [selectedPeriodos, setSelectedPeriodos] = useState<string[]>(['1. BIMESTRE']);
+  const [hasSearched, setHasSearched] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingDocentes, setLoadingDocentes] = useState(false);
   
@@ -27,9 +29,13 @@ export default function PendenciasLancamento() {
 
   useEffect(() => {
     if (escolaId) {
-      fetchDocentes(escolaId);
+      // Atualizar o endereço (distrito) automaticamente com base na escola selecionada
+      const escolaSelecionada = escolas.find(e => e.id === escolaId);
+      if (escolaSelecionada && escolaSelecionada.distrito) {
+        setDistrito(escolaSelecionada.distrito);
+      }
     }
-  }, [escolaId]);
+  }, [escolaId, escolas]);
 
   const fetchInitialData = async () => {
     setLoading(true);
@@ -55,6 +61,8 @@ export default function PendenciasLancamento() {
   };
 
   const fetchDocentes = async (id: string) => {
+    if (!id) return;
+    setHasSearched(true);
     setLoadingDocentes(true);
     try {
       // 1. Buscar alocações/horários da escola selecionada
@@ -70,7 +78,7 @@ export default function PendenciasLancamento() {
         const mapped = horarios.map(h => ({
           professor: h.professores?.nome || 'Docente N/D',
           dataLotacao: '01/02/2026', // Placeholder
-          periodo: '1. Bimestre',
+          periodo: '1. BIMESTRE',
           turno: h.turmas?.turno || 'N/D',
           ensino: 'Ensino Médio',
           fase: '3 Serie',
@@ -91,11 +99,17 @@ export default function PendenciasLancamento() {
 
   const escolasPorDistrito = (!distrito || distrito === 'TODOS') ? escolas : escolas.filter(e => e.distrito === distrito);
 
-  const docentesFiltrados = docentes.filter(d => 
-    d.professor.toLowerCase().includes(buscaDocente.toLowerCase()) ||
-    d.turma.toLowerCase().includes(buscaDocente.toLowerCase()) ||
-    d.componente.toLowerCase().includes(buscaDocente.toLowerCase())
-  );
+  const docentesFiltrados = docentes.filter(d => {
+    const matchesSearch = d.professor.toLowerCase().includes(buscaDocente.toLowerCase()) ||
+      d.turma.toLowerCase().includes(buscaDocente.toLowerCase()) ||
+      d.componente.toLowerCase().includes(buscaDocente.toLowerCase());
+    
+    const periodoFormatado = d.periodo.toUpperCase();
+    // Só mostrar se o período estiver explicitamente selecionado
+    const matchesPeriodo = selectedPeriodos.includes(periodoFormatado);
+    
+    return matchesSearch && matchesPeriodo;
+  });
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-slate-50 dark:bg-slate-900">
@@ -157,21 +171,28 @@ export default function PendenciasLancamento() {
             </div>
           </div>
 
-          <div className="mb-8">
-            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">Período</label>
-            <div className="flex flex-wrap gap-6">
-              {periodos.map((p) => (
-                <label key={p} className="flex items-center gap-2.5 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    defaultChecked={p === '1. BIMESTRE'}
-                    className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
-                  />
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{p}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+           <div className="mb-8">
+             <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">Período</label>
+             <div className="flex flex-wrap gap-6">
+               {periodos.map((p) => (
+                 <label key={p} className="flex items-center gap-2.5 cursor-pointer">
+                   <input 
+                     type="checkbox" 
+                     checked={selectedPeriodos.includes(p)}
+                     onChange={(e) => {
+                       if (e.target.checked) {
+                         setSelectedPeriodos([...selectedPeriodos, p]);
+                       } else {
+                         setSelectedPeriodos(selectedPeriodos.filter(item => item !== p));
+                       }
+                     }}
+                     className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                   />
+                   <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{p}</span>
+                 </label>
+               ))}
+             </div>
+           </div>
 
           <div className="mb-6 flex items-center justify-between border-t border-slate-100 dark:border-slate-700 pt-6">
             <button 
@@ -223,7 +244,13 @@ export default function PendenciasLancamento() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {loadingDocentes ? (
+                {!hasSearched ? (
+                  <tr>
+                    <td colSpan={11} className="px-6 py-20 text-center text-sm text-slate-500 italic">
+                      Selecione os filtros e clique em CONSULTAR para ver os resultados.
+                    </td>
+                  </tr>
+                ) : loadingDocentes ? (
                   <tr>
                     <td colSpan={11} className="px-6 py-12 text-center text-sm text-slate-500">
                       Carregando dados dos docentes...
