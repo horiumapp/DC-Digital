@@ -30,7 +30,7 @@ export default function Layout() {
         <div className="flex-1 flex items-center">
           <Link to="/turmas" className="flex items-center space-x-3 group">
             <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain transition-transform group-hover:scale-105" />
-            <span className="text-xl font-bold text-indigo-900 dark:text-indigo-100 tracking-tight hidden xl:block">Diário Digital</span>
+            <span className="text-xl font-bold text-[#0f2851] dark:text-indigo-100 tracking-tight hidden xl:block">Diário Digital</span>
           </Link>
         </div>
 

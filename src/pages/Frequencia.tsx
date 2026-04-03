@@ -54,9 +54,9 @@ export default function Frequencia() {
     <div className="min-h-screen bg-slate-50 relative pb-20">
       <div className="relative z-10">
         {/* SubHeader */}
-        <div className="bg-indigo-50/50 px-8 py-3 flex items-center justify-between border-b border-indigo-100">
+        <div className="bg-blue-50/10 px-8 py-3 flex items-center justify-between border-b border-blue-100/50">
           <div className="flex items-center gap-4">
-            <Link to="/diario" className="bg-blue-100 text-blue-700 px-4 py-2 rounded flex items-center gap-2 text-sm font-semibold border border-blue-200 hover:bg-blue-200 transition">
+            <Link to="/diario" className="bg-[#eef2ff] text-[#0f2851] px-4 py-1.5 rounded flex items-center gap-2 text-sm font-semibold border border-blue-100 hover:bg-[#e0e7ff] transition">
               <ArrowLeft className="w-4 h-4" /> Voltar
             </Link>
             <div className="flex items-center gap-3">
@@ -82,7 +82,7 @@ export default function Frequencia() {
             <div className="p-6 bg-slate-50/50 border-b border-slate-200">
               <div className="grid grid-cols-5 gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                  <div className="w-10 h-10 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#0f2851]">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" /></svg>
                   </div>
                   <div>
@@ -91,7 +91,7 @@ export default function Frequencia() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                  <div className="w-10 h-10 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#0f2851]">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
                   </div>
                   <div className="min-w-0">
@@ -100,7 +100,7 @@ export default function Frequencia() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                  <div className="w-10 h-10 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#0f2851]">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   </div>
                   <div className="min-w-0">
@@ -109,7 +109,7 @@ export default function Frequencia() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                  <div className="w-10 h-10 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#0f2851]">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                   </div>
                   <div className="min-w-0">
@@ -118,7 +118,7 @@ export default function Frequencia() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                  <div className="w-10 h-10 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#0f2851]">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
                   </div>
                   <div className="min-w-0">
