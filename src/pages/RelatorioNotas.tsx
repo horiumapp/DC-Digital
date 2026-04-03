@@ -1,8 +1,71 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 export default function RelatorioNotas() {
+  const { user } = useAuth();
+  const [turmas, setTurmas] = useState<any[]>([]);
+  const [selectedTurma, setSelectedTurma] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user?.email) {
+      fetchTurmasProfessor();
+    }
+  }, [user]);
+
+  const fetchTurmasProfessor = async () => {
+    setLoading(true);
+    try {
+      // 1. Achar o ID do professor pelo e-mail
+      const { data: profData } = await supabase
+        .from('professores')
+        .select('id')
+        .eq('email', user?.email)
+        .single();
+
+      if (profData) {
+        // 2. Buscar turmas e componentes nos horários do professor
+        const { data: horarios } = await supabase
+          .from('professor_horarios')
+          .select('turma_id, componente, turmas(nome, turno)')
+          .eq('professor_id', profData.id);
+
+        if (horarios) {
+          // Filtrar combinações únicas de turma_id e componente
+          const uniqueMap = new Map();
+          horarios.forEach(h => {
+            const key = `${h.turma_id}-${h.componente}`;
+            if (!uniqueMap.has(key)) {
+              // Supabase pode retornar array se a relação não estiver explicitamente 1-1 no schema
+              const turmaData = Array.isArray(h.turmas) ? h.turmas[0] : h.turmas;
+              uniqueMap.set(key, {
+                id: h.turma_id,
+                nome: turmaData?.nome || 'Turma N/D',
+                turno: turmaData?.turno || '',
+                componente: h.componente
+              });
+            }
+          });
+          
+          const uniqueTurmas = Array.from(uniqueMap.values());
+          setTurmas(uniqueTurmas);
+          
+          if (uniqueTurmas.length > 0) {
+            const first = uniqueTurmas[0];
+            setSelectedTurma(`${first.id}|${first.componente}`);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao buscar turmas para o relatório:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 relative">
       <div className="relative z-10">
@@ -35,14 +98,30 @@ export default function RelatorioNotas() {
               <div className="md:col-span-4">
                 <label className="block text-sm font-semibold text-slate-500 mb-1">Turma</label>
                 <div className="relative">
-                  <select className="w-full border border-slate-300 rounded-md py-3 pl-3 pr-10 text-base appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700 bg-white">
-                    <option>Ensino Médio - NEM - 3 SERIE - 01 - MATEMATICA</option>
+                  <select 
+                    value={selectedTurma}
+                    onChange={(e) => setSelectedTurma(e.target.value)}
+                    disabled={loading}
+                    className="w-full border border-slate-300 rounded-md py-3 pl-3 pr-10 text-base appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700 bg-white"
+                  >
+                    {loading ? (
+                      <option>Carregando turmas...</option>
+                    ) : turmas.length > 0 ? (
+                      turmas.map((t) => (
+                        <option key={`${t.id}-${t.componente}`} value={`${t.id}|${t.componente}`}>
+                          {t.nome} - {t.turno} - {t.componente}
+                        </option>
+                      ))
+                    ) : (
+                      <option>Nenhuma turma encontrada</option>
+                    )}
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
                     <ChevronDown className="h-5 w-5" />
                   </div>
                 </div>
               </div>
+
 
               {/* Período Dropdown */}
               <div className="md:col-span-4 relative">
