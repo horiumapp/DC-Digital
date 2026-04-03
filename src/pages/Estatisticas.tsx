@@ -34,10 +34,15 @@ export default function Estatisticas() {
 
             <Link 
               to="/pendencias-frequencia"
-              <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-800 flex items-center justify-center shrink-0">
-                <BarChart2 className="w-5 h-5 text-indigo-600 dark:text-indigo-300" />
+              className="flex items-center gap-4 p-4 bg-[#eef2ff] rounded-lg hover:bg-[#e0e7ff] transition-all border border-blue-100/50"
+            >
+              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shrink-0">
+                <BarChart2 className="w-5 h-5 text-[#0f2851]" />
               </div>
-              <span className="text-sm font-medium text-indigo-900 dark:text-indigo-100">Pendências de Lançamentos de<br/>Frequências/Objetos de Conhecimento</span>
+              <span className="text-sm font-medium text-[#0f2851]">
+                Pendências de Lançamentos de<br/>
+                Frequências/Objetos de Conhecimento
+              </span>
             </Link>
           </div>
         </div>
