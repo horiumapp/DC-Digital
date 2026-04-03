@@ -85,7 +85,8 @@ export const TurmaService = {
       instrumento: av.instrumento,
       objetos: av.objetos || [],
       bimestre: av.bimestre || getBimestrePorData(av.data),
-      valorMaximo: av.valor_maximo
+      valorMaximo: av.valor_maximo,
+      parent_id: av.parent_id
     }));
 
     const avaliacaoIds = avaliacoesFormatadas.map(av => av.id);
@@ -109,7 +110,8 @@ export const TurmaService = {
       objetos: av.objetos,
       bimestre: av.bimestre || getBimestrePorData(av.data),
       valor_maximo: av.valorMaximo || 10,
-      disciplina: disciplina
+      disciplina: disciplina,
+      parent_id: av.parent_id
     };
 
     let error;

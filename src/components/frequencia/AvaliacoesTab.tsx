@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, Pencil, Trash2, List, Save, Check, Calendar as CalendarIcon, Plus, Loader2, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Eye, Pencil, Trash2, List, Save, Check, Calendar as CalendarIcon, Plus, Loader2, X, ChevronLeft, ChevronRight, RefreshCw, AlertCircle } from 'lucide-react';
 import Captcha from '../common/Captcha';
 import { useTurma, Avaliacao } from '../../contexts/TurmaContext';
 import { useCaptcha } from '../../hooks/useCaptcha';
@@ -70,7 +70,17 @@ export default function AvaliacoesTab() {
   useEffect(() => {
     if (avaliacaoViewMode === 'grades' && selectedAvaliacao) {
       const notasMap: Record<string, string> = {};
-      alunos.forEach(aluno => {
+      
+      // Se for RP, precisamos filtrar os alunos que ficaram abaixo de 6,0 na avaliação pai
+      let alunosFiltrados = alunos;
+      if (selectedAvaliacao.parent_id) {
+        alunosFiltrados = alunos.filter(aluno => {
+          const notaPai = parseFloat((aluno.notas?.[selectedAvaliacao.parent_id] || '0').replace(',', '.'));
+          return notaPai < 6.0;
+        });
+      }
+
+      alunosFiltrados.forEach(aluno => {
         if (aluno.notas && aluno.notas[selectedAvaliacao.id]) {
           notasMap[aluno.id] = aluno.notas[selectedAvaliacao.id];
         } else {
@@ -80,6 +90,18 @@ export default function AvaliacoesTab() {
       setLocalNotas(notasMap);
     }
   }, [avaliacaoViewMode, selectedAvaliacao, alunos]);
+
+  // Alunos que devem aparecer no lançamento de notas (filtrados se for RP)
+  const alunosParaNotas = React.useMemo(() => {
+    if (!selectedAvaliacao) return [];
+    if (selectedAvaliacao.parent_id) {
+      return alunos.filter(aluno => {
+        const notaPai = parseFloat((aluno.notas?.[selectedAvaliacao.parent_id] || '0').replace(',', '.'));
+        return notaPai < 6.0;
+      });
+    }
+    return alunos;
+  }, [selectedAvaliacao, alunos]);
 
   const handleNotaChange = (alunoId: string, val: string) => {
     // Máscara 0,00 com limite de 10,00
@@ -115,7 +137,8 @@ export default function AvaliacoesTab() {
       instrumento: instrumentoAvaliacao,
       objetos: objetosAvaliacao,
       bimestre: getBimestrePorData(selectedDate),
-      valorMaximo: 10
+      valorMaximo: 10,
+      parent_id: selectedAvaliacao?.parent_id
     };
 
     await salvarAvaliacao(payload);
@@ -228,7 +251,7 @@ export default function AvaliacoesTab() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {['1º Bimestre', '2º Bimestre', '3º Bimestre', '4º Bimestre'].map(bim => {
-                  const avsBim = avaliacoes.filter(av => av.bimestre === bim);
+                  const avsBim = avaliacoes.filter(av => av.bimestre === bim && !av.parent_id);
                   if (avsBim.length === 0) return null;
                   return (
                     <React.Fragment key={bim}>
@@ -236,23 +259,117 @@ export default function AvaliacoesTab() {
                         <td colSpan={4} className="px-6 py-2 font-black text-blue-600 text-[10px] uppercase tracking-tighter">{bim}</td>
                       </tr>
                       {avsBim.map((av) => (
-                        <tr key={av.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 text-slate-900 font-bold">{av.tipo}</td>
-                          <td className="px-6 py-4 text-slate-600 font-medium uppercase">{av.data}</td>
-                          <td className="px-6 py-4 text-slate-500 text-xs font-semibold">{av.instrumento}</td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center justify-center gap-2">
-                              <button onClick={() => { setSelectedAvaliacao(av); setAvaliacaoViewMode('details'); }}
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"><Eye className="w-4 h-4" /></button>
-                              <button onClick={() => { setSelectedAvaliacao(av); setSelectedDate(av.data); setInstrumentoAvaliacao(av.instrumento || 'AVALIACAO ESCRITA'); setObjetosAvaliacao(av.objetos || []); setAvaliacaoViewMode('edit'); }}
-                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"><Pencil className="w-4 h-4" /></button>
-                              <button onClick={() => { setAvaliacaoToDelete(av); setShowDeleteModal(true); }}
-                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"><Trash2 className="w-4 h-4" /></button>
-                              <button onClick={() => { setSelectedAvaliacao(av); setAvaliacaoViewMode('grades'); }}
-                                className="px-4 py-2 bg-blue-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-blue-700 transition shadow-md shadow-blue-600/20">Notas</button>
-                            </div>
-                          </td>
-                        </tr>
+                        <React.Fragment key={av.id}>
+                          <tr className="hover:bg-slate-50 transition-colors">
+                            <td className="px-6 py-4 flex items-center gap-2">
+                              {/* Ícones de Status */}
+                              <div className="flex gap-1">
+                                <div className="w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center shadow-sm">
+                                  <Check className="w-3 h-3" />
+                                </div>
+                                {avaliacoes.some(rp => rp.parent_id === av.id) && (
+                                  <div className="w-5 h-5 bg-amber-400 text-white rounded-full flex items-center justify-center shadow-sm" title="Há alunos em recuperação paralela nesta avaliação.">
+                                    <RefreshCw className="w-3 h-3" />
+                                  </div>
+                                )}
+                              </div>
+                              <span className="text-slate-900 font-bold">{av.tipo}</span>
+                            </td>
+                            <td className="px-6 py-4 text-slate-600 font-medium uppercase">{av.data}</td>
+                            <td className="px-6 py-4 text-slate-500 text-xs font-semibold">{av.instrumento}</td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center justify-center gap-2">
+                                <button onClick={() => { setSelectedAvaliacao(av); setAvaliacaoViewMode('details'); }}
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-blue-600/20">
+                                  <Eye className="w-3.5 h-3.5" /> Detalhes
+                                </button>
+                                
+                                <button onClick={() => { setSelectedAvaliacao(av); setSelectedDate(av.data); setInstrumentoAvaliacao(av.instrumento || 'AVALIACAO ESCRITA'); setObjetosAvaliacao(av.objetos || []); setAvaliacaoViewMode('edit'); }}
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all">
+                                  <Pencil className="w-3.5 h-3.5" /> Alterar
+                                </button>
+
+                                <button onClick={() => { setAvaliacaoToDelete(av); setShowDeleteModal(true); }}
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-red-600/20">
+                                  <Trash2 className="w-3.5 h-3.5" /> Remover
+                                </button>
+
+                                {alunos.some(aluno => {
+                                  const nota = parseFloat((aluno.notas?.[av.id] || '').replace(',', '.'));
+                                  return !isNaN(nota) && nota < 6.0;
+                                }) && (
+                                  <button 
+                                    onClick={() => {
+                                      const rpsCount = avaliacoes.filter(rp => rp.parent_id === av.id).length;
+                                      const novoRP: any = {
+                                        turmaId: av.turmaId,
+                                        tipo: `RP${String(rpsCount + 1).padStart(2, '0')}`,
+                                        data: new Date().toISOString().split('T')[0],
+                                        instrumento: av.instrumento,
+                                        objetos: av.objetos,
+                                        bimestre: av.bimestre,
+                                        valorMaximo: 10,
+                                        parent_id: av.id
+                                      };
+                                      setSelectedAvaliacao(novoRP);
+                                      setSelectedDate(novoRP.data);
+                                      setInstrumentoAvaliacao(novoRP.instrumento);
+                                      setObjetosAvaliacao(novoRP.objetos);
+                                      setAvaliacaoViewMode('edit');
+                                    }}
+                                    className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-bold text-[10px] uppercase transition-all"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" /> ADICIONAR RP
+                                  </button>
+                                )}
+
+                                <button onClick={() => { setSelectedAvaliacao(av); setAvaliacaoViewMode('grades'); }}
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-blue-600/20">
+                                  <List className="w-3.5 h-3.5" /> Notas
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                          
+                          {/* Seção de Recuperações Paralelas */}
+                          {avaliacoes.some(rp => rp.parent_id === av.id) && (
+                            <>
+                              <tr className="bg-slate-50/30">
+                                <td colSpan={4} className="px-10 py-1.5 font-bold text-slate-500 text-[10px] uppercase tracking-tight">Recuperações Paralelas</td>
+                              </tr>
+                              {avaliacoes.filter(rp => rp.parent_id === av.id).map(rp => (
+                                <tr key={rp.id} className="bg-slate-50/20 border-l-4 border-l-amber-400">
+                                  <td className="px-10 py-3 text-slate-700 font-bold">{rp.tipo}</td>
+                                  <td className="px-6 py-3 text-slate-600 font-medium uppercase">{rp.data}</td>
+                                  <td className="px-6 py-3 text-slate-500 text-xs font-semibold">{rp.instrumento}</td>
+                                  <td className="px-6 py-3">
+                                    <div className="flex items-center justify-center gap-2">
+                                      <button onClick={() => { setSelectedAvaliacao(rp); setAvaliacaoViewMode('details'); }}
+                                        className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-blue-600/20">
+                                        <Eye className="w-3.5 h-3.5" /> Detalhes
+                                      </button>
+                                      
+                                      <button onClick={() => { setSelectedAvaliacao(rp); setSelectedDate(rp.data); setInstrumentoAvaliacao(rp.instrumento); setObjetosAvaliacao(rp.objetos); setAvaliacaoViewMode('edit'); }}
+                                        className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all">
+                                        <Pencil className="w-3.5 h-3.5" /> Alterar
+                                      </button>
+                                      
+                                      <button onClick={() => { setAvaliacaoToDelete(rp); setShowDeleteModal(true); }}
+                                        className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-red-600/20">
+                                        <Trash2 className="w-3.5 h-3.5" /> Remover
+                                      </button>
+
+                                      <button onClick={() => { setSelectedAvaliacao(rp); setAvaliacaoViewMode('grades'); }}
+                                        className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-blue-600/20">
+                                        <List className="w-3.5 h-3.5" /> Notas
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </>
+                          )}
+                        </React.Fragment>
                       ))}
                     </React.Fragment>
                   );
@@ -588,7 +705,7 @@ export default function AvaliacoesTab() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {alunos.map((aluno, index) => (
+                {alunosParaNotas.map((aluno, index) => (
                   <tr key={aluno.id} className="group hover:bg-blue-50/30 transition-colors">
                     <td className="px-8 py-6 text-slate-400 font-bold tabular-nums">{String(index + 1).padStart(2, '0')}</td>
                     <td className="px-8 py-6">

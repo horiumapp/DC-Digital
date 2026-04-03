@@ -51,6 +51,7 @@ export interface Avaliacao {
   objetos: any[];
   bimestre?: string;
   valorMaximo?: number;
+  parent_id?: string | number;
 }
 
 export interface Conteudo {
