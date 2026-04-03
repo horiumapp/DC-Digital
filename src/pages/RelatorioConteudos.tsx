@@ -13,6 +13,14 @@ interface TurmaRelatorio {
   ensino: string;
   fase: string;
   numero: string;
+  escolaId: string;
+  escolaNome: string;
+}
+
+interface ConteudoLinha {
+  data: string;
+  tempo: string;
+  descricao: string;
 }
 
 export default function RelatorioConteudos() {
@@ -21,6 +29,8 @@ export default function RelatorioConteudos() {
   const [selectedTurmaId, setSelectedTurmaId] = useState('');
   const [buscaTurma, setBuscaTurma] = useState('');
   const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [conteudosRelatorio, setConteudosRelatorio] = useState<ConteudoLinha[]>([]);
   
   const [opcaoFiltro, setOpcaoFiltro] = useState('Período');
   const [periodoSelecionado, setPeriodoSelecionado] = useState('1. BIMESTRE');
@@ -71,7 +81,7 @@ export default function RelatorioConteudos() {
           const orConditions = alocs.map(a => `and(escola_id.eq.${a.escola_id},turno.eq.${a.turno})`).join(',');
           const { data: turmasAlocadas } = await supabase
             .from('turmas')
-            .select('id, nome, turno')
+            .select('*, escolas(nome)')
             .or(orConditions)
             .order('nome');
 
@@ -79,7 +89,6 @@ export default function RelatorioConteudos() {
             const finalTurmas: TurmaRelatorio[] = [];
             turmasAlocadas.forEach(t => {
               componentes.forEach(comp => {
-                // Tenta extrair o número da turma (ex: "01", "02") do final do nome
                 const matchNum = t.nome.match(/(\d+)$/);
                 const numero = matchNum ? matchNum[1] : '01';
                 
@@ -88,9 +97,11 @@ export default function RelatorioConteudos() {
                   nome: t.nome, 
                   turno: t.turno, 
                   componente: comp,
-                  ensino: 'Ensino Fundamental', // Padrão
-                  fase: t.nome, // Fase é o nome amigável
-                  numero: numero
+                  ensino: t.ensino || 'Ensino Médio - NEM', 
+                  fase: t.fase || '3 SERIE', 
+                  numero: t.turma_codigo || numero,
+                  escolaId: t.escola_id,
+                  escolaNome: t.escolas?.nome || 'ESCOLA NÃO IDENTIFICADA'
                 });
               });
             });
@@ -108,6 +119,81 @@ export default function RelatorioConteudos() {
       setLoading(false);
     }
   };
+
+  const handleExibir = async () => {
+    if (!selectedTurmaId) {
+      alert('Por favor, selecione uma turma.');
+      return;
+    }
+
+    setDataLoading(true);
+    try {
+      const [turmaId, componente] = selectedTurmaId.split('|');
+      
+      let dateStart = '';
+      let dateEnd = '';
+
+      if (opcaoFiltro === 'Período') {
+        const bimestreMap: Record<string, [string, string]> = {
+          '1. BIMESTRE': [`${APP_CONFIG.YEAR}-02-01`, `${APP_CONFIG.YEAR}-04-30`],
+          '2. BIMESTRE': [`${APP_CONFIG.YEAR}-05-01`, `${APP_CONFIG.YEAR}-06-30`],
+          '3. BIMESTRE': [`${APP_CONFIG.YEAR}-07-01`, `${APP_CONFIG.YEAR}-09-30`],
+          '4. BIMESTRE': [`${APP_CONFIG.YEAR}-10-01`, `${APP_CONFIG.YEAR}-12-31`],
+          'RECUPERAÇÃO': [`${APP_CONFIG.YEAR}-12-20`, `${APP_CONFIG.YEAR}-12-31`],
+        };
+        [dateStart, dateEnd] = bimestreMap[periodoSelecionado] || [``, ``];
+      } else {
+        const mesesMap: Record<string, number> = {
+          'JANEIRO': 1, 'FEVEREIRO': 2, 'MARÇO': 3, 'ABRIL': 4,
+          'MAIO': 5, 'JUNHO': 6, 'JULHO': 7, 'AGOSTO': 8,
+          'SETEMBRO': 9, 'OUTUBRO': 10, 'NOVEMBRO': 11, 'DEZEMBRO': 12
+        };
+        const mes = mesesMap[periodoSelecionado];
+        if (mes) {
+          dateStart = `${APP_CONFIG.YEAR}-${mes.toString().padStart(2, '0')}-01`;
+          dateEnd = `${APP_CONFIG.YEAR}-${mes.toString().padStart(2, '0')}-31`; // Simplificado
+        }
+      }
+
+      const { data: contentsRes, error } = await supabase
+        .from('conteudos')
+        .select('*')
+        .eq('turma_id', turmaId)
+        .eq('disciplina', componente)
+        .gte('data', dateStart)
+        .lte('data', dateEnd)
+        .order('data', { ascending: true });
+
+      if (error) throw error;
+
+      if (!contentsRes || contentsRes.length === 0) {
+        alert('Nenhum conteúdo encontrado para os critérios selecionados.');
+        setDataLoading(false);
+        return;
+      }
+
+      const formatted = contentsRes.map(c => ({
+        data: new Date(c.data).toLocaleDateString('pt-BR'),
+        tempo: c.tempo,
+        descricao: c.descricao || (c.objetos ? c.objetos.join(', ') : '')
+      }));
+
+      setConteudosRelatorio(formatted);
+      
+      // Pequeno timeout para garantir que o componente de impressão renderizou
+      setTimeout(() => {
+        window.print();
+        setDataLoading(false);
+      }, 500);
+
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao gerar relatório.');
+      setDataLoading(false);
+    }
+  };
+
+  const selectedTurmaObj = turmas.find(t => t.id === selectedTurmaId);
 
   const filteredTurmas = turmas.filter(t => 
     t.nome.toLowerCase().includes(buscaTurma.toLowerCase()) ||
@@ -267,9 +353,11 @@ export default function RelatorioConteudos() {
                 </div>
 
                 <button 
-                  className="px-8 py-3 bg-[#0f2851] text-white rounded-xl text-sm font-bold hover:bg-[#0a1b38] transition-all shadow-lg shadow-[#0f2851]/20 active:scale-95 mb-[2px]"
+                  onClick={handleExibir}
+                  disabled={dataLoading}
+                  className="px-8 py-3 bg-[#0f2851] text-white rounded-xl text-sm font-bold hover:bg-[#0a1b38] transition-all shadow-lg shadow-[#0f2851]/20 active:scale-95 mb-[2px] disabled:opacity-50"
                 >
-                  Exibir Relatório
+                  {dataLoading ? 'Gerando...' : 'Exibir Relatório'}
                 </button>
               </div>
 
@@ -277,6 +365,124 @@ export default function RelatorioConteudos() {
           </div>
         </div>
       </main>
+
+      {/* ÁREA DE IMPRESSÃO (Oculta na tela, visível no PDF) */}
+      <div id="printable-relatorio" className="hidden print:block fixed inset-0 bg-white z-[9999] overflow-y-auto">
+        <style dangerouslySetInnerHTML={{ __html: `
+          @media print {
+            @page { margin: 1cm; size: A4; }
+            body { -webkit-print-color-adjust: exact; }
+            .hidden-print { display: none !important; }
+          }
+          #printable-relatorio table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+          #printable-relatorio th, #printable-relatorio td { border: 1px solid black; padding: 4px; text-align: left; font-size: 8px; font-family: Arial, sans-serif; }
+          #printable-relatorio .header-table td { border: none !important; border-bottom: 1px solid black !important; padding: 2px !important; }
+          #printable-relatorio .meta-grid td { border: 1px solid black !important; background: white !important; font-weight: bold; }
+          #printable-relatorio .label { font-size: 7px; color: #555; text-transform: uppercase; font-weight: normal; margin-bottom: 1px; }
+          #printable-relatorio .title-bar { background: white; text-align: center; font-size: 14px; font-weight: bold; border: 1px solid black; border-top: none; padding: 4px; }
+        `}} />
+
+        <div className="p-4 bg-white text-black min-h-screen">
+          {/* Header Area */}
+          <table className="header-table">
+            <tbody>
+              <tr>
+                <td width="30%" className="text-center" style={{ borderBottom: 'none !important' }}>
+                  <img src="/logo.png" alt="Logo" className="w-16 h-16 mx-auto mb-1" />
+                  <div className="font-bold text-[10px]">ESTADO DO AMAZONAS</div>
+                  <div className="text-[9px]">SECRETARIA DE ESTADO DE EDUCAÇÃO E DESPORTO</div>
+                </td>
+                <td width="70%" valign="top">
+                  <table className="meta-grid" style={{ width: '100%', tableLayout: 'fixed' }}>
+                    <tbody>
+                      <tr>
+                        <td colSpan={3} className="px-2 py-1">
+                          <div className="label">ESCOLA:</div>
+                          <div className="text-[10px] truncate uppercase">{selectedTurmaObj?.escolaNome}</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td width="50%" className="px-2 py-1">
+                          <div className="label">ENSINO:</div>
+                          <div className="text-[9px] uppercase">{selectedTurmaObj?.ensino || 'Ensino Médio - NEM'}</div>
+                        </td>
+                        <td width="25%" className="px-2 py-1">
+                          <div className="label">TURNO:</div>
+                          <div className="text-[9px] uppercase">{selectedTurmaObj?.turno || 'INTEGRAL'}</div>
+                        </td>
+                        <td width="25%" className="px-2 py-1">
+                          <div className="label">TURMA:</div>
+                          <div className="text-[9px] uppercase">{selectedTurmaObj?.numero || '01'}</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-2 py-1">
+                          <div className="label">FASE:</div>
+                          <div className="text-[9px] uppercase">{selectedTurmaObj?.fase || '3 SERIE'}</div>
+                        </td>
+                        <td className="px-2 py-1">
+                          <div className="label">COMPONENTE:</div>
+                          <div className="text-[9px] uppercase">{selectedTurmaObj?.componente || 'MATEMATICA'}</div>
+                        </td>
+                        <td className="px-2 py-1">
+                          <div className="label">PERÍODO LETIVO:</div>
+                          <div className="text-[9px] uppercase">{periodoSelecionado}</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td colSpan={3} className="px-2 py-1">
+                          <div className="label">PROFESSOR:</div>
+                          <div className="text-[10px] uppercase">{user?.name || 'JACKSON NASCIMENTO SILVA'}</div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div className="title-bar uppercase">
+            RELATÓRIO DE CONTEÚDO MINISTRADO
+          </div>
+
+          {/* Main Table */}
+          <table className="mt-4">
+            <thead className="bg-white">
+              <tr>
+                <th width="12%" className="text-center">DATA</th>
+                <th width="15%" className="text-center">TEMPO DE AULA</th>
+                <th width="43%">CONTEÚDO</th>
+                <th width="15%">OBSERVAÇÃO</th>
+                <th width="15%">CONTEÚDO MÍNIMO</th>
+              </tr>
+            </thead>
+            <tbody>
+              {conteudosRelatorio.map((c, i) => (
+                <tr key={i}>
+                  <td className="text-center">{c.data}</td>
+                  <td className="text-center">{c.tempo}</td>
+                  <td className="leading-tight text-[8px] py-2">{c.descricao}</td>
+                  <td></td>
+                  <td></td>
+                </tr>
+              ))}
+              {/* Preencher linhas vazias se for pouco conteúdo */}
+              {[...Array(Math.max(0, 15 - conteudosRelatorio.length))].map((_, i) => (
+                <tr key={`empty-${i}`}>
+                  <td className="h-6"></td><td></td><td></td><td></td><td></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Footer */}
+          <div className="fixed bottom-4 left-4 right-4 flex justify-between text-[8px] font-medium text-slate-500 italic">
+            <div>Impresso em {new Date().toLocaleString('pt-BR')}</div>
+            <div className="page-counter">1/1</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
