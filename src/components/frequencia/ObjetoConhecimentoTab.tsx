@@ -9,6 +9,7 @@ interface ObjetoConhecimentoTabProps {
   selectedDate: string;
   tempoAula: string;
   setTempoAula: (v: string) => void;
+  disponiveisTempos: string[];
 }
 
 export default function ObjetoConhecimentoTab({
@@ -16,6 +17,7 @@ export default function ObjetoConhecimentoTab({
   selectedDate,
   tempoAula,
   setTempoAula,
+  disponiveisTempos,
 }: ObjetoConhecimentoTabProps) {
   const { registrarLancamento, removerLancamento, salvarConteudo, buscarConteudo, removerConteudo, lancamentos } = useTurma();
 
@@ -129,7 +131,7 @@ export default function ObjetoConhecimentoTab({
                 value={tempoAula}
                 onChange={(e) => setTempoAula(e.target.value)}
               >
-                {turmaAtiva?.tempos.map((t: string) => (
+                {disponiveisTempos.map((t: string) => (
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
@@ -242,7 +244,7 @@ export default function ObjetoConhecimentoTab({
                 value={tempoAula}
                 onChange={(e) => setTempoAula(e.target.value)}
               >
-                {turmaAtiva?.tempos.map((t: string) => (
+                {disponiveisTempos.map((t: string) => (
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>

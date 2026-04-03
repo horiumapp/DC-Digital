@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Printer, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { fetchPendenciasPorEscola } from '../services/pendenciasService';
 
 export default function PendenciasLancamento() {
   const navigate = useNavigate();
@@ -60,42 +61,19 @@ export default function PendenciasLancamento() {
     setLoading(false);
   };
 
-  const fetchDocentes = async (id: string) => {
-    if (!id) return;
-    setHasSearched(true);
-    setLoadingDocentes(true);
-    try {
-      // 1. Buscar alocações/horários da escola selecionada
-      // Se o usuário for um professor, ele só deve ver as dele, MAS nesta tela geralmente é visão de gestor
-      const { data: horarios } = await supabase
-        .from('professor_horarios')
-        .select('*, turmas(nome, turno), professores(nome)')
-        .eq('escola_id', id);
-
-      if (horarios) {
-        // Mapear dados para a tabela
-        // Agrupar por professor e turma/componente
-        const mapped = horarios.map(h => ({
-          professor: h.professores?.nome || 'Docente N/D',
-          dataLotacao: '01/02/2026', // Placeholder
-          periodo: '1. BIMESTRE',
-          turno: h.turmas?.turno || 'N/D',
-          ensino: 'Ensino Médio',
-          fase: '3 Serie',
-          turma: h.turmas?.nome || 'N/D',
-          componente: h.componente,
-          pendNotas: 100, // Lógica de cálculo seria complexa e precisa de query separada
-          pendFreq: 100,
-          pendObjeto: 100
-        }));
-        setDocentes(mapped);
-      }
-    } catch (err) {
-      console.error('Erro ao buscar docentes:', err);
-    } finally {
-      setLoadingDocentes(false);
-    }
-  };
+   const fetchDocentes = async (id: string) => {
+     if (!id) return;
+     setHasSearched(true);
+     setLoadingDocentes(true);
+     try {
+       const resultados = await fetchPendenciasPorEscola(id, selectedPeriodos);
+       setDocentes(resultados);
+     } catch (err) {
+       console.error('Erro ao buscar docentes:', err);
+     } finally {
+       setLoadingDocentes(false);
+     }
+   };
 
   const escolasPorDistrito = (!distrito || distrito === 'TODOS') ? escolas : escolas.filter(e => e.distrito === distrito);
 

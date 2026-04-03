@@ -117,12 +117,12 @@ export default function CalendarWidget({
           const isPastOrToday = currentDate <= today;
           
           // Agora verificamos se o dia da semana existe no horário cadastrado para esta turma
-          const temAulaHoje = horarioTurma?.some(h => h.dia_semana === dayOfWeek);
+          const temAulaHoje = horarioTurma?.some(h => Number(h.dia_semana) === dayOfWeek);
           const isDiaDeAula = temAulaHoje && isWithinPeriod && isPastOrToday;
           
           if (isDiaDeAula) {
             const dayStr = `${day.toString().padStart(2, '0')}/${(currentMonth + 1).toString().padStart(2, '0')}/${year}`;
-            const lancamentosDoDia = lancamentos.filter(l => l.data === dayStr && l.turmaId === turmaAtiva?.id);
+            const lancamentosDoDia = lancamentos.filter(l => l.data === dayStr && String(l.turmaId) === String(turmaAtiva?.id));
             const temFrequencia = lancamentosDoDia.some(l => l.tipo === 'frequencia');
             const temConteudo = lancamentosDoDia.some(l => l.tipo === 'conteudo');
             

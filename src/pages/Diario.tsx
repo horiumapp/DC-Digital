@@ -94,33 +94,37 @@ export default function Diario() {
 
   const calcProgressStats = () => {
     const today = new Date();
-    today.setHours(23, 59, 59, 0);
+    today.setHours(23, 59, 59, 999);
 
-    const tempos = turmaAtiva.tempos.length || 1;
-    let totalDiasLetivos = 0;
+    let totalEsperado = 0;
+    const inicio = new Date(dataInicioValida);
+    inicio.setHours(0, 0, 0, 0);
+    
+    // O denominador deve refletir todas as aulas previstas para o BIMESTRE INTEIRO
+    // Isso garante que a barra de progresso mostre o quanto falta para concluir tudo,
+    // alinhando-se com a visão de pendências futuras no calendário.
+    const fimDenominador = new Date(dataFimValida);
+    fimDenominador.setHours(23, 59, 59, 999);
 
-    // Percorrer todos os dias do bimestre até hoje
-    const inicio = dataInicioValida;
-    const fim = dataFimValida < today ? dataFimValida : today;
-
-    const curso = new Date(inicio);
-    while (curso <= fim) {
-      const dow = curso.getDay(); // 0=Dom ... 6=Sáb
-      // Contamos quantos tempos (slots) esta turma tem neste dia da semana
-      const temposNoDia = horarioTurma?.filter(h => h.dia_semana === dow).length || 0;
-      totalDiasLetivos += temposNoDia;
+    const curso = new Date(inicio.getTime());
+    while (curso <= fimDenominador) {
+      const dow = curso.getDay();
+      // Comparação flexível para evitar erro de string vs number
+      const temposNoDia = horarioTurma?.filter(h => Number(h.dia_semana) === dow).length || 0;
+      totalEsperado += temposNoDia;
       curso.setDate(curso.getDate() + 1);
     }
 
-    const totalEsperado = totalDiasLetivos; // Cada slot em horarioTurma já é um "tempo"
-
-    // Lançamentos reais da turma dentro do período
+    // Filtrar lançamentos da turma dentro do período
     const lancamentosDaTurma = lancamentos.filter(l => {
-      if (l.turmaId !== turmaAtiva.id) return false;
-      // Converter DD/MM/YYYY para Date
+      // Comparação flexível de ID
+      if (String(l.turmaId) !== String(turmaAtiva.id)) return false;
+      
       const [d, m, y] = l.data.split('/');
       const dataLanc = new Date(Number(y), Number(m) - 1, Number(d));
-      return dataLanc >= dataInicioValida && dataLanc <= dataFimValida;
+      dataLanc.setHours(0, 0, 0, 0);
+      
+      return dataLanc >= inicio && dataLanc <= dataFimValida;
     });
 
     const freqLancadas = lancamentosDaTurma.filter(l => l.tipo === 'frequencia').length;

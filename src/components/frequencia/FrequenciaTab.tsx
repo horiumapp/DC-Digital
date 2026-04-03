@@ -9,12 +9,14 @@ interface FrequenciaTabProps {
   selectedDate: string;
   tempoAula: string;
   setTempoAula: (v: string) => void;
+  disponiveisTempos: string[];
 }
 
 export default function FrequenciaTab({
   selectedDate,
   tempoAula,
   setTempoAula,
+  disponiveisTempos,
 }: FrequenciaTabProps) {
   const { turmaAtiva, alunos, registrarLancamento, removerLancamento, salvarFrequencia, buscarFrequencia, removerFrequencia, lancamentos } = useTurma();
   
@@ -105,7 +107,7 @@ export default function FrequenciaTab({
             value={tempoAula}
             onChange={(e) => setTempoAula(e.target.value)}
           >
-            {turmaAtiva?.tempos.map((t: string) => (
+            {disponiveisTempos.map((t: string) => (
               <option key={t} value={t}>{t}</option>
             ))}
           </select>

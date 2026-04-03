@@ -12,10 +12,8 @@ export const getBimestrePorData = (dataStr: string): string => {
   if (data <= new Date(2026, 8, 24)) return '3º Bimestre';
   return '4º Bimestre';
 };
-
-export const formatCurrencyBRL = (val: number): string => {
-  return new Intl.NumberFormat('pt-BR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(val);
+export const getDayOfWeek = (dataStr: string): number => {
+  if (!dataStr) return -1;
+  const [dia, mes, ano] = dataStr.split('/').map(Number);
+  return new Date(ano, mes - 1, dia).getDay();
 };

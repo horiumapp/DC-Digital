@@ -3,6 +3,7 @@ import { ArrowLeft, Calendar as CalendarIcon } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
 import { useAuth } from '../contexts/AuthContext';
+import { getDayOfWeek } from '../utils/dateUtils';
 
 import FrequenciaTab from '../components/frequencia/FrequenciaTab';
 import ObjetoConhecimentoTab from '../components/frequencia/ObjetoConhecimentoTab';
@@ -10,7 +11,7 @@ import AnotacoesTab from '../components/frequencia/AnotacoesTab';
 import AvaliacoesTab from '../components/frequencia/AvaliacoesTab';
 
 export default function Frequencia() {
-  const { turmaAtiva } = useTurma();
+  const { turmaAtiva, horarioTurma } = useTurma();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const selectedDateParam = searchParams.get('date') || '06/02/2026';
@@ -18,9 +19,31 @@ export default function Frequencia() {
   // ── Shared state ──
   const [activeTab, setActiveTab] = useState('frequencia');
   const [selectedDate, setSelectedDate] = useState(selectedDateParam);
-  const [tempoAula, setTempoAula] = useState(turmaAtiva?.tempos[0] || '1º TEMPO');
+  
+  // Obter tempos válidos para o dia selecionado
+  const dow = getDayOfWeek(selectedDate);
+  const temposValidosDoDia = React.useMemo(() => {
+    if (!turmaAtiva || !horarioTurma) return [];
+    return horarioTurma
+      .filter(h => Number(h.dia_semana) === dow)
+      .sort((a, b) => a.tempo_ordem - b.tempo_ordem)
+      .map(h => `${h.tempo_ordem}º TEMPO`);
+  }, [horarioTurma, dow, turmaAtiva]);
 
+  // Se não houver aula no dia, mostramos pelo menos o 1º tempo como fallback para não quebrar a UI
+  const temposParaMostrar = temposValidosDoDia.length > 0 ? temposValidosDoDia : ['1º TEMPO'];
+
+  const [tempoAula, setTempoAula] = useState(temposParaMostrar[0]);
+
+  // Sincronizar data da URL
   React.useEffect(() => { setSelectedDate(selectedDateParam); }, [selectedDateParam]);
+
+  // Resetar o tempo quando a data mudar (se o tempo atual não for válido para o novo dia)
+  React.useEffect(() => {
+    if (!temposParaMostrar.includes(tempoAula)) {
+      setTempoAula(temposParaMostrar[0]);
+    }
+  }, [selectedDate, temposParaMostrar]);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -128,6 +151,7 @@ export default function Frequencia() {
                   selectedDate={selectedDate}
                   tempoAula={tempoAula}
                   setTempoAula={setTempoAula}
+                  disponiveisTempos={temposParaMostrar}
                 />
               )}
               {activeTab === 'objeto' && (
@@ -136,6 +160,7 @@ export default function Frequencia() {
                   selectedDate={selectedDate}
                   tempoAula={tempoAula}
                   setTempoAula={setTempoAula}
+                  disponiveisTempos={temposParaMostrar}
                 />
               )}
               {activeTab === 'anotacoes' && (
@@ -143,6 +168,7 @@ export default function Frequencia() {
                   turmaAtiva={turmaAtiva}
                   tempoAula={tempoAula}
                   setTempoAula={setTempoAula}
+                  disponiveisTempos={temposParaMostrar}
                 />
               )}
               {activeTab === 'avaliacoes' && (

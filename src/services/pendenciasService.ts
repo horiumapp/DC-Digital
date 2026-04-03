@@ -1,0 +1,159 @@
+import { supabase } from '../lib/supabase';
+
+export interface PendenciaDocente {
+  professor: string;
+  dataLotacao: string;
+  periodo: string;
+  turno: string;
+  ensino: string;
+  fase: string;
+  turma: string;
+  componente: string;
+  pendNotas: number;
+  pendFreq: number;
+  pendObjeto: number;
+}
+
+const PERIOD_DATES: Record<string, { start: Date; end: Date }> = {
+  '1. BIMESTRE': { start: new Date(2026, 1, 2), end: new Date(2026, 3, 23) },
+  '2. BIMESTRE': { start: new Date(2026, 3, 24), end: new Date(2026, 6, 7) },
+  '3. BIMESTRE': { start: new Date(2026, 6, 27), end: new Date(2026, 8, 24) },
+  '4. BIMESTRE': { start: new Date(2026, 8, 25), end: new Date(2026, 11, 18) },
+  '1. SEMESTRE': { start: new Date(2026, 1, 2), end: new Date(2026, 6, 7) },
+  '2. SEMESTRE': { start: new Date(2026, 6, 27), end: new Date(2026, 11, 18) },
+  'ÚNICO': { start: new Date(2026, 1, 2), end: new Date(2026, 11, 18) },
+  'RECUPERAÇÃO': { start: new Date(2026, 11, 19), end: new Date(2026, 11, 30) },
+};
+
+/**
+ * Conta quantos dias de aula existem para um dia da semana (0-6) em um intervalo.
+ */
+function countWeekDaysInRange(start: Date, end: Date, dayOfWeek: number): number {
+  let count = 0;
+  const current = new Date(start);
+  while (current <= end) {
+    if (current.getDay() === dayOfWeek) count++;
+    current.setDate(current.getDate() + 1);
+  }
+  return count;
+}
+
+export const fetchPendenciasPorEscola = async (
+  escolaId: string, 
+  periodosSelecionados: string[]
+): Promise<PendenciaDocente[]> => {
+  try {
+    const { data: horarios, error: hError } = await supabase
+      .from('professor_horarios')
+      .select('*, turmas(id, nome, turno, ensino, fase), professores(id, nome)')
+      .eq('escola_id', escolaId);
+
+    if (hError) throw hError;
+    if (!horarios) return [];
+
+    const hoje = new Date();
+    const mapConsolidado: Record<string, any> = {};
+
+    for (const periodoNome of periodosSelecionados) {
+      const dates = PERIOD_DATES[periodoNome];
+      if (!dates) continue;
+
+      const dateStart = dates.start;
+      const dateEnd = dates.end > hoje ? hoje : dates.end;
+
+      for (const h of horarios) {
+        const key = `${h.professores?.id}-${h.turma_id}-${h.componente}-${periodoNome}`;
+        
+        if (!mapConsolidado[key]) {
+          mapConsolidado[key] = {
+            professor: h.professores?.nome || 'N/D',
+            turmaId: h.turma_id,
+            turma: h.turmas?.nome || 'N/D',
+            componente: h.componente,
+            periodo: periodoNome,
+            turno: h.turmas?.turno || 'N/D',
+            ensino: h.turmas?.ensino || 'N/D',
+            fase: h.turmas?.fase || 'N/D',
+            tempos: new Set([h.tempo_ordem.toString() + 'º TEMPO']),
+            totalAulasEsperadas: 0,
+            lancamentosFreq: 0,
+            lancamentosCont: 0
+          };
+        } else {
+          mapConsolidado[key].tempos.add(h.tempo_ordem.toString() + 'º TEMPO');
+        }
+
+        mapConsolidado[key].totalAulasEsperadas += countWeekDaysInRange(dateStart, dateEnd, h.dia_semana);
+      }
+    }
+
+    const finalResult: PendenciaDocente[] = [];
+
+    // 4. Buscar Lançamentos Reais para cada Grupo Consolidado
+    for (const key in mapConsolidado) {
+      const group = mapConsolidado[key];
+      if (group.totalAulasEsperadas === 0) continue;
+
+      const periodoDates = PERIOD_DATES[group.periodo];
+      const dateStart = periodoDates.start;
+      const dateEnd = periodoDates.end > hoje ? hoje : periodoDates.end;
+
+      const temposArr = Array.from(group.tempos) as string[];
+
+      // Queries de contagem (Frequência e Conteúdo)
+      const [fRes, cRes, avRes, aluRes] = await Promise.all([
+        supabase.from('frequencias')
+          .select('id')
+          .eq('turma_id', group.turmaId)
+          .in('tempo', temposArr)
+          .gte('data', dateStart.toISOString().split('T')[0])
+          .lte('data', dateEnd.toISOString().split('T')[0]),
+        supabase.from('conteudos')
+          .select('id')
+          .eq('turma_id', group.turmaId)
+          .in('tempo', temposArr)
+          .gte('data', dateStart.toISOString().split('T')[0])
+          .lte('data', dateEnd.toISOString().split('T')[0]),
+        supabase.from('avaliacoes')
+          .select('id')
+          .eq('turma_id', group.turmaId)
+          .eq('bimestre', group.periodo),
+        supabase.from('alunos')
+          .select('id', { count: 'exact', head: true })
+          .eq('turma_id', group.turmaId)
+      ]);
+
+      const lancamentosFreq = fRes.data?.length || 0;
+      const lancamentosCont = cRes.data?.length || 0;
+      const totalAlunos = aluRes.count || 0;
+
+      // Calcular Pendência de Notas
+      let pNotas = 0;
+      if (avRes.data && avRes.data.length > 0 && totalAlunos > 0) {
+        const avIds = avRes.data.map(av => av.id);
+        const { data: notas } = await supabase.from('notas').select('aluno_id').in('avaliacao_id', avIds);
+        const totalNotasEsperadas = avIds.length * totalAlunos;
+        pNotas = Math.max(0, ((totalNotasEsperadas - (notas?.length || 0)) / totalNotasEsperadas) * 100);
+      }
+
+      finalResult.push({
+        professor: group.professor,
+        dataLotacao: '01/02/2026',
+        periodo: group.periodo,
+        turno: group.turno,
+        ensino: group.ensino,
+        fase: group.fase,
+        turma: group.turma,
+        componente: group.componente,
+        pendFreq: parseFloat(Math.max(0, ((group.totalAulasEsperadas - lancamentosFreq) / group.totalAulasEsperadas) * 100).toFixed(2)),
+        pendObjeto: parseFloat(Math.max(0, ((group.totalAulasEsperadas - lancamentosCont) / group.totalAulasEsperadas) * 100).toFixed(2)),
+        pendNotas: parseFloat(pNotas.toFixed(2))
+      });
+    }
+
+    return finalResult;
+  } catch (err) {
+    console.error('Erro no cálculo de pendências:', err);
+    return [];
+  }
+};

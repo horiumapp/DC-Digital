@@ -7,12 +7,14 @@ interface AnotacoesTabProps {
   turmaAtiva: any;
   tempoAula: string;
   setTempoAula: (v: string) => void;
+  disponiveisTempos: string[];
 }
 
 export default function AnotacoesTab({
   turmaAtiva,
   tempoAula,
   setTempoAula,
+  disponiveisTempos,
 }: AnotacoesTabProps) {
   const [isAddingAnotacao, setIsAddingAnotacao] = useState(false);
   const [showNoRecordsAnotacao, setShowNoRecordsAnotacao] = useState(false);
@@ -64,7 +66,7 @@ export default function AnotacoesTab({
                 value={tempoAula}
                 onChange={(e) => setTempoAula(e.target.value)}
               >
-                {turmaAtiva?.tempos.map((t: string) => (
+                {disponiveisTempos.map((t: string) => (
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Printer, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { fetchPendenciasPorEscola } from '../services/pendenciasService';
 
 export default function PendenciasFrequencia() {
   const navigate = useNavigate();
@@ -68,27 +69,8 @@ export default function PendenciasFrequencia() {
     setHasSearched(true);
     setLoadingDocentes(true);
     try {
-      const { data: horarios } = await supabase
-        .from('professor_horarios')
-        .select('*, turmas(nome, turno), professores(nome)')
-        .eq('escola_id', id);
-
-      if (horarios) {
-        const mapped = horarios.map(h => ({
-          professor: h.professores?.nome || 'Docente N/D',
-          dataLotacao: '01/02/2026',
-          periodo: '1. BIMESTRE',
-          turno: h.turmas?.turno || 'N/D',
-          ensino: 'Ensino Fundamental',
-          fase: '5 Ano',
-          turma: h.turmas?.nome || 'N/D',
-          componente: h.componente,
-          pendNotas: 0, 
-          pendFreq: 100, // Foco em frequência nesta tela
-          pendObjeto: 0
-        }));
-        setDocentes(mapped);
-      }
+      const resultados = await fetchPendenciasPorEscola(id, selectedPeriodos);
+      setDocentes(resultados);
     } catch (err) {
       console.error('Erro ao buscar docentes:', err);
     } finally {
