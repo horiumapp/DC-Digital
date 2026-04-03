@@ -276,20 +276,39 @@ export default function ObjetoConhecimentoTab({
               <select
                 className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 bg-white"
                 value={objetoUnidade}
-                onChange={(e) => setObjetoUnidade(e.target.value)}
+                onChange={(e) => { setObjetoUnidade(e.target.value); setObjetoConhecimento(''); }}
               >
-                <option>AS ORIGENS, O PENSAMENTO RACIONAL E O PENSAMENTO..</option>
+                <option value="">Selecione a Unidade...</option>
+                {unidadesDisponiveis.map(u => (
+                  <option key={u.nome} value={u.nome}>{u.nome}</option>
+                ))}
+                <option value="TEXTO LIVRE">-- OUTRA / TEXTO LIVRE --</option>
               </select>
             </div>
             <div className="col-span-4">
               <label className="block text-sm text-slate-600 mb-1">Objeto de Conhecimento</label>
-              <select
-                className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 bg-white"
-                value={objetoConhecimento}
-                onChange={(e) => setObjetoConhecimento(e.target.value)}
-              >
-                <option>O MITO (GREGOS E AMAZÔNICOS)</option>
-              </select>
+              {objetoUnidade === 'TEXTO LIVRE' ? (
+                <input
+                  type="text"
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 bg-white"
+                  value={objetoConhecimento}
+                  onChange={(e) => setObjetoConhecimento(e.target.value)}
+                  placeholder="Digite o objeto de conhecimento..."
+                />
+              ) : (
+                <select
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 bg-white"
+                  value={objetoConhecimento}
+                  onChange={(e) => setObjetoConhecimento(e.target.value)}
+                  disabled={!objetoUnidade}
+                >
+                  <option value="">Selecione o Objeto...</option>
+                  {objetosDisponiveis.map(o => (
+                    <option key={o} value={o}>{o}</option>
+                  ))}
+                  <option value="OUTRO">-- OUTRO / TEXTO LIVRE --</option>
+                </select>
+              )}
             </div>
             <div className="col-span-2">
               <label className="block text-sm text-slate-600 mb-1">Tempo de aula</label>
