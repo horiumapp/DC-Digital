@@ -168,7 +168,7 @@ export default function RelatorioMedias() {
       </main>
 
       <footer className="mt-8 pb-12 text-center text-slate-400 text-xs">
-        © 2026 Diário Digital - Sistema de Gestão Escolar
+        © {APP_CONFIG.YEAR} Diário Digital - Sistema de Gestão Escolar
       </footer>
       </div>
     </div>

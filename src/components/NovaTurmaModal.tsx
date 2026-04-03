@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Building2, Users, Clock, Calendar } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { APP_CONFIG } from '../config/appConfig';
 
 interface NovaTurmaModalProps {
   isOpen: boolean;
@@ -161,7 +162,7 @@ export default function NovaTurmaModal({ isOpen, onClose, onSave, turmaParaEdita
                 value={formData.ano_letivo}
                 onChange={(e) => setFormData({ ...formData, ano_letivo: e.target.value.replace(/\D/g, '') })}
                 className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
-                placeholder="Ex: 2026"
+                placeholder={`Ex: ${APP_CONFIG.YEAR}`}
               />
             </div>
           </div>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Printer, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { APP_CONFIG } from '../config/appConfig';
 import { fetchPendenciasPorEscola } from '../services/pendenciasService';
 
 export default function PendenciasLancamento() {
@@ -181,7 +182,7 @@ export default function PendenciasLancamento() {
 
             <div className="text-sm">
               <span className="font-bold text-slate-700 dark:text-slate-200">Data da extração: </span>
-              <span className="text-slate-600 dark:text-slate-400">01/04/2026</span>
+              <span className="text-slate-600 dark:text-slate-400">01/04/{APP_CONFIG.YEAR}</span>
             </div>
           </div>
         </div>

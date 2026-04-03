@@ -4,6 +4,7 @@ import { ArrowLeft, Printer, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchPendenciasPorEscola } from '../services/pendenciasService';
+import { APP_CONFIG } from '../config/appConfig';
 
 export default function PendenciasFrequencia() {
   const navigate = useNavigate();
@@ -228,7 +229,7 @@ export default function PendenciasFrequencia() {
 
           <div className="text-sm">
             <span className="font-bold text-slate-800 dark:text-slate-200">Data da extração: </span>
-            <span className="text-slate-600 dark:text-slate-400">01/04/2026</span>
+            <span className="text-slate-600 dark:text-slate-400">01/04/{APP_CONFIG.YEAR}</span>
           </div>
         </div>
 

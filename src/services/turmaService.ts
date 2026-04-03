@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { getBimestrePorData } from '../utils/dateUtils';
 import { Aluno, Avaliacao, Conteudo, Horario, Lancamento } from '../contexts/TurmaContext';
+import { APP_CONFIG } from '../config/appConfig';
 
 const getTid = (turmaId: string | number): string => turmaId.toString().split('_')[0];
 
@@ -59,7 +60,7 @@ export const TurmaService = {
     return (data || []).map(a => ({
       id: a.id.toString(),
       nome: a.nome,
-      matricula: a.matricula || `2026/${a.id.toString().slice(-7)}`,
+      matricula: a.matricula || `${APP_CONFIG.YEAR}/${a.id.toString().slice(-7)}`,
       freq: 'P',
       part: 'Presencial',
       notas: {}
