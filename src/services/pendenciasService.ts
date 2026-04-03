@@ -47,7 +47,7 @@ export const fetchPendenciasPorEscola = async (
   try {
     const { data: horarios, error: hError } = await supabase
       .from('professor_horarios')
-      .select('*, turmas(id, nome, turno, ensino, fase), professores(id, nome)')
+      .select('*, turmas(id, nome, turno), professores(id, nome)')
       .eq('escola_id', escolaId);
 
     if (hError) throw hError;
@@ -74,8 +74,8 @@ export const fetchPendenciasPorEscola = async (
             componente: h.componente,
             periodo: periodoNome,
             turno: h.turmas?.turno || 'N/D',
-            ensino: h.turmas?.ensino || 'N/D',
-            fase: h.turmas?.fase || 'N/D',
+            ensino: 'Ensino Fundamental', // Mapeamento fixo conforme padrão do sistema
+            fase: h.turmas?.nome || 'N/D', // Fase é o nome da turma
             tempos: new Set([h.tempo_ordem.toString() + 'º TEMPO']),
             totalAulasEsperadas: 0,
             lancamentosFreq: 0,
