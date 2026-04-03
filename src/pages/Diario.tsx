@@ -158,12 +158,12 @@ export default function Diario() {
   // ─── Cálculo de Avaliações e Notas ───────────────────────────────────────
   // Filtrar avaliações da turma ativa que pertencem ao BIMESTRE selecionado
   const avaliacoesDaTurma = avaliacoes.filter(av => {
-    const isSempreMesmaTurma = String(av.turmaId) === String(turmaAtiva.id);
-    if (!isSempreMesmaTurma) return false;
+    // Normalização rigorosa de ID de turma
+    if (String(av.turmaId) !== String(turmaAtiva.id)) return false;
     
     // Se a avaliação tiver campo bimestre, usamos ele. Caso contrário, inferimos pela data.
-    if (av.bimestre) return av.bimestre === periodoSelecionado.nome;
-    return getBimestrePorData(av.data) === periodoSelecionado.nome;
+    const bNome = av.bimestre || getBimestrePorData(av.data);
+    return bNome === periodoSelecionado.nome;
   });
   
   const avaliacoesCadastradas = avaliacoesDaTurma.length;
@@ -171,8 +171,10 @@ export default function Diario() {
   // Regra baseada nos tempos semanais reais (da tabela de horários)
   // 3 ou menos aulas semanais = meta de 2 avaliações | mais que isso = meta de 3
   const nAulasSemanais = horarioTurma?.length || 0;
-  const avaliacoesPrevistas = nAulasSemanais <= 3 ? 2 : 3;
-  const pAvaliacoes = totalEsperado > 0 ? Math.min(100, Math.round((avaliacoesCadastradas / avaliacoesPrevistas) * 100)) : 0;
+  // Fallback: se não tiver tempos carrgados, assume a meta pela turmaAtiva.tempos
+  const totalSlotsSemanais = nAulasSemanais > 0 ? nAulasSemanais : (turmaAtiva.tempos?.length || 0);
+  const avaliacoesPrevistas = totalSlotsSemanais <= 3 ? 2 : 3;
+  const pAvaliacoes = totalEsperado > 0 && avaliacoesPrevistas > 0 ? Math.min(100, Math.round((avaliacoesCadastradas / avaliacoesPrevistas) * 100)) : 0;
 
   // Notas lançadas: total de (aluno x avaliacao) que possuem valor
   let notasLancadasCount = 0;

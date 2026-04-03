@@ -1,6 +1,6 @@
 
 export const getBimestrePorData = (dataStr: string): string => {
-  if (!dataStr) return '1º Bimestre';
+  if (!dataStr) return '';
 
   // Espera DD/MM/YYYY
   const [dia, mes, ano] = dataStr.split('/').map(Number);
