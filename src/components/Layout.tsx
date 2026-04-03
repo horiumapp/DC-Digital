@@ -36,6 +36,7 @@ export default function Layout() {
 
         {/* Navegação - Centro */}
         <nav className="hidden lg:flex items-center justify-center space-x-3 flex-[2]">
+          {hasAdminAccess && (
             <Link
               to="/administracao"
               className="px-6 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95"
@@ -45,13 +46,13 @@ export default function Layout() {
           )}
           <Link
             to="/estatisticas"
-            className="px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg active:scale-95"
+            className="px-6 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95"
           >
             Estatísticas
           </Link>
           
           <div className="relative group">
-            <button className="px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold flex items-center space-x-2 hover:bg-blue-700 transition-all shadow-md hover:shadow-lg active:scale-95">
+            <button className="px-6 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold flex items-center space-x-2 hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95">
               <span>Relatórios</span>
               <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
             </button>
