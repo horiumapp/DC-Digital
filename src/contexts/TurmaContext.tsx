@@ -188,6 +188,10 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   };
 
   const fetchAvaliacoes = async (turmaId: string | number) => {
+    // Limpar estado antes de buscar para evitar dados fantasma de outras turmas
+    setAvaliacoes([]);
+    setAlunos(prev => prev.map(a => ({ ...a, notas: {} })));
+
     try {
       const { data, error } = await supabase
         .from('avaliacoes')
@@ -195,7 +199,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
         .eq('turma_id', turmaId.toString())
         .order('data', { ascending: false });
 
-      if (data) {
+      if (data && data.length > 0) {
         setAvaliacoes(data.map(av => ({
           id: av.id.toString(),
           turmaId: av.turma_id,
@@ -209,21 +213,19 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
         // Carregar notas para estas avaliações
         const avaliacaoIds = data.map(av => av.id);
-        if (avaliacaoIds.length > 0) {
-          const { data: notasData } = await supabase
-            .from('notas')
-            .select('*')
-            .in('avaliacao_id', avaliacaoIds);
+        const { data: notasData } = await supabase
+          .from('notas')
+          .select('*')
+          .in('avaliacao_id', avaliacaoIds);
 
-          if (notasData) {
-            setAlunos(prevAlunos => prevAlunos.map(aluno => {
-              const notasAluno: Record<string, string> = {};
-              notasData.filter(n => n.aluno_id.toString() === aluno.id).forEach(n => {
-                notasAluno[n.avaliacao_id.toString()] = n.valor.toString().replace('.', ',');
-              });
-              return { ...aluno, notas: notasAluno };
-            }));
-          }
+        if (notasData) {
+          setAlunos(prevAlunos => prevAlunos.map(aluno => {
+            const notasAluno: Record<string, string> = {};
+            notasData.filter(n => n.aluno_id.toString() === aluno.id).forEach(n => {
+              notasAluno[n.avaliacao_id.toString()] = n.valor.toString().replace('.', ',');
+            });
+            return { ...aluno, notas: notasAluno };
+          }));
         }
       }
     } catch (err) {

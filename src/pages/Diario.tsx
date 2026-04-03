@@ -174,22 +174,30 @@ export default function Diario() {
   // Fallback: se não tiver tempos carrgados, assume a meta pela turmaAtiva.tempos
   const totalSlotsSemanais = nAulasSemanais > 0 ? nAulasSemanais : (turmaAtiva.tempos?.length || 0);
   const avaliacoesPrevistas = totalSlotsSemanais <= 3 ? 2 : 3;
-  const pAvaliacoes = totalEsperado > 0 && avaliacoesPrevistas > 0 ? Math.min(100, Math.round((avaliacoesCadastradas / avaliacoesPrevistas) * 100)) : 0;
+  
+  // Só calcula se houver de fato sessões previstas e avaliações encontradas
+  const pAvaliacoes = (totalEsperado > 0 && avaliacoesPrevistas > 0 && avaliacoesCadastradas > 0) 
+    ? Math.min(100, Math.round((avaliacoesCadastradas / avaliacoesPrevistas) * 100)) 
+    : 0;
 
   // Notas lançadas: total de (aluno x avaliacao) que possuem valor
   let notasLancadasCount = 0;
-  avaliacoesDaTurma.forEach(av => {
-    alunos.forEach(aluno => {
-      // Garantir que a nota exista e não seja apenas um campo vazio
-      const nota = aluno.notas ? aluno.notas[av.id] : null;
-      if (nota !== undefined && nota !== null && nota !== '') {
-        notasLancadasCount++;
-      }
+  if (avaliacoesDaTurma.length > 0 && alunos.length > 0) {
+    avaliacoesDaTurma.forEach(av => {
+      alunos.forEach(aluno => {
+        // Garantir que a nota exista e não seja apenas um campo vazio
+        const nota = aluno.notas ? aluno.notas[av.id] : null;
+        if (nota !== undefined && nota !== null && nota !== '') {
+          notasLancadasCount++;
+        }
+      });
     });
-  });
+  }
 
   const totalNotasEsperadas = avaliacoesDaTurma.length * alunos.length;
-  const pNotas = totalNotasEsperadas > 0 ? Math.min(100, Math.round((notasLancadasCount / totalNotasEsperadas) * 100)) : 0;
+  const pNotas = (totalNotasEsperadas > 0 && avaliacoesDaTurma.length > 0) 
+    ? Math.min(100, Math.round((notasLancadasCount / totalNotasEsperadas) * 100)) 
+    : 0;
 
 
   return (
