@@ -143,12 +143,12 @@ export default function TabProfessores() {
       return;
     }
     
-    // Gera um email fictício único baseado no timestamp para não dar colisão no banco
-    const fakeEmail = `${inlineFormData.nome.toLowerCase().replace(/\s+/g, '.')}.${Date.now()}@escola.tmp`;
+    // O email PRECISA ser previsível para que a coordenação saiba qual email o professor vai usar para criar a conta depois.
+    const emailPrevisivel = `${inlineFormData.nome.toLowerCase().replace(/\s+/g, '.')}@escola.com`;
 
     handleSaveProfessor({
       ...inlineFormData,
-      email: fakeEmail,
+      email: emailPrevisivel,
       cpf: '',
       telefone: '',
       status: 'Ativo',
