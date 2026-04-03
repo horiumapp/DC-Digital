@@ -24,18 +24,16 @@ export default function Estatisticas() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Link 
               to="/pendencias-lancamento"
-              className="flex items-center gap-4 p-4 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors border border-indigo-100/50 dark:border-indigo-800/30"
+              className="flex items-center gap-4 p-4 bg-[#eef2ff] rounded-lg hover:bg-[#e0e7ff] transition-colors border border-blue-100"
             >
-              <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-800 flex items-center justify-center shrink-0">
-                <BarChart2 className="w-5 h-5 text-indigo-600 dark:text-indigo-300" />
+              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shrink-0">
+                <BarChart2 className="w-5 h-5 text-[#0f2851]" />
               </div>
-              <span className="text-sm font-medium text-indigo-900 dark:text-indigo-100">Pendências de Lançamento</span>
+              <span className="text-sm font-medium text-[#0f2851]">Pendências de Lançamento</span>
             </Link>
 
             <Link 
               to="/pendencias-frequencia"
-              className="flex items-center gap-4 p-4 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors border border-indigo-100/50 dark:border-indigo-800/30 text-left"
-            >
               <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-800 flex items-center justify-center shrink-0">
                 <BarChart2 className="w-5 h-5 text-indigo-600 dark:text-indigo-300" />
               </div>
