@@ -344,13 +344,8 @@ export default function AvaliacoesTab() {
                                 <div className="w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center shadow-sm">
                                   <Check className="w-3 h-3" />
                                 </div>
-                                {avaliacoes.some(rp => String(rp.parent_id) === String(av.id)) && (
-                                  <div className="w-6 h-6 bg-amber-400 rounded-full flex items-center justify-center animate-pulse-subtle">
-                                    <RefreshCw className="w-3.5 h-3.5 text-white" />
-                                  </div>
-                                )}
                               </div>
-                              <span className="text-slate-900 font-bold">{av.tipo}</span>
+                              <span className="text-slate-900 font-bold text-base">{av.tipo}</span>
                             </td>
                             <td className="px-6 py-4 text-slate-600 font-medium uppercase">{av.data}</td>
                             <td className="px-6 py-4 text-slate-500 text-xs font-semibold">{av.instrumento}</td>
@@ -443,7 +438,7 @@ export default function AvaliacoesTab() {
 
                               {avaliacoes.filter(rp => String(rp.parent_id) === String(av.id)).map(rp => (
                                 <tr key={rp.id} className="bg-white border-b border-slate-50 group/rp">
-                                  <td className="px-10 py-5">
+                                  <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
                                       <div className="w-6 h-6 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
                                         <Plus className="w-3.5 h-3.5" />
