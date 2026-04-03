@@ -2,13 +2,19 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Printer, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function PendenciasLancamento() {
   const navigate = useNavigate();
-  const [distrito, setDistrito] = useState('LABREA');
-  const [escola, setEscola] = useState('');
+  const { user } = useAuth();
+  const [distrito, setDistrito] = useState('');
+  const [distritos, setDistritos] = useState<string[]>([]);
+  const [escolaId, setEscolaId] = useState('');
   const [escolas, setEscolas] = useState<any[]>([]);
+  const [docentes, setDocentes] = useState<any[]>([]);
+  const [buscaDocente, setBuscaDocente] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadingDocentes, setLoadingDocentes] = useState(false);
   
   const periodos = [
     '1. SEMESTRE', '2. SEMESTRE', '1. BIMESTRE', '2. BIMESTRE', 
@@ -16,23 +22,80 @@ export default function PendenciasLancamento() {
   ];
 
   useEffect(() => {
-    fetchEscolas();
+    fetchInitialData();
   }, []);
 
-  const fetchEscolas = async () => {
-    const { data, error } = await supabase
-      .from('escolas')
-      .select('id, nome')
-      .order('nome');
-    
-    if (!error && data) {
-      setEscolas(data);
-      if (data.length > 0) {
-        setEscola(data[0].nome);
+  useEffect(() => {
+    if (escolaId) {
+      fetchDocentes(escolaId);
+    }
+  }, [escolaId]);
+
+  const fetchInitialData = async () => {
+    setLoading(true);
+    try {
+      const { data: escolasData } = await supabase
+        .from('escolas')
+        .select('id, nome, distrito')
+        .order('nome');
+      
+      if (escolasData) {
+        setEscolas(escolasData);
+        // Extrair distritos únicos e adicionar 'TODOS'
+        const uniqueDistritos = Array.from(new Set(escolasData.map(e => e.distrito).filter(Boolean))) as string[];
+        const distritosComTodos = ['TODOS', ...uniqueDistritos.sort()];
+        setDistritos(distritosComTodos);
+        setDistrito('TODOS');
+        if (escolasData.length > 0) setEscolaId(escolasData[0].id);
       }
+    } catch (err) {
+      console.error('Erro ao carregar dados iniciais:', err);
     }
     setLoading(false);
   };
+
+  const fetchDocentes = async (id: string) => {
+    setLoadingDocentes(true);
+    try {
+      // 1. Buscar alocações/horários da escola selecionada
+      // Se o usuário for um professor, ele só deve ver as dele, MAS nesta tela geralmente é visão de gestor
+      const { data: horarios } = await supabase
+        .from('professor_horarios')
+        .select('*, turmas(nome, turno), professores(nome)')
+        .eq('escola_id', id);
+
+      if (horarios) {
+        // Mapear dados para a tabela
+        // Agrupar por professor e turma/componente
+        const mapped = horarios.map(h => ({
+          professor: h.professores?.nome || 'Docente N/D',
+          dataLotacao: '01/02/2026', // Placeholder
+          periodo: '1. Bimestre',
+          turno: h.turmas?.turno || 'N/D',
+          ensino: 'Ensino Médio',
+          fase: '3 Serie',
+          turma: h.turmas?.nome || 'N/D',
+          componente: h.componente,
+          pendNotas: 100, // Lógica de cálculo seria complexa e precisa de query separada
+          pendFreq: 100,
+          pendObjeto: 100
+        }));
+        setDocentes(mapped);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar docentes:', err);
+    } finally {
+      setLoadingDocentes(false);
+    }
+  };
+
+  const escolasPorDistrito = (!distrito || distrito === 'TODOS') ? escolas : escolas.filter(e => e.distrito === distrito);
+
+  const docentesFiltrados = docentes.filter(d => 
+    d.professor.toLowerCase().includes(buscaDocente.toLowerCase()) ||
+    d.turma.toLowerCase().includes(buscaDocente.toLowerCase()) ||
+    d.componente.toLowerCase().includes(buscaDocente.toLowerCase())
+  );
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-slate-50 dark:bg-slate-900">
@@ -49,8 +112,9 @@ export default function PendenciasLancamento() {
       </div>
 
       {/* Main Content */}
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6 min-h-[600px]">
+      <div className="p-6 max-w-7xl mx-auto space-y-6">
+        {/* Consulta Card */}
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-medium text-slate-800 dark:text-slate-100">Consulta</h2>
             <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium">
@@ -61,54 +125,59 @@ export default function PendenciasLancamento() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Distrito</label>
-              <select 
-                value={distrito}
-                onChange={(e) => setDistrito(e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-md text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="LABREA">LABREA</option>
-              </select>
-            </div>
-            <div>
               <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Escola</label>
               <select 
-                value={escola}
-                onChange={(e) => setEscola(e.target.value)}
+                value={escolaId}
+                onChange={(e) => setEscolaId(e.target.value)}
                 className="w-full px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 rounded-md text-sm text-blue-800 dark:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 disabled={loading}
               >
                 {loading ? (
                   <option>Carregando escolas...</option>
-                ) : escolas.length > 0 ? (
-                  escolas.map((e) => (
-                    <option key={e.id} value={e.nome}>{e.nome}</option>
+                ) : escolasPorDistrito.length > 0 ? (
+                  escolasPorDistrito.map((e) => (
+                    <option key={e.id} value={e.id}>{e.nome}</option>
                   ))
                 ) : (
-                  <option>Nenhuma escola cadastrada</option>
+                  <option>Nenhuma escola neste distrito</option>
                 )}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Endereço</label>
+              <select 
+                value={distrito}
+                onChange={(e) => setDistrito(e.target.value)}
+                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-md text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {distritos.map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
               </select>
             </div>
           </div>
 
-
           <div className="mb-6">
             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">Período</label>
             <div className="flex flex-wrap gap-4">
-              {periodos.map((periodo) => (
-                <label key={periodo} className="flex items-center gap-2 cursor-pointer">
+              {periodos.map((p) => (
+                <label key={p} className="flex items-center gap-2 cursor-pointer">
                   <input 
                     type="checkbox" 
+                    defaultChecked={p === '1. BIMESTRE'}
                     className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
                   />
-                  <span className="text-xs text-slate-700 dark:text-slate-300">{periodo}</span>
+                  <span className="text-xs text-slate-700 dark:text-slate-300">{p}</span>
                 </label>
               ))}
             </div>
           </div>
 
           <div className="mb-6">
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium">
+            <button 
+              onClick={() => fetchDocentes(escolaId)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium"
+            >
               <Search className="w-4 h-4" />
               Consultar
             </button>
@@ -116,7 +185,75 @@ export default function PendenciasLancamento() {
 
           <div className="text-sm">
             <span className="font-bold text-slate-800 dark:text-slate-200">Data da extração: </span>
-            <span className="text-slate-600 dark:text-slate-400">17/03/2026</span>
+            <span className="text-slate-600 dark:text-slate-400">01/04/2026</span>
+          </div>
+        </div>
+
+        {/* Docentes Card */}
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6 overflow-hidden">
+          <div className="mb-6">
+            <h2 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-4">Docentes</h2>
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input 
+                type="text"
+                value={buscaDocente}
+                onChange={(e) => setBuscaDocente(e.target.value)}
+                placeholder="Pesquisar..."
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="overflow-x-auto -mx-6">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-900 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-y border-slate-200 dark:border-slate-700">
+                  <th className="px-6 py-3">Professor</th>
+                  <th className="px-3 py-3">Data Lotação</th>
+                  <th className="px-3 py-3">Período</th>
+                  <th className="px-3 py-3">Turno</th>
+                  <th className="px-3 py-3">Ensino</th>
+                  <th className="px-3 py-3">Fase</th>
+                  <th className="px-3 py-3">Turma</th>
+                  <th className="px-3 py-3">Componente</th>
+                  <th className="px-3 py-3 text-center">% Pend Notas</th>
+                  <th className="px-3 py-3 text-center">% Pend Freq</th>
+                  <th className="px-3 py-3 text-center">% Pend Objeto</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {loadingDocentes ? (
+                  <tr>
+                    <td colSpan={11} className="px-6 py-12 text-center text-sm text-slate-500">
+                      Carregando dados dos docentes...
+                    </td>
+                  </tr>
+                ) : docentesFiltrados.length > 0 ? (
+                  docentesFiltrados.map((d, i) => (
+                    <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-900 text-xs text-slate-700 dark:text-slate-300">
+                      <td className="px-6 py-4 font-medium">{d.professor}</td>
+                      <td className="px-3 py-4 whitespace-nowrap">{d.dataLotacao}</td>
+                      <td className="px-3 py-4 text-blue-600 font-medium">{d.periodo}</td>
+                      <td className="px-3 py-4">{d.turno}</td>
+                      <td className="px-3 py-4">{d.ensino}</td>
+                      <td className="px-3 py-4">{d.fase}</td>
+                      <td className="px-3 py-4">{d.turma}</td>
+                      <td className="px-3 py-4">{d.componente}</td>
+                      <td className="px-3 py-4 text-center font-semibold">{d.pendNotas.toFixed(2)}</td>
+                      <td className="px-3 py-4 text-center font-semibold">{d.pendFreq.toFixed(2)}</td>
+                      <td className="px-3 py-4 text-center font-semibold">{d.pendObjeto.toFixed(2)}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={11} className="px-6 py-12 text-center text-sm text-slate-500 italic">
+                      Nenhum docente encontrado para os critérios selecionados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
