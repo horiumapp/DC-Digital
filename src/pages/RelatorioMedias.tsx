@@ -150,7 +150,7 @@ export default function RelatorioMedias() {
           <span>Voltar</span>
         </Link>
         <div className="flex items-center space-x-3">
-          <h1 className="text-xl font-bold text-[#0f2851]">Relatório das Médias do Componente</h1>
+          <h1 className="text-xl font-semibold text-[#0f2851]">Relatório das Médias do Componente</h1>
           <span className="bg-emerald-100 text-emerald-700 text-[12px] font-bold px-3 py-1 rounded-full border border-emerald-200">Ano: {APP_CONFIG.YEAR}</span>
         </div>
       </section>
