@@ -448,7 +448,7 @@ export default function AvaliacoesTab() {
                                       <div className="w-6 h-6 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
                                         <Plus className="w-3.5 h-3.5" />
                                       </div>
-                                      <span className="text-slate-700 font-black">{rp.tipo}</span>
+                                      <span className="text-slate-900 font-bold text-base">{rp.tipo}</span>
                                     </div>
                                   </td>
                                   <td className="px-6 py-5">
