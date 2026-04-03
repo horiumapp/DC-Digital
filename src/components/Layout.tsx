@@ -30,16 +30,15 @@ export default function Layout() {
         <div className="flex-1 flex items-center">
           <Link to="/turmas" className="flex items-center space-x-3 group">
             <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain transition-transform group-hover:scale-105" />
-            <span className="text-xl font-bold text-[#0f2851] dark:text-indigo-100 tracking-tight hidden xl:block">Diário Digital</span>
+            <span className="text-xl font-bold text-[#0f2851] tracking-tight hidden xl:block">Diário Digital</span>
           </Link>
         </div>
 
         {/* Navegação - Centro */}
         <nav className="hidden lg:flex items-center justify-center space-x-3 flex-[2]">
-          {hasAdminAccess && (
             <Link
               to="/administracao"
-              className="px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg active:scale-95"
+              className="px-6 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95"
             >
               Administração
             </Link>
@@ -116,7 +115,7 @@ export default function Layout() {
               </span>
             </div>
           </div>
-          <Link to="/turmas" className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg active:scale-95">
+          <Link to="/turmas" className="flex items-center space-x-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-3 rounded-xl text-sm font-bold hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95">
             <Home className="w-4 h-4" />
             <span className="hidden md:inline">Início</span>
           </Link>

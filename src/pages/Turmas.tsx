@@ -166,10 +166,10 @@ export default function Turmas() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 relative">
       <div className="relative z-10">
-        <div className="px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-medium text-slate-800 dark:text-slate-100">Turmas/Componentes</h1>
-            <span className="bg-emerald-50 text-emerald-600 text-sm font-bold px-3 py-1 rounded border border-emerald-100 uppercase tracking-tight">Ano: {APP_CONFIG.YEAR}</span>
+        <div className="px-6 py-4 flex items-center justify-between border-b border-blue-50/50 bg-white/50">
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-semibold text-[#0f2851]">Turmas e Componentes</h1>
+            <span className="bg-emerald-100 text-emerald-700 text-[12px] font-bold px-3 py-1 rounded-full border border-emerald-200">Ano: {APP_CONFIG.YEAR}</span>
           </div>
           {alocacoes.length > 1 && (
             <div className="flex gap-2">
@@ -248,27 +248,27 @@ export default function Turmas() {
             {/* Data Table */}
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                <thead className="bg-slate-50 dark:bg-slate-800">
+                <thead className="bg-[#f8f9fa] border-b border-slate-200">
                   <tr>
-                    <th scope="col" className="px-6 py-4 text-left text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider cursor-pointer hover:text-slate-900 dark:hover:text-slate-100">
+                    <th scope="col" className="px-6 py-4 text-left text-[13px] font-bold text-[#0f2851] uppercase tracking-wider cursor-pointer hover:text-slate-900">
                       <div className="flex items-center gap-1">
                         Ensino / Projeto
-                        <ChevronDown className="w-4 h-4 text-slate-400" />
+                        <ChevronDown className="w-4 h-4 text-slate-300" />
                       </div>
                     </th>
-                    <th scope="col" className="px-6 py-4 text-left text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider cursor-pointer hover:text-slate-900 dark:hover:text-slate-100">
+                    <th scope="col" className="px-6 py-4 text-left text-[13px] font-bold text-[#0f2851] uppercase tracking-wider cursor-pointer hover:text-slate-900">
                       <div className="flex items-center gap-1">
                         Fase / Turma
-                        <ChevronDown className="w-4 h-4 text-slate-300 dark:text-slate-500" />
+                        <ChevronDown className="w-4 h-4 text-slate-300" />
                       </div>
                     </th>
-                    <th scope="col" className="px-6 py-4 text-left text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider cursor-pointer hover:text-slate-900 dark:hover:text-slate-100">
+                    <th scope="col" className="px-6 py-4 text-left text-[13px] font-bold text-[#0f2851] uppercase tracking-wider cursor-pointer hover:text-slate-900">
                       <div className="flex items-center gap-1">
                         Componente
-                        <ChevronDown className="w-4 h-4 text-slate-300 dark:text-slate-500" />
+                        <ChevronDown className="w-4 h-4 text-slate-300" />
                       </div>
                     </th>
-                    <th scope="col" className="px-6 py-4 text-left text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-4 text-left text-[13px] font-bold text-[#0f2851] uppercase tracking-wider">
                       Ações
                     </th>
                   </tr>
@@ -283,7 +283,7 @@ export default function Turmas() {
                         <td className="px-6 py-5 whitespace-nowrap">
                           <button
                             onClick={() => handleSelectTurma(turma)}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-[#eef2ff] dark:bg-blue-900/50 text-[#0f2851] dark:text-blue-300 rounded text-sm font-bold hover:bg-[#e0e7ff] dark:hover:bg-blue-800/50 transition-colors uppercase"
+                            className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#eef2ff] text-[#0f2851] border border-blue-100 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition-all uppercase"
                           >
                             <Calendar className="w-4 h-4" />
                             <span>Diário</span>
