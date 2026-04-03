@@ -191,29 +191,29 @@ export default function ObjetoConhecimentoTab({
               </select>
             </div>
             <button
-              onClick={() => {
-                if (objetoSalvo && objetoData) {
-                  setShowObjetoTable(true);
-                  setShowNoRecordsObjeto(false);
-                } else {
-                  setShowNoRecordsObjeto(true);
-                  setShowObjetoTable(false);
-                }
-              }}
-              className="bg-blue-600 text-white px-6 py-2 rounded text-sm font-medium hover:bg-blue-700 transition h-[38px]"
-            >
-              Exibir
-            </button>
-            <button
-              onClick={() => {
-                setShowObjetoTable(false);
-                setShowNoRecordsObjeto(false);
-                setIsAddingObjeto(true);
-              }}
-              className="bg-blue-600 text-white px-6 py-2 rounded text-sm font-medium hover:bg-blue-700 transition h-[38px] flex items-center gap-2"
-            >
-              <span className="text-lg leading-none">+</span> Adicionar Objeto de Conhecimento
-            </button>
+               onClick={() => {
+                 if (objetoSalvo && objetoData) {
+                   setShowObjetoTable(true);
+                   setShowNoRecordsObjeto(false);
+                 } else {
+                   setShowNoRecordsObjeto(true);
+                   setShowObjetoTable(false);
+                 }
+               }}
+               className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] shadow-sm active:scale-95"
+             >
+               Exibir
+             </button>
+             <button
+               onClick={() => {
+                 setShowObjetoTable(false);
+                 setShowNoRecordsObjeto(false);
+                 setIsAddingObjeto(true);
+               }}
+               className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] flex items-center gap-2 shadow-sm active:scale-95"
+             >
+               <span className="text-lg leading-none">+</span> Adicionar Objeto de Conhecimento
+             </button>
           </div>
 
           {showNoRecordsObjeto && !showObjetoTable && (
@@ -240,17 +240,17 @@ export default function ObjetoConhecimentoTab({
                   <tr className="bg-white hover:bg-slate-50/50 transition">
                     <td className="px-4 py-3 text-slate-700">{objetoData.descricao}</td>
                     <td className="px-4 py-3 text-slate-500">{objetoData.observacao || '—'}</td>
-                    <td className="px-4 py-3">
-                      <span className="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-0.5 rounded-full">{objetoData.status}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => { setShowObjetoTable(false); setIsAddingObjeto(true); }}
-                          className="flex items-center gap-1 bg-blue-100 text-blue-700 px-3 py-1.5 rounded text-xs font-medium hover:bg-blue-200 transition"
-                        >
-                          <Pencil className="w-3 h-3" /> Alterar
-                        </button>
+                     <td className="px-4 py-3">
+                       <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full border border-emerald-200 uppercase">{objetoData.status}</span>
+                     </td>
+                     <td className="px-4 py-3">
+                       <div className="flex items-center justify-center gap-2">
+                         <button
+                           onClick={() => { setShowObjetoTable(false); setIsAddingObjeto(true); }}
+                           className="flex items-center gap-1 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-3 py-1.5 rounded text-xs font-bold hover:bg-[#e0e7ff] transition"
+                         >
+                           <Pencil className="w-3 h-3" /> Alterar
+                         </button>
                         <button
                           onClick={() => setShowDeleteObjetoModal(true)}
                           className="flex items-center gap-1 bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-red-700 transition"
@@ -262,9 +262,9 @@ export default function ObjetoConhecimentoTab({
                   </tr>
                 </tbody>
               </table>
-              <div className="px-4 py-3 bg-white border-t border-slate-200 text-sm text-slate-600">
-                Mostrando de 1 até 1 de <span className="font-bold text-blue-600">1</span> registros
-              </div>
+               <div className="px-4 py-3 bg-white border-t border-slate-200 text-sm text-slate-600 font-medium">
+                 Mostrando de 1 até 1 de <span className="font-bold text-[#0f2851]">1</span> registros
+               </div>
             </div>
           )}
         </>
@@ -355,17 +355,17 @@ export default function ObjetoConhecimentoTab({
               className="mb-6"
             />
 
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleSave}
-                className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded text-sm font-medium hover:bg-blue-700 transition"
-              >
-                <Check className="w-4 h-4" /> Confirmar
-              </button>
-              <button onClick={() => setIsAddingObjeto(false)} className="bg-slate-200 text-slate-700 px-6 py-2 rounded text-sm font-medium hover:bg-slate-300 transition">
-                Cancelar
-              </button>
-            </div>
+             <div className="flex items-center gap-3">
+               <button
+                 onClick={handleSave}
+                 className="flex items-center gap-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-8 py-2 rounded text-sm font-bold hover:bg-[#e0e7ff] transition shadow-sm active:scale-95"
+               >
+                 <Check className="w-4 h-4" /> Confirmar lançamento
+               </button>
+               <button onClick={() => setIsAddingObjeto(false)} className="bg-white text-slate-600 border border-slate-200 px-6 py-2 rounded text-sm font-medium hover:bg-slate-50 transition">
+                 Cancelar
+               </button>
+             </div>
           </div>
         </div>
       )}
