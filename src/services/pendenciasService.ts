@@ -13,6 +13,7 @@ export interface PendenciaDocente {
   pendNotas: number;
   pendFreq: number;
   pendObjeto: number;
+  unidade?: string;
 }
 
 const PERIOD_DATES: Record<string, { start: Date; end: Date }> = {
@@ -89,67 +90,80 @@ export const fetchPendenciasPorEscola = async (
     }
 
     const finalResult: PendenciaDocente[] = [];
+    const consolidadoKeys = Object.keys(mapConsolidado);
+    
+    // Processar em lotes para evitar sobrecarga ou timeouts
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < consolidadoKeys.length; i += BATCH_SIZE) {
+      const batch = consolidadoKeys.slice(i, i + BATCH_SIZE);
+      
+      await Promise.all(batch.map(async (key) => {
+        const group = mapConsolidado[key];
+        if (group.totalAulasEsperadas === 0) return;
 
-    // 4. Buscar Lançamentos Reais para cada Grupo Consolidado
-    for (const key in mapConsolidado) {
-      const group = mapConsolidado[key];
-      if (group.totalAulasEsperadas === 0) continue;
+        const periodoDates = PERIOD_DATES[group.periodo];
+        const dateStart = periodoDates.start;
+        const dateEnd = periodoDates.end > hoje ? hoje : periodoDates.end;
 
-      const periodoDates = PERIOD_DATES[group.periodo];
-      const dateStart = periodoDates.start;
-      const dateEnd = periodoDates.end > hoje ? hoje : periodoDates.end;
+        const temposArr = Array.from(group.tempos) as string[];
 
-      const temposArr = Array.from(group.tempos) as string[];
+        try {
+          // Queries de contagem (Frequência e Conteúdo) - AGORA FILTRANDO POR COMPONENTE (disciplina)
+          const [fRes, cRes, avRes, aluRes] = await Promise.all([
+            supabase.from('frequencias')
+              .select('id')
+              .eq('turma_id', group.turmaId)
+              .eq('disciplina', group.componente)
+              .in('tempo', temposArr)
+              .gte('data', dateStart.toISOString().split('T')[0])
+              .lte('data', dateEnd.toISOString().split('T')[0]),
+            supabase.from('conteudos')
+              .select('id')
+              .eq('turma_id', group.turmaId)
+              .eq('disciplina', group.componente)
+              .in('tempo', temposArr)
+              .gte('data', dateStart.toISOString().split('T')[0])
+              .lte('data', dateEnd.toISOString().split('T')[0]),
+            supabase.from('avaliacoes')
+              .select('id')
+              .eq('turma_id', group.turmaId)
+              .eq('disciplina', group.componente)
+              .ilike('bimestre', group.periodo), // Case-insensitive para garantir o match
+            supabase.from('alunos')
+              .select('id', { count: 'exact', head: true })
+              .eq('turma_id', group.turmaId)
+          ]);
 
-      // Queries de contagem (Frequência e Conteúdo)
-      const [fRes, cRes, avRes, aluRes] = await Promise.all([
-        supabase.from('frequencias')
-          .select('id')
-          .eq('turma_id', group.turmaId)
-          .in('tempo', temposArr)
-          .gte('data', dateStart.toISOString().split('T')[0])
-          .lte('data', dateEnd.toISOString().split('T')[0]),
-        supabase.from('conteudos')
-          .select('id')
-          .eq('turma_id', group.turmaId)
-          .in('tempo', temposArr)
-          .gte('data', dateStart.toISOString().split('T')[0])
-          .lte('data', dateEnd.toISOString().split('T')[0]),
-        supabase.from('avaliacoes')
-          .select('id')
-          .eq('turma_id', group.turmaId)
-          .eq('bimestre', group.periodo),
-        supabase.from('alunos')
-          .select('id', { count: 'exact', head: true })
-          .eq('turma_id', group.turmaId)
-      ]);
+          const lancamentosFreq = fRes.data?.length || 0;
+          const lancamentosCont = cRes.data?.length || 0;
+          const totalAlunos = aluRes.count || 0;
 
-      const lancamentosFreq = fRes.data?.length || 0;
-      const lancamentosCont = cRes.data?.length || 0;
-      const totalAlunos = aluRes.count || 0;
+          // Calcular Pendência de Notas
+          let pNotas = 0;
+          if (avRes.data && avRes.data.length > 0 && totalAlunos > 0) {
+            const avIds = avRes.data.map(av => av.id);
+            const { data: notas } = await supabase.from('notas').select('aluno_id').in('avaliacao_id', avIds);
+            const totalNotasEsperadas = avIds.length * totalAlunos;
+            pNotas = Math.max(0, ((totalNotasEsperadas - (notas?.length || 0)) / totalNotasEsperadas) * 100);
+          }
 
-      // Calcular Pendência de Notas
-      let pNotas = 0;
-      if (avRes.data && avRes.data.length > 0 && totalAlunos > 0) {
-        const avIds = avRes.data.map(av => av.id);
-        const { data: notas } = await supabase.from('notas').select('aluno_id').in('avaliacao_id', avIds);
-        const totalNotasEsperadas = avIds.length * totalAlunos;
-        pNotas = Math.max(0, ((totalNotasEsperadas - (notas?.length || 0)) / totalNotasEsperadas) * 100);
-      }
-
-      finalResult.push({
-        professor: group.professor,
-        dataLotacao: '01/02/2026',
-        periodo: group.periodo,
-        turno: group.turno,
-        ensino: group.ensino,
-        fase: group.fase,
-        turma: group.turma,
-        componente: group.componente,
-        pendFreq: parseFloat(Math.max(0, ((group.totalAulasEsperadas - lancamentosFreq) / group.totalAulasEsperadas) * 100).toFixed(2)),
-        pendObjeto: parseFloat(Math.max(0, ((group.totalAulasEsperadas - lancamentosCont) / group.totalAulasEsperadas) * 100).toFixed(2)),
-        pendNotas: parseFloat(pNotas.toFixed(2))
-      });
+          finalResult.push({
+            professor: group.professor,
+            dataLotacao: '01/02/2026',
+            periodo: group.periodo,
+            turno: group.turno,
+            ensino: group.ensino,
+            fase: group.fase,
+            turma: group.turma,
+            componente: group.componente,
+            pendFreq: parseFloat(Math.max(0, ((group.totalAulasEsperadas - lancamentosFreq) / group.totalAulasEsperadas) * 100).toFixed(2)),
+            pendObjeto: parseFloat(Math.max(0, ((group.totalAulasEsperadas - lancamentosCont) / group.totalAulasEsperadas) * 100).toFixed(2)),
+            pendNotas: parseFloat(pNotas.toFixed(2))
+          });
+        } catch (innerErr) {
+          console.error(`Erro ao processar grupo ${key}:`, innerErr);
+        }
+      }));
     }
 
     return finalResult;

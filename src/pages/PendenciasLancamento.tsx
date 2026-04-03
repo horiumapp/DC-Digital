@@ -83,11 +83,9 @@ export default function PendenciasLancamento() {
       d.turma.toLowerCase().includes(buscaDocente.toLowerCase()) ||
       d.componente.toLowerCase().includes(buscaDocente.toLowerCase());
     
-    const periodoFormatado = d.periodo.toUpperCase();
-    // Só mostrar se o período estiver explicitamente selecionado
-    const matchesPeriodo = selectedPeriodos.includes(periodoFormatado);
-    
-    return matchesSearch && matchesPeriodo;
+    // O serviço já retorna apenas os períodos selecionados, então não precisamos filtrar novamente por período
+    // Isso evita erros se o formato da string não bater 100% (ex: espaços ou acentos)
+    return matchesSearch;
   });
 
   return (
