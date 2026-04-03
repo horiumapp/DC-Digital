@@ -468,7 +468,7 @@ export default function RelatorioConteudos() {
           <div className="flex border-2 border-black overflow-hidden">
             {/* Logo Box */}
             <div className="w-[30%] border-r-2 border-black p-4 flex flex-col items-center justify-center text-center">
-              <img src="/semed.png" alt="Logo SEMED" className="w-[72px] h-[72px] mb-1 object-contain" />
+              <img src="/semed.png" alt="Logo SEMED" className="w-20 h-20 mb-1 object-contain" />
               <div className="font-bold text-[9px] leading-tight uppercase">
                 Secretaria Municipal de Educação<br />
                 Lábrea - AM
