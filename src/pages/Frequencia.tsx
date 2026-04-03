@@ -60,14 +60,14 @@ export default function Frequencia() {
               <ArrowLeft className="w-4 h-4" /> Voltar
             </Link>
             <div className="flex items-center gap-3">
-              <h2 className="text-slate-800 text-base font-medium">{turmaAtiva?.ensino} - {turmaAtiva?.fase}</h2>
-              <span className="bg-emerald-50 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-md border border-emerald-100 uppercase tracking-widest">Ano: {APP_CONFIG.YEAR}</span>
+              <h2 className="text-[#0f2851] text-lg font-semibold">{turmaAtiva?.ensino} - {turmaAtiva?.fase}</h2>
+              <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-md border border-emerald-200 uppercase tracking-widest">Ano: {APP_CONFIG.YEAR}</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="bg-white border border-slate-200 rounded flex items-center overflow-hidden">
-              <span className="px-3 py-1.5 text-sm text-slate-600">{selectedDate}</span>
-              <button className="bg-blue-600 text-white p-2 hover:bg-blue-700 transition">
+            <div className="bg-white border border-blue-100 rounded-lg flex items-center overflow-hidden shadow-sm">
+              <span className="px-4 py-1.5 text-sm font-semibold text-[#0f2851]">{selectedDate}</span>
+              <button className="bg-[#eef2ff] text-[#0f2851] p-2 hover:bg-[#e0e7ff] transition border-l border-blue-100">
                 <CalendarIcon className="w-4 h-4" />
               </button>
             </div>
@@ -129,14 +129,14 @@ export default function Frequencia() {
               </div>
             </div>
 
-            {/* Tabs */}
-            <div className="flex border-b border-slate-200 px-6">
+            <div className="flex border-b border-slate-200 px-6 bg-white">
               {(['frequencia', 'objeto', 'anotacoes', 'avaliacoes'] as const).map((tab) => {
                 const labels: Record<string, string> = { frequencia: 'Frequência', objeto: 'Objeto de Conhecimento', anotacoes: 'Anotações', avaliacoes: 'Avaliações' };
                 return (
                   <button key={tab} onClick={() => handleTabChange(tab)}
-                    className={`px-4 py-3 text-sm font-medium transition ${activeTab === tab ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'}`}>
+                    className={`px-6 py-4 text-sm font-bold transition-all relative ${activeTab === tab ? 'text-[#0f2851]' : 'text-slate-400 hover:text-[#0f2851]'}`}>
                     {labels[tab]}
+                    {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#0f2851] rounded-t-full" />}
                   </button>
                 );
               })}

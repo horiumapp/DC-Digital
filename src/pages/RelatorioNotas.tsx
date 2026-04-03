@@ -179,8 +179,8 @@ export default function RelatorioNotas() {
         <div className="w-full max-w-7xl bg-white rounded-xl shadow-lg border border-slate-200 min-h-[600px] overflow-hidden">
           {/* Card Header Area */}
           <div className="p-6 pb-0 flex justify-between items-start">
-            <h3 className="text-xl font-semibold text-slate-700">Pesquisa</h3>
-            <button className="bg-blue-600 text-white px-6 py-2.5 rounded text-base font-medium hover:bg-blue-700 transition shadow-sm">
+            <h3 className="text-xl font-semibold text-[#0f2851]">Pesquisa</h3>
+            <button className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-base font-semibold hover:bg-[#e0e7ff] transition shadow-sm">
               Imprimir
             </button>
           </div>
@@ -241,7 +241,7 @@ export default function RelatorioNotas() {
                 <button 
                   onClick={handleExibir}
                   disabled={dataLoading}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-md flex items-center gap-2 text-base font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-70"
+                  className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-3 rounded-md flex items-center gap-2 text-base font-semibold hover:bg-[#e0e7ff] transition shadow-sm disabled:opacity-70"
                 >
                   <Search className="h-5 w-5" />
                   {dataLoading ? 'Buscando...' : 'Exibir'}
@@ -262,8 +262,8 @@ export default function RelatorioNotas() {
               <div className="flex flex-col h-full">
                 {/* Tabs */}
                 <div className="flex border-b border-slate-200 px-6">
-                  <div className="px-4 py-3 border-b-2 border-blue-600 text-sm font-semibold text-slate-800">Alunos</div>
-                  <div className="px-4 py-3 text-sm font-medium text-blue-500 hover:text-blue-600 cursor-pointer">Com notas importadas</div>
+                  <div className="px-4 py-3 border-b-2 border-[#0f2851] text-sm font-semibold text-[#0f2851]">Alunos</div>
+                  <div className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-[#0f2851] cursor-pointer">Com notas importadas</div>
                 </div>
 
                 <div className="p-6 pb-4">
@@ -375,20 +375,20 @@ export default function RelatorioNotas() {
                                 <React.Fragment key={av.id}>
                                   <td className="px-2 py-4 border-l border-slate-100 text-center">
                                     {vAv !== null ? (
-                                      <span className="inline-flex min-w-[50px] justify-center bg-[#4361ee] text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm shadow-blue-200/50 tracking-wide">
+                                      <span className="inline-flex min-w-[50px] justify-center bg-[#0f2851] text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm shadow-blue-200/50 tracking-wide">
                                         {Number(vAv).toFixed(2).replace('.', ',')}
                                       </span>
                                     ) : (
-                                      <span className="inline-flex min-w-[50px] justify-center bg-[#f1f5f9] text-[#64748b] px-3 py-1 rounded-full text-[13px] font-bold leading-tight">S/N</span>
+                                      <span className="inline-flex min-w-[50px] justify-center bg-slate-100 text-slate-400 px-3 py-1 rounded-full text-[13px] font-bold">S/N</span>
                                     )}
                                   </td>
                                   <td className="px-2 py-4 text-center border-l border-transparent">
                                     {rp && vRp !== null ? (
-                                      <span className="inline-flex min-w-[50px] justify-center bg-[#4361ee] text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm shadow-blue-200/50 tracking-wide">
+                                      <span className="inline-flex min-w-[50px] justify-center bg-[#0f2851] text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm shadow-blue-200/50 tracking-wide">
                                         {Number(vRp).toFixed(2).replace('.', ',')}
                                       </span>
                                     ) : (
-                                      <span className="inline-flex min-w-[50px] justify-center bg-[#f1f5f9] text-[#64748b] px-3 py-1 rounded-full text-[13px] font-bold leading-tight">S/N</span>
+                                      <span className="inline-flex min-w-[50px] justify-center bg-slate-100 text-slate-400 px-3 py-1 rounded-full text-[13px] font-bold">S/N</span>
                                     )}
                                   </td>
                                 </React.Fragment>
@@ -399,7 +399,7 @@ export default function RelatorioNotas() {
                               {mediaVal !== null ? (
                                 <span className={`inline-flex min-w-[50px] justify-center px-3 py-1 rounded-full text-[13px] font-bold shadow-sm text-white transition-colors duration-200 ${
                                   mediaVal >= 6 
-                                    ? 'bg-[#4361ee] shadow-blue-200/50' 
+                                    ? 'bg-[#0f2851] shadow-blue-200/50' 
                                     : 'bg-[#c2463e] shadow-red-200/50'
                                 }`}>
                                   {Number(mediaVal).toFixed(2).replace('.', ',')}
@@ -437,7 +437,6 @@ export default function RelatorioNotas() {
           </div>
         </div>
       </main>
-      </div>
     </div>
   );
 }

@@ -115,7 +115,7 @@ export default function FrequenciaTab({
         {!isLaunching && (
           <button
             onClick={() => setIsLaunching(true)}
-            className="bg-blue-600 text-white px-6 py-2 rounded text-sm font-medium hover:bg-blue-700 transition h-[38px]"
+            className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] shadow-sm active:scale-95"
           >
             Efetuar lançamento
           </button>
@@ -159,7 +159,7 @@ export default function FrequenciaTab({
             <input
               type="text"
               placeholder="Pesquisar"
-              className="w-full border border-slate-200 rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-blue-500 bg-slate-50/50"
+              className="w-full border border-blue-100 rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#0f2851] bg-white shadow-sm"
             />
           </div>
 
@@ -193,18 +193,18 @@ export default function FrequenciaTab({
                       </button>
                     </td>
                     <td className="px-4 py-3">
-                      <div className={`flex items-center justify-center rounded-md overflow-hidden border w-fit mx-auto transition-all ${!aluno.freq ? 'opacity-30 grayscale pointer-events-none border-slate-200' : 'border-blue-200'}`}>
+                      <div className={`flex items-center justify-center rounded-lg overflow-hidden border w-fit mx-auto transition-all ${!aluno.freq ? 'opacity-30 grayscale pointer-events-none border-slate-200' : 'border-blue-100 shadow-sm'}`}>
                         <button
                           disabled={!aluno.freq}
                           onClick={() => togglePart(aluno.id, 'Presencial')}
-                          className={`px-3 py-1 text-xs font-medium transition-colors ${aluno.part === 'Presencial' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 hover:bg-blue-50'}`}
+                          className={`px-4 py-1.5 text-xs font-bold transition-all ${aluno.part === 'Presencial' ? 'bg-[#0f2851] text-white' : 'bg-white text-[#0f2851] hover:bg-[#eef2ff]'}`}
                         >
                           Presencial
                         </button>
                         <button
                           disabled={!aluno.freq}
                           onClick={() => togglePart(aluno.id, 'Remoto')}
-                          className={`px-3 py-1 text-xs font-medium transition-colors border-l border-blue-200 ${aluno.part === 'Remoto' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 hover:bg-blue-50'}`}
+                          className={`px-4 py-1.5 text-xs font-bold transition-all border-l border-blue-100 ${aluno.part === 'Remoto' ? 'bg-[#0f2851] text-white' : 'bg-white text-[#0f2851] hover:bg-[#eef2ff]'}`}
                         >
                           Remoto
                         </button>
@@ -231,7 +231,7 @@ export default function FrequenciaTab({
               <button className="px-3 py-1.5 bg-slate-50 text-slate-400 flex items-center gap-1 hover:bg-slate-100 transition">
                 <ArrowLeft className="w-3 h-3" /> Anterior
               </button>
-              <button className="px-3 py-1.5 bg-blue-600 text-white font-medium">1</button>
+              <button className="px-3 py-1.5 bg-[#0f2851] text-white font-bold">1</button>
               <button className="px-3 py-1.5 bg-slate-50 text-slate-600 flex items-center gap-1 hover:bg-slate-100 transition border-l border-slate-200">
                 Seguinte <ArrowLeft className="w-3 h-3 rotate-180" />
               </button>
@@ -250,13 +250,13 @@ export default function FrequenciaTab({
             <div className="flex items-center gap-3">
               <button
                 onClick={handleConfirm}
-                className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded text-sm font-medium hover:bg-blue-700 transition"
+                className="flex items-center gap-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-bold hover:bg-[#e0e7ff] transition shadow-sm active:scale-95"
               >
                 <Check className="w-4 h-4" /> Confirmar
               </button>
               <button
                 onClick={() => setIsLaunching(false)}
-                className="bg-blue-600 text-white px-6 py-2 rounded text-sm font-medium hover:bg-blue-700 transition"
+                className="bg-white text-slate-600 border border-slate-200 px-6 py-2 rounded text-sm font-medium hover:bg-slate-50 transition"
               >
                 Voltar
               </button>

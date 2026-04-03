@@ -160,8 +160,8 @@ export default function RelatorioMedias() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6">
           <div className="p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-slate-800">Pesquisa</h2>
-              <button className="px-6 py-2.5 bg-blue-600 text-white rounded-md text-base font-bold shadow-sm hover:bg-blue-700 transition">
+              <h2 className="text-xl font-bold text-[#0f2851]">Pesquisa</h2>
+              <button className="px-6 py-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 rounded text-base font-semibold hover:bg-[#e0e7ff] transition shadow-sm">
                 Imprimir
               </button>
             </div>
@@ -196,7 +196,7 @@ export default function RelatorioMedias() {
                 <button 
                   onClick={handleExibir}
                   disabled={dataLoading}
-                  className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white px-6 py-3.5 rounded-md text-base font-bold hover:bg-blue-700 transition disabled:opacity-70"
+                  className="w-full flex items-center justify-center space-x-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-3.5 rounded-md text-base font-semibold hover:bg-[#e0e7ff] transition disabled:opacity-70"
                 >
                   <Search className="w-5 h-5" />
                   <span>{dataLoading ? 'Buscando...' : 'Exibir'}</span>
@@ -283,9 +283,9 @@ export default function RelatorioMedias() {
                     const mediaFinal = validMedias.length > 0 ? validMedias.reduce((a, b) => a + b, 0) / validMedias.length : null;
 
                     const renderMediaPill = (val: number | null) => {
-                      if (val === null) return <span className="inline-flex min-w-[45px] justify-center bg-[#f1f5f9] text-[#64748b] px-2 py-1 rounded-full text-[12px] font-bold">S/N</span>;
+                      if (val === null) return <span className="inline-flex min-w-[45px] justify-center bg-slate-100 text-slate-400 px-2 py-1 rounded-full text-[12px] font-bold">S/N</span>;
                       return (
-                        <span className={`inline-flex min-w-[45px] justify-center px-2 py-1 rounded-full text-[12px] font-bold text-white shadow-sm shadow-blue-200/50 ${val >= 6 ? 'bg-[#4361ee]' : 'bg-[#c2463e]'}`}>
+                        <span className={`inline-flex min-w-[45px] justify-center px-2 py-1 rounded-full text-[12px] font-bold text-white shadow-sm shadow-blue-200/50 ${val >= 6 ? 'bg-[#0f2851]' : 'bg-[#c2463e]'}`}>
                           {val.toFixed(2).replace('.', ',')}
                         </span>
                       );
