@@ -20,6 +20,7 @@ export default function Turmas() {
   const [alocacaoAtiva, setAlocacaoAtiva] = useState<any>(null);
   const [turmasBD, setTurmasBD] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [professorDisciplinas, setProfessorDisciplinas] = useState<string>('');
 
   React.useEffect(() => {
     fetchAlocacoes();
@@ -60,7 +61,7 @@ export default function Turmas() {
       // Buscamos TODOS que baterem com o email (caso o admin tenha criado o mesmo professor duas vezes)
       const { data: professorDataResult, error: profError } = await supabase
         .from('professores')
-        .select('id')
+        .select('id, disciplinas')
         .ilike('email', `%${emailLimpo}%`);
 
       if (profError) {
@@ -68,6 +69,17 @@ export default function Turmas() {
       }
 
       if (professorDataResult && professorDataResult.length > 0) {
+        // Pegar todas as disciplinas de todos os perfis encontrados e unificar (caso um tenha e outro não)
+        let allDisciplinas: string[] = [];
+        professorDataResult.forEach(p => {
+          if (p.disciplinas && Array.isArray(p.disciplinas)) {
+            allDisciplinas = [...allDisciplinas, ...p.disciplinas];
+          }
+        });
+        // Remover duplicatas
+        allDisciplinas = [...new Set(allDisciplinas)];
+        setProfessorDisciplinas(allDisciplinas.length > 0 ? allDisciplinas.join(', ') : 'POLIVALENTE');
+
         // Pegar array com os IDs de todos os cadastros possíveis desse professor
         const profIds = professorDataResult.map(p => p.id);
         
@@ -106,28 +118,40 @@ export default function Turmas() {
     setAlocacaoAtiva(aloc);
   };
 
-  const filteredTurmas: Turma[] = turmasBD
-    .filter(t => t.nome.toLowerCase().includes(searchTerm.toLowerCase()))
-    .map(t => ({
-      id: t.id,
-      ensino: 'Ensino Fundamental', // Campo padrão ou vindo do BD se existisse
-      fase: t.nome,
-      componente: 'COMPONENTE CURRICULAR',
-      professor: user?.name || '',
-      escola: t.escolas?.nome || alocacaoAtiva?.escolas?.nome || 'Escola',
-      turno: t.turno,
-      metricas: {
-        frequencia: 0,
-        objetosMinistrados: 0,
-        objetosPlanejados: 0,
-        avaliacoesCadastradas: 0,
-        avaliacoesPrevistas: 0,
-        notasLancadas: 0,
-        notasPrevistas: 0
-      },
-      diasDeAula: [1, 2, 3, 4, 5],
-      tempos: ['1º TEMPO', '2º TEMPO']
-    }));
+  const filteredTurmas: Turma[] = (() => {
+    const rawFiltered = turmasBD.filter(t => t.nome.toLowerCase().includes(searchTerm.toLowerCase()));
+    const exploded: Turma[] = [];
+
+    // Pegamos a lista de disciplinas (já unificada no fetchAlocacoes)
+    const disciplinasList = professorDisciplinas ? professorDisciplinas.split(', ') : ['POLIVALENTE'];
+
+    rawFiltered.forEach(t => {
+      disciplinasList.forEach(disc => {
+        exploded.push({
+          id: `${t.id}_${disc}`, // ID composto para evitar problemas de key no React
+          ensino: 'Ensino Fundamental', 
+          fase: t.nome,
+          componente: disc, // Uma linha para cada disciplina
+          professor: user?.name || '',
+          escola: t.escolas?.nome || alocacaoAtiva?.escolas?.nome || 'Escola',
+          turno: t.turno,
+          metricas: {
+            frequencia: 0,
+            objetosMinistrados: 0,
+            objetosPlanejados: 0,
+            avaliacoesCadastradas: 0,
+            avaliacoesPrevistas: 0,
+            notasLancadas: 0,
+            notasPrevistas: 0
+          },
+          diasDeAula: [1, 2, 3, 4, 5],
+          tempos: ['1º TEMPO', '2º TEMPO']
+        });
+      });
+    });
+
+    return exploded;
+  })();
 
   if (loading) {
     return (
