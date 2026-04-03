@@ -54,7 +54,7 @@ export default function SegundaChamadaEditor({
             AVALIAÇÃO DE 2ª CHAMADA
           </h2>
           <p className="text-slate-500 text-sm font-medium mt-1 uppercase tracking-wider">
-            VINCULADA A: <span className="text-blue-600 font-bold">{selectedAvaliacao.tipo} - {selectedAvaliacao.instrumento}</span>
+            VINCULADA A: <span className="text-[#0f2851] font-bold">{selectedAvaliacao.tipo} - {selectedAvaliacao.instrumento}</span>
           </p>
         </div>
         <button onClick={onCancel} className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-400 hover:text-slate-600">
@@ -70,7 +70,7 @@ export default function SegundaChamadaEditor({
                 <input 
                   type="checkbox" 
                   onChange={(e) => handleSelectAll(e.target.checked)}
-                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-slate-300 text-[#0f2851] focus:ring-[#0f2851]"
                 />
               </th>
               <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">Nº</th>
@@ -87,7 +87,7 @@ export default function SegundaChamadaEditor({
                     type="checkbox" 
                     checked={secondCallRows[aluno.id]?.selected}
                     onChange={(e) => handleRowChange(aluno.id, 'selected', e.target.checked)}
-                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-slate-300 text-[#0f2851] focus:ring-[#0f2851]"
                   />
                 </td>
                 <td className="px-8 py-4 text-slate-400 font-bold tabular-nums">{String(index + 1).padStart(2, '0')}</td>
@@ -123,7 +123,7 @@ export default function SegundaChamadaEditor({
                       handleRowChange(aluno.id, 'grade', val);
                     }}
                     placeholder="0,00"
-                    className="w-24 text-center py-2 bg-slate-50 border-2 border-slate-100 rounded-xl text-slate-700 font-black focus:border-blue-400 focus:bg-white transition-all outline-none disabled:opacity-50"
+                    className="w-24 text-center py-2 bg-slate-50 border-2 border-slate-100 rounded-xl text-slate-700 font-black focus:border-[#0f2851]/20 focus:bg-white transition-all outline-none disabled:opacity-50"
                   />
                 </td>
               </tr>
@@ -154,7 +154,7 @@ export default function SegundaChamadaEditor({
             <button 
               onClick={onSave}
               disabled={isSaving}
-              className="flex-1 md:flex-none px-12 py-3 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-700 transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-3 shadow-lg shadow-blue-600/30 disabled:opacity-50"
+              className="flex-1 md:flex-none px-12 py-3 bg-[#0f2851] text-white font-bold rounded-2xl hover:bg-[#1a3a6d] transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-3 shadow-lg shadow-[#0f2851]/30 disabled:opacity-50 active:scale-95"
             >
               {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
               Salvar

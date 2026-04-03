@@ -37,12 +37,12 @@ export default function NotasEditor({
 
   return (
     <div className="space-y-6 text-left">
-      <div className="bg-blue-600 p-8 rounded-[32px] text-white shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 blur-[100px] rounded-full -mr-20 -mt-20"></div>
+      <div className="bg-[#0f2851] p-8 rounded-[32px] text-white shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 blur-[100px] rounded-full -mr-20 -mt-20"></div>
         <div className="relative z-10">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center">
-              <List className="w-6 h-6 text-blue-400" />
+              <List className="w-6 h-6 text-white" />
             </div>
             <div>
               <h3 className="text-2xl font-black uppercase tracking-tight">Lançamento de Notas</h3>
@@ -85,7 +85,7 @@ export default function NotasEditor({
                         placeholder="0,00" 
                         value={localNotas[aluno.id] || ''} 
                         onChange={(e) => onNotaChange(aluno.id, e.target.value)} 
-                        className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-center text-lg font-black text-blue-600 focus:ring-2 focus:ring-blue-600/20 transition-all group-hover:bg-white placeholder:text-slate-200" 
+                        className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-center text-lg font-bold text-[#0f2851] focus:ring-2 focus:ring-[#0f2851]/20 transition-all group-hover:bg-white placeholder:text-slate-200" 
                       />
                     )}
                   </div>
@@ -108,9 +108,9 @@ export default function NotasEditor({
         <div className="flex gap-4">
           <button 
             onClick={onConfirm} 
-            className="flex-1 bg-blue-600 text-white py-5 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-blue-700 transition shadow-xl shadow-blue-600/30 flex items-center justify-center gap-3"
+            className="flex-1 bg-[#0f2851] text-white py-5 rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-[#1a3a6d] transition shadow-xl shadow-[#0f2851]/30 flex items-center justify-center gap-3 active:scale-95"
           >
-            <Check className="w-6 h-6" /> Confirmar Notas
+            <Check className="w-6 h-6 text-emerald-400" /> Confirmar Notas
           </button>
           <button 
             onClick={onCancel} 
