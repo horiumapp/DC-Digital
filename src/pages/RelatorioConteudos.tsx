@@ -492,23 +492,29 @@ export default function RelatorioConteudos() {
             </thead>
             <tbody>
               {conteudosRelatorio.map((c, i) => {
-                let dataExibicao = c.data;
+                let dataExibicao = '---';
                 
-                // Formatação resiliente para evitar "Invalid Date"
-                if (c.data) {
+                if (c.data && c.data !== 'Invalid Date' && c.data !== 'undefined' && c.data !== 'null') {
                   if (/^\d{4}-\d{2}-\d{2}/.test(c.data)) {
-                    // Formato ISO -> BR
-                    const [y, m, d] = c.data.split('T')[0].split('-');
-                    dataExibicao = `${d}/${m}/${y}`;
-                  } else if (/^\d{2}\/\d{2}\/\d{4}/.test(c.data)) {
-                    // Já está no formato BR
-                    dataExibicao = c.data.substring(0, 10);
+                    // Formato ISO (Ex: 2026-02-09) -> BR
+                    const parts = c.data.split('T')[0].split('-');
+                    if (parts.length === 3) {
+                      dataExibicao = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    }
+                  } else if (c.data.includes('/')) {
+                    // Já parece estar no formato BR ou similar
+                    const match = c.data.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+                    if (match) {
+                      dataExibicao = `${match[1]}/${match[2]}/${match[3]}`;
+                    } else {
+                        dataExibicao = c.data.substring(0, 10);
+                    }
                   }
                 }
 
                 return (
                   <tr key={i}>
-                    <td className="text-center">{dataExibicao || 'N/D'}</td>
+                    <td className="text-center">{dataExibicao}</td>
                     <td className="text-center">{c.tempo}</td>
                     <td className="leading-tight text-[8px] py-2">{c.descricao}</td>
                     <td></td>
