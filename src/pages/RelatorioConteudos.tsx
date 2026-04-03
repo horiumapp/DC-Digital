@@ -172,6 +172,8 @@ export default function RelatorioConteudos() {
       // Filtragem Inteligente em Memória (JS) usando normalização de datas
       const filtered = (rawContents || []).filter(c => {
         const cDateISO = formatarDataParaISO(c.data);
+        if (!cDateISO || cDateISO === 'Invalid Date') return false;
+        
         const matchDate = cDateISO >= dateStart && cDateISO <= dateEnd;
         const matchComp = String(c.disciplina || '').trim().toUpperCase() === componente.trim().toUpperCase();
         return matchDate && matchComp;
@@ -209,17 +211,40 @@ export default function RelatorioConteudos() {
         return;
       }
 
-      const formatted = contentsRes.map(c => ({
-        data: new Date(c.data).toLocaleDateString('pt-BR'),
-        tempo: c.tempo,
-        descricao: c.descricao || (c.objetos ? c.objetos.join(', ') : '')
-      }));
+      const formatted = contentsRes.map(c => {
+        let dataExibicao = '---';
+        
+        if (c.data && c.data !== 'Invalid Date') {
+          // Detectar e converter ISO (YYYY-MM-DD) para BR (DD/MM/YYYY)
+          if (/^\d{4}-\d{2}-\d{2}/.test(c.data)) {
+            const parts = c.data.split('T')[0].split('-');
+            dataExibicao = `${parts[2]}/${parts[1]}/${parts[0]}`;
+          } else if (c.data.includes('/')) {
+            // Se já tem barras, apenas limpa extras (Ex: 09/02/2026 00:00 -> 09/02/2026)
+            dataExibicao = c.data.substring(0, 10);
+          }
+        }
+
+        return {
+          data: dataExibicao,
+          tempo: c.tempo,
+          descricao: c.descricao || (c.objetos ? c.objetos.join(', ') : '')
+        };
+      });
 
       setConteudosRelatorio(formatted);
       
+      // Definir o nome do arquivo PDF (via título do documento)
+      const oldTitle = document.title;
+      const turmaNome = selectedTurmaObj?.nome?.replace(/\s+/g, '_') || 'Turma';
+      const disciplinaNome = componente?.replace(/\s+/g, '_') || 'Disciplina';
+      const periodoLimpo = periodoSelecionado.replace(/\s+/g, '');
+      document.title = `CM_${periodoLimpo}_${turmaNome}_${disciplinaNome}`;
+
       // Pequeno timeout para garantir que o componente de impressão renderizou
       setTimeout(() => {
         window.print();
+        document.title = oldTitle; // Restaurar título original
         setDataLoading(false);
       }, 500);
 
@@ -404,8 +429,9 @@ export default function RelatorioConteudos() {
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
             @page { margin: 1cm; size: A4; }
-            body { -webkit-print-color-adjust: exact; }
-            .hidden-print { display: none !important; }
+            body { -webkit-print-color-adjust: exact; background: white !important; }
+            .print\\:hidden { display: none !important; }
+            #printable-relatorio { display: block !important; position: static !important; }
           }
           #printable-relatorio table { width: 100%; border-collapse: collapse; table-layout: fixed; }
           #printable-relatorio th, #printable-relatorio td { border: 1px solid black; padding: 4px; text-align: left; font-size: 8px; font-family: Arial, sans-serif; }
@@ -491,37 +517,15 @@ export default function RelatorioConteudos() {
               </tr>
             </thead>
             <tbody>
-              {conteudosRelatorio.map((c, i) => {
-                let dataExibicao = '---';
-                
-                if (c.data && c.data !== 'Invalid Date' && c.data !== 'undefined' && c.data !== 'null') {
-                  if (/^\d{4}-\d{2}-\d{2}/.test(c.data)) {
-                    // Formato ISO (Ex: 2026-02-09) -> BR
-                    const parts = c.data.split('T')[0].split('-');
-                    if (parts.length === 3) {
-                      dataExibicao = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                    }
-                  } else if (c.data.includes('/')) {
-                    // Já parece estar no formato BR ou similar
-                    const match = c.data.match(/(\d{2})\/(\d{2})\/(\d{4})/);
-                    if (match) {
-                      dataExibicao = `${match[1]}/${match[2]}/${match[3]}`;
-                    } else {
-                        dataExibicao = c.data.substring(0, 10);
-                    }
-                  }
-                }
-
-                return (
-                  <tr key={i}>
-                    <td className="text-center">{dataExibicao}</td>
-                    <td className="text-center">{c.tempo}</td>
-                    <td className="leading-tight text-[8px] py-2">{c.descricao}</td>
-                    <td></td>
-                    <td></td>
-                  </tr>
-                );
-              })}
+              {conteudosRelatorio.map((c, i) => (
+                <tr key={i}>
+                  <td className="text-center">{c.data}</td>
+                  <td className="text-center">{c.tempo}</td>
+                  <td className="leading-tight text-[8px] py-2">{c.descricao}</td>
+                  <td></td>
+                  <td></td>
+                </tr>
+              ))}
               {/* Preencher linhas vazias se for pouco conteúdo */}
               {[...Array(Math.max(0, 15 - conteudosRelatorio.length))].map((_, i) => (
                 <tr key={`empty-${i}`}>
