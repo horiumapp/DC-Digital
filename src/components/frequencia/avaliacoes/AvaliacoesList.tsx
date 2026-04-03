@@ -84,17 +84,17 @@ export default function AvaliacoesList({
                           <td className="px-6 py-4">
                             <div className="flex items-center justify-center gap-2">
                               <button onClick={() => onViewDetails(av)}
-                                className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
+                                className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
                                 <Eye className="w-3.5 h-3.5" /> Detalhes
                               </button>
                               
                               <button onClick={() => onEdit(av)}
-                                className="flex items-center gap-1.5 px-4 py-2 bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-lg font-bold text-[10px] uppercase transition-all">
+                                className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-lg font-bold text-[10px] uppercase transition-all">
                                 <Pencil className="w-3.5 h-3.5 text-slate-500" /> Alterar
                               </button>
 
                               <button onClick={() => onDelete(av)}
-                                className="flex items-center gap-1.5 px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-red-100">
+                                className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-red-100">
                                 <Trash2 className="w-3.5 h-3.5" /> Remover
                               </button>
 
@@ -104,14 +104,14 @@ export default function AvaliacoesList({
                               }) && !avaliacoes.some(rp => String(rp.parent_id) === String(av.id)) && (
                                 <button 
                                   onClick={() => onAddRP(av)}
-                                  className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-bold text-[10px] uppercase transition-all"
+                                  className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-bold text-[10px] uppercase transition-all"
                                 >
                                   <Plus className="w-3.5 h-3.5 text-slate-500" /> ADICIONAR RP
                                 </button>
                               )}
 
                               <button onClick={() => onShowGrades(av)}
-                                className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
+                                className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
                                 <List className="w-3.5 h-3.5" /> Notas
                               </button>
                               
@@ -122,7 +122,7 @@ export default function AvaliacoesList({
                                 if (hasGrades && hasAbsences) {
                                   return (
                                     <button onClick={() => onSecondCall(av)}
-                                      className="flex items-center gap-1.5 px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-blue-600/10">
+                                      className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-blue-600/10">
                                       <div className="w-5 h-5 bg-blue-800 text-white rounded-full flex items-center justify-center text-[10px] scale-90">2</div> 2ª chamada
                                     </button>
                                   );
@@ -158,22 +158,22 @@ export default function AvaliacoesList({
                                 <td className="px-6 py-5">
                                   <div className="flex items-center justify-center gap-2">
                                     <button onClick={() => onViewDetails(rp)}
-                                      className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all">
+                                      className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all">
                                       <Eye className="w-3.5 h-3.5" /> Detalhes
                                     </button>
                                     
                                     <button onClick={() => onEdit(rp)}
-                                      className="flex items-center gap-1.5 px-4 py-2 bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-lg font-bold text-[10px] uppercase transition-all">
+                                      className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-lg font-bold text-[10px] uppercase transition-all">
                                       <Pencil className="w-3.5 h-3.5 text-slate-500" /> Alterar
                                     </button>
                                     
                                     <button onClick={() => onDelete(rp)}
-                                      className="flex items-center gap-1.5 px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-red-100">
+                                      className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-red-100">
                                       <Trash2 className="w-3.5 h-3.5" /> Remover
                                     </button>
 
                                     <button onClick={() => onShowGrades(rp)}
-                                      className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
+                                      className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
                                       <List className="w-3.5 h-3.5" /> Notas
                                     </button>
                                   </div>
