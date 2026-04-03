@@ -96,13 +96,13 @@ export default function Turmas() {
       escola: t.escolas?.nome || alocacaoAtiva?.escolas?.nome || 'Escola',
       turno: t.turno,
       metricas: {
-        frequencia: 85,
-        objetosMinistrados: 12,
-        objetosPlanejados: 15,
-        avaliacoesCadastradas: 2,
-        avaliacoesPrevistas: 4,
-        notasLancadas: 45,
-        notasPrevistas: 60
+        frequencia: 0,
+        objetosMinistrados: 0,
+        objetosPlanejados: 0,
+        avaliacoesCadastradas: 0,
+        avaliacoesPrevistas: 0,
+        notasLancadas: 0,
+        notasPrevistas: 0
       },
       diasDeAula: [1, 2, 3, 4, 5],
       tempos: ['1º TEMPO', '2º TEMPO']

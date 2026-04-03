@@ -11,17 +11,13 @@ export const getBimestrePorData = (dataStr: string): string => {
   }
   
   if (!dia || !mes || !ano) return '';
-  const data = new Date(ano, mes - 1, dia);
+  const dataRef = new Date(ano, mes - 1, dia);
+  if (ano !== 2026) return '';
 
-  // Datas de 2026 (Limites estritos baseados em Diario.tsx)
-  // 1º Bimestre: 05/02/2026 - 23/04/2026
-  if (data >= new Date(2026, 1, 5) && data <= new Date(2026, 3, 23)) return '1º Bimestre';
-  // 2º Bimestre: 24/04/2026 - 07/07/2026
-  if (data >= new Date(2026, 3, 24) && data <= new Date(2026, 6, 7)) return '2º Bimestre';
-  // 3º Bimestre: 16/07/2026 - 24/09/2026
-  if (data >= new Date(2026, 6, 16) && data <= new Date(2026, 8, 24)) return '3º Bimestre';
-  // 4º Bimestre: 25/09/2026 - 14/12/2026
-  if (data >= new Date(2026, 8, 25) && data <= new Date(2026, 11, 14)) return '4º Bimestre';
+  if (dataRef >= new Date(2026, 1, 5) && dataRef <= new Date(2026, 3, 23)) return '1º Bimestre';
+  if (dataRef >= new Date(2026, 3, 24) && dataRef <= new Date(2026, 6, 7)) return '2º Bimestre';
+  if (dataRef >= new Date(2026, 6, 16) && dataRef <= new Date(2026, 8, 24)) return '3º Bimestre';
+  if (dataRef >= new Date(2026, 8, 25) && dataRef <= new Date(2026, 11, 14)) return '4º Bimestre';
   
   return '';
 };

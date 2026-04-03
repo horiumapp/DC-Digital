@@ -161,6 +161,10 @@ export default function Diario() {
     // Normalização rigorosa de ID de turma
     if (String(av.turmaId) !== String(turmaAtiva.id)) return false;
     
+    // Filtro de Integridade: Só conta se a avaliação tiver uma data válida de 2026
+    // Registros sem data ou com datas malformadas de outros anos são ignorados.
+    if (!av.data || !av.data.includes('2026') || av.id.includes('temp_')) return false;
+
     // Se a avaliação tiver campo bimestre, usamos ele. Caso contrário, inferimos pela data.
     const bNome = av.bimestre || getBimestrePorData(av.data);
     return bNome === periodoSelecionado.nome;

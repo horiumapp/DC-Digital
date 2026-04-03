@@ -100,10 +100,16 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (turmaAtiva) {
+      // Limpeza imediata ao trocar de turma
+      setAlunos([]);
+      setAvaliacoes([]);
+      setLancamentos([]);
+      setHorarioTurma([]);
       cargarDadosTurma(turmaAtiva.id);
     } else {
       setAlunos([]);
       setAvaliacoes([]);
+      setLancamentos([]);
       setHorarioTurma([]);
     }
   }, [turmaAtiva]);
