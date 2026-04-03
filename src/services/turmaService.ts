@@ -100,7 +100,7 @@ export const TurmaService = {
     return { avaliacoes: avaliacoesFormatadas, notasData: notasData || [] };
   },
 
-  salvarAvaliacao: async (av: Avaliacao, turmaId: string | number, disciplina: string): Promise<void> => {
+  salvarAvaliacao: async (av: Avaliacao, turmaId: string | number, disciplina: string): Promise<string> => {
     const tid = turmaId.toString().split('_')[0];
     const payload = {
       turma_id: tid,
@@ -114,16 +114,19 @@ export const TurmaService = {
       parent_id: av.parent_id
     };
 
+    let createdId = av.id;
     let error;
     if (!av.id || av.id.startsWith('temp_')) {
-      const { error: insError } = await supabase.from('avaliacoes').insert([payload]);
+      const { data, error: insError } = await supabase.from('avaliacoes').insert([payload]).select().single();
       error = insError;
+      if (data) createdId = data.id.toString();
     } else {
-      const { error: updError } = await supabase.from('avaliacoes').update(payload).eq('id', av.id);
+      const { error: updError } = await supabase.from('avaliacoes').update(payload).eq('id', av.id).select().single();
       error = updError;
     }
 
     if (error) throw error;
+    return createdId;
   },
 
   removerAvaliacao: async (id: string): Promise<void> => {
@@ -179,6 +182,18 @@ export const TurmaService = {
       .eq('turma_id', tid)
       .eq('data', data)
       .eq('tempo', tempo)
+      .eq('disciplina', disciplina);
+    if (error) throw error;
+    return freqData || [];
+  },
+
+  buscarFrequenciaPorDia: async (turmaId: string | number, disciplina: string, data: string): Promise<any[]> => {
+    const tid = turmaId.toString().split('_')[0];
+    const { data: freqData, error } = await supabase
+      .from('frequencias')
+      .select('aluno_id, status')
+      .eq('turma_id', tid)
+      .eq('data', data)
       .eq('disciplina', disciplina);
     if (error) throw error;
     return freqData || [];

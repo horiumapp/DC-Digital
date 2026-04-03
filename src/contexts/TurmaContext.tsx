@@ -187,11 +187,12 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     ));
   };
 
-  const salvarAvaliacao = async (av: Avaliacao) => {
-    if (!turmaAtiva) return;
+  const salvarAvaliacao = async (av: Avaliacao): Promise<string> => {
+    if (!turmaAtiva) return '';
     const rawId = turmaAtiva.id.toString().split('_')[0];
-    await TurmaService.salvarAvaliacao(av, rawId, turmaAtiva.componente);
+    const createdId = await TurmaService.salvarAvaliacao(av, rawId, turmaAtiva.componente);
     await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunos);
+    return createdId;
   };
 
   const removerAvaliacao = async (id: string) => {

@@ -9,7 +9,7 @@ import { formatMatricula } from '../../utils/formatters';
 export default function AvaliacoesTab() {
   const { turmaAtiva, alunos, avaliacoes, conteudos, loading, salvarAvaliacao, removerAvaliacao, salvarNotas } = useTurma();
 
-  const [avaliacaoViewMode, setAvaliacaoViewMode] = useState<'list' | 'details' | 'edit' | 'grades'>('list');
+  const [avaliacaoViewMode, setAvaliacaoViewMode] = useState<'list' | 'details' | 'edit' | 'grades' | 'second_call'>('list');
   const [selectedAvaliacao, setSelectedAvaliacao] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -23,6 +23,9 @@ export default function AvaliacoesTab() {
   const [localNotas, setLocalNotas] = useState<Record<string, string>>({}); // alunoId -> valor string
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+  const [successMessage, setSuccessMessage] = useState('');
+  const [secondCallRows, setSecondCallRows] = useState<Record<string, { selected: boolean, date: string, grade: string }>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   // Gerar opções dinâmicas de Unidades Didáticas baseadas nos conteúdos lançados
   const unidadesOpcoes = React.useMemo(() => {
@@ -210,6 +213,59 @@ export default function AvaliacoesTab() {
     setAvaliacaoToDelete(null);
   };
 
+  const handleSaveSecondCall = async () => {
+    if (!validateCaptcha()) {
+      alert('Código incorreto!');
+      return;
+    }
+
+    if (!selectedAvaliacao) return;
+
+    const selectedAlunIds = Object.keys(secondCallRows).filter(id => secondCallRows[id].selected);
+    if (selectedAlunIds.length === 0) {
+      alert('Selecione pelo menos um aluno!');
+      return;
+    }
+
+    // Agrupar por data para criar registros de avaliação se necessário
+    // Simplificação: Criar um registro "2CH" para cada data única
+    const dates = [...new Set(selectedAlunIds.map(id => secondCallRows[id].date))];
+
+    setIsSaving(true);
+    for (const d of dates) {
+      const parentAv = selectedAvaliacao;
+      const payload: Avaliacao = {
+        id: `temp_2ch_${Date.now()}_${d}`,
+        turmaId: parentAv.turmaId,
+        tipo: `2CH`,
+        data: d,
+        instrumento: parentAv.instrumento,
+        objetos: parentAv.objetos,
+        bimestre: parentAv.bimestre,
+        valorMaximo: 10,
+        parent_id: parentAv.id
+      };
+
+      const createdId = await salvarAvaliacao(payload);
+      
+      // Salvar as notas para esta data
+      const notasParaData = selectedAlunIds
+        .filter(id => secondCallRows[id].date === d)
+        .map(id => ({
+          alunoId: id,
+          valor: secondCallRows[id].grade
+        }));
+      
+      // Salvar as notas vinculadas ao novo ID real
+      await salvarNotas(createdId, notasParaData);
+    }
+
+    setSuccessMessage('Avaliação(ões) de segunda chamada salva(s) com sucesso!');
+    setTimeout(() => setSuccessMessage(''), 5000);
+    setAvaliacaoViewMode('list');
+    setIsSaving(false);
+  };
+
   if (loading) {
     return (
       <div className="py-20 flex flex-col items-center justify-center text-slate-400">
@@ -221,6 +277,21 @@ export default function AvaliacoesTab() {
 
   return (
     <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+      {/* Banner de Sucesso */}
+      {successMessage && (
+        <div className="mb-6 flex items-center justify-between p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-700 animate-slide-in">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
+              <Check className="w-5 h-5" />
+            </div>
+            <p className="font-medium">{successMessage}</p>
+          </div>
+          <button onClick={() => setSuccessMessage('')} className="p-1 hover:bg-emerald-100 rounded-lg transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
       {avaliacaoViewMode === 'list' && (
         <div className="space-y-4">
           <div className="flex items-end shadow-sm mb-2">
@@ -268,8 +339,8 @@ export default function AvaliacoesTab() {
                                   <Check className="w-3 h-3" />
                                 </div>
                                 {avaliacoes.some(rp => rp.parent_id === av.id) && (
-                                  <div className="w-5 h-5 bg-amber-400 text-white rounded-full flex items-center justify-center shadow-sm" title="Há alunos em recuperação paralela nesta avaliação.">
-                                    <RefreshCw className="w-3 h-3" />
+                                  <div className="w-6 h-6 bg-amber-400 rounded-full flex items-center justify-center animate-pulse-subtle">
+                                    <RefreshCw className="w-3.5 h-3.5 text-white" />
                                   </div>
                                 )}
                               </div>
@@ -327,6 +398,25 @@ export default function AvaliacoesTab() {
                                   className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-blue-600/20">
                                   <List className="w-3.5 h-3.5" /> Notas
                                 </button>
+
+                                <button onClick={() => { 
+                                    setSelectedAvaliacao(av); 
+                                    const rows: any = {};
+                                    alunos.forEach(a => {
+                                      const notaOriginal = a.notas?.[av.id];
+                                      rows[a.id] = { 
+                                        selected: !notaOriginal, // Seleciona automaticamente quem não tem nota
+                                        date: new Date().toISOString().split('T')[0],
+                                        grade: ''
+                                      };
+                                    });
+                                    setSecondCallRows(rows);
+                                    setAvaliacaoViewMode('second_call'); 
+                                    generateNewCaptcha();
+                                  }}
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-blue-600/10">
+                                  <div className="w-5 h-5 bg-blue-800 text-white rounded-full flex items-center justify-center text-[10px] scale-90">2</div> 2ª chamada
+                                </button>
                               </div>
                             </td>
                           </tr>
@@ -377,7 +467,133 @@ export default function AvaliacoesTab() {
               </tbody>
             </table>
           </div>
-          )}
+        )}
+      </div>
+    )}
+
+      {avaliacaoViewMode === 'second_call' && selectedAvaliacao && (
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-3">
+                AVALIAÇÃO DE 2ª CHAMADA
+              </h2>
+              <p className="text-slate-500 text-sm font-medium mt-1 uppercase tracking-wider">
+                VINCULADA A: <span className="text-blue-600 font-bold">{selectedAvaliacao.tipo} - {selectedAvaliacao.instrumento}</span>
+              </p>
+            </div>
+            <button onClick={() => setAvaliacaoViewMode('list')} className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-400 hover:text-slate-600">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-slate-50/50 border-b border-slate-100">
+                  <th className="px-8 py-4 text-left">
+                    <input 
+                      type="checkbox" 
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        const newRows = { ...secondCallRows };
+                        Object.keys(newRows).forEach(id => newRows[id].selected = checked);
+                        setSecondCallRows(newRows);
+                      }}
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </th>
+                  <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">Nº</th>
+                  <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">CÓDIGO DO ALUNO</th>
+                  <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">MATRÍCULA NO.</th>
+                  <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">ALUNO</th>
+                  <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">DATA DA AVALIAÇÃO</th>
+                  <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">NOTA</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {alunos.map((aluno, index) => (
+                  <tr key={aluno.id} className={`group hover:bg-blue-50/30 transition-colors ${secondCallRows[aluno.id]?.selected ? 'bg-blue-50/20' : ''}`}>
+                    <td className="px-8 py-4">
+                      <input 
+                        type="checkbox" 
+                        checked={secondCallRows[aluno.id]?.selected}
+                        onChange={(e) => setSecondCallRows(prev => ({ ...prev, [aluno.id]: { ...prev[aluno.id], selected: e.target.checked } }))}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="px-8 py-4 text-slate-400 font-bold tabular-nums">{String(index + 1).padStart(2, '0')}</td>
+                    <td className="px-8 py-4 text-slate-600 font-medium">{aluno.id}</td>
+                    <td className="px-8 py-4 text-slate-500 font-medium tracking-wider">{aluno.matricula || '---'}</td>
+                    <td className="px-8 py-4">
+                      <div className="font-bold text-slate-800 uppercase tracking-tight">{aluno.nome}</div>
+                    </td>
+                    <td className="px-8 py-4">
+                      <div className="relative max-w-[160px]">
+                        <input
+                          type="date"
+                          value={secondCallRows[aluno.id]?.date || ''}
+                          disabled={!secondCallRows[aluno.id]?.selected}
+                          onChange={(e) => setSecondCallRows(prev => ({ ...prev, [aluno.id]: { ...prev[aluno.id], date: e.target.value } }))}
+                          className="w-full pl-3 pr-10 py-2 border-2 border-slate-100 rounded-xl focus:border-blue-200 focus:ring-0 transition-all font-bold text-slate-700 disabled:opacity-50"
+                        />
+                        <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-500 pointer-events-none" />
+                      </div>
+                    </td>
+                    <td className="px-8 py-4">
+                      <input
+                        type="text"
+                        value={secondCallRows[aluno.id]?.grade || ''}
+                        disabled={!secondCallRows[aluno.id]?.selected}
+                        onChange={(e) => {
+                          let val = e.target.value.replace(/\D/g, '');
+                          if (val) {
+                            let numVal = parseInt(val, 10);
+                            if (numVal > 1000) numVal = 1000;
+                            val = (numVal / 100).toFixed(2).replace('.', ',');
+                          }
+                          setSecondCallRows(prev => ({ ...prev, [aluno.id]: { ...prev[aluno.id], grade: val } }));
+                        }}
+                        placeholder="0,00"
+                        className="w-24 text-center py-2 bg-slate-50 border-2 border-slate-100 rounded-xl text-slate-700 font-black focus:border-blue-400 focus:bg-white transition-all outline-none disabled:opacity-50"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="p-8 bg-slate-50 border-t border-slate-100">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="w-full md:w-auto">
+                <Captcha 
+                  generatedCaptcha={generatedCaptcha}
+                  captchaInput={captchaInput}
+                  setCaptchaInput={setCaptchaInput}
+                  captchaError={captchaError}
+                  generateNewCaptcha={generateNewCaptcha}
+                />
+              </div>
+
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <button 
+                  onClick={() => setAvaliacaoViewMode('list')}
+                  className="flex-1 md:flex-none px-8 py-3 bg-white text-slate-600 font-black rounded-2xl border-2 border-slate-100 hover:bg-slate-50 hover:border-slate-200 transition-all uppercase tracking-widest text-xs"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={handleSaveSecondCall}
+                  disabled={isSaving}
+                  className="flex-1 md:flex-none px-12 py-3 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-700 transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-3 shadow-lg shadow-blue-600/30 disabled:opacity-50"
+                >
+                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                  Salvar
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
       {avaliacaoViewMode === 'details' && selectedAvaliacao && (
