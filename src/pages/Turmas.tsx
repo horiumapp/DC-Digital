@@ -54,39 +54,46 @@ export default function Turmas() {
     
     setLoading(true);
     try {
-      // 1. Encontrar o registro do professor vinculado ao usuário logado
-      // Usamos limit(1) ao invés de single() para evitar crash se por acidente houver mais de um prof com o mesmo e-mail.
+      const emailLimpo = user.email.trim();
+      
+      // 1. Encontrar o(s) registro(s) do professor vinculado ao usuário logado
+      // Buscamos TODOS que baterem com o email (caso o admin tenha criado o mesmo professor duas vezes)
       const { data: professorDataResult, error: profError } = await supabase
         .from('professores')
         .select('id')
-        .ilike('email', user.email) 
-        .limit(1);
+        .ilike('email', `%${emailLimpo}%`);
 
       if (profError) {
         console.error("Erro ao achar professor pelo email:", profError);
       }
 
       if (professorDataResult && professorDataResult.length > 0) {
-        const professorData = professorDataResult[0];
+        // Pegar array com os IDs de todos os cadastros possíveis desse professor
+        const profIds = professorDataResult.map(p => p.id);
         
-        // 2. Buscar as alocações (escolas e turnos) desse professor
+        // 2. Buscar as alocações (escolas e turnos) vinculadas a QUALQUER UM desses IDs
         const { data: alocData, error: alocError } = await supabase
           .from('professor_alocacoes')
           .select('id, escola_id, turno, escolas(nome)')
-          .eq('professor_id', professorData.id);
+          .in('professor_id', profIds);
 
         if (alocError) {
           console.error("Erro na busca de alocacoes:", alocError);
         }
 
         if (alocData && alocData.length > 0) {
-          setAlocacoes(alocData);
-          setAlocacaoAtiva(alocData[0]); // Seleciona a primeira por padrão
+          // Remove duplicadas reais (mesma escola & mesmo turno) se houver
+          const uniqueAlocs = alocData.filter((v, i, a) => 
+            a.findIndex(t => (t.escola_id === v.escola_id && t.turno === v.turno)) === i
+          );
+          
+          setAlocacoes(uniqueAlocs);
+          setAlocacaoAtiva(uniqueAlocs[0]); // Seleciona a primeira por padrão
         } else {
-          console.warn("Nenhuma alocacão encontrada para o professor ID:", professorData.id);
+          console.warn("Nenhuma alocacão encontrada para os professores encontrados.");
         }
       } else {
-        console.warn("Nenhum professor encontrado com o e-mail:", user.email);
+        console.warn("Nenhum professor encontrado com o e-mail:", emailLimpo);
       }
     } catch (err) {
       console.error('Erro ao carregar lotações:', err);
