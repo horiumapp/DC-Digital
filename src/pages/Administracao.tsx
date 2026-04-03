@@ -28,7 +28,7 @@ export default function Administracao() {
           {user?.role === 'ADMIN' && (
             <button
               onClick={() => setActiveTab('escolas')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium transition ${activeTab === 'escolas' ? 'bg-white text-blue-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'escolas' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
             >
               <Building2 className="w-5 h-5" />
               Escolas
@@ -36,21 +36,21 @@ export default function Administracao() {
           )}
           <button
             onClick={() => setActiveTab('turmas')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium transition ${activeTab === 'turmas' ? 'bg-white text-blue-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'}`}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'turmas' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
           >
             <Users className="w-5 h-5" />
             Turmas
           </button>
           <button
             onClick={() => setActiveTab('professores')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium transition ${activeTab === 'professores' ? 'bg-white text-blue-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'}`}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'professores' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
           >
             <GraduationCap className="w-5 h-5" />
             Professores
           </button>
           <button
             onClick={() => setActiveTab('alunos')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium transition ${activeTab === 'alunos' ? 'bg-white text-blue-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'}`}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'alunos' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
           >
             <User className="w-5 h-5" />
             Alunos

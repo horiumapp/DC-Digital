@@ -99,7 +99,7 @@ export default function PendenciasFrequencia() {
       <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 flex items-center gap-4">
         <button 
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors text-sm font-medium"
+          className="flex items-center gap-2 px-4 py-2 bg-[#eef2ff] text-[#0f2851] rounded-xl hover:bg-[#e0e7ff] transition-all text-sm font-bold border border-blue-100"
         >
           <ArrowLeft className="w-4 h-4" />
           Voltar
@@ -113,7 +113,7 @@ export default function PendenciasFrequencia() {
         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Consulta</h2>
-            <button className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm font-bold shadow-sm active:scale-95">
+            <button className="flex items-center gap-2 px-6 py-2.5 bg-[#0f2851] text-white rounded-xl hover:bg-[#1a3a6d] transition-all text-sm font-bold shadow-lg shadow-[#0f2851]/20 active:scale-95">
               <Printer className="w-4 h-4" />
               Imprimir
             </button>
@@ -209,7 +209,7 @@ export default function PendenciasFrequencia() {
                          setSelectedPeriodos(selectedPeriodos.filter(item => item !== p));
                        }
                      }}
-                     className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                     className="w-5 h-5 text-[#0f2851] rounded border-slate-300 focus:ring-[#0f2851]"
                    />
                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{p}</span>
                  </label>
@@ -220,10 +220,10 @@ export default function PendenciasFrequencia() {
           <div className="mb-6">
             <button 
               onClick={() => fetchDocentes(escolaId)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium"
+              className="flex items-center gap-2 px-8 py-3 bg-[#0f2851] text-white rounded-xl hover:bg-[#1a3a6d] transition-all text-sm font-bold shadow-lg shadow-[#0f2851]/20 active:scale-95"
             >
               <Search className="w-4 h-4" />
-              Consultar
+              CONSULTAR
             </button>
           </div>
 
@@ -243,8 +243,8 @@ export default function PendenciasFrequencia() {
                 type="text"
                 value={buscaDocente}
                 onChange={(e) => setBuscaDocente(e.target.value)}
-                placeholder="Pesquisar..."
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                placeholder="Pesquisar docente..."
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-[#0f2851] focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 shadow-sm"
               />
             </div>
           </div>
@@ -282,9 +282,9 @@ export default function PendenciasFrequencia() {
                 ) : docentesFiltrados.length > 0 ? (
                   docentesFiltrados.map((d, i) => (
                     <tr key={i} className="hover:bg-blue-50/30 dark:hover:bg-slate-900 text-sm text-slate-600 dark:text-slate-300">
-                      <td className="px-6 py-5 text-slate-900 dark:text-white uppercase">{d.professor}</td>
-                      <td className="px-3 py-5 whitespace-nowrap">{d.dataLotacao}</td>
-                      <td className="px-3 py-5 text-blue-600 uppercase">{d.periodo}</td>
+                      <td className="px-6 py-5 text-[#0f2851] dark:text-white font-bold uppercase">{d.professor}</td>
+                      <td className="px-3 py-5 whitespace-nowrap font-medium">{d.dataLotacao}</td>
+                      <td className="px-3 py-5 text-[#0f2851] font-bold uppercase">{d.periodo}</td>
                       <td className="px-3 py-5">{d.turno}</td>
                       <td className="px-3 py-5">{d.ensino}</td>
                       <td className="px-3 py-5">{d.fase}</td>

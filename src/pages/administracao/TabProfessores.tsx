@@ -229,7 +229,7 @@ export default function TabProfessores() {
                 value={buscaProfessor}
                 onChange={(e) => setBuscaProfessor(e.target.value)}
                 placeholder="Filtrar escolas..."
-                className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 bg-slate-50/50 transition-all font-medium"
+                className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f2851] focus:border-[#0f2851] bg-slate-50/50 transition-all font-medium"
               />
             </div>
           </div>
@@ -237,7 +237,7 @@ export default function TabProfessores() {
       ) : (
         <div className="flex flex-col shrink-0">
           {/* Banner */}
-          <div className="bg-blue-600 p-8 relative overflow-hidden">
+          <div className="bg-[#0f2851] p-8 relative overflow-hidden">
             <Users className="absolute -right-8 -bottom-8 w-48 h-48 text-white/5 pointer-events-none rotate-12" />
             <div className="relative z-10 flex items-center justify-between">
               <div className="flex items-center gap-5">
@@ -255,7 +255,7 @@ export default function TabProfessores() {
                     <User className="w-6 h-6 text-white/80" />
                     <h1 className="text-2xl font-black text-white tracking-widest uppercase">PROFESSORES</h1>
                   </div>
-                  <p className="text-blue-100/80 text-sm mt-1 font-semibold italic">
+                  <p className="text-blue-100/80 text-sm mt-1 font-bold italic">
                     Cadastre o corpo docente e suas especialidades.
                   </p>
                 </div>
@@ -281,7 +281,7 @@ export default function TabProfessores() {
                     value={inlineFormData.nome}
                     onChange={(e) => setInlineFormData({...inlineFormData, nome: e.target.value})}
                     placeholder="Nome Completo"
-                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-base placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 bg-slate-50/30 transition-all font-medium"
+                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-base placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851]"
                   />
                 </div>
                 {/* Departamento */}
@@ -290,7 +290,7 @@ export default function TabProfessores() {
                   <select
                     value={inlineFormData.departamento}
                     onChange={(e) => setInlineFormData({...inlineFormData, departamento: e.target.value})}
-                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 bg-slate-50/30 transition-all font-medium appearance-none"
+                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851] appearance-none"
                   >
                     {DEPARTAMENTOS.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
@@ -309,23 +309,23 @@ export default function TabProfessores() {
                         onClick={() => toggleDisciplinaInline(disc)}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-bold tracking-wider transition-all border ${
                           isSelected 
-                            ? 'bg-blue-600 border-blue-600 text-white shadow-md' 
-                            : 'bg-white border-slate-100 text-slate-400 hover:border-blue-200'
+                            ? 'bg-[#0f2851] border-[#0f2851] text-white shadow-md' 
+                            : 'bg-white border-slate-100 text-slate-400 hover:border-[#0f2851]/30'
                         }`}
                       >
-                        <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-blue-400'}`} />
+                        <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#eef2ff]'}`} />
                         {disc}
                       </button>
                     );
                   })}
-                  <button className="text-[9px] font-black text-blue-600 uppercase hover:underline ml-2">Ver todas...</button>
+                  <button className="text-[9px] font-bold text-[#0f2851] uppercase hover:underline ml-2">Ver todas...</button>
                 </div>
               </div>
 
               {/* Botão */}
               <button 
                 onClick={handleInlineSubmit}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98]"
+                className="w-full bg-[#0f2851] hover:bg-[#1a3a6d] text-white py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-all shadow-lg shadow-[#0f2851]/20 active:scale-[0.98]"
               >
                 Cadastrar Professor
               </button>
@@ -352,16 +352,16 @@ export default function TabProfessores() {
                   <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                     <Building2 className="w-16 h-16 text-blue-900" />
                   </div>
-                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                  <div className="w-12 h-12 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center mb-4 group-hover:bg-[#0f2851] group-hover:text-white transition-colors duration-300">
                     <Building2 className="w-6 h-6" />
                   </div>
-                  <h3 className="font-bold text-slate-800 text-lg leading-snug mb-2 group-hover:text-blue-700 transition-colors pr-10">{escola.nome}</h3>
+                  <h3 className="font-bold text-slate-800 text-lg leading-snug mb-2 group-hover:text-[#0f2851] transition-colors pr-10">{escola.nome}</h3>
                   <div className="mt-auto flex items-center justify-between">
                     <div className="flex flex-col">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total de Professores</span>
                       <span className="text-2xl font-black text-slate-700 tabular-nums">{count.toString().padStart(2, '0')}</span>
                     </div>
-                    <div className="p-2 bg-slate-50 text-slate-400 rounded-lg group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
+                    <div className="p-2 bg-slate-50 text-slate-400 rounded-lg group-hover:bg-[#eef2ff] group-hover:text-[#0f2851] transition-colors">
                       <ChevronRight className="w-5 h-5" />
                     </div>
                   </div>
@@ -379,7 +379,7 @@ export default function TabProfessores() {
                 >
                   {/* Top: Avatar and Info */}
                   <div className="flex items-center gap-4 mb-6">
-                    <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center font-black text-xl border-4 border-white shadow-sm ring-1 ring-blue-100">
+                    <div className="w-14 h-14 bg-[#eef2ff] text-[#0f2851] rounded-full flex items-center justify-center font-bold text-xl border-4 border-white shadow-sm ring-1 ring-blue-50">
                       {professor.nome.split(' ').slice(0, 2).map((n: string) => n[0]).join('')}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -433,7 +433,7 @@ export default function TabProfessores() {
                   <div className="mt-auto flex items-center justify-between gap-4">
                     <div className="flex flex-wrap gap-1">
                       {professor.disciplinas?.slice(0, 2).map((d: string) => (
-                        <span key={d} className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[8px] font-black uppercase tracking-tighter">
+                        <span key={d} className="px-2 py-0.5 bg-[#eef2ff] text-[#0f2851] rounded text-[8px] font-bold uppercase tracking-tighter">
                           {d.slice(0, 4)}
                         </span>
                       ))}

@@ -119,7 +119,7 @@ export default function TabAlunos() {
             value={buscaAluno}
             onChange={(e) => setBuscaAluno(e.target.value)}
             placeholder="Buscar alunos..."
-            className="block w-full pl-11 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 bg-white"
+            className="block w-full pl-11 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f2851] focus:border-[#0f2851] bg-white transition-all font-bold text-[#0f2851]"
           />
         </div>
         {user?.role === 'ADMIN' && (
@@ -128,7 +128,7 @@ export default function TabAlunos() {
               setAlunoParaEditar(null);
               setIsNovoAlunoModalOpen(true);
             }}
-            className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm"
+            className="flex items-center gap-2 bg-[#0f2851] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20 active:scale-95"
           >
             <Plus className="w-4 h-4" />
             Novo Aluno
@@ -162,11 +162,11 @@ export default function TabAlunos() {
                   </td>
                   <td className="px-6 py-3.5 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-bold text-xs border border-blue-100/50 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                      <div className="w-8 h-8 bg-[#eef2ff] text-[#0f2851] rounded-lg flex items-center justify-center font-bold text-xs border border-blue-50 group-hover:bg-[#0f2851] group-hover:text-white transition-all">
                         {aluno.nome.charAt(0)}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-bold text-slate-700 truncate">{aluno.nome}</p>
+                        <p className="text-sm font-bold text-[#0f2851] truncate">{aluno.nome}</p>
                         <p className="text-[10px] text-slate-400 font-medium">CPF: {aluno.cpf ? formatCpfObscured(aluno.cpf) : '---'}</p>
                       </div>
                     </div>
@@ -178,8 +178,8 @@ export default function TabAlunos() {
                         <span className="text-xs font-bold text-slate-600 truncate max-w-[150px]">{aluno.escolas?.nome || 'N/D'}</span>
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <Users className="w-3 h-3 text-blue-300" />
-                        <span className="text-[10px] font-black text-blue-600 uppercase tracking-tight">{aluno.turmas?.nome || 'SEM TURMA'}</span>
+                        <Users className="w-3 h-3 text-[#0f2851]/40" />
+                        <span className="text-[10px] font-bold text-[#0f2851] uppercase tracking-tight">{aluno.turmas?.nome || 'SEM TURMA'}</span>
                       </div>
                     </div>
                   </td>
@@ -206,7 +206,7 @@ export default function TabAlunos() {
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={() => handleEditAluno(aluno)} 
-                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                          className="p-1.5 text-slate-400 hover:text-[#0f2851] hover:bg-[#eef2ff] rounded-lg transition-all"
                           title="Editar"
                         >
                           <Edit2 className="w-4 h-4" />

@@ -128,7 +128,7 @@ export default function TabEscolas() {
               value={buscaEscola}
               onChange={(e) => setBuscaEscola(e.target.value)}
               placeholder="Nome, INEP ou Diretor..."
-              className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 bg-slate-50/50 transition-all font-medium"
+              className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f2851] focus:border-[#0f2851] bg-slate-50/50 transition-all font-bold text-[#0f2851]"
             />
           </div>
           <button
@@ -136,7 +136,7 @@ export default function TabEscolas() {
               setEscolaParaEditar(null);
               setIsNovaEscolaModalOpen(true);
             }}
-            className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-600/10 shrink-0 h-[38px]"
+            className="flex items-center gap-2 bg-[#0f2851] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20 active:scale-95 shrink-0 h-[38px]"
           >
             <Plus className="w-4 h-4" />
             Nova Escola
@@ -156,7 +156,7 @@ export default function TabEscolas() {
                 <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all translate-y-[-10px] group-hover:translate-y-0 duration-300 z-10">
                   <button 
                     onClick={() => handleEditEscola(escola)}
-                    className="p-2 bg-white/80 backdrop-blur-sm text-slate-400 hover:text-blue-600 shadow-sm border border-slate-100 rounded-lg transition-colors"
+                    className="p-2 bg-white/80 backdrop-blur-sm text-slate-400 hover:text-[#0f2851] shadow-sm border border-slate-100 rounded-lg transition-colors"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
@@ -175,7 +175,7 @@ export default function TabEscolas() {
 
                 <div className="flex items-start justify-between mb-4">
                   {/* Main Icon */}
-                  <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                  <div className="w-10 h-10 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center group-hover:bg-[#0f2851] group-hover:text-white transition-colors duration-300">
                     <Building2 className="w-5 h-5" />
                   </div>
 
@@ -193,7 +193,7 @@ export default function TabEscolas() {
 
                 {/* Nome e INEP */}
                 <div className="mb-4">
-                  <h3 className="font-black text-slate-800 text-base leading-tight group-hover:text-blue-700 transition-colors pr-10">
+                  <h3 className="font-bold text-slate-800 text-base leading-tight group-hover:text-[#0f2851] transition-colors pr-10">
                     {escola.nome}
                   </h3>
                   <div className="flex items-center gap-1 mt-1 text-slate-400">
