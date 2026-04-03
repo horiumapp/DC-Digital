@@ -163,9 +163,14 @@ export default function CalendarWidget({
                 <div className="flex flex-col gap-1 items-end">
                   <span className={`w-5 h-5 rounded-full ${fColor} text-white flex items-center justify-center text-[10px] font-black shadow-sm`}>F</span>
                   <span className={`w-5 h-5 rounded-full ${cmColor} text-white flex items-center justify-center text-[10px] font-black shadow-sm`}>CM</span>
-                  {temAvaliacao && (
-                    <span className={`w-5 h-5 rounded-full ${aColor} text-white flex items-center justify-center text-[10px] font-black shadow-sm`}>A</span>
-                  )}
+                  {temAvaliacao && (() => {
+                    const temRP = avaliacoesDoDia.some(av => av.tipo?.startsWith('RP'));
+                    return (
+                      <span className={`${temRP ? 'w-fit px-1.5' : 'w-5'} h-5 rounded-full ${aColor} text-white flex items-center justify-center text-[10px] font-black shadow-sm tracking-tighter`}>
+                        {temRP ? 'RP' : 'A'}
+                      </span>
+                    );
+                  })()}
                 </div>
               </Link>
             );

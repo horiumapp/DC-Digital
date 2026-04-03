@@ -133,10 +133,15 @@ export default function AvaliacoesTab() {
       return;
     }
 
+    if (!objetosAvaliacao || objetosAvaliacao.length === 0) {
+      alert('Adicione pelo menos um Objeto de Conhecimento à avaliação!');
+      return;
+    }
+
     const payload: Avaliacao = {
       id: selectedAvaliacao ? selectedAvaliacao.id : `temp_${Date.now()}`,
       turmaId: turmaAtiva?.id || '',
-      tipo: selectedAvaliacao?.tipo || `AV${String(avaliacoes.length + 1).padStart(2, '0')}`,
+      tipo: selectedAvaliacao?.tipo || `AV${String(avaliacoes.filter(a => !a.parent_id).length + 1).padStart(2, '0')}`,
       data: selectedDate,
       instrumento: instrumentoAvaliacao,
       objetos: objetosAvaliacao,
@@ -339,7 +344,7 @@ export default function AvaliacoesTab() {
                                 <div className="w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center shadow-sm">
                                   <Check className="w-3 h-3" />
                                 </div>
-                                {avaliacoes.some(rp => rp.parent_id === av.id) && (
+                                {avaliacoes.some(rp => String(rp.parent_id) === String(av.id)) && (
                                   <div className="w-6 h-6 bg-amber-400 rounded-full flex items-center justify-center animate-pulse-subtle">
                                     <RefreshCw className="w-3.5 h-3.5 text-white" />
                                   </div>
@@ -433,30 +438,42 @@ export default function AvaliacoesTab() {
                           </tr>
                           
                           {/* Seção de Recuperações Paralelas */}
-                          {avaliacoes.some(rp => rp.parent_id === av.id) && (
+                          {avaliacoes.some(rp => String(rp.parent_id) === String(av.id)) && (
                             <>
-                              <tr className="bg-slate-50/30">
-                                <td colSpan={4} className="px-10 py-1.5 font-bold text-slate-500 text-[10px] uppercase tracking-tight">Recuperações Paralelas</td>
-                              </tr>
-                              {avaliacoes.filter(rp => rp.parent_id === av.id).map(rp => (
-                                <tr key={rp.id} className="bg-slate-50/20 border-l-4 border-l-amber-400">
-                                  <td className="px-10 py-3 text-slate-700 font-bold">{rp.tipo}</td>
-                                  <td className="px-6 py-3 text-slate-600 font-medium uppercase">{rp.data}</td>
-                                  <td className="px-6 py-3 text-slate-500 text-xs font-semibold">{rp.instrumento}</td>
-                                  <td className="px-6 py-3">
+
+                              {avaliacoes.filter(rp => String(rp.parent_id) === String(av.id)).map(rp => (
+                                <tr key={rp.id} className="bg-white border-b border-slate-50 group/rp">
+                                  <td className="px-10 py-5">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-6 h-6 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                                        <Plus className="w-3.5 h-3.5" />
+                                      </div>
+                                      <span className="text-slate-700 font-black">{rp.tipo}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-5">
+                                     <div className="flex items-center gap-2 text-slate-600 font-bold uppercase text-xs">
+                                       <CalendarIcon className="w-3.5 h-3.5 text-slate-400" />
+                                       {rp.data}
+                                     </div>
+                                  </td>
+                                  <td className="px-6 py-5">
+                                     <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-wider">{rp.instrumento}</span>
+                                  </td>
+                                  <td className="px-6 py-5">
                                     <div className="flex items-center justify-center gap-2">
                                       <button onClick={() => { setSelectedAvaliacao(rp); setAvaliacaoViewMode('details'); }}
-                                        className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-blue-600/20">
+                                        className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all">
                                         <Eye className="w-3.5 h-3.5" /> Detalhes
                                       </button>
                                       
                                       <button onClick={() => { setSelectedAvaliacao(rp); setSelectedDate(rp.data); setInstrumentoAvaliacao(rp.instrumento); setObjetosAvaliacao(rp.objetos); setAvaliacaoViewMode('edit'); }}
-                                        className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg font-bold text-[10px] uppercase transition-all">
+                                        className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-600 hover:bg-amber-50 hover:text-amber-600 rounded-lg font-bold text-[10px] uppercase transition-all">
                                         <Pencil className="w-3.5 h-3.5" /> Alterar
                                       </button>
                                       
                                       <button onClick={() => { setAvaliacaoToDelete(rp); setShowDeleteModal(true); }}
-                                        className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-red-600/20">
+                                        className="flex items-center gap-1.5 px-4 py-2 bg-white text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-lg font-bold text-[10px] uppercase transition-all border border-slate-100">
                                         <Trash2 className="w-3.5 h-3.5" /> Remover
                                       </button>
 

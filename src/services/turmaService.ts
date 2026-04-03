@@ -71,7 +71,7 @@ export const TurmaService = {
       .select('*')
       .eq('turma_id', tid)
       .eq('disciplina', disciplina)
-      .order('data', { ascending: false });
+      .order('data', { ascending: true });
     
     if (avError) throw avError;
 
