@@ -116,7 +116,7 @@ export default function AvaliacoesTab() {
     }
 
     let numVal = parseInt(numStr, 10);
-    if (numVal > 1000) numVal = 1000;
+    if (numVal > 1000) return; // Ignora se passar de 10,00
 
     const formatted = (numVal / 100).toFixed(2).replace('.', ',');
     setLocalNotas(prev => ({ ...prev, [alunoId]: formatted }));
@@ -519,7 +519,7 @@ export default function AvaliacoesTab() {
                   <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">MATRÍCULA NO.</th>
                   <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">ALUNO</th>
                   <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">DATA DA AVALIAÇÃO</th>
-                  <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">NOTA</th>
+                  <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">NOTA (0,00 A 10,00)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -560,7 +560,7 @@ export default function AvaliacoesTab() {
                           let val = e.target.value.replace(/\D/g, '');
                           if (val) {
                             let numVal = parseInt(val, 10);
-                            if (numVal > 1000) numVal = 1000;
+                            if (numVal > 1000) return; // Ignora se passar de 10,00
                             val = (numVal / 100).toFixed(2).replace('.', ',');
                           }
                           setSecondCallRows(prev => ({ ...prev, [aluno.id]: { ...prev[aluno.id], grade: val } }));
@@ -917,7 +917,7 @@ export default function AvaliacoesTab() {
               </div>
               <div className="flex gap-6">
                 <div className="bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10">Data: {selectedAvaliacao.data}</div>
-                <div className="bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10">Escala: 0 a 10,0</div>
+                <div className="bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10">Escala: 0 a 10,00</div>
               </div>
             </div>
           </div>
