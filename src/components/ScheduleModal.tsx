@@ -315,7 +315,7 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
                                 <select
                                   value={cellData?.componente_horario || ''}
                                   onChange={(e) => handleComponenteSelect(diaIdx, slot, e.target.value)}
-                                  className="w-full bg-indigo-50/50 border border-indigo-100 rounded-lg p-2 text-[9px] font-black text-indigo-600 focus:outline-none focus:border-indigo-400 transition-all cursor-pointer uppercase tracking-tighter"
+                                  className="w-full bg-[#eef2ff] border border-blue-100 rounded-lg p-2 text-[9px] font-black text-[#0f2851] focus:outline-none focus:border-blue-400 transition-all cursor-pointer uppercase tracking-tighter"
                                 >
                                   <option value="">+ Disciplina</option>
                                   {professorDisciplinas.map(d => (
@@ -339,9 +339,9 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
                                       {cellData.nome}
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-1.5 mt-2 bg-indigo-50/50 border border-indigo-100 rounded-md px-1.5 py-1">
-                                    <BookOpen className="w-3 h-3 text-indigo-400" />
-                                    <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest leading-none truncate">
+                                  <div className="flex items-center gap-1.5 mt-2 bg-blue-50/50 border border-blue-100 rounded-md px-1.5 py-1">
+                                    <BookOpen className="w-3 h-3 text-blue-400" />
+                                    <span className="text-[9px] font-black text-[#0f2851] uppercase tracking-widest leading-none truncate">
                                       {cellData.componente_horario || 'N/A'}
                                     </span>
                                   </div>
@@ -371,7 +371,7 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Escola</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-indigo-500" />
+              <div className="w-2 h-2 rounded-full bg-blue-500" />
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Turma</span>
             </div>
             <div className="flex items-center gap-2">
