@@ -3,11 +3,13 @@ import { getBimestrePorData } from '../utils/dateUtils';
 import { Aluno, Avaliacao, Conteudo, Horario, Lancamento } from '../contexts/TurmaContext';
 
 export const TurmaService = {
-  fetchHorario: async (turmaId: string | number): Promise<Horario[]> => {
+  fetchHorario: async (turmaId: string | number, disciplina: string): Promise<Horario[]> => {
+    const tid = turmaId.toString().split('_')[0];
     const { data, error } = await supabase
       .from('professor_horarios')
       .select('dia_semana, tempo_ordem')
-      .eq('turma_id', turmaId.toString());
+      .eq('turma_id', tid)
+      .eq('componente', disciplina);
     if (error) throw error;
     return data || [];
   },

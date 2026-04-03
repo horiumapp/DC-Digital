@@ -113,7 +113,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
           const rawId = turmaAtiva.id.toString().split('_')[0];
           const [ls, hs, alumnosData] = await Promise.all([
             TurmaService.fetchLancamentos(rawId, turmaAtiva.componente),
-            TurmaService.fetchHorario(rawId),
+            TurmaService.fetchHorario(rawId, turmaAtiva.componente),
             TurmaService.fetchAlunos(rawId)
           ]);
           
