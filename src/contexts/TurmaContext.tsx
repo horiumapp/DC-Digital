@@ -238,7 +238,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const registrarLancamento = (novo: Lancamento) => {
     setLancamentos(prev => {
       const existe = prev.some(l => 
-        l.turmaId === novo.turmaId && 
+        String(l.turmaId) === String(novo.turmaId) && 
         l.data === novo.data && 
         l.tipo === novo.tipo && 
         l.tempo === novo.tempo
@@ -250,7 +250,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const removerLancamento = (filtro: Lancamento) => {
     setLancamentos(prev => prev.filter(l => 
-      !(l.turmaId === filtro.turmaId && 
+      !(String(l.turmaId) === String(filtro.turmaId) && 
         l.data === filtro.data && 
         l.tipo === filtro.tipo && 
         l.tempo === filtro.tempo)

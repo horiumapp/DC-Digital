@@ -3,6 +3,7 @@ import { ArrowLeft, Bell, ChevronDown, GraduationCap, Building2, Clock, BookOpen
 import { Link } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
 import CalendarWidget from '../components/common/CalendarWidget';
+import { getBimestrePorData } from '../utils/dateUtils';
 
 export default function Diario() {
   const { turmaAtiva, lancamentos, avaliacoes, alunos, horarioTurma } = useTurma();
@@ -93,42 +94,51 @@ export default function Diario() {
   // Só conta dias que já passaram (até hoje) dentro do bimestre selecionado.
 
   const calcProgressStats = () => {
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
-
-    let totalEsperado = 0;
-    const inicio = new Date(dataInicioValida);
-    inicio.setHours(0, 0, 0, 0);
-    
-    // O denominador deve refletir todas as aulas previstas para o BIMESTRE INTEIRO
-    // Isso garante que a barra de progresso mostre o quanto falta para concluir tudo,
-    // alinhando-se com a visão de pendências futuras no calendário.
-    const fimDenominador = new Date(dataFimValida);
-    fimDenominador.setHours(23, 59, 59, 999);
-
-    const curso = new Date(inicio.getTime());
-    while (curso <= fimDenominador) {
-      const dow = curso.getDay();
-      // Comparação flexível para evitar erro de string vs number
-      const temposNoDia = horarioTurma?.filter(h => Number(h.dia_semana) === dow).length || 0;
-      totalEsperado += temposNoDia;
-      curso.setDate(curso.getDate() + 1);
+    if (!horarioTurma || !turmaAtiva) {
+      return { pFreq: 0, pObj: 0, totalEsperado: 0, freqLancadas: 0, conteudoLancados: 0 };
     }
 
-    // Filtrar lançamentos da turma dentro do período
-    const lancamentosDaTurma = lancamentos.filter(l => {
-      // Comparação flexível de ID
-      if (String(l.turmaId) !== String(turmaAtiva.id)) return false;
-      
-      const [d, m, y] = l.data.split('/');
-      const dataLanc = new Date(Number(y), Number(m) - 1, Number(d));
-      dataLanc.setHours(0, 0, 0, 0);
-      
-      return dataLanc >= inicio && dataLanc <= dataFimValida;
-    });
+    let totalEsperado = 0;
+    let freqLancadas = 0;
+    let conteudoLancados = 0;
 
-    const freqLancadas = lancamentosDaTurma.filter(l => l.tipo === 'frequencia').length;
-    const conteudoLancados = lancamentosDaTurma.filter(l => l.tipo === 'conteudo').length;
+    const inicio = new Date(dataInicioValida);
+    inicio.setHours(0, 0, 0, 0);
+    const fim = new Date(dataFimValida);
+    fim.setHours(23, 59, 59, 999);
+
+    const curso = new Date(inicio.getTime());
+    while (curso <= fim) {
+      const dow = curso.getDay();
+      const temposNoHorario = horarioTurma.filter(h => Number(h.dia_semana) === dow);
+      
+      if (temposNoHorario.length > 0) {
+        const dayStr = `${curso.getDate().toString().padStart(2, '0')}/${(curso.getMonth() + 1).toString().padStart(2, '0')}/${curso.getFullYear()}`;
+        
+        temposNoHorario.forEach(horario => {
+          totalEsperado++;
+          
+          // Verificar se existe lançamento para este dia e este tempo específico
+          const temFrequencia = lancamentos.some(l => 
+            l.data === dayStr && 
+            l.tempo === `${horario.tempo_ordem}º TEMPO` && 
+            l.tipo === 'frequencia' &&
+            String(l.turmaId) === String(turmaAtiva.id)
+          );
+          
+          const temConteudo = lancamentos.some(l => 
+            l.data === dayStr && 
+            l.tempo === `${horario.tempo_ordem}º TEMPO` && 
+            l.tipo === 'conteudo' &&
+            String(l.turmaId) === String(turmaAtiva.id)
+          );
+
+          if (temFrequencia) freqLancadas++;
+          if (temConteudo) conteudoLancados++;
+        });
+      }
+      curso.setDate(curso.getDate() + 1);
+    }
 
     const pFreq = totalEsperado > 0 ? Math.min(100, Math.round((freqLancadas / totalEsperado) * 100)) : 0;
     const pObj  = totalEsperado > 0 ? Math.min(100, Math.round((conteudoLancados / totalEsperado) * 100)) : 0;
@@ -136,7 +146,7 @@ export default function Diario() {
     return { pFreq, pObj, totalEsperado, freqLancadas, conteudoLancados };
   };
 
-  const { pFreq, pObj } = calcProgressStats();
+  const { pFreq, pObj, totalEsperado } = calcProgressStats();
 
   // Cor dinâmica por porcentagem (Seguindo referência visual: Verde para alto, Vermelho para baixo)
   const barColor = (pct: number) => {
@@ -146,24 +156,37 @@ export default function Diario() {
   };
 
   // ─── Cálculo de Avaliações e Notas ───────────────────────────────────────
-  const aulasSemanais = (turmaAtiva.diasDeAula?.length || 0) * (turmaAtiva.tempos?.length || 0);
-  const avaliacoesCadastradas = avaliacoes.length;
+  // Filtrar avaliações da turma ativa que pertencem ao BIMESTRE selecionado
+  const avaliacoesDaTurma = avaliacoes.filter(av => {
+    const isSempreMesmaTurma = String(av.turmaId) === String(turmaAtiva.id);
+    if (!isSempreMesmaTurma) return false;
+    
+    // Se a avaliação tiver campo bimestre, usamos ele. Caso contrário, inferimos pela data.
+    if (av.bimestre) return av.bimestre === periodoSelecionado.nome;
+    return getBimestrePorData(av.data) === periodoSelecionado.nome;
+  });
   
-  // Regra: 3 aulas semanais = 2 avaliações | 4 ou 5 aulas semanais = 3 avaliações
-  const avaliacoesPrevistas = aulasSemanais <= 3 ? 2 : 3;
-  const pAvaliacoes = calcPercent(avaliacoesCadastradas, avaliacoesPrevistas);
+  const avaliacoesCadastradas = avaliacoesDaTurma.length;
+  
+  // Regra baseada nos tempos semanais reais (da tabela de horários)
+  // 3 ou menos aulas semanais = meta de 2 avaliações | mais que isso = meta de 3
+  const nAulasSemanais = horarioTurma?.length || 0;
+  const avaliacoesPrevistas = nAulasSemanais <= 3 ? 2 : 3;
+  const pAvaliacoes = totalEsperado > 0 ? Math.min(100, Math.round((avaliacoesCadastradas / avaliacoesPrevistas) * 100)) : 0;
 
   // Notas lançadas: total de (aluno x avaliacao) que possuem valor
   let notasLancadasCount = 0;
-  avaliacoes.forEach(av => {
+  avaliacoesDaTurma.forEach(av => {
     alunos.forEach(aluno => {
-      if (aluno.notas && aluno.notas[av.id]) {
+      // Garantir que a nota exista e não seja apenas um campo vazio
+      const nota = aluno.notas ? aluno.notas[av.id] : null;
+      if (nota !== undefined && nota !== null && nota !== '') {
         notasLancadasCount++;
       }
     });
   });
 
-  const totalNotasEsperadas = avaliacoes.length * alunos.length;
+  const totalNotasEsperadas = avaliacoesDaTurma.length * alunos.length;
   const pNotas = totalNotasEsperadas > 0 ? Math.min(100, Math.round((notasLancadasCount / totalNotasEsperadas) * 100)) : 0;
 
 
