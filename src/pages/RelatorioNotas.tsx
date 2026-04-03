@@ -20,43 +20,68 @@ export default function RelatorioNotas() {
   const fetchTurmasProfessor = async () => {
     setLoading(true);
     try {
-      // 1. Achar o ID do professor pelo e-mail
-      const { data: profData } = await supabase
-        .from('professores')
-        .select('id')
-        .eq('email', user?.email)
-        .single();
+      if (!user) return;
 
-      if (profData) {
-        // 2. Buscar turmas e componentes nos horários do professor
-        const { data: horarios } = await supabase
-          .from('professor_horarios')
-          .select('turma_id, componente, turmas(nome, turno)')
-          .eq('professor_id', profData.id);
+      if (user.role === 'ADMIN' || user.role === 'GESTOR' || user.role === 'SECRETARIO') {
+        const { data: todasTurmas } = await supabase
+          .from('turmas')
+          .select('id, nome, turno')
+          .order('nome');
+        
+        if (todasTurmas) {
+          const finalTurmas = todasTurmas.map(t => ({ ...t, componente: 'GERAL' }));
+          setTurmas(finalTurmas);
+          if (finalTurmas.length > 0) {
+            setSelectedTurma(`${finalTurmas[0].id}|GERAL`);
+          }
+        }
+      } else {
+        const emailLimpo = user.email.trim();
+        const { data: profs } = await supabase
+          .from('professores')
+          .select('id, disciplinas')
+          .ilike('email', `%${emailLimpo}%`);
 
-        if (horarios) {
-          // Filtrar combinações únicas de turma_id e componente
-          const uniqueMap = new Map();
-          horarios.forEach(h => {
-            const key = `${h.turma_id}-${h.componente}`;
-            if (!uniqueMap.has(key)) {
-              // Supabase pode retornar array se a relação não estiver explicitamente 1-1 no schema
-              const turmaData = Array.isArray(h.turmas) ? h.turmas[0] : h.turmas;
-              uniqueMap.set(key, {
-                id: h.turma_id,
-                nome: turmaData?.nome || 'Turma N/D',
-                turno: turmaData?.turno || '',
-                componente: h.componente
-              });
+        if (profs && profs.length > 0) {
+          let allDisciplinas: string[] = [];
+          profs.forEach(p => {
+            if (p.disciplinas && Array.isArray(p.disciplinas)) {
+              allDisciplinas = [...allDisciplinas, ...p.disciplinas];
             }
           });
-          
-          const uniqueTurmas = Array.from(uniqueMap.values());
-          setTurmas(uniqueTurmas);
-          
-          if (uniqueTurmas.length > 0) {
-            const first = uniqueTurmas[0];
-            setSelectedTurma(`${first.id}|${first.componente}`);
+          const componente = allDisciplinas.length > 0 ? allDisciplinas.join(', ') : 'POLIVALENTE';
+          const profIds = profs.map(p => p.id);
+
+          const { data: alocs } = await supabase
+            .from('professor_alocacoes')
+            .select('escola_id, turno')
+            .in('professor_id', profIds);
+
+          if (alocs && alocs.length > 0) {
+            const orConditions = alocs.map(a => `and(escola_id.eq.${a.escola_id},turno.eq.${a.turno})`).join(',');
+            const { data: turmasAlocadas } = await supabase
+              .from('turmas')
+              .select('id, nome, turno')
+              .or(orConditions)
+              .order('nome');
+
+            if (turmasAlocadas) {
+              const uniqueMap = new Map();
+              turmasAlocadas.forEach(t => {
+                const key = `${t.id}-${componente}`;
+                if (!uniqueMap.has(key)) {
+                  uniqueMap.set(key, { ...t, componente });
+                }
+              });
+              
+              const finalTurmas = Array.from(uniqueMap.values());
+              setTurmas(finalTurmas);
+              if (finalTurmas.length > 0) {
+                setSelectedTurma(`${finalTurmas[0].id}|${componente}`);
+              }
+            }
+          } else {
+            setTurmas([]);
           }
         }
       }
