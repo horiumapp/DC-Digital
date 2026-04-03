@@ -52,7 +52,7 @@ export default function Diario() {
           </div>
           <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Nenhuma turma selecionada</h2>
           <p className="text-slate-600 dark:text-slate-400 mb-6">Por favor, volte à lista de turmas e selecione um diário para visualizar.</p>
-          <Link to="/turmas" className="inline-flex flex-1 items-center justify-center gap-2 w-full px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition">
+          <Link to="/turmas" className="inline-flex flex-1 items-center justify-center gap-2 w-full px-6 py-3 bg-[#0f2851] text-white font-bold rounded-xl hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20">
             <ArrowLeft className="w-5 h-5" />
             Voltar para Turmas
           </Link>
@@ -77,7 +77,7 @@ export default function Diario() {
         {/* Secondary Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link to="/turmas" className="flex items-center gap-1 px-4 py-2 bg-blue-100 text-blue-800 text-sm font-medium rounded-lg border border-blue-200 hover:bg-blue-200 transition">
+            <Link to="/turmas" className="flex items-center gap-1 px-4 py-2 bg-[#eef2ff] text-[#0f2851] text-sm font-bold rounded-xl border border-blue-100 hover:bg-[#e0e7ff] transition">
               <ArrowLeft className="w-4 h-4" /> 
               Voltar
             </Link>
@@ -87,7 +87,7 @@ export default function Diario() {
             </h2>
           </div>
           <div className="relative">
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg shadow-md transition">
+            <button className="flex items-center gap-2 px-4 py-2 bg-[#0f2851] hover:bg-[#1a3a6d] text-white text-sm font-bold rounded-xl shadow-lg shadow-[#0f2851]/20 transition">
               <Bell className="w-4 h-4" /> 
               Notificações 
               <ChevronDown className="w-4 h-4" />
@@ -113,7 +113,7 @@ export default function Diario() {
                     setCurrentMonth(month);
                   }
                 }}
-                className="w-full border border-slate-300 dark:border-slate-600 rounded-lg text-base bg-white dark:bg-slate-700 dark:text-slate-100 p-2.5 outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
+                className="w-full border border-slate-300 dark:border-slate-600 rounded-xl text-base bg-white dark:bg-slate-700 dark:text-slate-100 p-2.5 outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] cursor-pointer font-bold text-[#0f2851]"
               >
                 {periodosLetivos.map(p => {
                   const format = (d: string) => d.split('-').reverse().join('/');
@@ -206,7 +206,7 @@ export default function Diario() {
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
               <div className="p-4 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
                 <h4 className="text-sm font-bold text-slate-700 uppercase tracking-tight">Aparata</h4>
-                <Link to="/aparata" className="bg-blue-600 hover:bg-blue-700 transition text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 shadow-sm">
+                <Link to="/aparata" className="bg-[#0f2851] hover:bg-[#1a3a6d] transition text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-lg shadow-[#0f2851]/20">
                   <Folder className="w-4 h-4" /> 
                   Ver aparata
                 </Link>
@@ -226,7 +226,7 @@ export default function Diario() {
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
               <div className="p-4 flex items-center justify-between">
                 <h4 className="text-base font-bold text-slate-700">Atividades da Turma</h4>
-                <button className="bg-blue-600 hover:bg-blue-700 transition text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1">
+                <button className="bg-[#0f2851] hover:bg-[#1a3a6d] transition text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-lg shadow-[#0f2851]/20">
                   <CheckSquare className="w-4 h-4" /> 
                   Ver atividades
                 </button>

@@ -40,7 +40,7 @@ export default function Aparata() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-200 text-center max-w-md w-full">
-          <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-[#eef2ff] text-[#0f2851] rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-50">
             <BookOpen className="w-8 h-8" />
           </div>
           <h2 className="text-xl font-bold text-slate-800 mb-2">Nenhuma turma selecionada</h2>
@@ -238,7 +238,7 @@ export default function Aparata() {
                         <div className="px-4 py-3 bg-white border-t border-slate-200 flex items-center justify-between text-sm text-slate-500">
                           <span>
                             Mostrando de 1 até {movimentacoesFiltradas.length} de{' '}
-                            <span className="font-bold text-blue-600">{movimentacoesFiltradas.length}</span> registros
+                            <span className="font-bold text-[#0f2851]">{movimentacoesFiltradas.length}</span> registros
                             &nbsp;&nbsp;Mostrar{' '}
                             <select className="border border-slate-300 rounded px-1 py-0.5 text-xs bg-white ml-1 mr-1">
                               <option>10</option>

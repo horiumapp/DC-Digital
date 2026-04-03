@@ -179,7 +179,7 @@ export default function Turmas() {
                   onClick={() => setAlocacaoAtiva(a)}
                   className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
                     alocacaoAtiva?.id === a.id 
-                    ? 'bg-blue-600 text-white shadow-md' 
+                    ? 'bg-[#0f2851] text-white shadow-lg shadow-[#0f2851]/20' 
                     : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                   }`}
                 >
@@ -240,7 +240,7 @@ export default function Turmas() {
                   placeholder="Pesquisar" 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="block w-full pl-12 pr-4 py-3 border border-slate-200 rounded-md text-base placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 bg-slate-50/50" 
+                  className="block w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl text-base placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f2851] focus:border-[#0f2851] bg-slate-50/50 font-bold text-[#0f2851]" 
                 />
               </div>
             </div>
@@ -308,7 +308,7 @@ export default function Turmas() {
                 <p>Mostrando de 1 até {filteredTurmas.length} de {filteredTurmas.length} registros</p>
                 <div className="flex items-center gap-2">
                   <span>Mostrar</span>
-                  <select className="border border-slate-200 rounded px-3 py-1.5 text-sm bg-white focus:ring-0 focus:border-blue-600 outline-none">
+                  <select className="border border-slate-200 rounded px-3 py-1.5 text-sm bg-white focus:ring-0 focus:border-[#0f2851] outline-none font-bold text-[#0f2851]">
                     <option>{filteredTurmas.length}</option>
                   </select>
                   <span>registros</span>
@@ -320,7 +320,7 @@ export default function Turmas() {
                     <ChevronLeft className="w-4 h-4" />
                     Anterior
                   </button>
-                  <button className="px-4 py-2 text-sm font-bold text-white bg-blue-600 border-t border-b border-blue-600">
+                  <button className="px-4 py-2 text-sm font-bold text-white bg-[#0f2851] border-t border-b border-[#0f2851]">
                     1
                   </button>
                   <button className="px-4 py-2 text-sm font-medium text-slate-500 bg-white border border-slate-200 rounded-r-lg hover:bg-slate-50 flex items-center gap-1">

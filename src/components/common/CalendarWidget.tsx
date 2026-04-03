@@ -83,7 +83,7 @@ export default function CalendarWidget({
         <button 
           onClick={handleNextMonth}
           disabled={currentMonth === 11}
-          className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-4 py-2 bg-[#0f2851] text-white rounded-xl text-sm font-bold hover:bg-[#1a3a6d] transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#0f2851]/20"
         >
           Próximo
           <ChevronRight className="w-4 h-4" />

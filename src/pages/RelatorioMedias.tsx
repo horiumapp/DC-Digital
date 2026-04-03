@@ -173,7 +173,7 @@ export default function RelatorioMedias() {
                   <select 
                     value={selectedTurma}
                     onChange={(e) => setSelectedTurma(e.target.value)}
-                    className="w-full bg-white border border-slate-300 text-slate-700 text-base rounded-lg focus:ring-blue-600 focus:border-blue-600 block p-3 appearance-none outline-none"
+                    className="bg-slate-50 border border-slate-200 text-slate-900 text-base rounded-md focus:ring-[#0f2851] focus:border-[#0f2851] block w-full pl-12 p-3 outline-none"
                   >
                     {loading ? (
                       <option>Carregando turmas...</option>
@@ -218,7 +218,7 @@ export default function RelatorioMedias() {
                 <input 
                   type="text" 
                   placeholder="Pesquisar" 
-                  className="bg-slate-50 border border-slate-200 text-slate-900 text-base rounded-md focus:ring-blue-600 focus:border-blue-600 block w-full pl-12 p-3 outline-none"
+                  className="bg-slate-50 border border-slate-200 text-slate-900 text-base rounded-md focus:ring-[#0f2851] focus:border-[#0f2851] block w-full pl-12 p-3 outline-none"
                 />
               </div>
             </div>

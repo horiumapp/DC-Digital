@@ -84,7 +84,7 @@ export default function Login() {
                 name="email" 
                 placeholder="seu@email.com" 
                 required 
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors outline-none text-base" 
+                className="w-full flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-3 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all active:scale-95"
               />
             </div>
 
@@ -96,7 +96,7 @@ export default function Login() {
                 name="password" 
                 placeholder="••••••••" 
                 required 
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors outline-none text-base" 
+                className="w-full flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-3 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all active:scale-95"
               />
             </div>
 
@@ -106,14 +106,14 @@ export default function Login() {
                   type="checkbox" 
                   id="remember_me" 
                   name="remember_me" 
-                  className="h-5 w-5 text-blue-600 focus:ring-blue-600 border-slate-300 rounded" 
+                className="w-full flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-3 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all active:scale-95"
                 />
                 <label htmlFor="remember_me" className="ml-2 block text-base text-slate-600 select-none">
                   Lembrar-me
                 </label>
               </div>
               <div className="text-base">
-                <Link to="/recuperar-senha" className="font-medium text-blue-600 hover:underline transition-all">
+                className="w-full flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-3 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all active:scale-95"
                   Esqueceu a senha?
                 </Link>
               </div>
@@ -123,7 +123,7 @@ export default function Login() {
               <button 
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center items-center bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-base font-semibold py-3 px-4 rounded-lg shadow-sm transition-all"
+                className="w-full flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-3 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all active:scale-95"
               >
                 {isLoading ? (
                   <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Entrando...</>
@@ -138,7 +138,7 @@ export default function Login() {
           <div className="mt-8 pt-6 border-t border-slate-100 text-center">
             <p className="text-sm text-slate-500">
               Não possui uma conta?{' '}
-              <Link to="/cadastro" className="text-blue-600 font-medium hover:underline">Criar conta</Link>
+                className="w-full flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-3 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all active:scale-95"
             </p>
             <p className="mt-4 text-[10px] text-slate-400 uppercase tracking-widest">
               Protegido por Supabase Auth
