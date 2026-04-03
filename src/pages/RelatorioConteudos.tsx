@@ -449,179 +449,128 @@ export default function RelatorioConteudos() {
             }
             .no-print { display: none !important; }
           }
-          #printable-relatorio table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 10px; }
-          #printable-relatorio th, #printable-relatorio td { border: 1px solid black; padding: 6px 4px; text-align: left; font-size: 9px; font-family: Arial, sans-serif; }
-          #printable-relatorio th { background-color: #f2f2f2 !important; font-weight: bold; text-transform: uppercase; }
-          #printable-relatorio tr:nth-child(even) td { background-color: #fafafa !important; }
-          #printable-relatorio .header-table td { border: none !important; border-bottom: 2px solid black !important; padding: 4px !important; }
-          #printable-relatorio .meta-grid td { border: 1px solid black !important; background: white !important; font-weight: bold; font-size: 8px; }
-          #printable-relatorio .label { font-size: 7px; color: #333; text-transform: uppercase; font-weight: normal; margin-bottom: 1px; }
-          #printable-relatorio .title-bar { background: #f2f2f2; text-align: center; font-size: 16px; font-weight: bold; border: 2px solid black; border-top: none; padding: 8px; text-transform: uppercase; }
-          #printable-relatorio .signatures { margin-top: 40px; display: flex; justify-content: space-around; font-size: 10px; font-weight: bold; text-align: center; }
-          #printable-relatorio .sig-box { border-top: 1px solid black; width: 250px; padding-top: 5px; margin-top: 30px; }
+          #printable-relatorio table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+          #printable-relatorio th, #printable-relatorio td { border: 1px solid black; padding: 4px; text-align: left; font-size: 8px; font-family: Arial, sans-serif; }
+          #printable-relatorio .header-grid { width: 100%; border: 2px solid black; border-collapse: collapse; }
+          #printable-relatorio .header-grid td { border: 1px solid black; padding: 2px 6px; }
+          #printable-relatorio .label { font-size: 6px; text-transform: uppercase; font-weight: normal; margin-bottom: 1px; color: #333; }
+          #printable-relatorio .value { font-size: 9px; font-weight: bold; text-transform: uppercase; }
+          #printable-relatorio .title-bar { border: 2px solid black; border-top: none; padding: 6px; text-align: center; font-weight: bold; font-size: 14px; text-transform: uppercase; }
+          #printable-relatorio .content-table { margin-top: 15px; border: 2px solid black; width: 100%; border-collapse: collapse; }
+          #printable-relatorio .content-table th { background: #eee; text-align: center; font-weight: bold; padding: 6px; border: 1px solid black; font-size: 8px; }
+          #printable-relatorio .content-table td { border: 1px solid black; padding: 4px; font-size: 8px; }
+          #printable-relatorio .signatures { margin-top: 40px; display: flex; justify-content: space-around; }
+          #printable-relatorio .sig-line { border-top: 1px solid black; width: 250px; text-align: center; padding-top: 4px; font-size: 8px; font-weight: bold; margin-top: 25px; }
         `}} />
 
         <div className="p-4 bg-white text-black h-auto">
-          {/* Header Area */}
-          <table className="header-table">
-            <tbody>
-              <tr>
-                <td width="30%" className="text-center" style={{ borderBottom: 'none !important' }}>
-                  <img src="/logo.png" alt="Logo" className="w-16 h-16 mx-auto mb-1" />
-                  <div className="font-bold text-[10px]">ESTADO DO AMAZONAS</div>
-                  <div className="text-[9px]">SECRETARIA DE ESTADO DE EDUCAÇÃO E DESPORTO</div>
-                </td>
-                <td width="70%" valign="top">
-                  <table className="meta-grid" style={{ width: '100%', tableLayout: 'fixed' }}>
-                    <tbody>
-                      <tr>
-                        <td colSpan={3} className="px-2 py-1">
-                          <div className="label">ESCOLA:</div>
-                          <div className="text-[10px] truncate uppercase">{selectedTurmaObj?.escolaNome}</div>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td width="50%" className="px-2 py-1">
-                          <div className="label">ENSINO:</div>
-                          <div className="text-[9px] uppercase">{selectedTurmaObj?.ensino || 'Ensino Médio - NEM'}</div>
-                        </td>
-                        <td width="25%" className="px-2 py-1">
-                          <div className="label">TURNO:</div>
-                          <div className="text-[9px] uppercase">{selectedTurmaObj?.turno || 'INTEGRAL'}</div>
-                        </td>
-                        <td width="25%" className="px-2 py-1">
-                          <div className="label">TURMA:</div>
-                          <div className="text-[9px] uppercase">{selectedTurmaObj?.numero || '01'}</div>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="px-2 py-1">
-                          <div className="label">FASE:</div>
-                          <div className="text-[9px] uppercase">{selectedTurmaObj?.fase || '3 SERIE'}</div>
-                        </td>
-                        <td className="px-2 py-1">
-                          <div className="label">COMPONENTE:</div>
-                          <div className="text-[9px] uppercase">{selectedTurmaObj?.componente || 'MATEMATICA'}</div>
-                        </td>
-                        <td className="px-2 py-1">
-                          <div className="label">PERÍODO LETIVO:</div>
-                          <div className="text-[9px] uppercase">{periodoSelecionado}</div>
-          {/* Header Area Oficial SEDUC-AM */}
-          <div className="flex border-2 border-black">
-            {/* Bloco Esquerdo: Brasão e Secretaria */}
-            <div className="w-[35%] border-r-2 border-black p-4 flex flex-col items-center justify-center text-center">
-              <img src="/logo_am.png" alt="Brasão Amazonas" className="w-20 h-20 mb-2 object-contain" />
-              <div className="font-bold text-[11px] leading-tight uppercase">
-                Estado do Amazonas<br />
-                Secretaria de Estado de<br />
-                Educação e Desporto
+          {/* Header Area Oficial */}
+          <div className="flex border-2 border-black overflow-hidden">
+            {/* Logo Box */}
+            <div className="w-[30%] border-r-2 border-black p-4 flex flex-col items-center justify-center text-center">
+              <img src="/semed.png" alt="Logo SEMED" className="w-[72px] h-[72px] mb-1 object-contain" />
+              <div className="font-bold text-[9px] leading-tight uppercase">
+                Secretaria Municipal de Educação<br />
+                Lábrea - AM
               </div>
             </div>
 
-            {/* Bloco Direito: Grade de Informações */}
-            <div className="flex-1 text-[8px] uppercase">
-              {/* Linha 1: Escola */}
-              <div className="border-b-2 border-black p-1">
-                <div className="label">Escola:</div>
-                <div className="font-bold text-[10px]">{selectedTurmaObj?.escolaNome}</div>
-              </div>
-
-              {/* Linha 2: Ensino | Turno | Turma */}
-              <div className="flex border-b-2 border-black">
-                <div className="flex-1 border-r-2 border-black p-1">
-                  <div className="label">Ensino:</div>
-                  <div className="font-bold">{selectedTurmaObj?.ensino}</div>
-                </div>
-                <div className="w-[25%] border-r-2 border-black p-1">
-                  <div className="label">Turno:</div>
-                  <div className="font-bold">{selectedTurmaObj?.turno}</div>
-                </div>
-                <div className="w-[15%] p-1">
-                  <div className="label">Turma:</div>
-                  <div className="font-bold">{selectedTurmaObj?.numero}</div>
-                </div>
-              </div>
-
-              {/* Linha 3: Fase | Componente | Período */}
-              <div className="flex border-b-2 border-black">
-                <div className="flex-1 border-r-2 border-black p-1">
-                  <div className="label">Fase:</div>
-                  <div className="font-bold">{selectedTurmaObj?.fase}</div>
-                </div>
-                <div className="flex-1 border-r-2 border-black p-1">
-                  <div className="label">Componente:</div>
-                  <div className="font-bold">{selectedTurmaObj?.componente?.toUpperCase()}</div>
-                </div>
-                <div className="w-[20%] p-1">
-                  <div className="label">Período Letivo:</div>
-                  <div className="font-bold">{periodoSelecionado}</div>
-                </div>
-              </div>
-
-              {/* Linha 4: Professor */}
-              <div className="p-1">
-                <div className="label">Professor:</div>
-                <div className="font-bold text-[10px]">{user?.user_metadata?.full_name?.toUpperCase() || 'NÃO IDENTIFICADO'}</div>
-                <div className="text-[6px] font-normal mb-0.5">Professor:</div>
-                <div className="text-[9px] truncate">{user?.user_metadata?.full_name?.toUpperCase() || 'NÃO IDENTIFICADO'}</div>
-              </div>
-            </div>
+            {/* Metadata Grid */}
+            <table className="flex-1 header-grid border-none">
+              <tbody>
+                <tr className="h-8">
+                  <td colSpan={3} className="border-t-0 border-r-0">
+                    <div className="label">Escola:</div>
+                    <div className="value shadow-none">{selectedTurmaObj?.escolaNome}</div>
+                  </td>
+                </tr>
+                <tr className="h-8">
+                  <td width="55%" className="border-r-2 border-black">
+                    <div className="label">Ensino:</div>
+                    <div className="value">{selectedTurmaObj?.ensino}</div>
+                  </td>
+                  <td width="25%" className="border-r-2 border-black">
+                    <div className="label">Turno:</div>
+                    <div className="value">{selectedTurmaObj?.turno}</div>
+                  </td>
+                  <td width="20%" className="border-r-0">
+                    <div className="label">Turma:</div>
+                    <div className="value">{selectedTurmaObj?.numero}</div>
+                  </td>
+                </tr>
+                <tr className="h-8">
+                  <td className="border-r-2 border-black">
+                    <div className="label">Fase:</div>
+                    <div className="value">{selectedTurmaObj?.fase}</div>
+                  </td>
+                  <td className="border-r-2 border-black">
+                    <div className="label">Componente:</div>
+                    <div className="value">{selectedTurmaObj?.componente?.toUpperCase()}</div>
+                  </td>
+                  <td className="border-r-0">
+                    <div className="label">Período Letivo:</div>
+                    <div className="value">{periodoSelecionado}</div>
+                  </td>
+                </tr>
+                <tr className="h-8">
+                  <td colSpan={3} className="border-b-0 border-r-0">
+                    <div className="label">Professor:</div>
+                    <div className="value">{user?.user_metadata?.full_name?.toUpperCase() || 'NÃO IDENTIFICADO'}</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
-          {/* Barra de Título */}
-          <div className="border-2 border-black border-t-0 p-2 text-center bg-white font-bold text-lg uppercase tracking-widest">
+          {/* Title Bar */}
+          <div className="title-bar">
             Relatório de Conteúdo Ministrado
           </div>
 
-          {/* Main Table */}
-          <table className="mt-6 border-2 border-black w-full border-collapse">
-            <thead className="bg-white">
-              <tr className="border-b-2 border-black h-10">
-                <th width="10%" className="border-r-2 border-black text-center font-bold text-[9px]">DATA</th>
-                <th width="12%" className="border-r-2 border-black text-center font-bold text-[9px]">TEMPO DE AULA</th>
-                <th width="48%" className="border-r-2 border-black text-center font-bold text-[9px]">CONTEÚDO</th>
-                <th width="15%" className="border-r-2 border-black text-center font-bold text-[9px]">OBSERVAÇÃO</th>
-                <th width="15%" className="text-center font-bold text-[9px]">CONTEÚDO MÍNIMO</th>
+          {/* Table Area */}
+          <table className="content-table">
+            <thead>
+              <tr>
+                <th width="10%">DATA</th>
+                <th width="12%">TEMPO DE AULA</th>
+                <th width="48%">CONTEÚDO</th>
+                <th width="15%">OBSERVAÇÃO</th>
+                <th width="15%">CONTEÚDO MÍNIMO</th>
               </tr>
             </thead>
-            <tbody className="divide-y-2 divide-black">
+            <tbody>
               {conteudosRelatorio.map((c, i) => (
-                <tr key={i} className="min-h-[40px]">
-                  <td className="border-r-2 border-black text-center font-bold text-[9px] py-3">{c.data}</td>
-                  <td className="border-r-2 border-black text-center text-[9px] uppercase">{c.tempo}</td>
-                  <td className="border-r-2 border-black text-[8px] leading-tight p-2 uppercase align-middle">{c.descricao}</td>
-                  <td className="border-r-2 border-black"></td>
+                <tr key={i}>
+                  <td className="text-center font-bold px-2 py-3">{c.data}</td>
+                  <td className="text-center uppercase">{c.tempo}</td>
+                  <td className="p-2 uppercase leading-tight">{c.descricao}</td>
+                  <td></td>
                   <td></td>
                 </tr>
               ))}
-              {/* Preencher linhas vazias se for pouco conteúdo */}
               {[...Array(Math.max(0, 10 - conteudosRelatorio.length))].map((_, i) => (
                 <tr key={`empty-${i}`} className="h-10">
-                  <td className="border-r-2 border-black"></td>
-                  <td className="border-r-2 border-black"></td>
-                  <td className="border-r-2 border-black"></td>
-                  <td className="border-r-2 border-black"></td>
-                  <td></td>
+                  <td></td><td></td><td></td><td></td><td></td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          {/* Área de Assinaturas */}
-          <div className="signatures mt-12 mb-8 flex justify-around">
-            <div className="sig-box border-t-2 border-black w-72 text-center pt-2">
-              <div className="text-[10px] font-bold uppercase">Assinatura do Professor(a)</div>
-              <div className="text-[8px] font-normal mt-1">{user?.user_metadata?.full_name?.toUpperCase()}</div>
+          {/* Signatures */}
+          <div className="signatures">
+            <div>
+              <div className="sig-line">ASSINATURA DO PROFESSOR(A)</div>
+              <div className="text-[7px] text-center mt-0.5">{user?.user_metadata?.full_name?.toUpperCase()}</div>
             </div>
-            <div className="sig-box border-t-2 border-black w-72 text-center pt-2">
-              <div className="text-[10px] font-bold uppercase">Assinatura da Coordenação Pedagógica</div>
+            <div>
+              <div className="sig-line">ASSINATURA DA COORDENAÇÃO PEDAGÓGICA</div>
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="mt-auto pt-4 border-t border-slate-200 flex justify-between text-[7px] italic text-slate-400">
-            <div>Gerado pelo Sistema DC Digital em {new Date().toLocaleString('pt-BR')}</div>
-            <div>Folha de Registro Individual - SEDUC-AM</div>
+          {/* Bottom Info */}
+          <div className="mt-auto pt-6 flex justify-between text-[7px] italic text-slate-400">
+            <div>Sistema DC Digital - Gerado em {new Date().toLocaleString('pt-BR')}</div>
+            <div>Registro Individual de Conteúdo - Modelo SEDUC/AM</div>
           </div>
         </div>
       </div>
