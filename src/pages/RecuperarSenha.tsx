@@ -3,6 +3,7 @@ import { Loader2, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Background from '../components/Background';
 import { supabase } from '../lib/supabase';
+import { APP_CONFIG } from '../config/appConfig';
 import { translateSupabaseError } from '../utils/supabaseErrors';
 
 export default function RecuperarSenha() {
@@ -103,7 +104,7 @@ export default function RecuperarSenha() {
         </section>
 
         <footer className="mt-6 text-center text-slate-400 text-xs">
-          © 2026 Diário Digital. Todos os direitos reservados.
+          © {APP_CONFIG.YEAR} Diário Digital. Todos os direitos reservados.
         </footer>
       </main>
     </div>

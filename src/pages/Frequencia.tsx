@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Calendar as CalendarIcon } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
+import { APP_CONFIG } from '../config/appConfig';
 import { useAuth } from '../contexts/AuthContext';
 import { getDayOfWeek } from '../utils/dateUtils';
 
@@ -14,7 +15,7 @@ export default function Frequencia() {
   const { turmaAtiva, horarioTurma } = useTurma();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
-  const selectedDateParam = searchParams.get('date') || '06/02/2026';
+  const selectedDateParam = searchParams.get('date') || `06/02/${APP_CONFIG.YEAR}`;
 
   // ── Shared state ──
   const [activeTab, setActiveTab] = useState('frequencia');
@@ -60,7 +61,7 @@ export default function Frequencia() {
             </Link>
             <div className="flex items-center gap-3">
               <h2 className="text-slate-800 text-base font-medium">{turmaAtiva?.ensino} - {turmaAtiva?.fase}</h2>
-              <span className="bg-emerald-50 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-md border border-emerald-100 uppercase tracking-widest">Ano: 2026</span>
+              <span className="bg-emerald-50 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-md border border-emerald-100 uppercase tracking-widest">Ano: {APP_CONFIG.YEAR}</span>
             </div>
           </div>
           <div className="flex items-center gap-2">

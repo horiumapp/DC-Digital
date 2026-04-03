@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Background from '../components/Background';
 import { useAuth, UserRole } from '../contexts/AuthContext';
+import { APP_CONFIG } from '../config/appConfig';
 import { supabase } from '../lib/supabase';
 import { translateSupabaseError } from '../utils/supabaseErrors';
 
@@ -146,7 +147,7 @@ export default function Login() {
         </section>
 
         <footer className="mt-6 text-center text-slate-400 text-xs">
-          © 2026 Diário Digital. Todos os direitos reservados.
+          © {APP_CONFIG.YEAR} Diário Digital. Todos os direitos reservados.
         </footer>
       </main>
     </div>

@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { APP_CONFIG } from '../config/appConfig';
 
 export interface PendenciaDocente {
   professor: string;
@@ -15,14 +16,14 @@ export interface PendenciaDocente {
 }
 
 const PERIOD_DATES: Record<string, { start: Date; end: Date }> = {
-  '1. BIMESTRE': { start: new Date(2026, 1, 2), end: new Date(2026, 3, 23) },
-  '2. BIMESTRE': { start: new Date(2026, 3, 24), end: new Date(2026, 6, 7) },
-  '3. BIMESTRE': { start: new Date(2026, 6, 27), end: new Date(2026, 8, 24) },
-  '4. BIMESTRE': { start: new Date(2026, 8, 25), end: new Date(2026, 11, 18) },
-  '1. SEMESTRE': { start: new Date(2026, 1, 2), end: new Date(2026, 6, 7) },
-  '2. SEMESTRE': { start: new Date(2026, 6, 27), end: new Date(2026, 11, 18) },
-  'ÚNICO': { start: new Date(2026, 1, 2), end: new Date(2026, 11, 18) },
-  'RECUPERAÇÃO': { start: new Date(2026, 11, 19), end: new Date(2026, 11, 30) },
+  '1. BIMESTRE': { start: new Date(APP_CONFIG.YEAR, 1, 2), end: new Date(APP_CONFIG.YEAR, 3, 23) },
+  '2. BIMESTRE': { start: new Date(APP_CONFIG.YEAR, 3, 24), end: new Date(APP_CONFIG.YEAR, 6, 7) },
+  '3. BIMESTRE': { start: new Date(APP_CONFIG.YEAR, 6, 27), end: new Date(APP_CONFIG.YEAR, 8, 24) },
+  '4. BIMESTRE': { start: new Date(APP_CONFIG.YEAR, 8, 25), end: new Date(APP_CONFIG.YEAR, 11, 18) },
+  '1. SEMESTRE': { start: new Date(APP_CONFIG.YEAR, 1, 2), end: new Date(APP_CONFIG.YEAR, 6, 7) },
+  '2. SEMESTRE': { start: new Date(APP_CONFIG.YEAR, 6, 27), end: new Date(APP_CONFIG.YEAR, 11, 18) },
+  'ÚNICO': { start: new Date(APP_CONFIG.YEAR, 1, 2), end: new Date(APP_CONFIG.YEAR, 11, 18) },
+  'RECUPERAÇÃO': { start: new Date(APP_CONFIG.YEAR, 11, 19), end: new Date(APP_CONFIG.YEAR, 11, 30) },
 };
 
 /**

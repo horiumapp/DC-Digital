@@ -5,6 +5,7 @@ import { useTurma } from '../contexts/TurmaContext';
 import { supabase } from '../lib/supabase';
 import { formatMatricula } from '../utils/formatters';
 import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
+import { APP_CONFIG, getBimestreAtual } from '../config/appConfig';
 
 export default function AparataDetalhes() {
   const { turmaAtiva, alunos, avaliacoes, lancamentos } = useTurma();
@@ -98,8 +99,9 @@ export default function AparataDetalhes() {
     );
   }
 
-  const periodo = '1. Bimestre';
-  const meses = 'Fev,Mar,Abr';
+  const bimestreInfo = getBimestreAtual() || APP_CONFIG.BIMESTRES[0];
+  const periodo = bimestreInfo.nome;
+  const meses = bimestreInfo.months;
 
   return (
     <div className="min-h-screen bg-slate-50 relative">
@@ -117,8 +119,8 @@ export default function AparataDetalhes() {
             </Link>
             <h2 className="text-xl font-medium text-slate-700 flex items-center gap-2">
               Detalhes da Movimentação
-              <span className="bg-emerald-100 text-emerald-800 text-sm font-bold px-3 py-1 rounded">Ano: 2026</span>
-              <span className="bg-blue-100 text-blue-800 text-sm font-bold px-3 py-1 rounded">Período: 1</span>
+              <span className="bg-emerald-100 text-emerald-800 text-sm font-bold px-3 py-1 rounded">Ano: {APP_CONFIG.YEAR}</span>
+              <span className="bg-blue-100 text-blue-800 text-sm font-bold px-3 py-1 rounded">Período: {bimestreInfo.id}</span>
             </h2>
           </div>
 
@@ -173,7 +175,7 @@ export default function AparataDetalhes() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Ano letivo</label>
-                  <div className="border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-slate-50">2026</div>
+                  <div className="border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-slate-50">{APP_CONFIG.YEAR}</div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Data</label>

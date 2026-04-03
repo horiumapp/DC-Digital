@@ -2,9 +2,11 @@ import { supabase } from '../lib/supabase';
 import { getBimestrePorData } from '../utils/dateUtils';
 import { Aluno, Avaliacao, Conteudo, Horario, Lancamento } from '../contexts/TurmaContext';
 
+const getTid = (turmaId: string | number): string => turmaId.toString().split('_')[0];
+
 export const TurmaService = {
   fetchHorario: async (turmaId: string | number, disciplina: string): Promise<Horario[]> => {
-    const tid = turmaId.toString().split('_')[0];
+    const tid = getTid(turmaId);
     const { data, error } = await supabase
       .from('professor_horarios')
       .select('dia_semana, tempo_ordem')
@@ -15,7 +17,7 @@ export const TurmaService = {
   },
 
   fetchLancamentos: async (turmaId: string | number, disciplina: string): Promise<Lancamento[]> => {
-    const tid = turmaId.toString().split('_')[0]; // Pega o ID real do banco
+    const tid = getTid(turmaId);
     const [freqRes, contRes] = await Promise.all([
       supabase.from('frequencias')
         .select('data, tempo')
@@ -65,7 +67,7 @@ export const TurmaService = {
   },
 
   fetchAvaliacoes: async (turmaId: string | number, disciplina: string): Promise<{ avaliacoes: Avaliacao[], notasData: any[] }> => {
-    const tid = turmaId.toString().split('_')[0];
+    const tid = getTid(turmaId);
     const { data: avData, error: avError } = await supabase
       .from('avaliacoes')
       .select('*')
@@ -101,7 +103,7 @@ export const TurmaService = {
   },
 
   salvarAvaliacao: async (av: Avaliacao, turmaId: string | number, disciplina: string): Promise<string> => {
-    const tid = turmaId.toString().split('_')[0];
+    const tid = getTid(turmaId);
     const payload = {
       turma_id: tid,
       tipo: av.tipo,
@@ -145,7 +147,7 @@ export const TurmaService = {
   },
 
   salvarFrequencia: async (turmaId: string | number, disciplina: string, data: string, tempo: string, alunosFreq: Aluno[]): Promise<void> => {
-    const tid = turmaId.toString().split('_')[0];
+    const tid = getTid(turmaId);
     const upserts = alunosFreq.map(aluno => ({
       turma_id: tid,
       aluno_id: aluno.id,
@@ -160,7 +162,7 @@ export const TurmaService = {
   },
 
   salvarConteudo: async (turmaId: string | number, disciplina: string, cont: Conteudo): Promise<void> => {
-    const tid = turmaId.toString().split('_')[0];
+    const tid = getTid(turmaId);
     const payload = {
       turma_id: tid,
       data: cont.data,
@@ -175,7 +177,7 @@ export const TurmaService = {
   },
 
   buscarFrequencia: async (turmaId: string | number, disciplina: string, data: string, tempo: string): Promise<any[]> => {
-    const tid = turmaId.toString().split('_')[0];
+    const tid = getTid(turmaId);
     const { data: freqData, error } = await supabase
       .from('frequencias')
       .select('*')
@@ -188,7 +190,7 @@ export const TurmaService = {
   },
 
   fetchAllFrequencias: async (turmaId: string | number, disciplina: string): Promise<any[]> => {
-    const tid = turmaId.toString().split('_')[0];
+    const tid = getTid(turmaId);
     const { data: freqData, error } = await supabase
       .from('frequencias')
       .select('data, aluno_id, status')
@@ -199,7 +201,7 @@ export const TurmaService = {
   },
 
   buscarFrequenciaPorDia: async (turmaId: string | number, disciplina: string, data: string): Promise<any[]> => {
-    const tid = turmaId.toString().split('_')[0];
+    const tid = getTid(turmaId);
     const { data: freqData, error } = await supabase
       .from('frequencias')
       .select('aluno_id, status')
@@ -211,7 +213,7 @@ export const TurmaService = {
   },
 
   buscarConteudo: async (turmaId: string | number, disciplina: string, data: string, tempo: string): Promise<Conteudo | null> => {
-    const tid = turmaId.toString().split('_')[0];
+    const tid = getTid(turmaId);
     const { data: contData, error } = await supabase
       .from('conteudos')
       .select('*')
@@ -238,7 +240,7 @@ export const TurmaService = {
   },
 
   removerFrequencia: async (turmaId: string | number, disciplina: string, data: string, tempo: string): Promise<void> => {
-    const tid = turmaId.toString().split('_')[0];
+    const tid = getTid(turmaId);
     const { error } = await supabase
       .from('frequencias')
       .delete()
@@ -250,7 +252,7 @@ export const TurmaService = {
   },
 
   removerConteudo: async (turmaId: string | number, disciplina: string, data: string, tempo: string): Promise<void> => {
-    const tid = turmaId.toString().split('_')[0];
+    const tid = getTid(turmaId);
     const { error } = await supabase
     .from('conteudos')
     .delete()
@@ -262,7 +264,7 @@ export const TurmaService = {
   },
 
   fetchAllConteudos: async (turmaId: string | number, disciplina: string): Promise<Conteudo[]> => {
-    const tid = turmaId.toString().split('_')[0];
+    const tid = getTid(turmaId);
     const { data, error } = await supabase
       .from('conteudos')
       .select('*')

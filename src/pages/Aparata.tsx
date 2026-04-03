@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft, GraduationCap, Building2, Clock, BookOpen, Search, Info, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
+import { APP_CONFIG } from '../config/appConfig';
 
 const PERIODOS = [
   { value: '1. BIMESTRE', label: '1. BIMESTRE' },
@@ -69,7 +70,7 @@ export default function Aparata() {
             </Link>
             <h2 className="text-xl font-medium text-slate-700 flex items-center gap-2">
               Aparatas da Turma
-              <span className="bg-emerald-100 text-emerald-800 text-sm font-bold px-3 py-1 rounded ml-1">Ano: 2026</span>
+              <span className="bg-emerald-100 text-emerald-800 text-sm font-bold px-3 py-1 rounded ml-1">Ano: {APP_CONFIG.YEAR}</span>
             </h2>
           </div>
 

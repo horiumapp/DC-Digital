@@ -3,6 +3,7 @@ import { ArrowLeft, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { APP_CONFIG } from '../config/appConfig';
 
 export default function RelatorioNotas() {
   const { user } = useAuth();
@@ -77,7 +78,7 @@ export default function RelatorioNotas() {
         </Link>
         <div className="flex items-center gap-3">
           <h2 className="text-slate-800 text-xl font-medium">Relatório de Notas das Avaliações</h2>
-          <span className="bg-green-100 text-green-700 text-sm font-bold px-3 py-1 rounded-full border border-green-200">Ano: 2026</span>
+          <span className="bg-green-100 text-green-700 text-sm font-bold px-3 py-1 rounded-full border border-green-200">Ano: {APP_CONFIG.YEAR}</span>
         </div>
       </div>
 

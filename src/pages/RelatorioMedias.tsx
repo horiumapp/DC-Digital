@@ -1,6 +1,7 @@
 import { ArrowLeft, ChevronDown, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatMatricula } from '../utils/formatters';
+import { APP_CONFIG } from '../config/appConfig';
 
 export default function RelatorioMedias() {
   const alunos = [
@@ -26,7 +27,7 @@ export default function RelatorioMedias() {
         </Link>
         <div className="flex items-center space-x-3">
           <h1 className="text-2xl font-semibold text-slate-700">Relatório das Médias do Componente</h1>
-          <span className="bg-emerald-100 text-emerald-700 text-sm font-bold px-3 py-1 rounded-full border border-emerald-200">Ano: 2026</span>
+          <span className="bg-emerald-100 text-emerald-700 text-sm font-bold px-3 py-1 rounded-full border border-emerald-200">Ano: {APP_CONFIG.YEAR}</span>
         </div>
       </section>
 

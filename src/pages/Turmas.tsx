@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Search, ChevronDown, ChevronRight, ChevronLeft, Edit2, GraduationCap, Building2, Clock } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import NovaTurmaModal from '../components/NovaTurmaModal';
+import { APP_CONFIG } from '../config/appConfig';
 import { useTurma, Turma } from '../contexts/TurmaContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -167,7 +169,7 @@ export default function Turmas() {
         <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-medium text-slate-800 dark:text-slate-100">Turmas/Componentes</h1>
-            <span className="bg-emerald-50 text-emerald-600 text-sm font-bold px-3 py-1 rounded border border-emerald-100 uppercase tracking-tight">Ano: 2026</span>
+            <span className="bg-emerald-50 text-emerald-600 text-sm font-bold px-3 py-1 rounded border border-emerald-100 uppercase tracking-tight">Ano: {APP_CONFIG.YEAR}</span>
           </div>
           {alocacoes.length > 1 && (
             <div className="flex gap-2">

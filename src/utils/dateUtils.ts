@@ -1,8 +1,8 @@
+import { APP_CONFIG } from '../config/appConfig';
 
 export const getBimestrePorData = (dataStr: string): string => {
   if (!dataStr) return '';
 
-  // Espera DD/MM/YYYY ou YYYY-MM-DD
   let dia, mes, ano;
   if (dataStr.includes('/')) {
     [dia, mes, ano] = dataStr.split('/').map(Number);
@@ -12,14 +12,14 @@ export const getBimestrePorData = (dataStr: string): string => {
   
   if (!dia || !mes || !ano) return '';
   const dataRef = new Date(ano, mes - 1, dia);
-  if (ano !== 2026) return '';
 
-  if (dataRef >= new Date(2026, 1, 5) && dataRef <= new Date(2026, 3, 23)) return '1º Bimestre';
-  if (dataRef >= new Date(2026, 3, 24) && dataRef <= new Date(2026, 6, 7)) return '2º Bimestre';
-  if (dataRef >= new Date(2026, 6, 16) && dataRef <= new Date(2026, 8, 24)) return '3º Bimestre';
-  if (dataRef >= new Date(2026, 8, 25) && dataRef <= new Date(2026, 11, 14)) return '4º Bimestre';
-  
-  return '';
+  const bimestre = APP_CONFIG.BIMESTRES.find(b => {
+    const start = new Date(b.dataInicio);
+    const end = new Date(b.dataFim);
+    return dataRef >= start && dataRef <= end;
+  });
+
+  return bimestre ? bimestre.nome : '';
 };
 export const getDayOfWeek = (dataStr: string): number => {
   if (!dataStr) return -1;

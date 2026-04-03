@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, Check, X } from 'lucide-react';
-import { useTurma, Avaliacao } from '../../contexts/TurmaContext';
+import { useTurma, Avaliacao, Aluno } from '../../contexts/TurmaContext';
+import { APP_CONFIG } from '../../config/appConfig';
 import { useCaptcha } from '../../hooks/useCaptcha';
 import { getBimestrePorData, formatarDataParaISO } from '../../utils/dateUtils';
 
@@ -37,12 +38,13 @@ export default function AvaliacoesTab() {
   const [secondCallRows, setSecondCallRows] = useState<Record<string, { selected: boolean, date: string, grade: string }>>({});
   const [isSaving, setIsSaving] = useState(false);
 
-  const PERIODOS_LABELS: Record<string, string> = {
-    '1º Bimestre': '1. BIMESTRE 05/02/2026 - 23/04/2026',
-    '2º Bimestre': '2. BIMESTRE 28/04/2026 - 07/07/2026',
-    '3º Bimestre': '3. BIMESTRE 21/07/2026 - 24/09/2026',
-    '4º Bimestre': '4. BIMESTRE 28/09/2026 - 18/12/2026'
-  };
+  const PERIODOS_LABELS: Record<string, string> = {};
+  APP_CONFIG.BIMESTRES.forEach(b => {
+    // Formata a exibição como: "1. BIMESTRE 05/02/2026 - 23/04/2026"
+    const start = new Date(b.dataInicio).toLocaleDateString('pt-BR');
+    const end = new Date(b.dataFim).toLocaleDateString('pt-BR');
+    PERIODOS_LABELS[b.nome] = `${b.label} ${start} - ${end}`;
+  });
 
   const {
     generatedCaptcha,

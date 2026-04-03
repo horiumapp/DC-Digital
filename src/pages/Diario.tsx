@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { ArrowLeft, Bell, ChevronDown, GraduationCap, Building2, Clock, BookOpen, Folder, CheckSquare, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Bell, ChevronDown, BookOpen, Folder, CheckSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
+import { APP_CONFIG } from '../config/appConfig';
 import CalendarWidget from '../components/common/CalendarWidget';
 import { useTurmaProgress } from '../hooks/useTurmaProgress';
 import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
@@ -9,22 +10,12 @@ import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
 export default function Diario() {
   const { turmaAtiva, lancamentos, avaliacoes, alunos, horarioTurma } = useTurma();
   const [currentMonth, setCurrentMonth] = useState(1); // 1 = February (0-indexed)
-  const year = 2026;
+  const year = APP_CONFIG.YEAR;
 
-  const periodosLetivos = [
-    { id: 1, nome: '1º Bimestre', dataInicio: '2026-02-05', dataFim: '2026-04-23' },
-    { id: 2, nome: '2º Bimestre', dataInicio: '2026-04-24', dataFim: '2026-07-07' },
-    { id: 3, nome: '3º Bimestre', dataInicio: '2026-07-16', dataFim: '2026-09-24' },
-    { id: 4, nome: '4º Bimestre', dataInicio: '2026-09-25', dataFim: '2026-12-14' },
-  ];
+  const periodosLetivos = APP_CONFIG.BIMESTRES;
 
   const [periodoSelecionadoId, setPeriodoSelecionadoId] = useState(1);
   const periodoSelecionado = periodosLetivos.find(p => p.id === periodoSelecionadoId) || periodosLetivos[0];
-
-  const monthNames = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-  ];
 
   const handlePrevMonth = () => {
     if (currentMonth > 0) {
@@ -51,9 +42,6 @@ export default function Diario() {
     }
     return days;
   };
-
-  const calendarDays = getDaysArray();
-  const weekDays = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
   if (!turmaAtiva) {
     return (
@@ -95,7 +83,7 @@ export default function Diario() {
             </Link>
             <h2 className="text-xl font-medium text-slate-700 dark:text-slate-100">
               {turmaAtiva.ensino} - {turmaAtiva.fase}
-              <span className="bg-emerald-100 text-emerald-800 text-sm font-bold px-3 py-1 rounded ml-2">Ano: 2026</span>
+              <span className="bg-green-100 text-green-700 text-sm font-bold px-3 py-1 rounded-full border border-green-200 ml-2">Ano: {APP_CONFIG.YEAR}</span>
             </h2>
           </div>
           <div className="relative">

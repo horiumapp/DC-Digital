@@ -1,6 +1,8 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTurma } from '../../contexts/TurmaContext';
+import { APP_CONFIG } from '../../config/appConfig';
 
 interface CalendarWidgetProps {
   year: number;
@@ -25,12 +27,7 @@ export default function CalendarWidget({
 }: CalendarWidgetProps) {
 
   // Re-calcular datas do período baseadas no Bimestre selecionado (poderiam vir de props, mas mantemos isolado)
-  const periodosLetivos = [
-    { id: 1, nome: '1º Bimestre', dataInicio: '2026-02-05', dataFim: '2026-04-23' },
-    { id: 2, nome: '2º Bimestre', dataInicio: '2026-04-24', dataFim: '2026-07-07' },
-    { id: 3, nome: '3º Bimestre', dataInicio: '2026-07-16', dataFim: '2026-09-24' },
-    { id: 4, nome: '4º Bimestre', dataInicio: '2026-09-25', dataFim: '2026-12-14' },
-  ];
+  const periodosLetivos = APP_CONFIG.BIMESTRES;
 
   // Identificar em qual período estamos (heurística baseada no mês atual)
   // Nota: Isso é uma redundância para manter o widget funcionando se as props de data sumirem.

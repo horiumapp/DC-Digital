@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Avaliacao, Horario, Lancamento, Turma, Aluno } from '../contexts/TurmaContext';
+import { APP_CONFIG } from '../config/appConfig';
 import { getBimestrePorData } from '../utils/dateUtils';
 
 // Interfazes para as dependências e retornos
@@ -103,7 +104,7 @@ export function useTurmaProgress(
     const avaliacoesDaTurma = avaliacoes.filter(av => {
       const avTurmaId = String(av.turmaId).split('_')[0];
       if (avTurmaId !== activeTurmaId) return false;
-      if (!av.data || !av.data.includes('2026') || av.id.includes('temp_')) return false;
+      if (!av.data || !av.data.includes(APP_CONFIG.YEAR.toString()) || av.id.includes('temp_')) return false;
       const bNome = av.bimestre || getBimestrePorData(av.data);
       return bNome === periodoSelecionado.nome;
     });
