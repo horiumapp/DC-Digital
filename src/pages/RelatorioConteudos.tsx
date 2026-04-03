@@ -429,9 +429,16 @@ export default function RelatorioConteudos() {
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
             @page { margin: 1cm; size: A4; }
-            body { -webkit-print-color-adjust: exact; background: white !important; }
-            .print\\:hidden { display: none !important; }
-            #printable-relatorio { display: block !important; position: static !important; }
+            body * { visibility: hidden; }
+            #printable-relatorio, #printable-relatorio * { visibility: visible; }
+            #printable-relatorio { 
+              position: absolute; 
+              left: 0; 
+              top: 0; 
+              width: 100%; 
+              display: block !important;
+            }
+            .no-print { display: none !important; }
           }
           #printable-relatorio table { width: 100%; border-collapse: collapse; table-layout: fixed; }
           #printable-relatorio th, #printable-relatorio td { border: 1px solid black; padding: 4px; text-align: left; font-size: 8px; font-family: Arial, sans-serif; }
