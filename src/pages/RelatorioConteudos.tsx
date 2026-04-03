@@ -429,9 +429,11 @@ export default function RelatorioConteudos() {
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
             @page { margin: 1cm; size: A4; }
+            html, body { height: 100%; overflow: hidden; background: white !important; }
             body * { visibility: hidden; }
             #printable-relatorio, #printable-relatorio * { visibility: visible; }
             #printable-relatorio { 
+              visibility: visible;
               position: absolute; 
               left: 0; 
               top: 0; 
@@ -448,7 +450,7 @@ export default function RelatorioConteudos() {
           #printable-relatorio .title-bar { background: white; text-align: center; font-size: 14px; font-weight: bold; border: 1px solid black; border-top: none; padding: 4px; }
         `}} />
 
-        <div className="p-4 bg-white text-black min-h-screen">
+        <div className="p-4 bg-white text-black h-auto">
           {/* Header Area */}
           <table className="header-table">
             <tbody>
@@ -543,9 +545,9 @@ export default function RelatorioConteudos() {
           </table>
 
           {/* Footer */}
-          <div className="fixed bottom-4 left-4 right-4 flex justify-between text-[8px] font-medium text-slate-500 italic">
+          <div className="mt-8 flex justify-between text-[8px] font-medium text-slate-500 italic border-t border-slate-100 pt-2">
             <div>Impresso em {new Date().toLocaleString('pt-BR')}</div>
-            <div className="page-counter">1/1</div>
+            <div className="page-counter">Página 1/1</div>
           </div>
         </div>
       </div>
