@@ -50,29 +50,43 @@ export default function Turmas() {
   };
 
   const fetchAlocacoes = async () => {
-    if (!user) return;
+    if (!user || !user.email) return;
     
     setLoading(true);
     try {
       // 1. Encontrar o registro do professor vinculado ao usuário logado
-      // Usamos o e-mail como chave de busca pois o ID do Auth e o da tabela professores podem divergir
-      const { data: professorData } = await supabase
+      // Usamos limit(1) ao invés de single() para evitar crash se por acidente houver mais de um prof com o mesmo e-mail.
+      const { data: professorDataResult, error: profError } = await supabase
         .from('professores')
         .select('id')
-        .eq('email', user.email) 
-        .single();
+        .ilike('email', user.email) 
+        .limit(1);
 
-      if (professorData) {
+      if (profError) {
+        console.error("Erro ao achar professor pelo email:", profError);
+      }
+
+      if (professorDataResult && professorDataResult.length > 0) {
+        const professorData = professorDataResult[0];
+        
         // 2. Buscar as alocações (escolas e turnos) desse professor
-        const { data: alocData } = await supabase
+        const { data: alocData, error: alocError } = await supabase
           .from('professor_alocacoes')
           .select('id, escola_id, turno, escolas(nome)')
           .eq('professor_id', professorData.id);
 
+        if (alocError) {
+          console.error("Erro na busca de alocacoes:", alocError);
+        }
+
         if (alocData && alocData.length > 0) {
           setAlocacoes(alocData);
           setAlocacaoAtiva(alocData[0]); // Seleciona a primeira por padrão
+        } else {
+          console.warn("Nenhuma alocacão encontrada para o professor ID:", professorData.id);
         }
+      } else {
+        console.warn("Nenhum professor encontrado com o e-mail:", user.email);
       }
     } catch (err) {
       console.error('Erro ao carregar lotações:', err);
