@@ -107,11 +107,11 @@ export default function Layout() {
         <div className="flex-1 flex items-center justify-end space-x-4">
           <div className="bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-lg hidden sm:flex items-center space-x-3 border border-slate-200 dark:border-slate-700">
             <User className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-            <div className="text-sm">
-              <span className="font-bold text-slate-800 dark:text-slate-100 uppercase block leading-tight">
+            <div className="text-sm min-w-fit">
+              <span className="font-bold text-slate-800 dark:text-slate-100 uppercase whitespace-nowrap leading-tight">
                 {nameDisplay}
               </span>
-              <span className="text-slate-500 dark:text-slate-400 text-xs">
+              <span className="text-slate-500 dark:text-slate-400 text-xs block">
                 {titleDisplay}
               </span>
             </div>

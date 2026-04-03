@@ -282,23 +282,21 @@ export default function RelatorioNotas() {
 
                 <div className="overflow-x-auto px-6 pb-6">
                   <table className="w-full text-sm text-left border-collapse">
-                    <thead className="bg-[#f8f9fa] text-slate-700 font-bold uppercase text-xs">
+                    <thead className="bg-[#f8f9fa] border-t border-slate-200">
                       <tr>
-                        <th className="px-4 py-4 border-b border-slate-200 w-16">
-                          <div className="flex items-center justify-between">
-                            <span>Nº</span>
-                            <div className="flex flex-col text-[9px] text-slate-300 leading-[6px] gap-[1px] ml-2 font-black tracking-tighter">
-                              <span>▲</span>
-                              <span>▼</span>
+                        <th className="px-4 py-4 border-b border-slate-200 w-16 text-center">
+                          <div className="flex flex-col items-center justify-center relative">
+                            <span className="text-[13px] text-[#0f2851] font-bold">Nº</span>
+                            <div className="absolute right-1 flex flex-col text-[10px] text-slate-300 opacity-60 font-black leading-[6px] gap-[1px]">
+                              <span>▲</span><span>▼</span>
                             </div>
                           </div>
                         </th>
-                        <th className="px-6 py-4 border-b border-slate-200 border-l border-slate-100 min-w-[250px]">
-                          <div className="flex items-center justify-between">
-                            <span>NOME DO ALUNO</span>
-                            <div className="flex flex-col text-[9px] text-slate-300 leading-[6px] gap-[1px] ml-2 font-black tracking-tighter">
-                              <span>▲</span>
-                              <span>▼</span>
+                        <th className="px-6 py-4 border-b border-slate-200 border-l border-slate-100 min-w-[250px] text-left">
+                          <div className="flex items-center justify-between relative pr-4">
+                            <span className="text-[13px] text-[#0f2851] font-bold">NOME DO ALUNO</span>
+                            <div className="absolute right-0 flex flex-col text-[10px] text-slate-300 opacity-60 font-black leading-[6px] gap-[1px]">
+                              <span>▲</span><span>▼</span>
                             </div>
                           </div>
                         </th>
@@ -342,17 +340,19 @@ export default function RelatorioNotas() {
                           );
                         })}
                         <th className="px-4 py-4 border-b border-slate-200 border-l border-slate-100 text-center min-w-[140px]">
-                          <div className="flex items-center justify-center gap-2">
-                            <span>MÉDIA PARCIAL</span>
-                            <div className="flex flex-col text-[9px] text-slate-300 leading-[6px] gap-[1px] ml-1 font-black tracking-tighter">
-                              <span>▲</span>
-                              <span>▼</span>
+                          <div className="flex flex-col items-center justify-center relative">
+                            <span className="text-[13px] text-[#0f2851] font-bold">MÉDIA PARCIAL</span>
+                            <div className="absolute right-1 flex flex-col text-[10px] text-slate-300 opacity-60 font-black leading-[6px] gap-[1px]">
+                              <span>▲</span><span>▼</span>
                             </div>
                           </div>
                         </th>
-                        <th className="px-4 py-4 border-b border-slate-200 border-l border-slate-100 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <span>MÉDIA PROCESSADA</span>
+                        <th className="px-4 py-4 border-b border-slate-200 border-l border-slate-100 text-center min-w-[140px]">
+                          <div className="flex flex-col items-center justify-center relative">
+                            <span className="text-[13px] text-[#0f2851] font-bold">MÉDIA PROCESSADA</span>
+                            <div className="absolute right-1 flex flex-col text-[10px] text-slate-300 opacity-60 font-black leading-[6px] gap-[1px]">
+                              <span>▲</span><span>▼</span>
+                            </div>
                           </div>
                         </th>
                       </tr>
@@ -397,7 +397,11 @@ export default function RelatorioNotas() {
                             
                             <td className="px-4 py-4 border-l border-slate-100 text-center">
                               {mediaVal !== null ? (
-                                <span className={`inline-flex min-w-[42px] justify-center px-2.5 py-1 rounded-full text-[13px] font-bold shadow-sm text-white ${mediaVal >= 6 ? 'bg-[#c2463e] shadow-red-200/50' : 'bg-[#c2463e] shadow-red-200/50'}`}>
+                                <span className={`inline-flex min-w-[50px] justify-center px-3 py-1 rounded-full text-[13px] font-bold shadow-sm text-white transition-colors duration-200 ${
+                                  mediaVal >= 6 
+                                    ? 'bg-[#4361ee] shadow-blue-200/50' 
+                                    : 'bg-[#c2463e] shadow-red-200/50'
+                                }`}>
                                   {Number(mediaVal).toFixed(2).replace('.', ',')}
                                 </span>
                               ) : (
