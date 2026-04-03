@@ -9,6 +9,7 @@ import Diario from './pages/Diario';
 import RelatorioNotas from './pages/RelatorioNotas';
 import RelatorioMedias from './pages/RelatorioMedias';
 import RelatorioConteudos from './pages/RelatorioConteudos';
+import RelatorioFrequencia from './pages/RelatorioFrequencia';
 import Frequencia from './pages/Frequencia';
 import Estatisticas from './pages/Estatisticas';
 import PendenciasLancamento from './pages/PendenciasLancamento';
@@ -39,6 +40,7 @@ export default function App() {
                 <Route path="/relatorio-notas" element={<RelatorioNotas />} />
                 <Route path="/relatorio-medias" element={<RelatorioMedias />} />
                 <Route path="/relatorio-conteudos" element={<RelatorioConteudos />} />
+                <Route path="/relatorio-frequencia" element={<RelatorioFrequencia />} />
                 <Route path="/frequencia" element={<Frequencia />} />
                 <Route path="/estatisticas" element={<Estatisticas />} />
                 <Route path="/pendencias-lancamento" element={<PendenciasLancamento />} />
