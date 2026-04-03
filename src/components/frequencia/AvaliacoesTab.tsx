@@ -136,7 +136,7 @@ export default function AvaliacoesTab() {
     const payload: Avaliacao = {
       id: selectedAvaliacao ? selectedAvaliacao.id : `temp_${Date.now()}`,
       turmaId: turmaAtiva?.id || '',
-      tipo: selectedAvaliacao ? selectedAvaliacao.tipo : `AV${String(avaliacoes.length + 1).padStart(2, '0')}`,
+      tipo: selectedAvaliacao?.tipo || `AV${String(avaliacoes.length + 1).padStart(2, '0')}`,
       data: selectedDate,
       instrumento: instrumentoAvaliacao,
       objetos: objetosAvaliacao,
@@ -682,9 +682,17 @@ export default function AvaliacoesTab() {
                 <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
                   <Pencil className="w-5 h-5" />
                 </div>
-                {selectedAvaliacao ? 'Alterar Avaliação' : 'Cadastrar Nova Avaliação'}
+                {selectedAvaliacao ? (selectedAvaliacao.parent_id ? 'Agendar Recuperação Paralela (RP)' : 'Alterar Avaliação') : 'Cadastrar Nova Avaliação'}
               </h3>
-              <button onClick={() => setAvaliacaoViewMode('list')} className="text-slate-400 hover:text-slate-600 transition"><X /></button>
+              <div className="flex items-center gap-4">
+                {selectedAvaliacao && (
+                  <div className="px-4 py-2 bg-blue-50 border border-blue-100 rounded-xl">
+                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest block leading-none mb-1">Tipo</span>
+                    <span className="text-sm font-black text-blue-700 uppercase">{selectedAvaliacao.tipo}</span>
+                  </div>
+                )}
+                <button onClick={() => setAvaliacaoViewMode('list')} className="text-slate-400 hover:text-slate-600 transition"><X /></button>
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-2">
