@@ -144,8 +144,8 @@ export default function RelatorioMedias() {
     <div className="min-h-screen bg-slate-50 relative">
       <div className="relative z-10">
         {/* SubHeader */}
-        <section className="bg-blue-50/50 px-6 py-4 flex items-center space-x-4 border-b border-blue-100">
-        <Link to="/turmas" className="flex items-center space-x-2 text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-4 py-1.5 rounded text-base font-medium transition">
+        <section className="bg-blue-50/10 px-6 py-4 flex items-center space-x-4 border-b border-blue-100/50">
+        <Link to="/turmas" className="flex items-center space-x-2 text-[#0f2851] bg-[#eef2ff] hover:bg-[#e0e7ff] px-4 py-1.5 rounded text-base font-semibold transition">
           <ArrowLeft className="w-5 h-5" />
           <span>Voltar</span>
         </Link>

@@ -163,14 +163,14 @@ export default function RelatorioNotas() {
     <div className="min-h-screen bg-slate-50 relative">
       <div className="relative z-10">
         {/* SubHeader */}
-        <div className="bg-indigo-50/50 px-8 py-3 flex items-center gap-4 border-b border-indigo-100">
-        <Link to="/turmas" className="bg-blue-100 text-blue-700 px-4 py-2 rounded flex items-center gap-2 text-base font-semibold border border-blue-200 hover:bg-blue-200 transition">
+        <div className="bg-blue-50/10 px-8 py-3 flex items-center gap-4 border-b border-blue-100/50">
+        <Link to="/turmas" className="bg-[#eef2ff] text-[#0f2851] px-4 py-1.5 rounded flex items-center gap-2 text-base font-semibold border border-blue-100 hover:bg-[#e0e7ff] transition">
           <ArrowLeft className="w-5 h-5" />
           Voltar
         </Link>
         <div className="flex items-center gap-3">
-          <h2 className="text-slate-800 text-xl font-medium">Relatório de Notas das Avaliações</h2>
-          <span className="bg-green-100 text-green-700 text-sm font-bold px-3 py-1 rounded-full border border-green-200">Ano: {APP_CONFIG.YEAR}</span>
+          <h2 className="text-[#0f2851] text-xl font-semibold">Relatório de Notas das Avaliações</h2>
+          <span className="bg-emerald-100 text-emerald-700 text-[12px] font-bold px-3 py-1 rounded-full border border-emerald-200">Ano: {APP_CONFIG.YEAR}</span>
         </div>
       </div>
 

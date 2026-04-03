@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, ChevronDown, ChevronRight, ChevronLeft, Edit2, GraduationCap, Building2, Clock } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, ChevronLeft, Edit2, GraduationCap, Building2, Clock, Calendar } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import NovaTurmaModal from '../components/NovaTurmaModal';
 import { APP_CONFIG } from '../config/appConfig';
@@ -195,7 +195,7 @@ export default function Turmas() {
             {/* Info Strip */}
             <div className="p-6 bg-blue-50/30 dark:bg-slate-800/50 grid grid-cols-1 md:grid-cols-3 gap-6 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-indigo-100 dark:bg-slate-700 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                <div className="w-12 h-12 bg-[#eef2ff] dark:bg-slate-700 rounded-full flex items-center justify-center text-[#0f2851] dark:text-blue-400">
                   <GraduationCap className="w-6 h-6" />
                 </div>
                 <div>
@@ -205,7 +205,7 @@ export default function Turmas() {
               </div>
               
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-indigo-100 dark:bg-slate-700 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                <div className="w-12 h-12 bg-[#eef2ff] dark:bg-slate-700 rounded-full flex items-center justify-center text-[#0f2851] dark:text-blue-400">
                   <Building2 className="w-6 h-6" />
                 </div>
                 <div>
@@ -217,7 +217,7 @@ export default function Turmas() {
               </div>
               
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-indigo-100 dark:bg-slate-700 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                <div className="w-12 h-12 bg-[#eef2ff] dark:bg-slate-700 rounded-full flex items-center justify-center text-[#0f2851] dark:text-blue-400">
                   <Clock className="w-6 h-6" />
                 </div>
                 <div>
@@ -281,12 +281,12 @@ export default function Turmas() {
                         <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{turma.fase}</td>
                         <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{turma.componente}</td>
                         <td className="px-6 py-5 whitespace-nowrap">
-                          <button 
+                          <button
                             onClick={() => handleSelectTurma(turma)}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded text-sm font-bold hover:bg-indigo-100 dark:hover:bg-indigo-800/50 transition-colors uppercase"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-[#eef2ff] dark:bg-blue-900/50 text-[#0f2851] dark:text-blue-300 rounded text-sm font-bold hover:bg-[#e0e7ff] dark:hover:bg-blue-800/50 transition-colors uppercase"
                           >
-                            Selecionar
-                            <ChevronRight className="w-4 h-4" />
+                            <Calendar className="w-4 h-4" />
+                            <span>Diário</span>
                           </button>
                         </td>
                       </tr>
