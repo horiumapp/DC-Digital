@@ -101,18 +101,37 @@ export default function TabProfessores() {
         setIsNovoProfessorModalOpen(false);
       }
     } else {
-      const { error } = await supabase
+      // Limpa chaves vazias para não conflitar com constraints UNIQUE (tipo cpf vazio)
+      const dataToInsert = { ...professorData };
+      if (!dataToInsert.cpf) dataToInsert.cpf = null;
+      if (!dataToInsert.email) dataToInsert.email = null;
+
+      const { data: newProfList, error } = await supabase
         .from('professores')
-        .insert([professorData]);
+        .insert([dataToInsert])
+        .select();
 
       if (error) {
         console.error("Erro ao inserir:", error);
         alert("Erro ao criar professor: " + error.message);
       } else {
+        const newProf = newProfList?.[0];
+        // Se existe uma escola selecionada, alocamos ele automaticamente nela!
+        if (selectedEscola && newProf) {
+          const { error: alocError } = await supabase
+            .from('professor_alocacoes')
+            .insert({
+               professor_id: newProf.id,
+               escola_id: selectedEscola.id,
+               turno: 'Manhã'
+            });
+          if (alocError) console.error("Erro ao alocar:", alocError);
+        }
+
         fetchProfessores();
         setProfessorParaEditar(null);
         setIsNovoProfessorModalOpen(false);
-        // Limpar form inline se for o caso
+        // Limpar form inline
         setInlineFormData({ nome: '', departamento: 'Geral', disciplinas: [] });
       }
     }
@@ -123,9 +142,13 @@ export default function TabProfessores() {
       alert("Por favor, informe o nome do professor.");
       return;
     }
+    
+    // Gera um email fictício único baseado no timestamp para não dar colisão no banco
+    const fakeEmail = `${inlineFormData.nome.toLowerCase().replace(/\s+/g, '.')}.${Date.now()}@escola.tmp`;
+
     handleSaveProfessor({
       ...inlineFormData,
-      email: `${inlineFormData.nome.toLowerCase().replace(/\s+/g, '.')}@escola.com`,
+      email: fakeEmail,
       cpf: '',
       telefone: '',
       status: 'Ativo',
@@ -368,10 +391,14 @@ export default function TabProfessores() {
                   {/* Actions (Image 1 row style) */}
                   <div className="bg-slate-50/50 rounded-xl p-2 flex items-center justify-between mb-6 border border-slate-100 shadow-inner">
                     <button 
+                      onClick={() => {
+                        setProfessorParaAlocar(professor);
+                        setIsAlocacoesModalOpen(true);
+                      }}
                       className="p-2.5 text-slate-400 hover:text-blue-600 bg-white rounded-lg shadow-sm border border-slate-100 flex-1 flex justify-center transition-colors"
-                      title="Disciplinas"
+                      title="Gerenciar Escolas / Alocações"
                     >
-                      <GraduationCap className="w-4 h-4" />
+                      <Building2 className="w-4 h-4" />
                     </button>
                     <div className="w-px h-6 bg-slate-200 mx-1" />
                     <button 
