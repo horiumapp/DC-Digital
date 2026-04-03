@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
 import { supabase } from '../lib/supabase';
 import { formatMatricula } from '../utils/formatters';
+import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
 
 export default function AparataDetalhes() {
   const { turmaAtiva, alunos, avaliacoes, lancamentos } = useTurma();
@@ -125,46 +126,7 @@ export default function AparataDetalhes() {
           <div className="bg-white/70 rounded-2xl p-6 border border-slate-200 space-y-6">
 
             {/* Info da Turma */}
-            <div className="grid grid-cols-4 gap-4">
-              <div className="flex items-center gap-3 bg-blue-50/50 p-4 rounded-2xl">
-                <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center text-blue-700">
-                  <GraduationCap className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-400 uppercase">Professor</p>
-                  <p className="text-sm font-bold text-slate-800" title={turmaAtiva.professor}>
-                    {turmaAtiva.professor.length > 20 ? turmaAtiva.professor.substring(0, 18) + '...' : turmaAtiva.professor}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 bg-blue-50/50 p-4 rounded-2xl">
-                <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center text-blue-700">
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-400 uppercase">Escola</p>
-                  <p className="text-sm font-bold text-slate-800">{turmaAtiva.escola}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 bg-blue-50/50 p-4 rounded-2xl">
-                <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center text-blue-700">
-                  <Clock className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-400 uppercase">Turno</p>
-                  <p className="text-sm font-bold text-slate-800">{turmaAtiva.turno}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 bg-blue-50/50 p-4 rounded-2xl">
-                <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center text-blue-700">
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-400 uppercase">Componente</p>
-                  <p className="text-sm font-bold text-slate-800 uppercase">{turmaAtiva.componente}</p>
-                </div>
-              </div>
-            </div>
+            <TurmaHeaderInfo turmaAtiva={turmaAtiva} />
 
             {/* Seção Detalhes da Movimentação */}
             <div>

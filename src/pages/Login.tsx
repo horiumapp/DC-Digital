@@ -112,9 +112,9 @@ export default function Login() {
                 </label>
               </div>
               <div className="text-base">
-                <a href="#" className="font-medium text-blue-600 hover:underline transition-all">
+                <Link to="/recuperar-senha" className="font-medium text-blue-600 hover:underline transition-all">
                   Esqueceu a senha?
-                </a>
+                </Link>
               </div>
             </div>
 

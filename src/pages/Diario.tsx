@@ -3,7 +3,8 @@ import { ArrowLeft, Bell, ChevronDown, GraduationCap, Building2, Clock, BookOpen
 import { Link } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
 import CalendarWidget from '../components/common/CalendarWidget';
-import { getBimestrePorData } from '../utils/dateUtils';
+import { useTurmaProgress } from '../hooks/useTurmaProgress';
+import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
 
 export default function Diario() {
   const { turmaAtiva, lancamentos, avaliacoes, alunos, horarioTurma } = useTurma();
@@ -72,137 +73,14 @@ export default function Diario() {
     );
   }
 
-  const calcPercent = (val: number, total: number) => {
-    if (total === 0) return 0;
-    return Math.round((val / total) * 100);
-  };
-
-  // Datas do período selecionado (devem vir ANTES de calcProgressStats)
-  let dataInicioValida = new Date(0);
-  let dataFimValida = new Date(9999, 11, 31);
-  if (periodoSelecionado) {
-    const [inicioAno, inicioMes, inicioDia] = periodoSelecionado.dataInicio.split('-');
-    dataInicioValida = new Date(Number(inicioAno), Number(inicioMes) - 1, Number(inicioDia));
-    const [fimAno, fimMes, fimDia] = periodoSelecionado.dataFim.split('-');
-    dataFimValida = new Date(Number(fimAno), Number(fimMes) - 1, Number(fimDia));
-  }
-
-  // ─── Cálculo dinâmico de progresso ───────────────────────────────────────
-  //
-  // Total esperado = (dias letivos passados no bimestre) × (nº de tempos da turma)
-  // Um "tempo" gera 1 lançamento de frequência + 1 de conteúdo por dia de aula.
-  // Só conta dias que já passaram (até hoje) dentro do bimestre selecionado.
-
-  const calcProgressStats = () => {
-    if (!horarioTurma || !turmaAtiva) {
-      return { pFreq: 0, pObj: 0, totalEsperado: 0, freqLancadas: 0, conteudoLancados: 0 };
-    }
-
-    let totalEsperado = 0;
-    let freqLancadas = 0;
-    let conteudoLancados = 0;
-
-    const inicio = new Date(dataInicioValida);
-    inicio.setHours(0, 0, 0, 0);
-    const fim = new Date(dataFimValida);
-    fim.setHours(23, 59, 59, 999);
-
-    const curso = new Date(inicio.getTime());
-    while (curso <= fim) {
-      const dow = curso.getDay();
-      const temposNoHorario = horarioTurma.filter(h => Number(h.dia_semana) === dow);
-      
-      if (temposNoHorario.length > 0) {
-        const dayStr = `${curso.getDate().toString().padStart(2, '0')}/${(curso.getMonth() + 1).toString().padStart(2, '0')}/${curso.getFullYear()}`;
-        
-        temposNoHorario.forEach(horario => {
-          totalEsperado++;
-          
-          // Verificar se existe lançamento para este dia e este tempo específico
-          const temFrequencia = lancamentos.some(l => 
-            l.data === dayStr && 
-            l.tempo === `${horario.tempo_ordem}º TEMPO` && 
-            l.tipo === 'frequencia' &&
-            String(l.turmaId) === String(turmaAtiva.id)
-          );
-          
-          const temConteudo = lancamentos.some(l => 
-            l.data === dayStr && 
-            l.tempo === `${horario.tempo_ordem}º TEMPO` && 
-            l.tipo === 'conteudo' &&
-            String(l.turmaId) === String(turmaAtiva.id)
-          );
-
-          if (temFrequencia) freqLancadas++;
-          if (temConteudo) conteudoLancados++;
-        });
-      }
-      curso.setDate(curso.getDate() + 1);
-    }
-
-    const pFreq = totalEsperado > 0 ? Math.min(100, Math.round((freqLancadas / totalEsperado) * 100)) : 0;
-    const pObj  = totalEsperado > 0 ? Math.min(100, Math.round((conteudoLancados / totalEsperado) * 100)) : 0;
-
-    return { pFreq, pObj, totalEsperado, freqLancadas, conteudoLancados };
-  };
-
-  const { pFreq, pObj, totalEsperado } = calcProgressStats();
-
-  // Cor dinâmica por porcentagem (Seguindo referência visual: Verde para alto, Vermelho para baixo)
-  const barColor = (pct: number) => {
-    if (pct > 75) return 'bg-emerald-500';
-    if (pct > 50) return 'bg-amber-400';
-    return 'bg-red-500';
-  };
-
-  // ─── Cálculo de Avaliações e Notas ───────────────────────────────────────
-  // Filtrar avaliações da turma ativa que pertencem ao BIMESTRE selecionado
-  const avaliacoesDaTurma = avaliacoes.filter(av => {
-    // Normalização rigorosa de ID de turma
-    if (String(av.turmaId) !== String(turmaAtiva.id)) return false;
-    
-    // Filtro de Integridade: Só conta se a avaliação tiver uma data válida de 2026
-    // Registros sem data ou com datas malformadas de outros anos são ignorados.
-    if (!av.data || !av.data.includes('2026') || av.id.includes('temp_')) return false;
-
-    // Se a avaliação tiver campo bimestre, usamos ele. Caso contrário, inferimos pela data.
-    const bNome = av.bimestre || getBimestrePorData(av.data);
-    return bNome === periodoSelecionado.nome;
-  });
-  
-  const avaliacoesCadastradas = avaliacoesDaTurma.length;
-  
-  // Regra baseada nos tempos semanais reais (da tabela de horários)
-  // 3 ou menos aulas semanais = meta de 2 avaliações | mais que isso = meta de 3
-  const nAulasSemanais = horarioTurma?.length || 0;
-  // Fallback: se não tiver tempos carrgados, assume a meta pela turmaAtiva.tempos
-  const totalSlotsSemanais = nAulasSemanais > 0 ? nAulasSemanais : (turmaAtiva.tempos?.length || 0);
-  const avaliacoesPrevistas = totalSlotsSemanais <= 3 ? 2 : 3;
-  
-  // Só calcula se houver de fato sessões previstas e avaliações encontradas
-  const pAvaliacoes = (totalEsperado > 0 && avaliacoesPrevistas > 0 && avaliacoesCadastradas > 0) 
-    ? Math.min(100, Math.round((avaliacoesCadastradas / avaliacoesPrevistas) * 100)) 
-    : 0;
-
-  // Notas lançadas: total de (aluno x avaliacao) que possuem valor
-  let notasLancadasCount = 0;
-  if (avaliacoesDaTurma.length > 0 && alunos.length > 0) {
-    avaliacoesDaTurma.forEach(av => {
-      alunos.forEach(aluno => {
-        // Garantir que a nota exista e não seja apenas um campo vazio
-        const nota = aluno.notas ? aluno.notas[av.id] : null;
-        if (nota !== undefined && nota !== null && nota !== '') {
-          notasLancadasCount++;
-        }
-      });
-    });
-  }
-
-  const totalNotasEsperadas = avaliacoesDaTurma.length * alunos.length;
-  const pNotas = (totalNotasEsperadas > 0 && avaliacoesDaTurma.length > 0) 
-    ? Math.min(100, Math.round((notasLancadasCount / totalNotasEsperadas) * 100)) 
-    : 0;
-
+  const { pFreq, pObj, pAvaliacoes, pNotas, barColor } = useTurmaProgress(
+    turmaAtiva, 
+    periodoSelecionado, 
+    lancamentos, 
+    horarioTurma, 
+    avaliacoes, 
+    alunos
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 relative">
@@ -231,49 +109,7 @@ export default function Diario() {
 
         {/* Main Info Cards */}
         <div className="bg-white/70 dark:bg-slate-800/70 rounded-2xl p-6 border border-slate-200 dark:border-slate-700">
-          <div className="grid grid-cols-4 gap-4">
-            <div className="flex items-center gap-3 bg-blue-50/50 dark:bg-slate-700/50 p-4 rounded-2xl">
-              <div className="w-10 h-10 rounded-full bg-blue-200 dark:bg-slate-600 flex items-center justify-center text-blue-700 dark:text-blue-400">
-                <GraduationCap className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 dark:text-slate-300 uppercase">Professor</p>
-                <p className="text-sm font-bold text-slate-800 dark:text-slate-100" title={turmaAtiva.professor}>
-                  {turmaAtiva.professor.length > 20 ? turmaAtiva.professor.substring(0, 18) + '...' : turmaAtiva.professor}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 bg-blue-50/50 dark:bg-slate-700/50 p-4 rounded-2xl">
-              <div className="w-10 h-10 rounded-full bg-blue-200 dark:bg-slate-600 flex items-center justify-center text-blue-700 dark:text-blue-400">
-                <Building2 className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 dark:text-slate-300 uppercase">Escola</p>
-                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{turmaAtiva.escola}</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 bg-blue-50/50 dark:bg-slate-700/50 p-4 rounded-2xl">
-              <div className="w-10 h-10 rounded-full bg-blue-200 dark:bg-slate-600 flex items-center justify-center text-blue-700 dark:text-blue-400">
-                <Clock className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 dark:text-slate-300 uppercase">Turno</p>
-                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{turmaAtiva.turno}</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 bg-blue-50/50 dark:bg-slate-700/50 p-4 rounded-2xl">
-              <div className="w-10 h-10 rounded-full bg-blue-200 dark:bg-slate-600 flex items-center justify-center text-blue-700 dark:text-blue-400">
-                <BookOpen className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 dark:text-slate-300 uppercase">Componente</p>
-                <p className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase">{turmaAtiva.componente}</p>
-              </div>
-            </div>
-          </div>
+          <TurmaHeaderInfo turmaAtiva={turmaAtiva} />
 
           <div className="flex flex-col lg:flex-row gap-8 mt-6">
             <div className="w-full lg:w-[340px] shrink-0">
