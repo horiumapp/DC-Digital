@@ -53,8 +53,15 @@ export function useTurmaProgress(
 
     const inicio = new Date(dataInicioValida);
     inicio.setHours(0, 0, 0, 0);
-    const fim = new Date(dataFimValida);
-    fim.setHours(23, 59, 59, 999);
+    
+    // Limitar o cálculo até HOJE ou até o fim do bimestre (o que for menor)
+    const hoje = new Date();
+    hoje.setHours(23, 59, 59, 999);
+    
+    const fimBimestre = new Date(dataFimValida);
+    fimBimestre.setHours(23, 59, 59, 999);
+    
+    const fim = hoje < fimBimestre ? hoje : fimBimestre;
 
     const curso = new Date(inicio.getTime());
     const activeTurmaId = String(turmaAtiva.id).split('_')[0];

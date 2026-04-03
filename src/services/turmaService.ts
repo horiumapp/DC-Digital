@@ -224,12 +224,34 @@ export const TurmaService = {
   removerConteudo: async (turmaId: string | number, disciplina: string, data: string, tempo: string): Promise<void> => {
     const tid = turmaId.toString().split('_')[0];
     const { error } = await supabase
-      .from('conteudos')
-      .delete()
-      .eq('turma_id', tid)
-      .eq('data', data)
-      .eq('tempo', tempo)
-      .eq('disciplina', disciplina);
+    .from('conteudos')
+    .delete()
+    .eq('turma_id', tid)
+    .eq('data', data)
+    .eq('tempo', tempo)
+    .eq('disciplina', disciplina);
     if (error) throw error;
+  },
+
+  fetchAllConteudos: async (turmaId: string | number, disciplina: string): Promise<Conteudo[]> => {
+    const tid = turmaId.toString().split('_')[0];
+    const { data, error } = await supabase
+      .from('conteudos')
+      .select('*')
+      .eq('turma_id', tid)
+      .eq('disciplina', disciplina)
+      .order('data', { ascending: false });
+    
+    if (error) throw error;
+    
+    return (data || []).map(c => ({
+      id: c.id.toString(),
+      turmaId: c.turma_id,
+      data: c.data,
+      tempo: c.tempo,
+      objetos: c.objetos || [],
+      habilidades: c.habilidades || [],
+      descricao: c.descricao || ''
+    }));
   }
 };

@@ -76,6 +76,7 @@ interface TurmaContextType {
   removerLancamento: (lancamento: Lancamento) => void;
   alunos: Aluno[];
   avaliacoes: Avaliacao[];
+  conteudos: Conteudo[];
   horarioTurma: Horario[];
   loading: boolean;
   salvarAvaliacao: (av: Avaliacao) => Promise<void>;
@@ -96,6 +97,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
+  const [conteudos, setConteudos] = useState<Conteudo[]>([]);
   const [horarioTurma, setHorarioTurma] = useState<Horario[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -108,18 +110,21 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
         setAvaliacoes([]);
         setLancamentos([]);
         setHorarioTurma([]);
+        setConteudos([]);
 
         try {
           const rawId = turmaAtiva.id.toString().split('_')[0];
-          const [ls, hs, alumnosData] = await Promise.all([
+          const [ls, hs, alumnosData, conts] = await Promise.all([
             TurmaService.fetchLancamentos(rawId, turmaAtiva.componente),
             TurmaService.fetchHorario(rawId, turmaAtiva.componente),
-            TurmaService.fetchAlunos(rawId)
+            TurmaService.fetchAlunos(rawId),
+            TurmaService.fetchAllConteudos(rawId, turmaAtiva.componente)
           ]);
           
           setLancamentos(ls);
           setHorarioTurma(hs);
           setAlunos(alumnosData);
+          setConteudos(conts);
           
           // Busca avaliações (depende de alunos para notas)
           await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alumnosData);
@@ -212,6 +217,9 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     const rawId = turmaAtiva.id.toString().split('_')[0];
     await TurmaService.salvarConteudo(rawId, turmaAtiva.componente, cont);
     registrarLancamento({ turmaId: rawId, data: cont.data, tipo: 'conteudo', tempo: cont.tempo });
+    // Recarregar conteúdos favoritos para outras abas
+    const conts = await TurmaService.fetchAllConteudos(rawId, turmaAtiva.componente);
+    setConteudos(conts);
   };
 
   const buscarFrequencia = async (data: string, tempo: string) => {
@@ -254,13 +262,16 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     const rawId = turmaAtiva.id.toString().split('_')[0];
     await TurmaService.removerConteudo(rawId, turmaAtiva.componente, data, tempo);
     removerLancamento({ turmaId: rawId, data, tipo: 'conteudo', tempo });
+    // Recarregar conteúdos
+    const conts = await TurmaService.fetchAllConteudos(rawId, turmaAtiva.componente);
+    setConteudos(conts);
   };
 
   return (
     <TurmaContext.Provider value={{ 
       turmaAtiva, selecionarTurma, 
       lancamentos, registrarLancamento, removerLancamento,
-      alunos, avaliacoes, horarioTurma, loading, 
+      alunos, avaliacoes, conteudos, horarioTurma, loading, 
       salvarAvaliacao, removerAvaliacao, salvarNotas,
       salvarFrequencia, salvarConteudo, buscarFrequencia, buscarConteudo,
       removerFrequencia, removerConteudo
