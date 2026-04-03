@@ -3,6 +3,7 @@ import { ArrowLeft, ChevronDown, Search, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { formatarDataParaISO, getBimestrePorData, getDayOfWeek } from '../utils/dateUtils';
 import { APP_CONFIG } from '../config/appConfig';
 
 interface TurmaRelatorio {
@@ -132,40 +133,78 @@ export default function RelatorioConteudos() {
       let dateStart = '';
       let dateEnd = '';
       
+      const hojeISO = new Date().toISOString().split('T')[0];
+      
       if (opcaoFiltro === 'Período') {
         const period = APP_CONFIG.BIMESTRES.find(b => b.label === periodoSelecionado);
         if (period) {
           dateStart = period.dataInicio;
-          dateEnd = period.dataFim;
+          // Se o fim do bimestre for depois de hoje, limitamos a hoje para o relatório ser atual
+          dateEnd = period.dataFim > hojeISO ? hojeISO : period.dataFim;
         }
       } else {
         const mesesMap: Record<string, number> = {
-          'JANEIRO': 1, 'FEVEREIRO': 2, 'MARÇO': 3, 'ABRIL': 4,
-          'MAIO': 5, 'JUNHO': 6, 'JULHO': 7, 'AGOSTO': 8,
-          'SETEMBRO': 9, 'OUTUBRO': 10, 'NOVEMBRO': 11, 'DEZEMBRO': 12
+          'JANEIRO': 1, 'FEVEREIRO': 2, 'MARÇO': 3, 'ABRIL': 4, 'MAIO': 5, 'JUNHO': 6, 
+          'JULHO': 7, 'AGOSTO': 8, 'SETEMBRO': 9, 'OUTUBRO': 10, 'NOVEMBRO': 11, 'DEZEMBRO': 12
         };
         const mes = mesesMap[periodoSelecionado];
         if (mes) {
           dateStart = `${APP_CONFIG.YEAR}-${mes.toString().padStart(2, '0')}-01`;
-          dateEnd = `${APP_CONFIG.YEAR}-${mes.toString().padStart(2, '0')}-31`;
+          const lastDay = new Date(APP_CONFIG.YEAR, mes, 0).getDate();
+          const mesEndISO = `${APP_CONFIG.YEAR}-${mes.toString().padStart(2, '0')}-${lastDay}`;
+          dateEnd = mesEndISO > hojeISO ? hojeISO : mesEndISO;
         }
       }
 
-      console.log('Buscando conteúdos com:', { turmaId, componente, dateStart, dateEnd });
+      console.log('--- INICIO BUSCA RELATORIO ---');
+      console.log('Critérios:', { turmaId, componente, dateStart, dateEnd, hoje: hojeISO });
 
-      const { data: contentsRes, error } = await supabase
+      // Busca Primária por UUID (Sem filtro agressivo de data no SQL para evitar problemas de formato string)
+      const { data: rawContents, error } = await supabase
         .from('conteudos')
         .select('*')
-        .eq('turma_id', turmaId)
-        .ilike('disciplina', componente)
-        .gte('data', dateStart)
-        .lte('data', dateEnd)
-        .order('data', { ascending: true });
+        .eq('turma_id', turmaId);
 
       if (error) throw error;
 
-      if (!contentsRes || contentsRes.length === 0) {
-        alert('Nenhum conteúdo encontrado para os critérios selecionados.');
+      console.log(`Registros totais da turma no banco: ${rawContents?.length || 0}`);
+
+      // Filtragem Inteligente em Memória (JS) usando normalização de datas
+      const filtered = (rawContents || []).filter(c => {
+        const cDateISO = formatarDataParaISO(c.data);
+        const matchDate = cDateISO >= dateStart && cDateISO <= dateEnd;
+        const matchComp = String(c.disciplina || '').trim().toUpperCase() === componente.trim().toUpperCase();
+        return matchDate && matchComp;
+      });
+
+      console.log(`Registros após filtragem de Data/Disciplina: ${filtered.length}`);
+
+      let contentsRes = filtered;
+
+      // Fallback: Se não achou nada pelo ID, tentamos buscar pelo NOME da disciplina em todo o período
+      // Isso ajuda se o ID da turma foi corrompido ou trocado por outro formato
+      if (contentsRes.length === 0) {
+        console.log('Tentando Fallback Amplo por Disciplina/Escola...');
+        const { data: fallbackData } = await supabase
+          .from('conteudos')
+          .select('*')
+          .ilike('disciplina', componente)
+          .gte('data', dateStart.split('-').reverse().join('/')) // Tenta formato BR caso o GTE funcione
+          .lte('data', dateEnd.split('-').reverse().join('/'));
+
+        const fallbackFiltered = (fallbackData || []).filter(c => {
+           const cDateISO = formatarDataParaISO(c.data);
+           return cDateISO >= dateStart && cDateISO <= dateEnd;
+        });
+
+        if (fallbackFiltered.length > 0) {
+          contentsRes = fallbackFiltered;
+          console.log(`Fallback encontrou ${contentsRes.length} registros.`);
+        }
+      }
+
+      if (contentsRes.length === 0) {
+        alert('Nenhum conteúdo encontrado para os critérios selecionados no diário.');
         setDataLoading(false);
         return;
       }
@@ -452,15 +491,31 @@ export default function RelatorioConteudos() {
               </tr>
             </thead>
             <tbody>
-              {conteudosRelatorio.map((c, i) => (
-                <tr key={i}>
-                  <td className="text-center">{c.data}</td>
-                  <td className="text-center">{c.tempo}</td>
-                  <td className="leading-tight text-[8px] py-2">{c.descricao}</td>
-                  <td></td>
-                  <td></td>
-                </tr>
-              ))}
+              {conteudosRelatorio.map((c, i) => {
+                let dataExibicao = c.data;
+                
+                // Formatação resiliente para evitar "Invalid Date"
+                if (c.data) {
+                  if (/^\d{4}-\d{2}-\d{2}/.test(c.data)) {
+                    // Formato ISO -> BR
+                    const [y, m, d] = c.data.split('T')[0].split('-');
+                    dataExibicao = `${d}/${m}/${y}`;
+                  } else if (/^\d{2}\/\d{2}\/\d{4}/.test(c.data)) {
+                    // Já está no formato BR
+                    dataExibicao = c.data.substring(0, 10);
+                  }
+                }
+
+                return (
+                  <tr key={i}>
+                    <td className="text-center">{dataExibicao || 'N/D'}</td>
+                    <td className="text-center">{c.tempo}</td>
+                    <td className="leading-tight text-[8px] py-2">{c.descricao}</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                );
+              })}
               {/* Preencher linhas vazias se for pouco conteúdo */}
               {[...Array(Math.max(0, 15 - conteudosRelatorio.length))].map((_, i) => (
                 <tr key={`empty-${i}`}>
