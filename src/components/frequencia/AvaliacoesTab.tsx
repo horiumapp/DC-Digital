@@ -6,38 +6,8 @@ import { useCaptcha } from '../../hooks/useCaptcha';
 import { getBimestrePorData } from '../../utils/dateUtils';
 import { formatMatricula } from '../../utils/formatters';
 
-// Dados de referência para Objetos de Conhecimento
-const PERIODOS_LETIVOS = [
-  { id: '1bim', label: '1. BIMESTRE 05/02/2026 - 23/04/2026' },
-  { id: '2bim', label: '2. BIMESTRE 28/04/2026 - 07/07/2026' },
-  { id: '3bim', label: '3. BIMESTRE 21/07/2026 - 24/09/2026' },
-  { id: '4bim', label: '4. BIMESTRE 28/09/2026 - 18/12/2026' }
-];
-
-const UNIDADES_DIDATICAS: Record<string, string[]> = {
-  '1bim': ['GEOMETRIA PLANA', 'ÁLGEBRA LINEAR', 'ARITMÉTICA BÁSICA'],
-  '2bim': ['GEOMETRIA ESPACIAL', 'EQUAÇÕES DO 2º GRAU', 'PROBABILIDADE'],
-  '3bim': ['TRIGONOMETRIA', 'ESTATÍSTICA', 'FUNÇÕES'],
-  '4bim': ['MATEMÁTICA FINANCEIRA', 'COMBINATÓRIA', 'PROGRESSÕES']
-};
-
-const OBJETOS_CONHECIMENTO: Record<string, string[]> = {
-  'GEOMETRIA PLANA': ['POLÍGONOS REGULARES: DEFINIÇÃO E PROPRIEDADES (NÚMERO DE LADOS, ÂNGULOS INTERNOS E EXTERNOS); ELEMENTOS', 'ÁREAS DE FIGURAS PLANAS', 'PERÍMETRO E CIRCUNFERÊNCIA'],
-  'ÁLGEBRA LINEAR': ['SISTEMAS LINEARES', 'MATRIZES E DETERMINANTES', 'VETORES NO PLANO'],
-  'ARITMÉTICA BÁSICA': ['OPERAÇÕES FUNDAMENTAIS', 'DIVISIBILIDADE E NÚMEROS PRIMOS', 'MMC E MDC'],
-  'GEOMETRIA ESPACIAL': ['PRISMAS E PIRÂMIDES', 'CILINDROS E CONES', 'ESFERAS'],
-  'EQUAÇÕES DO 2º GRAU': ['FÓRMULA DE BHASKARA', 'SOMA E PRODUTO DAS RAÍZES', 'PROBLEMAS ENVOLVENDO EQUAÇÕES'],
-  'PROBABILIDADE': ['ESPAÇO AMOSTRAL', 'EVENTOS E PROBABILIDADES', 'PROBABILIDADE CONDICIONAL'],
-  'TRIGONOMETRIA': ['RAZÕES TRIGONOMÉTRICAS', 'CÍRCULO TRIGONOMÉTRICO', 'FUNÇÕES TRIGONOMÉTRICAS'],
-  'ESTATÍSTICA': ['MEDIDAS DE TENDÊNCIA CENTRAL', 'MEDIDAS DE DISPERSÃO', 'GRÁFICOS ESTATÍSTICOS'],
-  'FUNÇÕES': ['FUNÇÃO AFIM', 'FUNÇÃO QUADRÁTICA', 'FUNÇÃO EXPONENCIAL'],
-  'MATEMÁTICA FINANCEIRA': ['JUROS SIMPLES', 'JUROS COMPOSTOS', 'DESCONTOS'],
-  'COMBINATÓRIA': ['PRINCÍPIO FUNDAMENTAL DA CONTAGEM', 'PERMUTAÇÕES', 'COMBINAÇÕES'],
-  'PROGRESSÕES': ['PROGRESSÃO ARITMÉTICA', 'PROGRESSÃO GEOMÉTRICA', 'SÉRIES']
-};
-
 export default function AvaliacoesTab() {
-  const { turmaAtiva, alunos, avaliacoes, loading, salvarAvaliacao, removerAvaliacao, salvarNotas } = useTurma();
+  const { turmaAtiva, alunos, avaliacoes, conteudos, loading, salvarAvaliacao, removerAvaliacao, salvarNotas } = useTurma();
 
   const [avaliacaoViewMode, setAvaliacaoViewMode] = useState<'list' | 'details' | 'edit' | 'grades'>('list');
   const [selectedAvaliacao, setSelectedAvaliacao] = useState<any>(null);
@@ -53,6 +23,39 @@ export default function AvaliacoesTab() {
   const [localNotas, setLocalNotas] = useState<Record<string, string>>({}); // alunoId -> valor string
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+
+  // Gerar opções dinâmicas de Unidades Didáticas baseadas nos conteúdos lançados
+  const unidadesOpcoes = React.useMemo(() => {
+    if (!selectedDate || !conteudos) return [];
+    const bimestreAtual = getBimestrePorData(selectedDate);
+    
+    // Filtrar conteúdos do mesmo bimestre e pegar unidades únicas
+    const unidades = conteudos
+      .filter(c => getBimestrePorData(c.data) === bimestreAtual)
+      .map(c => c.habilidades[0]) // Assumindo habilidades[0] como Unidade
+      .filter((u, index, self) => u && self.indexOf(u) === index);
+      
+    return unidades;
+  }, [selectedDate, conteudos]);
+
+  // Gerar opções dinâmicas de Objetos de Conhecimento baseadas na Unidade selecionada
+  const objetosOpcoes = React.useMemo(() => {
+    if (!unidadeDidatica || !conteudos) return [];
+    
+    const objetos = conteudos
+      .filter(c => c.habilidades[0] === unidadeDidatica)
+      .flatMap(c => c.objetos) // Pega todos os objetos daquela unidade
+      .filter((o, index, self) => o && self.indexOf(o) === index);
+      
+    return objetos;
+  }, [unidadeDidatica, conteudos]);
+
+  const PERIODOS_LABELS: Record<string, string> = {
+    '1º Bimestre': '1. BIMESTRE 05/02/2026 - 23/04/2026',
+    '2º Bimestre': '2. BIMESTRE 28/04/2026 - 07/07/2026',
+    '3º Bimestre': '3. BIMESTRE 21/07/2026 - 24/09/2026',
+    '4º Bimestre': '4. BIMESTRE 28/09/2026 - 18/12/2026'
+  };
 
   const {
     generatedCaptcha,
@@ -153,11 +156,7 @@ export default function AvaliacoesTab() {
   useEffect(() => {
     if (selectedDate) {
       const bim = getBimestrePorData(selectedDate);
-      const map: Record<string, string> = {
-        '1º Bimestre': '1bim', '2º Bimestre': '2bim',
-        '3º Bimestre': '3bim', '4º Bimestre': '4bim'
-      };
-      setPeriodoLetivo(map[bim] || '1bim');
+      setPeriodoLetivo(bim);
       setUnidadeDidatica('');
       setObjetoConhecimento('');
     }
@@ -464,9 +463,12 @@ export default function AvaliacoesTab() {
                         value={periodoLetivo}
                         onChange={(e) => { setPeriodoLetivo(e.target.value); setUnidadeDidatica(''); setObjetoConhecimento(''); }}
                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-600/10 cursor-pointer"
+                        disabled
                       >
                         <option value="">Selecione...</option>
-                        {PERIODOS_LETIVOS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                        {Object.entries(PERIODOS_LABELS).map(([bim, label]) => (
+                          <option key={bim} value={bim}>{label}</option>
+                        ))}
                       </select>
                     </div>
                     <div className="space-y-2">
@@ -475,10 +477,10 @@ export default function AvaliacoesTab() {
                         value={unidadeDidatica}
                         onChange={(e) => { setUnidadeDidatica(e.target.value); setObjetoConhecimento(''); }}
                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-600/10 cursor-pointer"
-                        disabled={!periodoLetivo}
+                        disabled={!periodoLetivo || unidadesOpcoes.length === 0}
                       >
-                        <option value="">Selecione...</option>
-                        {periodoLetivo && (UNIDADES_DIDATICAS[periodoLetivo] || []).map(u => <option key={u} value={u}>{u}</option>)}
+                        <option value="">{unidadesOpcoes.length > 0 ? "Selecione..." : "Nenhuma unidade lançada"}</option>
+                        {unidadesOpcoes.map(u => <option key={u} value={u}>{u}</option>)}
                       </select>
                     </div>
                   </div>
@@ -489,10 +491,10 @@ export default function AvaliacoesTab() {
                         value={objetoConhecimento}
                         onChange={(e) => setObjetoConhecimento(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-600/10 cursor-pointer"
-                        disabled={!unidadeDidatica}
+                        disabled={!unidadeDidatica || objetosOpcoes.length === 0}
                       >
-                        <option value="">Selecione...</option>
-                        {unidadeDidatica && (OBJETOS_CONHECIMENTO[unidadeDidatica] || []).map(o => <option key={o} value={o}>{o}</option>)}
+                        <option value="">{objetosOpcoes.length > 0 ? "Selecione..." : "Nenhum objeto lançado"}</option>
+                        {objetosOpcoes.map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
                     </div>
                     <button
