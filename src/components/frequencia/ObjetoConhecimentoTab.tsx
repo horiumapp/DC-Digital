@@ -3,6 +3,7 @@ import { Check, Pencil, Trash2, X } from 'lucide-react';
 import Captcha from '../common/Captcha';
 import { useTurma } from '../../contexts/TurmaContext';
 import { useCaptcha } from '../../hooks/useCaptcha';
+import { REFERENCIAL_CURRICULAR, UnidadeCurricular } from '../../data/curriculum';
 
 interface ObjetoConhecimentoTabProps {
   turmaAtiva: any;
@@ -32,10 +33,56 @@ export default function ObjetoConhecimentoTab({
   const [objetoSalvo, setObjetoSalvo] = useState(false);
   const [objetoData, setObjetoData] = useState<{ descricao: string; observacao: string; status: string } | null>(null);
   
-  const [objetoUnidade, setObjetoUnidade] = useState('AS ORIGENS, O PENSAMENTO RACIONAL E O PENSAMENTO..');
-  const [objetoConhecimento, setObjetoConhecimento] = useState('O MITO (GREGOS E AMAZÔNICOS)');
+  // Lógica de Currículo Dinâmico
+  const unidadesDisponiveis = React.useMemo(() => {
+    if (!turmaAtiva) return [];
+    const segmento = turmaAtiva.ensino || "Ensino Fundamental";
+    const faseStr = turmaAtiva.fase || "";
+    const anoMatch = faseStr.match(/\d+/);
+    const ano = anoMatch ? anoMatch[0] : "1";
+    const disciplina = (turmaAtiva.componente || "").toUpperCase();
+
+    const unidadesAno = REFERENCIAL_CURRICULAR[segmento]?.[ano] || [];
+    
+    // Tenta sugerir a unidade correta com base na disciplina
+    if (disciplina.includes("PORTUGUES") || disciplina.includes("LINGUA") || disciplina.includes("ALFABETIZAÇÃO")) {
+      return unidadesAno.filter(u => u.nome.includes("Unidade Didática 1"));
+    }
+    if (disciplina.includes("MATEMATICA")) {
+      return unidadesAno.filter(u => u.nome.includes("Unidade Didática 2"));
+    }
+    if (disciplina.includes("CIENCIA") || disciplina.includes("BIOLOGIA") || disciplina.includes("FISICA") || disciplina.includes("QUIMICA")) {
+      return unidadesAno.filter(u => u.nome.includes("Unidade Didática 3"));
+    }
+    if (disciplina.includes("HISTORIA") || disciplina.includes("GEOGRAFIA") || disciplina.includes("FILOSOFIA") || disciplina.includes("SOCIOLOGIA") || disciplina.includes("CONVIVENCIA")) {
+      return unidadesAno.filter(u => u.nome.includes("Unidade Didática 4"));
+    }
+
+    return unidadesAno;
+  }, [turmaAtiva]);
+
+  const [objetoUnidade, setObjetoUnidade] = useState('');
+  const [objetoConhecimento, setObjetoConhecimento] = useState('');
   const [objetoObservacao, setObjetoObservacao] = useState('');
   const [objetoStatus, setObjetoStatus] = useState('Ministrado');
+
+  // Atualiza seleções iniciais quando as unidades mudam
+  React.useEffect(() => {
+    if (unidadesDisponiveis.length > 0 && !objetoUnidade) {
+      setObjetoUnidade(unidadesDisponiveis[0].nome);
+    }
+  }, [unidadesDisponiveis]);
+
+  const objetosDisponiveis = React.useMemo(() => {
+    const unidade = unidadesDisponiveis.find(u => u.nome === objetoUnidade);
+    return unidade ? unidade.objetos : [];
+  }, [objetoUnidade, unidadesDisponiveis]);
+
+  React.useEffect(() => {
+    if (objetosDisponiveis.length > 0 && !objetoConhecimento) {
+      setObjetoConhecimento(objetosDisponiveis[0]);
+    }
+  }, [objetosDisponiveis]);
   
   const [showObjetoTable, setShowObjetoTable] = useState(false);
   const [showNoRecordsObjeto, setShowNoRecordsObjeto] = useState(false);
@@ -51,7 +98,7 @@ export default function ObjetoConhecimentoTab({
           setObjetoData({
             descricao: dados.objetos[0] || '',
             observacao: dados.descricao || '',
-            status: 'Ministrado' // Simplificado para o exemplo
+            status: 'Ministrado'
           });
           setObjetoConhecimento(dados.objetos[0] || '');
           setObjetoUnidade(dados.habilidades[0] || '');
@@ -60,11 +107,18 @@ export default function ObjetoConhecimentoTab({
           setObjetoSalvo(false);
           setObjetoData(null);
           setShowObjetoTable(false);
+          // Reset para o padrão sugerido
+          if (unidadesDisponiveis.length > 0) {
+            setObjetoUnidade(unidadesDisponiveis[0].nome);
+            if (unidadesDisponiveis[0].objetos.length > 0) {
+              setObjetoConhecimento(unidadesDisponiveis[0].objetos[0]);
+            }
+          }
         }
       }
     };
     carregar();
-  }, [selectedDate, tempoAula, turmaAtiva]);
+  }, [selectedDate, tempoAula, turmaAtiva, unidadesDisponiveis]);
 
   const {
     generatedCaptcha,
