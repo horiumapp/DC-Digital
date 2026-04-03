@@ -97,8 +97,8 @@ export default function RelatorioConteudos() {
                   nome: t.nome, 
                   turno: t.turno, 
                   componente: comp,
-                  ensino: t.ensino || 'Ensino Médio - NEM', 
-                  fase: t.fase || '3 SERIE', 
+                  ensino: t.ensino || 'Ensino Fundamental', 
+                  fase: t.nome, 
                   numero: t.turma_codigo || numero,
                   escolaId: t.escola_id,
                   escolaNome: t.escolas?.nome || 'ESCOLA NÃO IDENTIFICADA'
@@ -244,11 +244,9 @@ export default function RelatorioConteudos() {
                 <table className="w-full text-sm text-left">
                   <thead className="bg-[#f0f4f8] text-[#0f2851] font-bold border-b border-slate-200">
                     <tr>
-                      <th className="px-4 py-3 border-r border-slate-200">Ensino</th>
-                      <th className="px-4 py-3 border-r border-slate-200">Projeto</th>
-                      <th className="px-4 py-3 border-r border-slate-200">Fase</th>
-                      <th className="px-4 py-3 border-r border-slate-200">Turma</th>
-                      <th className="px-4 py-3 border-r border-slate-200">Componente</th>
+                      <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Ensino / Projeto</th>
+                      <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Fase / Turma</th>
+                      <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Componente</th>
                       <th className="px-4 py-3 text-center">Selecione</th>
                     </tr>
                   </thead>
