@@ -38,23 +38,27 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
     if (!user?.email) return;
     setLoading(true);
     try {
-      // 1. Achar o ID do professor pelo e-mail
-      const { data: profData } = await supabase
+      const emailLimpo = user.email.trim();
+      
+      // 1. Achar todos os IDs de professor vinculados a este e-mail
+      const { data: profs } = await supabase
         .from('professores')
         .select('id')
-        .eq('email', user.email)
-        .single();
+        .ilike('email', `%${emailLimpo}%`);
 
-      if (profData) {
-        // 2. Achar a primeira escola alocada
+      if (profs && profs.length > 0) {
+        const profIds = profs.map(p => p.id);
+        
+        // 2. Achar a primeira escola alocada para QUALQUER um desses perfis
         const { data: alocData } = await supabase
           .from('professor_alocacoes')
           .select('escola_id')
-          .eq('professor_id', profData.id)
+          .in('professor_id', profIds)
           .limit(1);
 
         if (alocData && alocData.length > 0) {
-          fetchData(profData.id, alocData[0].escola_id);
+          // Passamos a lista de IDs para o fetchData
+          fetchData(profIds, alocData[0].escola_id);
         }
       }
     } catch (err) {
@@ -63,15 +67,16 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
     setLoading(false);
   };
 
-  const fetchData = async (pId?: string, eId?: string) => {
-    const targetProfId = pId || professorId;
+  const fetchData = async (pIds?: string | string[], eId?: string) => {
+    // Garantir que pIds seja um array
+    const targetProfIds = Array.isArray(pIds) ? pIds : (pIds ? [pIds] : (professorId ? [professorId] : []));
     const targetEscolaId = eId || escolaId;
 
-    if (!targetProfId || !targetEscolaId) return;
+    if (targetProfIds.length === 0 || !targetEscolaId) return;
 
     setLoading(true);
     try {
-      // 1. Buscar Turmas vinculadas ao professor nesta escola
+      // 1. Buscar Turmas desta escola
       const { data: turmasData } = await supabase
         .from('turmas')
         .select('*')
@@ -79,25 +84,30 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
       
       if (turmasData) setTurmas(turmasData);
       
-      // 2. Buscar Disciplinas do Professor
-      const { data: profData } = await supabase
+      // 2. Buscar Disciplinas do Professor (unificando de todos os perfis)
+      const { data: profsData } = await supabase
         .from('professores')
         .select('disciplinas')
-        .eq('id', targetProfId)
-        .single();
-      if (profData?.disciplinas) setProfessorDisciplinas(profData.disciplinas);
+        .in('id', targetProfIds);
+      
+      const allDisciplinas: string[] = [];
+      profsData?.forEach(p => {
+        if (p.disciplinas) allDisciplinas.push(...p.disciplinas);
+      });
+      setProfessorDisciplinas([...new Set(allDisciplinas)]);
 
-      // 3. Buscar Horários atuais
+      // 3. Buscar Horários atuais de TODOS os perfis vinculados
       const { data: scheduleData } = await supabase
         .from('professor_horarios')
         .select('*, turmas(*)')
-        .eq('professor_id', targetProfId)
+        .in('professor_id', targetProfIds)
         .eq('escola_id', targetEscolaId);
 
       const mappedSchedule: Record<string, any> = {};
       if (scheduleData) {
         scheduleData.forEach(item => {
           const key = `${item.dia_semana}-${item.tempo_ordem}`;
+          // Se houver conflito entre perfis duplicados, o último ganha
           mappedSchedule[key] = {
             ...item.turmas,
             componente_horario: item.componente
