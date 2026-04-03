@@ -100,57 +100,55 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (turmaAtiva) {
-      // Limpeza imediata ao trocar de turma
-      setAlunos([]);
-      setAvaliacoes([]);
-      setLancamentos([]);
-      setHorarioTurma([]);
-      cargarDadosTurma(turmaAtiva.id);
-    } else {
-      setAlunos([]);
-      setAvaliacoes([]);
-      setLancamentos([]);
-      setHorarioTurma([]);
-    }
+    const carregarDados = async () => {
+      if (turmaAtiva) {
+        setLoading(true);
+        // Limpeza antecipada
+        setAlunos([]);
+        setAvaliacoes([]);
+        setLancamentos([]);
+        setHorarioTurma([]);
+
+        try {
+          const rawId = turmaAtiva.id.toString().split('_')[0];
+          const [ls, hs, alumnosData] = await Promise.all([
+            TurmaService.fetchLancamentos(rawId, turmaAtiva.componente),
+            TurmaService.fetchHorario(rawId),
+            TurmaService.fetchAlunos(rawId)
+          ]);
+          
+          setLancamentos(ls);
+          setHorarioTurma(hs);
+          setAlunos(alumnosData);
+          
+          // Busca avaliações (depende de alunos para notas)
+          await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alumnosData);
+        } catch (err) {
+          console.error('Erro ao carregar dados da turma:', err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    carregarDados();
   }, [turmaAtiva]);
 
-  const cargarDadosTurma = async (turmaId: string | number) => {
-    setLoading(true);
-    await Promise.all([
-      fetchAlunos(turmaId),
-      fetchAvaliacoes(turmaId),
-      fetchLancamentos(turmaId),
-      fetchHorario(turmaId)
-    ]);
-    setLoading(false);
-  const fetchAlunos = async (turmaId: string | number) => {
-    try {
-      const alunosData = await TurmaService.fetchAlunos(turmaId);
-      setAlunos(alunosData);
-    } catch (err) {
-      console.error('Erro ao carregar alunos:', err);
-    }
-  };
-
-  const fetchAvaliacoes = async (turmaId: string | number, disciplina: string) => {
-    setAvaliacoes([]);
-    setAlunos(prev => prev.map(a => ({ ...a, notas: {} })));
-
+  const fetchAvaliacoesInterno = async (turmaId: string | number, disciplina: string, contextAlunos: Aluno[]) => {
     try {
       const { avaliacoes: avsFormatadas, notasData } = await TurmaService.fetchAvaliacoes(turmaId, disciplina);
-      if (avsFormatadas.length > 0) {
-        setAvaliacoes(avsFormatadas);
-        // Aplica as notas nos alunos
-        if (notasData.length > 0) {
-          setAlunos(prevAlunos => prevAlunos.map(aluno => {
+      setAvaliacoes(avsFormatadas);
+      
+      if (notasData.length > 0) {
+        setAlunos(prevAlunos => {
+          const baseAlunos = contextAlunos.length > 0 ? contextAlunos : prevAlunos;
+          return baseAlunos.map(aluno => {
             const notasAluno: Record<string, string> = {};
             notasData.filter((n: any) => n.aluno_id.toString() === aluno.id).forEach((n: any) => {
               notasAluno[n.avaliacao_id.toString()] = n.valor.toString().replace('.', ',');
             });
             return { ...aluno, notas: notasAluno };
-          }));
-        }
+          });
+        });
       }
     } catch (err) {
       console.error('Erro ao carregar avaliações:', err);
@@ -184,117 +182,78 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   };
 
   const salvarAvaliacao = async (av: Avaliacao) => {
-    try {
-      if (!turmaAtiva) return;
-      await TurmaService.salvarAvaliacao(av, turmaAtiva.id, turmaAtiva.componente);
-      await fetchAvaliacoes(turmaAtiva.id, turmaAtiva.componente);
-    } catch (err) {
-      console.error('Erro ao salvar avaliação:', err);
-      alert('Erro ao salvar avaliação no banco de dados. Verifique sua conexão.');
-    }
+    if (!turmaAtiva) return;
+    const rawId = turmaAtiva.id.toString().split('_')[0];
+    await TurmaService.salvarAvaliacao(av, rawId, turmaAtiva.componente);
+    await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunos);
   };
 
   const removerAvaliacao = async (id: string) => {
-    try {
-      await TurmaService.removerAvaliacao(id);
-      setAvaliacoes(prev => prev.filter(a => a.id !== id));
-    } catch (err) {
-      console.error('Erro ao remover avaliação:', err);
-    }
+    await TurmaService.removerAvaliacao(id);
+    setAvaliacoes(prev => prev.filter(a => a.id !== id));
   };
 
   const salvarNotas = async (avaliacaoId: string, notas: { alunoId: string, valor: string }[]) => {
-    try {
-      await TurmaService.salvarNotas(avaliacaoId, notas);
-      if (turmaAtiva) await fetchAvaliacoes(turmaAtiva.id, turmaAtiva.componente);
-    } catch (err) {
-      console.error('Erro ao salvar notas:', err);
-      alert('Erro ao salvar notas no banco de dados.');
-    }
+    if (!turmaAtiva) return;
+    const rawId = turmaAtiva.id.toString().split('_')[0];
+    await TurmaService.salvarNotas(avaliacaoId, notas);
+    await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunos);
   };
 
   const salvarFrequencia = async (data: string, tempo: string, alunosFreq: Aluno[]) => {
-    try {
-      if (!turmaAtiva) return;
-      await TurmaService.salvarFrequencia(turmaAtiva.id, turmaAtiva.componente, data, tempo, alunosFreq);
-      registrarLancamento({ turmaId: turmaAtiva.id, data, tipo: 'frequencia', tempo });
-    } catch (err) {
-      console.error('Erro ao salvar frequência:', err);
-      alert('Erro ao salvar frequência no banco de dados.');
-    }
+    if (!turmaAtiva) return;
+    const rawId = turmaAtiva.id.toString().split('_')[0];
+    await TurmaService.salvarFrequencia(rawId, turmaAtiva.componente, data, tempo, alunosFreq);
+    registrarLancamento({ turmaId: rawId, data, tipo: 'frequencia', tempo });
   };
 
   const salvarConteudo = async (cont: Conteudo) => {
-    try {
-      if (!turmaAtiva) return;
-      await TurmaService.salvarConteudo(turmaAtiva.id, turmaAtiva.componente, cont);
-      registrarLancamento({ turmaId: turmaAtiva.id, data: cont.data, tipo: 'conteudo', tempo: cont.tempo });
-    } catch (err) {
-      console.error('Erro ao salvar conteúdo:', err);
-      alert('Erro ao salvar conteúdo no banco de dados.');
-    }
+    if (!turmaAtiva) return;
+    const rawId = turmaAtiva.id.toString().split('_')[0];
+    await TurmaService.salvarConteudo(rawId, turmaAtiva.componente, cont);
+    registrarLancamento({ turmaId: rawId, data: cont.data, tipo: 'conteudo', tempo: cont.tempo });
   };
 
   const buscarFrequencia = async (data: string, tempo: string) => {
-    try {
-      if (!turmaAtiva) return;
-      
-      const freqData = await TurmaService.buscarFrequencia(turmaAtiva.id, turmaAtiva.componente, data, tempo);
+    if (!turmaAtiva) return;
+    const rawId = turmaAtiva.id.toString().split('_')[0];
+    const freqData = await TurmaService.buscarFrequencia(rawId, turmaAtiva.componente, data, tempo);
 
-      if (freqData.length > 0) {
-        setAlunos(prev => prev.map(aluno => {
-          const f = freqData.find(fd => fd.aluno_id === aluno.id);
-          if (f) return { ...aluno, freq: f.status, part: f.participacao };
-          return aluno;
-        }));
-        registrarLancamento({ turmaId: turmaAtiva.id, data, tipo: 'frequencia', tempo });
-      } else {
-        setAlunos(prev => prev.map(aluno => ({ ...aluno, freq: 'P', part: 'Presencial' })));
-      }
-    } catch (err) {
-      console.error('Erro ao buscar frequência:', err);
+    if (freqData.length > 0) {
+      setAlunos(prev => prev.map(aluno => {
+        const f = freqData.find(fd => fd.aluno_id === aluno.id);
+        if (f) return { ...aluno, freq: f.status, part: f.participacao };
+        return aluno;
+      }));
+      registrarLancamento({ turmaId: rawId, data, tipo: 'frequencia', tempo });
+    } else {
+      setAlunos(prev => prev.map(aluno => ({ ...aluno, freq: 'P', part: 'Presencial' })));
     }
   };
 
   const buscarConteudo = async (data: string, tempo: string): Promise<Conteudo | null> => {
-    try {
-      if (!turmaAtiva) return null;
-      
-      const contData = await TurmaService.buscarConteudo(turmaAtiva.id, turmaAtiva.componente, data, tempo);
-
-      if (contData) {
-        registrarLancamento({ turmaId: turmaAtiva.id, data, tipo: 'conteudo', tempo });
-        return contData;
-      }
-      return null;
-    } catch (err) {
-      console.error('Erro ao buscar conteúdo:', err);
-      return null;
+    if (!turmaAtiva) return null;
+    const rawId = turmaAtiva.id.toString().split('_')[0];
+    const contData = await TurmaService.buscarConteudo(rawId, turmaAtiva.componente, data, tempo);
+    if (contData) {
+      registrarLancamento({ turmaId: rawId, data: contData.data, tipo: 'conteudo', tempo: contData.tempo });
     }
+    return contData;
   };
 
   const removerFrequencia = async (data: string, tempo: string) => {
-    try {
-      if (!turmaAtiva) return;
-      await TurmaService.removerFrequencia(turmaAtiva.id, turmaAtiva.componente, data, tempo);
-      
-      removerLancamento({ turmaId: turmaAtiva.id, data, tempo, tipo: 'frequencia' });
-      setAlunos(prev => prev.map(a => ({ ...a, freq: '', part: 'Presencial' })));
-    } catch (err) {
-      console.error('Erro ao remover frequência:', err);
-      alert('Erro ao excluir frequência do banco de dados.');
-    }
+    if (!turmaAtiva) return;
+    const rawId = turmaAtiva.id.toString().split('_')[0];
+    await TurmaService.removerFrequencia(rawId, turmaAtiva.componente, data, tempo);
+    removerLancamento({ turmaId: rawId, data, tipo: 'frequencia', tempo });
+    setAlunos(prev => prev.map(a => ({ ...a, freq: '', part: 'Presencial' })));
   };
 
   const removerConteudo = async (data: string, tempo: string) => {
-    try {
-      if (!turmaAtiva) return;
-      await TurmaService.removerConteudo(turmaAtiva.id, turmaAtiva.componente, data, tempo);
-      removerLancamento({ turmaId: turmaAtiva.id, data, tempo, tipo: 'conteudo' });
-    } catch (err) {
-      console.error('Erro ao remover conteúdo:', err);
-      alert('Erro ao excluir conteúdo do banco de dados.');
-    }
+    if (!turmaAtiva) return;
+    const rawId = turmaAtiva.id.toString().split('_')[0];
+    await TurmaService.removerConteudo(rawId, turmaAtiva.componente, data, tempo);
+    removerLancamento({ turmaId: rawId, data, tipo: 'conteudo', tempo });
   };
 
   return (
