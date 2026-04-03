@@ -115,8 +115,8 @@ export default function PendenciasFrequencia() {
         {/* Consulta Card */}
         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-medium text-slate-800 dark:text-slate-100">Consulta</h2>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium">
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Consulta</h2>
+            <button className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm font-bold shadow-sm active:scale-95">
               <Printer className="w-4 h-4" />
               Imprimir
             </button>
@@ -124,11 +124,11 @@ export default function PendenciasFrequencia() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Escola</label>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Escola</label>
               <select 
                 value={escolaId}
                 onChange={(e) => setEscolaId(e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-md text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
                 disabled={loading}
               >
                 {loading ? (
@@ -143,11 +143,11 @@ export default function PendenciasFrequencia() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Endereço</label>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Endereço</label>
               <select 
                 value={distrito}
                 onChange={(e) => setDistrito(e.target.value)}
-                className="w-full px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 rounded-md text-sm text-blue-800 dark:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 rounded-lg text-sm text-blue-800 dark:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
               >
                 {distritos.map(d => (
                   <option key={d} value={d}>{d}</option>
@@ -158,11 +158,11 @@ export default function PendenciasFrequencia() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Ensino</label>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Ensino</label>
               <select 
                 value={ensino}
                 onChange={(e) => setEnsino(e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-md text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
               >
                 <option value="ENSINO FUNDAMENTAL - 1º CICLO">ENSINO FUNDAMENTAL - 1º CICLO</option>
                 <option value="ENSINO MEDIO - MED TECNO">ENSINO MEDIO - MED TECNO</option>
@@ -174,11 +174,11 @@ export default function PendenciasFrequencia() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Turno</label>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Turno</label>
               <select 
                 value={turno}
                 onChange={(e) => setTurno(e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-md text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
               >
                 <option value="Matutino">Matutino</option>
                 <option value="Vespertino">Vespertino</option>
@@ -187,11 +187,11 @@ export default function PendenciasFrequencia() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Tipo de pendência</label>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Tipo de pendência</label>
               <select 
                 value={tipoPendencia}
                 onChange={(e) => setTipoPendencia(e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-md text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
               >
                 <option value="FREQUENCIA">FREQUENCIA</option>
                 <option value="OBJETO DE CONHECIMENTO">OBJETO DE CONHECIMENTO</option>
@@ -199,17 +199,17 @@ export default function PendenciasFrequencia() {
             </div>
           </div>
 
-          <div className="mb-6">
-            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">Período</label>
-            <div className="flex flex-wrap gap-4">
+          <div className="mb-8">
+            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">Período</label>
+            <div className="flex flex-wrap gap-6">
               {periodos.map((p) => (
-                <label key={p} className="flex items-center gap-2 cursor-pointer">
+                <label key={p} className="flex items-center gap-2.5 cursor-pointer">
                   <input 
                     type="checkbox" 
                     defaultChecked={p === '1. BIMESTRE'}
-                    className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                    className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
                   />
-                  <span className="text-xs text-slate-700 dark:text-slate-300">{p}</span>
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{p}</span>
                 </label>
               ))}
             </div>
@@ -234,15 +234,15 @@ export default function PendenciasFrequencia() {
         {/* Docentes Card */}
         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6 overflow-hidden">
           <div className="mb-6">
-            <h2 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-4">Docentes</h2>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Docentes</h2>
             <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input 
                 type="text"
                 value={buscaDocente}
                 onChange={(e) => setBuscaDocente(e.target.value)}
                 placeholder="Pesquisar..."
-                className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
               />
             </div>
           </div>
@@ -250,18 +250,18 @@ export default function PendenciasFrequencia() {
           <div className="overflow-x-auto -mx-6">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 dark:bg-slate-900 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-y border-slate-200 dark:border-slate-700">
-                  <th className="px-6 py-3">Professor</th>
-                  <th className="px-3 py-3">Data Lotação</th>
-                  <th className="px-3 py-3">Período</th>
-                  <th className="px-3 py-3">Turno</th>
-                  <th className="px-3 py-3">Ensino</th>
-                  <th className="px-3 py-3">Fase</th>
-                  <th className="px-3 py-3">Turma</th>
-                  <th className="px-3 py-3">Componente</th>
-                  <th className="px-3 py-3 text-center">% Pend Notas</th>
-                  <th className="px-3 py-3 text-center">% Pend Freq</th>
-                  <th className="px-3 py-3 text-center">% Pend Objeto</th>
+                <tr className="bg-slate-100 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-400 uppercase tracking-wider border-y border-slate-200 dark:border-slate-700">
+                  <th className="px-6 py-4">Professor</th>
+                  <th className="px-3 py-4 whitespace-nowrap">Data Lotação</th>
+                  <th className="px-3 py-4">Período</th>
+                  <th className="px-3 py-4">Turno</th>
+                  <th className="px-3 py-4">Ensino</th>
+                  <th className="px-3 py-4">Fase</th>
+                  <th className="px-3 py-4">Turma</th>
+                  <th className="px-3 py-4">Componente</th>
+                  <th className="px-3 py-4 text-center">% Pend Notas</th>
+                  <th className="px-3 py-4 text-center">% Pend Freq</th>
+                  <th className="px-3 py-4 text-center">% Pend Objeto</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -273,23 +273,23 @@ export default function PendenciasFrequencia() {
                   </tr>
                 ) : docentesFiltrados.length > 0 ? (
                   docentesFiltrados.map((d, i) => (
-                    <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-900 text-xs text-slate-700 dark:text-slate-300">
-                      <td className="px-6 py-4 font-medium">{d.professor}</td>
-                      <td className="px-3 py-4 whitespace-nowrap">{d.dataLotacao}</td>
-                      <td className="px-3 py-4 text-blue-600 font-medium">{d.periodo}</td>
-                      <td className="px-3 py-4">{d.turno}</td>
-                      <td className="px-3 py-4">{d.ensino}</td>
-                      <td className="px-3 py-4">{d.fase}</td>
-                      <td className="px-3 py-4">{d.turma}</td>
-                      <td className="px-3 py-4">{d.componente}</td>
-                      <td className="px-3 py-4 text-center font-semibold">{d.pendNotas.toFixed(2)}</td>
-                      <td className="px-3 py-4 text-center font-semibold">{d.pendFreq.toFixed(2)}</td>
-                      <td className="px-3 py-4 text-center font-semibold">{d.pendObjeto.toFixed(2)}</td>
+                    <tr key={i} className="hover:bg-blue-50/30 dark:hover:bg-slate-900 text-sm text-slate-600 dark:text-slate-300">
+                      <td className="px-6 py-5 text-slate-900 dark:text-white uppercase">{d.professor}</td>
+                      <td className="px-3 py-5 whitespace-nowrap">{d.dataLotacao}</td>
+                      <td className="px-3 py-5 text-blue-600 uppercase">{d.periodo}</td>
+                      <td className="px-3 py-5">{d.turno}</td>
+                      <td className="px-3 py-5">{d.ensino}</td>
+                      <td className="px-3 py-5">{d.fase}</td>
+                      <td className="px-3 py-5 uppercase font-medium">{d.turma}</td>
+                      <td className="px-3 py-5">{d.componente}</td>
+                      <td className="px-3 py-5 text-center">{d.pendNotas.toFixed(2)}</td>
+                      <td className="px-3 py-5 text-center">{d.pendFreq.toFixed(2)}</td>
+                      <td className="px-3 py-5 text-center">{d.pendObjeto.toFixed(2)}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={11} className="px-6 py-12 text-center text-sm text-slate-500 italic">
+                    <td colSpan={11} className="px-6 py-20 text-center text-sm text-slate-500 italic">
                       Nenhum docente encontrado para os critérios selecionados.
                     </td>
                   </tr>
