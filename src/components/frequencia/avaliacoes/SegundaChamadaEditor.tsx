@@ -74,8 +74,6 @@ export default function SegundaChamadaEditor({
                 />
               </th>
               <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">Nº</th>
-              <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">CÓDIGO DO ALUNO</th>
-              <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">MATRÍCULA NO.</th>
               <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">ALUNO</th>
               <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">DATA DA AVALIAÇÃO</th>
               <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">NOTA (0,00 A 10,00)</th>
@@ -93,10 +91,11 @@ export default function SegundaChamadaEditor({
                   />
                 </td>
                 <td className="px-8 py-4 text-slate-400 font-bold tabular-nums">{String(index + 1).padStart(2, '0')}</td>
-                <td className="px-8 py-4 text-slate-600 font-medium">{aluno.id}</td>
-                <td className="px-8 py-4 text-slate-500 font-medium tracking-wider">{aluno.matricula || '---'}</td>
                 <td className="px-8 py-4">
-                  <div className="font-bold text-slate-800 uppercase tracking-tight">{aluno.nome}</div>
+                  <div className="flex flex-col">
+                    <div className="font-bold text-slate-800 uppercase tracking-tight">{aluno.nome}</div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">MATRÍCULA: {aluno.matricula || '---'}</div>
+                  </div>
                 </td>
                 <td className="px-8 py-4">
                   <div className="relative max-w-[160px]">
@@ -105,9 +104,8 @@ export default function SegundaChamadaEditor({
                       value={secondCallRows[aluno.id]?.date || ''}
                       disabled={!secondCallRows[aluno.id]?.selected}
                       onChange={(e) => handleRowChange(aluno.id, 'date', e.target.value)}
-                      className="w-full pl-3 pr-10 py-2 border-2 border-slate-100 rounded-xl focus:border-blue-200 focus:ring-0 transition-all font-bold text-slate-700 disabled:opacity-50"
+                      className="w-full px-3 py-2 border-2 border-slate-100 rounded-xl focus:border-blue-200 focus:ring-0 transition-all font-bold text-slate-700 disabled:opacity-50"
                     />
-                    <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-500 pointer-events-none" />
                   </div>
                 </td>
                 <td className="px-8 py-4">

@@ -118,8 +118,9 @@ export default function AvaliacoesList({
                               {(() => {
                                 const hasGrades = alunos.some(a => a.notas?.[av.id]);
                                 const hasAbsences = (faltasPorData[formatarDataParaISO(av.data)] || new Set()).size > 0;
+                                const alreadyHasSecondCall = avaliacoes.some(rp => String(rp.parent_id) === String(av.id) && rp.tipo.includes('2CH'));
                                 
-                                if (hasGrades && hasAbsences) {
+                                if (hasGrades && hasAbsences && !alreadyHasSecondCall) {
                                   return (
                                     <button onClick={() => onSecondCall(av)}
                                       className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg font-bold text-[10px] uppercase transition-all shadow-md shadow-blue-600/10">

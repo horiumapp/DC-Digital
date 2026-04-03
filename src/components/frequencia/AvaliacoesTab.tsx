@@ -240,10 +240,9 @@ export default function AvaliacoesTab() {
           }}
           onDelete={(av) => { setAvaliacaoToDelete(av); setShowDeleteModal(true); }}
           onAddRP={(av) => {
-            const rpsCount = avaliacoes.filter(rp => rp.parent_id === av.id).length;
             const novoRP: any = {
               turmaId: av.turmaId,
-              tipo: `RP${String(rpsCount + 1).padStart(2, '0')}`,
+              tipo: av.tipo.includes('AV') ? av.tipo.replace('AV', 'RP') : `RP - ${av.tipo}`,
               data: new Date().toISOString().split('T')[0],
               instrumento: av.instrumento,
               objetos: av.objetos,
@@ -338,7 +337,7 @@ export default function AvaliacoesTab() {
       {avaliacaoViewMode === 'second_call' && (
         <SegundaChamadaEditor 
           selectedAvaliacao={selectedAvaliacao}
-          alunos={alunos}
+          alunos={alunos.filter(a => faltasPorData[formatarDataParaISO(selectedAvaliacao?.data || '')]?.has(a.id))}
           secondCallRows={secondCallRows}
           isSaving={isSaving}
           generatedCaptcha={generatedCaptcha}
