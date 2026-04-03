@@ -211,7 +211,14 @@ export default function RelatorioConteudos() {
         return;
       }
 
-      const formatted = contentsRes.map(c => {
+      // Ordenar por data cronológica antes de formatar para exibição
+      const sorted = [...contentsRes].sort((a, b) => {
+        const dateA = formatarDataParaISO(a.data);
+        const dateB = formatarDataParaISO(b.data);
+        return dateA.localeCompare(dateB);
+      });
+
+      const formatted = sorted.map(c => {
         let dataExibicao = '---';
         
         if (c.data && c.data !== 'Invalid Date') {
@@ -428,7 +435,7 @@ export default function RelatorioConteudos() {
       <div id="printable-relatorio" className="hidden print:block fixed inset-0 bg-white z-[9999] overflow-y-auto">
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
-            @page { margin: 1cm; size: A4; }
+            @page { margin: 1cm; size: A4 landscape; }
             html, body { height: 100%; overflow: hidden; background: white !important; }
             body * { visibility: hidden; }
             #printable-relatorio, #printable-relatorio * { visibility: visible; }
@@ -442,12 +449,16 @@ export default function RelatorioConteudos() {
             }
             .no-print { display: none !important; }
           }
-          #printable-relatorio table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-          #printable-relatorio th, #printable-relatorio td { border: 1px solid black; padding: 4px; text-align: left; font-size: 8px; font-family: Arial, sans-serif; }
-          #printable-relatorio .header-table td { border: none !important; border-bottom: 1px solid black !important; padding: 2px !important; }
-          #printable-relatorio .meta-grid td { border: 1px solid black !important; background: white !important; font-weight: bold; }
-          #printable-relatorio .label { font-size: 7px; color: #555; text-transform: uppercase; font-weight: normal; margin-bottom: 1px; }
-          #printable-relatorio .title-bar { background: white; text-align: center; font-size: 14px; font-weight: bold; border: 1px solid black; border-top: none; padding: 4px; }
+          #printable-relatorio table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 10px; }
+          #printable-relatorio th, #printable-relatorio td { border: 1px solid black; padding: 6px 4px; text-align: left; font-size: 9px; font-family: Arial, sans-serif; }
+          #printable-relatorio th { background-color: #f2f2f2 !important; font-weight: bold; text-transform: uppercase; }
+          #printable-relatorio tr:nth-child(even) td { background-color: #fafafa !important; }
+          #printable-relatorio .header-table td { border: none !important; border-bottom: 2px solid black !important; padding: 4px !important; }
+          #printable-relatorio .meta-grid td { border: 1px solid black !important; background: white !important; font-weight: bold; font-size: 8px; }
+          #printable-relatorio .label { font-size: 7px; color: #333; text-transform: uppercase; font-weight: normal; margin-bottom: 1px; }
+          #printable-relatorio .title-bar { background: #f2f2f2; text-align: center; font-size: 16px; font-weight: bold; border: 2px solid black; border-top: none; padding: 8px; text-transform: uppercase; }
+          #printable-relatorio .signatures { margin-top: 40px; display: flex; justify-content: space-around; font-size: 10px; font-weight: bold; text-align: center; }
+          #printable-relatorio .sig-box { border-top: 1px solid black; width: 250px; padding-top: 5px; margin-top: 30px; }
         `}} />
 
         <div className="p-4 bg-white text-black h-auto">
@@ -495,59 +506,122 @@ export default function RelatorioConteudos() {
                         <td className="px-2 py-1">
                           <div className="label">PERÍODO LETIVO:</div>
                           <div className="text-[9px] uppercase">{periodoSelecionado}</div>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td colSpan={3} className="px-2 py-1">
-                          <div className="label">PROFESSOR:</div>
-                          <div className="text-[10px] uppercase">{user?.name || 'JACKSON NASCIMENTO SILVA'}</div>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          {/* Header Area Oficial SEDUC-AM */}
+          <div className="flex border-2 border-black">
+            {/* Bloco Esquerdo: Brasão e Secretaria */}
+            <div className="w-[35%] border-r-2 border-black p-4 flex flex-col items-center justify-center text-center">
+              <img src="/logo_am.png" alt="Brasão Amazonas" className="w-20 h-20 mb-2 object-contain" />
+              <div className="font-bold text-[11px] leading-tight uppercase">
+                Estado do Amazonas<br />
+                Secretaria de Estado de<br />
+                Educação e Desporto
+              </div>
+            </div>
 
-          <div className="title-bar uppercase">
-            RELATÓRIO DE CONTEÚDO MINISTRADO
+            {/* Bloco Direito: Grade de Informações */}
+            <div className="flex-1 text-[8px] uppercase">
+              {/* Linha 1: Escola */}
+              <div className="border-b-2 border-black p-1">
+                <div className="label">Escola:</div>
+                <div className="font-bold text-[10px]">{selectedTurmaObj?.escolaNome}</div>
+              </div>
+
+              {/* Linha 2: Ensino | Turno | Turma */}
+              <div className="flex border-b-2 border-black">
+                <div className="flex-1 border-r-2 border-black p-1">
+                  <div className="label">Ensino:</div>
+                  <div className="font-bold">{selectedTurmaObj?.ensino}</div>
+                </div>
+                <div className="w-[25%] border-r-2 border-black p-1">
+                  <div className="label">Turno:</div>
+                  <div className="font-bold">{selectedTurmaObj?.turno}</div>
+                </div>
+                <div className="w-[15%] p-1">
+                  <div className="label">Turma:</div>
+                  <div className="font-bold">{selectedTurmaObj?.numero}</div>
+                </div>
+              </div>
+
+              {/* Linha 3: Fase | Componente | Período */}
+              <div className="flex border-b-2 border-black">
+                <div className="flex-1 border-r-2 border-black p-1">
+                  <div className="label">Fase:</div>
+                  <div className="font-bold">{selectedTurmaObj?.fase}</div>
+                </div>
+                <div className="flex-1 border-r-2 border-black p-1">
+                  <div className="label">Componente:</div>
+                  <div className="font-bold">{selectedTurmaObj?.componente?.toUpperCase()}</div>
+                </div>
+                <div className="w-[20%] p-1">
+                  <div className="label">Período Letivo:</div>
+                  <div className="font-bold">{periodoSelecionado}</div>
+                </div>
+              </div>
+
+              {/* Linha 4: Professor */}
+              <div className="p-1">
+                <div className="label">Professor:</div>
+                <div className="font-bold text-[10px]">{user?.user_metadata?.full_name?.toUpperCase() || 'NÃO IDENTIFICADO'}</div>
+                <div className="text-[6px] font-normal mb-0.5">Professor:</div>
+                <div className="text-[9px] truncate">{user?.user_metadata?.full_name?.toUpperCase() || 'NÃO IDENTIFICADO'}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Barra de Título */}
+          <div className="border-2 border-black border-t-0 p-2 text-center bg-white font-bold text-lg uppercase tracking-widest">
+            Relatório de Conteúdo Ministrado
           </div>
 
           {/* Main Table */}
-          <table className="mt-4">
+          <table className="mt-6 border-2 border-black w-full border-collapse">
             <thead className="bg-white">
-              <tr>
-                <th width="12%" className="text-center">DATA</th>
-                <th width="15%" className="text-center">TEMPO DE AULA</th>
-                <th width="43%">CONTEÚDO</th>
-                <th width="15%">OBSERVAÇÃO</th>
-                <th width="15%">CONTEÚDO MÍNIMO</th>
+              <tr className="border-b-2 border-black h-10">
+                <th width="10%" className="border-r-2 border-black text-center font-bold text-[9px]">DATA</th>
+                <th width="12%" className="border-r-2 border-black text-center font-bold text-[9px]">TEMPO DE AULA</th>
+                <th width="48%" className="border-r-2 border-black text-center font-bold text-[9px]">CONTEÚDO</th>
+                <th width="15%" className="border-r-2 border-black text-center font-bold text-[9px]">OBSERVAÇÃO</th>
+                <th width="15%" className="text-center font-bold text-[9px]">CONTEÚDO MÍNIMO</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y-2 divide-black">
               {conteudosRelatorio.map((c, i) => (
-                <tr key={i}>
-                  <td className="text-center">{c.data}</td>
-                  <td className="text-center">{c.tempo}</td>
-                  <td className="leading-tight text-[8px] py-2">{c.descricao}</td>
-                  <td></td>
+                <tr key={i} className="min-h-[40px]">
+                  <td className="border-r-2 border-black text-center font-bold text-[9px] py-3">{c.data}</td>
+                  <td className="border-r-2 border-black text-center text-[9px] uppercase">{c.tempo}</td>
+                  <td className="border-r-2 border-black text-[8px] leading-tight p-2 uppercase align-middle">{c.descricao}</td>
+                  <td className="border-r-2 border-black"></td>
                   <td></td>
                 </tr>
               ))}
               {/* Preencher linhas vazias se for pouco conteúdo */}
-              {[...Array(Math.max(0, 15 - conteudosRelatorio.length))].map((_, i) => (
-                <tr key={`empty-${i}`}>
-                  <td className="h-6"></td><td></td><td></td><td></td><td></td>
+              {[...Array(Math.max(0, 10 - conteudosRelatorio.length))].map((_, i) => (
+                <tr key={`empty-${i}`} className="h-10">
+                  <td className="border-r-2 border-black"></td>
+                  <td className="border-r-2 border-black"></td>
+                  <td className="border-r-2 border-black"></td>
+                  <td className="border-r-2 border-black"></td>
+                  <td></td>
                 </tr>
               ))}
             </tbody>
           </table>
 
+          {/* Área de Assinaturas */}
+          <div className="signatures mt-12 mb-8 flex justify-around">
+            <div className="sig-box border-t-2 border-black w-72 text-center pt-2">
+              <div className="text-[10px] font-bold uppercase">Assinatura do Professor(a)</div>
+              <div className="text-[8px] font-normal mt-1">{user?.user_metadata?.full_name?.toUpperCase()}</div>
+            </div>
+            <div className="sig-box border-t-2 border-black w-72 text-center pt-2">
+              <div className="text-[10px] font-bold uppercase">Assinatura da Coordenação Pedagógica</div>
+            </div>
+          </div>
+
           {/* Footer */}
-          <div className="mt-8 flex justify-between text-[8px] font-medium text-slate-500 italic border-t border-slate-100 pt-2">
-            <div>Impresso em {new Date().toLocaleString('pt-BR')}</div>
-            <div className="page-counter">Página 1/1</div>
+          <div className="mt-auto pt-4 border-t border-slate-200 flex justify-between text-[7px] italic text-slate-400">
+            <div>Gerado pelo Sistema DC Digital em {new Date().toLocaleString('pt-BR')}</div>
+            <div>Folha de Registro Individual - SEDUC-AM</div>
           </div>
         </div>
       </div>
