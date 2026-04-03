@@ -124,26 +124,6 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       fetchHorario(turmaId)
     ]);
     setLoading(false);
-  };
-
-  const fetchHorario = async (turmaId: string | number) => {
-    try {
-      const data = await TurmaService.fetchHorario(turmaId);
-      setHorarioTurma(data);
-    } catch (err) {
-      console.error('Erro ao carregar horário da turma:', err);
-    }
-  };
-
-  const fetchLancamentos = async (turmaId: string | number) => {
-    try {
-      const novosLancamentos = await TurmaService.fetchLancamentos(turmaId);
-      setLancamentos(novosLancamentos);
-    } catch (err) {
-      console.error('Erro ao carregar lançamentos:', err);
-    }
-  };
-
   const fetchAlunos = async (turmaId: string | number) => {
     try {
       const alunosData = await TurmaService.fetchAlunos(turmaId);
@@ -153,12 +133,12 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const fetchAvaliacoes = async (turmaId: string | number) => {
+  const fetchAvaliacoes = async (turmaId: string | number, disciplina: string) => {
     setAvaliacoes([]);
     setAlunos(prev => prev.map(a => ({ ...a, notas: {} })));
 
     try {
-      const { avaliacoes: avsFormatadas, notasData } = await TurmaService.fetchAvaliacoes(turmaId);
+      const { avaliacoes: avsFormatadas, notasData } = await TurmaService.fetchAvaliacoes(turmaId, disciplina);
       if (avsFormatadas.length > 0) {
         setAvaliacoes(avsFormatadas);
         // Aplica as notas nos alunos
@@ -206,8 +186,8 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const salvarAvaliacao = async (av: Avaliacao) => {
     try {
       if (!turmaAtiva) return;
-      await TurmaService.salvarAvaliacao(av, turmaAtiva.id);
-      await fetchAvaliacoes(turmaAtiva.id);
+      await TurmaService.salvarAvaliacao(av, turmaAtiva.id, turmaAtiva.componente);
+      await fetchAvaliacoes(turmaAtiva.id, turmaAtiva.componente);
     } catch (err) {
       console.error('Erro ao salvar avaliação:', err);
       alert('Erro ao salvar avaliação no banco de dados. Verifique sua conexão.');
@@ -226,7 +206,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const salvarNotas = async (avaliacaoId: string, notas: { alunoId: string, valor: string }[]) => {
     try {
       await TurmaService.salvarNotas(avaliacaoId, notas);
-      if (turmaAtiva) await fetchAvaliacoes(turmaAtiva.id);
+      if (turmaAtiva) await fetchAvaliacoes(turmaAtiva.id, turmaAtiva.componente);
     } catch (err) {
       console.error('Erro ao salvar notas:', err);
       alert('Erro ao salvar notas no banco de dados.');
@@ -236,7 +216,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const salvarFrequencia = async (data: string, tempo: string, alunosFreq: Aluno[]) => {
     try {
       if (!turmaAtiva) return;
-      await TurmaService.salvarFrequencia(turmaAtiva.id, data, tempo, alunosFreq);
+      await TurmaService.salvarFrequencia(turmaAtiva.id, turmaAtiva.componente, data, tempo, alunosFreq);
       registrarLancamento({ turmaId: turmaAtiva.id, data, tipo: 'frequencia', tempo });
     } catch (err) {
       console.error('Erro ao salvar frequência:', err);
@@ -247,7 +227,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const salvarConteudo = async (cont: Conteudo) => {
     try {
       if (!turmaAtiva) return;
-      await TurmaService.salvarConteudo(turmaAtiva.id, cont);
+      await TurmaService.salvarConteudo(turmaAtiva.id, turmaAtiva.componente, cont);
       registrarLancamento({ turmaId: turmaAtiva.id, data: cont.data, tipo: 'conteudo', tempo: cont.tempo });
     } catch (err) {
       console.error('Erro ao salvar conteúdo:', err);
@@ -259,7 +239,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     try {
       if (!turmaAtiva) return;
       
-      const freqData = await TurmaService.buscarFrequencia(turmaAtiva.id, data, tempo);
+      const freqData = await TurmaService.buscarFrequencia(turmaAtiva.id, turmaAtiva.componente, data, tempo);
 
       if (freqData.length > 0) {
         setAlunos(prev => prev.map(aluno => {
@@ -280,7 +260,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     try {
       if (!turmaAtiva) return null;
       
-      const contData = await TurmaService.buscarConteudo(turmaAtiva.id, data, tempo);
+      const contData = await TurmaService.buscarConteudo(turmaAtiva.id, turmaAtiva.componente, data, tempo);
 
       if (contData) {
         registrarLancamento({ turmaId: turmaAtiva.id, data, tipo: 'conteudo', tempo });
@@ -296,7 +276,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const removerFrequencia = async (data: string, tempo: string) => {
     try {
       if (!turmaAtiva) return;
-      await TurmaService.removerFrequencia(turmaAtiva.id, data, tempo);
+      await TurmaService.removerFrequencia(turmaAtiva.id, turmaAtiva.componente, data, tempo);
       
       removerLancamento({ turmaId: turmaAtiva.id, data, tempo, tipo: 'frequencia' });
       setAlunos(prev => prev.map(a => ({ ...a, freq: '', part: 'Presencial' })));
@@ -309,7 +289,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const removerConteudo = async (data: string, tempo: string) => {
     try {
       if (!turmaAtiva) return;
-      await TurmaService.removerConteudo(turmaAtiva.id, data, tempo);
+      await TurmaService.removerConteudo(turmaAtiva.id, turmaAtiva.componente, data, tempo);
       removerLancamento({ turmaId: turmaAtiva.id, data, tempo, tipo: 'conteudo' });
     } catch (err) {
       console.error('Erro ao remover conteúdo:', err);
