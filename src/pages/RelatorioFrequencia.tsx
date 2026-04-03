@@ -154,38 +154,67 @@ export default function RelatorioFrequencia() {
         }
       }
 
+      console.log('--- BUSCA DE FREQUÊNCIAS ---');
+      console.log('Filtros:', { turmaId, componente, dateStart, dateEnd });
+
       // 1. Buscar Alunos
       const alunosList = await TurmaService.fetchAlunos(turmaId);
+      console.log(`Alunos encontrados: ${alunosList.length}`);
       
-      // 2. Buscar Frequências de forma ampla (seguindo padrão do Relatório de Conteúdos)
-      // Buscamos todos da turma e filtramos em memória para evitar erros de formato de data/string no SQL
+      // 2. Buscar Frequências de forma ampla
       const { data: rawFreqs, error: freqError } = await supabase
         .from('frequencias')
         .select('*')
         .eq('turma_id', turmaId);
 
       if (freqError) throw freqError;
+      console.log(`Registros brutos da turma: ${rawFreqs?.length || 0}`);
 
       // Filtragem em Memória (JS)
       const finalFreqs = (rawFreqs || []).filter(f => {
         const fDateISO = formatarDataParaISO(f.data);
         if (!fDateISO || fDateISO === 'Invalid Date') return false;
         
+        // Comparação robusta de disciplina e período
         const matchProp = String(f.disciplina || '').trim().toUpperCase() === componente.trim().toUpperCase();
         const matchDate = fDateISO >= dateStart && fDateISO <= dateEnd;
         return matchProp && matchDate;
       });
 
+      console.log(`Registros após filtragem (Disciplina + Data): ${finalFreqs.length}`);
+
       if (finalFreqs.length === 0) {
-        alert('Nenhuma frequência encontrada para os critérios selecionados.');
-        setDataLoading(false);
-        return;
+        // Fallback: Tenta buscar pelo NOME da disciplina caso o ID da turma esteja vinculado de forma diferente
+        console.log('Tentando fallback por disciplina ilike...');
+        const { data: fallbackFreqs } = await supabase
+          .from('frequencias')
+          .select('*')
+          .ilike('disciplina', componente);
+        
+        const filteredFallback = (fallbackFreqs || []).filter(f => {
+           // Verifica se o aluno da frequência pertence à turma atual
+           const alunoPertence = alunosList.some(a => a.id.toString() === f.aluno_id.toString());
+           const fDateISO = formatarDataParaISO(f.data);
+           return alunoPertence && fDateISO >= dateStart && fDateISO <= dateEnd;
+        });
+
+        if (filteredFallback.length > 0) {
+           console.log(`Fallback encontrou ${filteredFallback.length} registros.`);
+           finalFreqs.push(...filteredFallback);
+        } else {
+           alert('Nenhuma frequência encontrada para os critérios selecionados.');
+           setDataLoading(false);
+           return;
+        }
       }
 
       // 3. Processar Colunas (Datas/Tempos)
       const colunasUnicas = new Set<string>();
       finalFreqs.forEach(f => {
-        colunasUnicas.add(`${f.data}|${f.tempo}`);
+        // Garantir que temos data e tempo
+        if (f.data && f.tempo) {
+          colunasUnicas.add(`${f.data}|${f.tempo}`);
+        }
       });
 
       const colunasSorted = [...colunasUnicas].sort((a, b) => {
@@ -474,7 +503,7 @@ export default function RelatorioFrequencia() {
                       <td width="20%"><div className="label">Turma:</div><div className="value">{selectedTurmaObj?.numero}</div></td>
                     </tr>
                     <tr>
-                      <td><div className="label">Professor:</div><div className="value">{user?.user_metadata?.full_name || 'NÃO IDENTIFICADO'}</div></td>
+                      <td><div className="label">Professor:</div><div className="value">{user?.name || 'NÃO IDENTIFICADO'}</div></td>
                       <td><div className="label">Fase:</div><div className="value">{selectedTurmaObj?.fase}</div></td>
                       <td><div className="label">Componente:</div><div className="value">{selectedTurmaObj?.componente}</div></td>
                     </tr>
