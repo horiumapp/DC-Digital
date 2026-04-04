@@ -70,12 +70,12 @@ export const fetchPendenciasPorEscola = async (
           mapConsolidado[key] = {
             professor: h.professores?.nome || 'N/D',
             turmaId: h.turma_id,
-            turma: h.turmas?.nome || 'N/D',
+            turma: h.turmas?.nome?.split(' ').pop() || 'N/D',
             componente: h.componente,
             periodo: periodoNome,
             turno: h.turmas?.turno || 'N/D',
             ensino: 'Ensino Fundamental', // Mapeamento fixo conforme padrão do sistema
-            fase: h.turmas?.nome || 'N/D', // Fase é o nome da turma
+            fase: h.turmas?.nome?.split(' ').slice(0, -1).join(' ') || h.turmas?.nome || 'N/D',
             tempos: new Set([h.tempo_ordem.toString() + 'º TEMPO']),
             totalAulasEsperadas: 0,
             lancamentosFreq: 0,

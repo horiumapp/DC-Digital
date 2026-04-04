@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ChevronDown, Search } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Search, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -18,6 +18,7 @@ export default function RelatorioMedias() {
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
   const [notas, setNotas] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (user?.email) {
@@ -170,10 +171,13 @@ export default function RelatorioMedias() {
               <div className="md:col-span-8">
                 <label className="block text-sm font-semibold text-slate-500 mb-1">Turma</label>
                 <div className="relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                    <Users className="w-5 h-5 text-slate-400" />
+                  </div>
                   <select 
                     value={selectedTurma}
                     onChange={(e) => setSelectedTurma(e.target.value)}
-                    className="bg-slate-50 border border-slate-200 text-slate-900 text-base rounded-md focus:ring-[#0f2851] focus:border-[#0f2851] block w-full pl-12 p-3 outline-none"
+                    className="bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-md focus:ring-[#0f2851] focus:border-[#0f2851] block w-full pl-12 p-2.5 outline-none appearance-none font-semibold"
                   >
                     {loading ? (
                       <option>Carregando turmas...</option>
@@ -196,7 +200,7 @@ export default function RelatorioMedias() {
                 <button 
                   onClick={handleExibir}
                   disabled={dataLoading}
-                  className="w-full flex items-center justify-center space-x-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-3.5 rounded-md text-base font-semibold hover:bg-[#e0e7ff] transition disabled:opacity-70"
+                  className="w-full flex items-center justify-center space-x-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2.5 rounded-md text-sm font-semibold hover:bg-[#e0e7ff] transition disabled:opacity-70 shadow-sm"
                 >
                   <Search className="w-5 h-5" />
                   <span>{dataLoading ? 'Buscando...' : 'Exibir'}</span>
@@ -217,7 +221,9 @@ export default function RelatorioMedias() {
                 </div>
                 <input 
                   type="text" 
-                  placeholder="Pesquisar" 
+                  placeholder="Pesquisar por nome do aluno..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="bg-slate-50 border border-slate-200 text-slate-900 text-base rounded-md focus:ring-[#0f2851] focus:border-[#0f2851] block w-full pl-12 p-3 outline-none"
                 />
               </div>
@@ -272,8 +278,8 @@ export default function RelatorioMedias() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {alunos.map((aluno, index) => {
+                <tbody className="bg-white divide-y divide-slate-100">
+                  {alunos.filter(a => a.nome.toLowerCase().includes(searchTerm.toLowerCase())).map((aluno, index) => {
                     const m1 = calcularMediaBimestre(aluno.id, '1º Bimestre');
                     const m2 = calcularMediaBimestre(aluno.id, '2º Bimestre');
                     const m3 = calcularMediaBimestre(aluno.id, '3º Bimestre');
