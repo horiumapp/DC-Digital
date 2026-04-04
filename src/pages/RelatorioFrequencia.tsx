@@ -485,6 +485,19 @@ export default function RelatorioFrequencia() {
           #printable-relatorio .status-F { background: #fff5f5; color: #742a2a; border-color: #e53e3e; }
           #printable-relatorio .signatures { margin-top: 40px; display: flex; justify-content: space-around; }
           #printable-relatorio .sig-line { border-top: 1px solid black; width: 250px; text-align: center; padding-top: 4px; font-size: 8px; font-weight: bold; margin-top: 25px; }
+          #printable-relatorio .print-footer { 
+            position: fixed; 
+            bottom: 0; 
+            left: 0; 
+            right: 0; 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 5px 10px;
+            font-size: 7px;
+            font-style: italic;
+            border-top: 0.5px solid #eee;
+            background: white;
+          }
         `}} />
 
         <div className="doc-container">
@@ -547,9 +560,9 @@ export default function RelatorioFrequencia() {
             <div><div className="sig-line">ASSINATURA DA COORDENAÇÃO PEDAGÓGICA</div></div>
           </div>
 
-          <div className="mt-10 flex justify-between text-[6px] italic text-slate-500">
+          <div className="print-footer">
              <div>Gerado pelo Sistema DC Digital em {new Date().toLocaleString('pt-BR')}</div>
-             <div>Folha de Registro Individual de Frequência - Lábrea/AM</div>
+             <div>Folha de Registro Individual de Frequência - SEMED - Lábrea/AM</div>
           </div>
         </div>
       </div>

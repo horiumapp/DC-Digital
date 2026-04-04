@@ -62,31 +62,13 @@ export default function Layout() {
                 <Link to="/relatorio-conteudos" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                   Conteúdos Ministrados
                 </Link>
-                <Link to="#" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                  Datas com Conteúdos Não Lançados
-                </Link>
-                <Link to="#" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                  Conteúdos Planejados x Ministrados
-                </Link>
-                <Link to="#" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                  Conteúdos Cadastrados
-                </Link>
-                <Link to="#" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                  Aspectos Socioafetivos
-                </Link>
-                <Link to="/relatorio-medias" className="flex items-center px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                  Médias do Componente
-                </Link>
-                <Link to="#" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                  Anotações Complementares
-                </Link>
-                <Link to="#" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                  Nutricional
-                </Link>
                 <Link to="/relatorio-frequencia" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                   Frequências da Turma
                 </Link>
-                <Link to="/relatorio-notas" className="flex items-center px-4 py-2 text-sm font-medium text-[#0f2851] hover:bg-slate-50 transition-colors">
+                <Link to="/relatorio-medias" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                  Médias do Componente
+                </Link>
+                <Link to="/relatorio-notas" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                   Notas da Turma
                 </Link>
               </div>
