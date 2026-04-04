@@ -48,7 +48,8 @@ export const fetchPendenciasPorEscola = async (
     const { data: horarios, error: hError } = await supabase
       .from('professor_horarios')
       .select('*, turmas(id, nome, turno), professores(id, nome)')
-      .eq('escola_id', escolaId);
+      .eq('escola_id', escolaId)
+      .limit(5000);
 
     if (hError) throw hError;
     if (!horarios) return [];
@@ -64,7 +65,8 @@ export const fetchPendenciasPorEscola = async (
       const dateEnd = dates.end > hoje ? hoje : dates.end;
 
       for (const h of horarios) {
-        const key = `${h.professores?.id}-${h.turma_id}-${h.componente}-${periodoNome}`;
+        const profId = h.professores?.id || 'SEM-ID';
+        const key = `${profId}-${h.turma_id}-${h.componente}-${periodoNome}`;
         
         if (!mapConsolidado[key]) {
           mapConsolidado[key] = {
@@ -99,7 +101,7 @@ export const fetchPendenciasPorEscola = async (
       
       await Promise.all(batch.map(async (key) => {
         const group = mapConsolidado[key];
-        if (group.totalAulasEsperadas === 0) return;
+        // Não retornar early se for 0, para podermos ver o erro na tabela se houver
 
         const periodoDates = PERIOD_DATES[group.periodo];
         const dateStart = periodoDates.start;
@@ -156,8 +158,8 @@ export const fetchPendenciasPorEscola = async (
             fase: group.fase,
             turma: group.turma,
             componente: group.componente,
-            pendFreq: parseFloat(Math.max(0, ((group.totalAulasEsperadas - lancamentosFreq) / group.totalAulasEsperadas) * 100).toFixed(2)),
-            pendObjeto: parseFloat(Math.max(0, ((group.totalAulasEsperadas - lancamentosCont) / group.totalAulasEsperadas) * 100).toFixed(2)),
+            pendFreq: group.totalAulasEsperadas > 0 ? parseFloat(Math.max(0, ((group.totalAulasEsperadas - lancamentosFreq) / group.totalAulasEsperadas) * 100).toFixed(2)) : 0,
+            pendObjeto: group.totalAulasEsperadas > 0 ? parseFloat(Math.max(0, ((group.totalAulasEsperadas - lancamentosCont) / group.totalAulasEsperadas) * 100).toFixed(2)) : 0,
             pendNotas: parseFloat(pNotas.toFixed(2))
           });
         } catch (innerErr) {
