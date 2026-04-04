@@ -42,17 +42,29 @@ function countWeekDaysInRange(start: Date, end: Date, dayOfWeek: number): number
 
 export const fetchPendenciasPorEscola = async (
   escolaId: string, 
-  periodosSelecionados: string[]
+  periodosSelecionados: string[],
+  professorEmail?: string
 ): Promise<PendenciaDocente[]> => {
   try {
-    const { data: horarios, error: hError } = await supabase
+    let query = supabase
       .from('professor_horarios')
-      .select('*, turmas(id, nome, turno), professores(id, nome)')
-      .eq('escola_id', escolaId)
-      .limit(5000);
+      .select('*, turmas(id, nome, turno), professores(id, nome, email)')
+      .limit(10000); // Aumentado para garantir cobertura total
+
+    if (escolaId !== 'TODAS') {
+      query = query.eq('escola_id', escolaId);
+    }
+
+    const { data: horarios, error: hError } = await query;
 
     if (hError) throw hError;
     if (!horarios) return [];
+
+    // Se um e-mail foi fornecido, filtramos os horários deste professor especificamente
+    // Isso garante que se ele tem 8 turmas, todas as 8 desse professor apareçam
+    const horariosFiltrados = professorEmail 
+      ? horarios.filter(h => h.professores?.email?.toLowerCase().trim() === professorEmail.toLowerCase().trim())
+      : horarios;
 
     const hoje = new Date();
     const mapConsolidado: Record<string, any> = {};
@@ -64,20 +76,26 @@ export const fetchPendenciasPorEscola = async (
       const dateStart = dates.start;
       const dateEnd = dates.end > hoje ? hoje : dates.end;
 
-      for (const h of horarios) {
+      for (const h of horariosFiltrados) {
         const profId = h.professores?.id || 'SEM-ID';
         const key = `${profId}-${h.turma_id}-${h.componente}-${periodoNome}`;
         
         if (!mapConsolidado[key]) {
+          // Lógica robusta para separar Fase e Turma
+          const nomeCompleto = h.turmas?.nome || 'N/D';
+          const partes = nomeCompleto.split(' ');
+          const turmaPart = partes.length > 1 ? partes.pop() : '';
+          const fasePart = partes.join(' ') || nomeCompleto;
+
           mapConsolidado[key] = {
             professor: h.professores?.nome || 'N/D',
             turmaId: h.turma_id,
-            turma: h.turmas?.nome?.split(' ').pop() || 'N/D',
+            turma: turmaPart || 'N/D',
             componente: h.componente,
             periodo: periodoNome,
             turno: h.turmas?.turno || 'N/D',
-            ensino: 'Ensino Fundamental', // Mapeamento fixo conforme padrão do sistema
-            fase: h.turmas?.nome?.split(' ').slice(0, -1).join(' ') || h.turmas?.nome || 'N/D',
+            ensino: 'Ensino Fundamental',
+            fase: fasePart,
             tempos: new Set([h.tempo_ordem.toString() + 'º TEMPO']),
             totalAulasEsperadas: 0,
             lancamentosFreq: 0,
@@ -94,33 +112,29 @@ export const fetchPendenciasPorEscola = async (
     const finalResult: PendenciaDocente[] = [];
     const consolidadoKeys = Object.keys(mapConsolidado);
     
-    // Processar em lotes para evitar sobrecarga ou timeouts
-    const BATCH_SIZE = 5;
+    // Processar em lotes
+    const BATCH_SIZE = 10;
     for (let i = 0; i < consolidadoKeys.length; i += BATCH_SIZE) {
       const batch = consolidadoKeys.slice(i, i + BATCH_SIZE);
       
       await Promise.all(batch.map(async (key) => {
         const group = mapConsolidado[key];
-        // Não retornar early se for 0, para podermos ver o erro na tabela se houver
-
         const periodoDates = PERIOD_DATES[group.periodo];
         const dateStart = periodoDates.start;
         const dateEnd = periodoDates.end > hoje ? hoje : periodoDates.end;
-
         const temposArr = Array.from(group.tempos) as string[];
 
         try {
-          // Queries de contagem (Frequência e Conteúdo) - AGORA FILTRANDO POR COMPONENTE (disciplina)
           const [fRes, cRes, avRes, aluRes] = await Promise.all([
             supabase.from('frequencias')
-              .select('id')
+              .select('id', { count: 'exact' })
               .eq('turma_id', group.turmaId)
               .eq('disciplina', group.componente)
               .in('tempo', temposArr)
               .gte('data', dateStart.toISOString().split('T')[0])
               .lte('data', dateEnd.toISOString().split('T')[0]),
             supabase.from('conteudos')
-              .select('id')
+              .select('id', { count: 'exact' })
               .eq('turma_id', group.turmaId)
               .eq('disciplina', group.componente)
               .in('tempo', temposArr)
@@ -130,23 +144,27 @@ export const fetchPendenciasPorEscola = async (
               .select('id')
               .eq('turma_id', group.turmaId)
               .eq('disciplina', group.componente)
-              .ilike('bimestre', group.periodo), // Case-insensitive para garantir o match
+              .ilike('bimestre', group.periodo),
             supabase.from('alunos')
               .select('id', { count: 'exact', head: true })
               .eq('turma_id', group.turmaId)
           ]);
 
-          const lancamentosFreq = fRes.data?.length || 0;
-          const lancamentosCont = cRes.data?.length || 0;
+          const lancamentosFreq = fRes.count || 0;
+          const lancamentosCont = cRes.count || 0;
           const totalAlunos = aluRes.count || 0;
 
           // Calcular Pendência de Notas
           let pNotas = 0;
           if (avRes.data && avRes.data.length > 0 && totalAlunos > 0) {
             const avIds = avRes.data.map(av => av.id);
-            const { data: notas } = await supabase.from('notas').select('aluno_id').in('avaliacao_id', avIds);
+            const { count: totalNotas } = await supabase
+              .from('notas')
+              .select('id', { count: 'exact', head: true })
+              .in('avaliacao_id', avIds);
+            
             const totalNotasEsperadas = avIds.length * totalAlunos;
-            pNotas = Math.max(0, ((totalNotasEsperadas - (notas?.length || 0)) / totalNotasEsperadas) * 100);
+            pNotas = Math.max(0, ((totalNotasEsperadas - (totalNotas || 0)) / totalNotasEsperadas) * 100);
           }
 
           finalResult.push({
@@ -168,7 +186,7 @@ export const fetchPendenciasPorEscola = async (
       }));
     }
 
-    return finalResult;
+    return finalResult.sort((a, b) => a.professor.localeCompare(b.professor));
   } catch (err) {
     console.error('Erro no cálculo de pendências:', err);
     return [];

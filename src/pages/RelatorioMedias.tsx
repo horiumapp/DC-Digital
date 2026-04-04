@@ -233,47 +233,30 @@ export default function RelatorioMedias() {
               <table className="w-full text-base text-left border-collapse">
                 <thead className="bg-[#f8f9fa] border-b border-slate-200">
                   <tr>
-                    <th className="px-4 py-5 border-b border-slate-200 w-16 text-center">
-                      <div className="flex flex-col items-center justify-center relative">
-                        <span className="text-[13px] text-[#0f2851] font-bold">Nº</span>
-                        <div className="absolute right-1 flex flex-col text-[10px] text-slate-300 opacity-60 font-black leading-[6px] gap-[1px]">
-                          <span>▲</span><span>▼</span>
-                        </div>
-                      </div>
+                    <th className="px-4 py-4 border-b border-slate-200 w-16 text-center">
+                      <span className="text-[12px] text-[#0f2851] font-bold uppercase">Nº</span>
                     </th>
-                    <th className="px-6 py-5 border-b border-slate-200 border-l border-slate-100 min-w-[250px]">
-                      <div className="flex items-center justify-between relative pr-4">
-                        <span className="text-[13px] text-[#0f2851] font-bold uppercase">NOME DO ALUNO</span>
-                        <div className="absolute right-0 flex flex-col text-[10px] text-slate-300 opacity-60 font-black leading-[6px] gap-[1px]">
-                          <span>▲</span><span>▼</span>
-                        </div>
-                      </div>
+                    <th className="px-4 py-4 border-b border-slate-200 border-l border-slate-100 text-center">
+                      <span className="text-[12px] text-[#0f2851] font-bold uppercase">Fase</span>
                     </th>
-                    <th className="px-4 py-5 border-b border-slate-200 border-l border-slate-100 text-center">
-                      <span className="text-[13px] text-[#0f2851] font-bold">MOTIVO SAÍDA</span>
+                    <th className="px-3 py-4 border-b border-slate-200 border-l border-slate-100 text-center">
+                      <span className="text-[12px] text-[#0f2851] font-bold uppercase">Turma</span>
                     </th>
-                    <th className="px-4 py-5 border-b border-slate-200 border-l border-slate-100 text-center">
-                      <span className="text-[13px] text-[#0f2851] font-bold">DATA SAÍDA</span>
+                    <th className="px-6 py-4 border-b border-slate-200 border-l border-slate-100 min-w-[300px]">
+                      <span className="text-[12px] text-[#0f2851] font-bold uppercase">Nome do Aluno</span>
                     </th>
-                    {['1. BIM', '2. BIM', '3. BIM', '4. BIM', 'RECUP'].map(label => (
-                      <th key={label} className="px-2 py-5 border-b border-slate-200 border-l border-slate-100 text-center min-w-[85px]">
-                        <div className="flex flex-col items-center justify-center relative">
-                          <span className="text-[13px] text-[#0f2851] font-bold">{label}</span>
-                          <div className="absolute right-1 flex flex-col text-[10px] text-slate-300 opacity-60 font-black leading-[6px] gap-[1px]">
-                            <span>▲</span><span>▼</span>
-                          </div>
-                        </div>
+                    <th className="px-4 py-4 border-b border-slate-200 border-l border-slate-100 text-center">
+                      <span className="text-[12px] text-[#0f2851] font-bold uppercase">Status/Saída</span>
+                    </th>
+                    {['1º BIM', '2º BIM', '3º BIM', '4º BIM', 'RECUP'].map(label => (
+                      <th key={label} className="px-2 py-4 border-b border-slate-200 border-l border-slate-100 text-center min-w-[90px]">
+                        <span className="text-[12px] text-[#0f2851] font-bold uppercase">{label}</span>
                       </th>
                     ))}
-                    <th className="px-4 py-5 border-b border-slate-200 border-l border-slate-100 text-center min-w-[120px]">
-                      <div className="flex flex-col items-center justify-center relative">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[13px] text-[#0f2851] font-bold">MÉDIA FINAL</span>
-                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                        </div>
-                        <div className="absolute right-1 flex flex-col text-[10px] text-slate-300 opacity-60 font-black leading-[6px] gap-[1px]">
-                          <span>▲</span><span>▼</span>
-                        </div>
+                    <th className="px-4 py-4 border-b border-slate-200 border-l border-slate-100 text-center min-w-[130px] bg-slate-50/50">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span className="text-[12px] text-[#0f2851] font-bold uppercase">Média Final</span>
+                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
                       </div>
                     </th>
                   </tr>
@@ -288,31 +271,53 @@ export default function RelatorioMedias() {
                     const validMedias = [m1, m2, m3, m4].filter(m => m !== null) as number[];
                     const mediaFinal = validMedias.length > 0 ? validMedias.reduce((a, b) => a + b, 0) / validMedias.length : null;
 
-                    const renderMediaPill = (val: number | null) => {
-                      if (val === null) return <span className="inline-flex min-w-[45px] justify-center bg-slate-100 text-slate-400 px-2 py-1 rounded-full text-[12px] font-bold">S/N</span>;
+                    const [fase, turma] = selectedTurma.split('|')[0].split(' '); // Simplificação, ideal seria vir do objeto
+                    // Para o relatório, vamos pegar o nome da turma selecionada e quebrar
+                    const turmaNomeRaw = turmas.find(t => `${t.id}|${t.componente}` === selectedTurma)?.nome || '';
+                    const fasePart = turmaNomeRaw.split(' ').slice(0, -1).join(' ');
+                    const turmaPart = turmaNomeRaw.split(' ').pop();
+
+                    const renderMediaPill = (val: number | null, isFinal = false) => {
+                      if (val === null) return <span className="inline-flex min-w-[48px] justify-center text-slate-300 px-2 py-1 text-[13px] font-bold">-</span>;
+                      const isLow = val < 6;
                       return (
-                        <span className={`inline-flex min-w-[45px] justify-center px-2 py-1 rounded-full text-[12px] font-bold text-white shadow-sm shadow-blue-200/50 ${val >= 6 ? 'bg-[#0f2851]' : 'bg-[#c2463e]'}`}>
+                        <span className={`inline-flex min-w-[52px] justify-center px-2.5 py-1 rounded-lg text-[13px] font-bold transition-all shadow-sm ${
+                          isLow 
+                            ? 'bg-red-50 text-red-600 border border-red-100' 
+                            : isFinal ? 'bg-[#0f2851] text-white' : 'bg-blue-50 text-[#0f2851] border border-blue-100'
+                        }`}>
                           {val.toFixed(2).replace('.', ',')}
                         </span>
                       );
                     };
 
                     return (
-                      <tr key={aluno.id} className="hover:bg-slate-50/50 transition border-b border-slate-50">
-                        <td className="px-4 py-4 text-[#64748b] font-bold text-center text-sm">
+                      <tr key={aluno.id} className="hover:bg-blue-50/30 transition-colors group">
+                        <td className="px-4 py-3.5 text-[#64748b] font-medium text-center text-[13px]">
                           {(index + 1).toString().padStart(2, '0')}
                         </td>
-                        <td className="px-6 py-4 text-slate-700 font-bold uppercase border-l border-slate-50 text-[13px]">
-                          {aluno.nome}
+                        <td className="px-4 py-3.5 text-slate-600 font-medium text-center text-[13px] border-l border-slate-50 uppercase">
+                          {fasePart}
                         </td>
-                        <td className="px-4 py-4 border-l border-slate-50 text-center"></td>
-                        <td className="px-4 py-4 border-l border-slate-50 text-center"></td>
-                        <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m1)}</td>
-                        <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m2)}</td>
-                        <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m3)}</td>
-                        <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m4)}</td>
-                        <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(null)}</td>
-                        <td className="px-4 py-4 border-l border-slate-50 text-center">{renderMediaPill(mediaFinal)}</td>
+                        <td className="px-3 py-3.5 text-[#0f2851] font-bold text-center text-[14px] border-l border-slate-50 uppercase">
+                          {turmaPart}
+                        </td>
+                        <td className="px-6 py-3.5 border-l border-slate-50">
+                          <span className="text-[#0f2851] font-bold uppercase text-[13px] group-hover:text-blue-700 transition-colors">
+                            {aluno.nome}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 border-l border-slate-50 text-center">
+                          <span className="text-[11px] text-slate-400 font-medium">-</span>
+                        </td>
+                        <td className="px-2 py-3.5 border-l border-slate-50 text-center">{renderMediaPill(m1)}</td>
+                        <td className="px-2 py-3.5 border-l border-slate-50 text-center">{renderMediaPill(m2)}</td>
+                        <td className="px-2 py-3.5 border-l border-slate-50 text-center">{renderMediaPill(m3)}</td>
+                        <td className="px-2 py-3.5 border-l border-slate-50 text-center">{renderMediaPill(m4)}</td>
+                        <td className="px-2 py-3.5 border-l border-slate-50 text-center">{renderMediaPill(null)}</td>
+                        <td className="px-4 py-3.5 border-l border-slate-50 text-center bg-slate-50/30 font-black">
+                          {renderMediaPill(mediaFinal, true)}
+                        </td>
                       </tr>
                     );
                   })}
