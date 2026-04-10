@@ -18,7 +18,9 @@ export interface PendenciaDocente {
 
 const PERIOD_DATES: Record<string, { start: Date; end: Date }> = {};
 APP_CONFIG.PERIODOS.forEach(p => {
-  PERIOD_DATES[p.id] = { start: new Date(p.dataInicio), end: new Date(p.dataFim) };
+  const [sy, sm, sd] = p.dataInicio.split('-').map(Number);
+  const [ey, em, ed] = p.dataFim.split('-').map(Number);
+  PERIOD_DATES[p.id] = { start: new Date(sy, sm - 1, sd), end: new Date(ey, em - 1, ed) };
 });
 
 /**
