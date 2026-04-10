@@ -149,11 +149,23 @@ export default function PendenciasLancamento() {
             </div>
             <div className="space-y-2">
               <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 ml-1">Distrito / Localidade</label>
-               <input 
-                 value={distrito || 'GERAL'} 
-                 readOnly
-                 className="w-full px-4 py-3.5 bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-400 cursor-not-allowed outline-none"
-               />
+              {escolaId === 'TODAS' ? (
+                <select 
+                  value={distrito}
+                  onChange={(e) => setDistrito(e.target.value)}
+                  className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-[#0f2851] dark:text-slate-200 focus:outline-none focus:ring-4 focus:ring-[#0f2851]/5 transition-all appearance-none"
+                >
+                  {distritos.map((d) => (
+                    <option key={d} value={d}>{d === 'TODOS' ? 'TODOS OS DISTRITOS' : d}</option>
+                  ))}
+                </select>
+              ) : (
+                <input 
+                  value={distrito || 'GERAL'} 
+                  readOnly
+                  className="w-full px-4 py-3.5 bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-400 cursor-not-allowed outline-none"
+                />
+              )}
             </div>
           </div>
 
