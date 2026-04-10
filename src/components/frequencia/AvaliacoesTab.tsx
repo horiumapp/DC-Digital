@@ -39,7 +39,7 @@ export default function AvaliacoesTab() {
   const [isSaving, setIsSaving] = useState(false);
 
   const PERIODOS_LABELS: Record<string, string> = {};
-  APP_CONFIG.BIMESTRES.forEach(b => {
+  APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE')).forEach(b => {
     // Formata a exibição como: "1. BIMESTRE 05/02/2026 - 23/04/2026"
     const start = new Date(b.dataInicio).toLocaleDateString('pt-BR');
     const end = new Date(b.dataFim).toLocaleDateString('pt-BR');

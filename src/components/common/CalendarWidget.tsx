@@ -27,7 +27,7 @@ export default function CalendarWidget({
 }: CalendarWidgetProps) {
 
   // Re-calcular datas do período baseadas no Bimestre selecionado (poderiam vir de props, mas mantemos isolado)
-  const periodosLetivos = APP_CONFIG.BIMESTRES;
+  const periodosLetivos = APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE'));
 
   // Identificar em qual período estamos (heurística baseada no mês atual)
   // Nota: Isso é uma redundância para manter o widget funcionando se as props de data sumirem.

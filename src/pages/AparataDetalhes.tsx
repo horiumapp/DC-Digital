@@ -99,9 +99,10 @@ export default function AparataDetalhes() {
     );
   }
 
-  const bimestreInfo = getBimestreAtual() || APP_CONFIG.BIMESTRES[0];
+  const bimestres = APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE'));
+  const bimestreInfo = getBimestreAtual() || bimestres[0];
   const periodo = bimestreInfo.nome;
-  const meses = bimestreInfo.months;
+  const meses = `${new Date(bimestreInfo.dataInicio).toLocaleDateString('pt-BR', { month: 'long' })} - ${new Date(bimestreInfo.dataFim).toLocaleDateString('pt-BR', { month: 'long' })}`;
 
   return (
     <div className="min-h-screen bg-slate-50 relative">
