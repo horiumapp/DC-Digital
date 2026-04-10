@@ -260,7 +260,8 @@ export default function RelatorioMedias() {
                       </div>
                     </th>
                   </tr>
-                               <tbody className="bg-white divide-y divide-slate-100">
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-100">
                   {(() => {
                     const turmaObj = turmas.find(t => `${t.id}|${t.componente}` === selectedTurma);
                     const turmaNomeRaw = turmaObj?.nome || 'N/D';
