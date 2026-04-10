@@ -182,10 +182,22 @@ export const fetchPendenciasPorEscola = async (
 
         // Calcular Pendência de Notas
         let pNotas = 0;
+        
+        // Construir set com todas as variantes possíveis do nome do período para match flexível
+        const periodoConfig = APP_CONFIG.PERIODOS.find(p => p.id === group.periodo || p.label === group.periodo);
+        const periodoVariants = new Set<string>();
+        if (periodoConfig) {
+          periodoVariants.add(periodoConfig.id.toUpperCase());
+          periodoVariants.add(periodoConfig.nome.toUpperCase());
+          periodoVariants.add(periodoConfig.label.toUpperCase());
+        } else {
+          periodoVariants.add(group.periodo.toUpperCase());
+        }
+        
         const avsDoGrupo = (avData.data || []).filter(av => 
           av.turma_id === group.turmaId && 
           av.disciplina === group.componente && 
-          av.bimestre?.toUpperCase() === group.periodo.toUpperCase()
+          periodoVariants.has((av.bimestre || '').toUpperCase())
         );
 
         if (avsDoGrupo.length > 0 && totalAlunos > 0) {
