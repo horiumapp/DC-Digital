@@ -12,9 +12,9 @@ export default function Diario() {
   const [currentMonth, setCurrentMonth] = useState(1); // 1 = February (0-indexed)
   const year = APP_CONFIG.YEAR;
 
-  const periodosLetivos = APP_CONFIG.BIMESTRES;
+  const periodosLetivos = APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE'));
 
-  const [periodoSelecionadoId, setPeriodoSelecionadoId] = useState(1);
+  const [periodoSelecionadoId, setPeriodoSelecionadoId] = useState(periodosLetivos[0]?.id || '1. BIMESTRE');
   const periodoSelecionado = periodosLetivos.find(p => p.id === periodoSelecionadoId) || periodosLetivos[0];
 
   const handlePrevMonth = () => {
@@ -105,7 +105,7 @@ export default function Diario() {
               <select 
                 value={periodoSelecionadoId}
                 onChange={(e) => {
-                  const newId = Number(e.target.value);
+                  const newId = e.target.value;
                   setPeriodoSelecionadoId(newId);
                   const selectedPeriod = periodosLetivos.find(p => p.id === newId);
                   if (selectedPeriod) {

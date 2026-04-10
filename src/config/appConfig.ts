@@ -21,3 +21,13 @@ export const getPeriodoPorData = (date: Date | string = new Date()) => {
     return dataRef >= start && dataRef <= end;
   });
 };
+
+export const getBimestreAtual = () => {
+  const hoje = new Date();
+  const bimestres = APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE'));
+  return bimestres.find(b => {
+    const start = new Date(b.dataInicio);
+    const end = new Date(b.dataFim);
+    return hoje >= start && hoje <= end;
+  }) || null;
+};
