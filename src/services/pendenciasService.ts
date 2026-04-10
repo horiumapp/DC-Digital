@@ -97,13 +97,20 @@ export const fetchPendenciasPorEscola = async (
             lancamentosFreq: 0,
             lancamentosCont: 0,
             dateStart,
-            dateEnd
+            dateEnd,
+            // Rastrear combinações dia_semana|tempo já contadas para evitar duplicatas
+            countedSlots: new Set<string>()
           };
         } else {
           mapConsolidado[key].tempos.add(h.tempo_ordem.toString() + 'º TEMPO');
         }
 
-        mapConsolidado[key].totalAulasEsperadas += countWeekDaysInRange(dateStart, dateEnd, h.dia_semana);
+        // Evitar contagem duplicada: só incrementar se esta combinação dia_semana+tempo_ordem ainda não foi contada
+        const slotKey = `${h.dia_semana}|${h.tempo_ordem}`;
+        if (!mapConsolidado[key].countedSlots.has(slotKey)) {
+          mapConsolidado[key].countedSlots.add(slotKey);
+          mapConsolidado[key].totalAulasEsperadas += countWeekDaysInRange(dateStart, dateEnd, h.dia_semana);
+        }
       }
     }
 
@@ -119,18 +126,18 @@ export const fetchPendenciasPorEscola = async (
       const batchTurmaIds = turmaIds.slice(i, i + TURMA_BATCH_SIZE);
       const batchGroups = consolidadoGroups.filter(g => batchTurmaIds.includes(g.turmaId));
 
-      // Buscar todos os dados relevantes para esse lote de turmas
+      // Buscar todos os dados relevantes para esse lote de turmas (com limite alto para evitar truncamento)
       const [fData, cData, avData, aluData] = await Promise.all([
-        supabase.from('frequencias').select('turma_id, disciplina, tempo, data').in('turma_id', batchTurmaIds),
-        supabase.from('conteudos').select('turma_id, disciplina, tempo, data').in('turma_id', batchTurmaIds),
-        supabase.from('avaliacoes').select('id, turma_id, disciplina, bimestre').in('turma_id', batchTurmaIds),
-        supabase.from('alunos').select('id, turma_id').in('turma_id', batchTurmaIds)
+        supabase.from('frequencias').select('turma_id, disciplina, tempo, data').in('turma_id', batchTurmaIds).limit(100000),
+        supabase.from('conteudos').select('turma_id, disciplina, tempo, data').in('turma_id', batchTurmaIds).limit(100000),
+        supabase.from('avaliacoes').select('id, turma_id, disciplina, bimestre').in('turma_id', batchTurmaIds).limit(100000),
+        supabase.from('alunos').select('id, turma_id').in('turma_id', batchTurmaIds).limit(100000)
       ]);
 
       // Buscar notas em lote para todas as avaliações encontradas
       const avIds = (avData.data || []).map(av => av.id);
       const { data: nData } = avIds.length > 0 
-        ? await supabase.from('notas').select('avaliacao_id').in('avaliacao_id', avIds)
+        ? await supabase.from('notas').select('avaliacao_id').in('avaliacao_id', avIds).limit(100000)
         : { data: [] };
 
       // Helper: converte 'DD/MM/YYYY' ou 'YYYY-MM-DD' para Date para comparação
