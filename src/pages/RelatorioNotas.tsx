@@ -225,10 +225,9 @@ export default function RelatorioNotas() {
                     onChange={(e) => setPeriodo(e.target.value)}
                     className="w-full border border-slate-300 rounded-md py-3 pl-3 pr-10 text-base appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700 bg-white"
                   >
-                    {APP_CONFIG.BIMESTRES.map(b => (
-                      <option key={b.id} value={b.nome}>{b.label}</option>
+                    {APP_CONFIG.PERIODOS.filter(p => !p.id.includes('SEMESTRE') && p.id !== 'ÚNICO').map(p => (
+                      <option key={p.id} value={p.nome}>{p.label}</option>
                     ))}
-                    <option value="Recuperação">RECUPERAÇÃO</option>
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
                     <ChevronDown className="h-5 w-5" />

@@ -20,10 +20,7 @@ export default function PendenciasLancamento() {
   const [loading, setLoading] = useState(true);
   const [loadingDocentes, setLoadingDocentes] = useState(false);
   
-  const periodos = [
-    '1. SEMESTRE', '2. SEMESTRE', '1. BIMESTRE', '2. BIMESTRE', 
-    '3. BIMESTRE', '4. BIMESTRE', 'RECUPERAÇÃO', 'ÚNICO'
-  ];
+  const periodos = APP_CONFIG.PERIODOS.map(p => p.label);
 
   useEffect(() => {
     fetchInitialData();
@@ -208,7 +205,7 @@ export default function PendenciasLancamento() {
 
             <div className="text-right">
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Última atualização</div>
-              <div className="text-sm font-bold text-slate-700 dark:text-slate-200">01/04/{APP_CONFIG.YEAR}</div>
+              <div className="text-sm font-bold text-slate-700 dark:text-slate-200">{new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}/{APP_CONFIG.YEAR}</div>
             </div>
           </div>
         </div>

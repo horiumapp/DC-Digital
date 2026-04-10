@@ -136,7 +136,7 @@ export default function RelatorioConteudos() {
       const hojeISO = new Date().toISOString().split('T')[0];
       
       if (opcaoFiltro === 'Período') {
-        const period = APP_CONFIG.BIMESTRES.find(b => b.label === periodoSelecionado);
+        const period = APP_CONFIG.PERIODOS.find(p => p.label === periodoSelecionado);
         if (period) {
           dateStart = period.dataInicio;
           // Se o fim do bimestre for depois de hoje, limitamos a hoje para o relatório ser atual
@@ -389,13 +389,9 @@ export default function RelatorioConteudos() {
                       className="w-full py-3 px-4 bg-white border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] outline-none font-medium"
                     >
                       {opcaoFiltro === 'Período' ? (
-                        <>
-                          <option value="1. BIMESTRE">1. BIMESTRE</option>
-                          <option value="2. BIMESTRE">2. BIMESTRE</option>
-                          <option value="3. BIMESTRE">3. BIMESTRE</option>
-                          <option value="4. BIMESTRE">4. BIMESTRE</option>
-                          <option value="RECUPERAÇÃO">RECUPERAÇÃO</option>
-                        </>
+                        APP_CONFIG.PERIODOS.filter(p => !p.id.includes('SEMESTRE') && p.id !== 'ÚNICO').map(p => (
+                          <option key={p.id} value={p.label}>{p.label}</option>
+                        ))
                       ) : (
                         <>
                           <option value="JANEIRO">JANEIRO</option>

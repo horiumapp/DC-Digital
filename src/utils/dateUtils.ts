@@ -13,13 +13,13 @@ export const getBimestrePorData = (dataStr: string): string => {
   if (!dia || !mes || !ano) return '';
   const dataRef = new Date(ano, mes - 1, dia);
 
-  const bimestre = APP_CONFIG.BIMESTRES.find(b => {
-    const start = new Date(b.dataInicio);
-    const end = new Date(b.dataFim);
+  const periodo = APP_CONFIG.PERIODOS.find(p => {
+    const start = new Date(p.dataInicio);
+    const end = new Date(p.dataFim);
     return dataRef >= start && dataRef <= end;
   });
 
-  return bimestre ? bimestre.nome : '';
+  return periodo ? periodo.nome : '';
 };
 export const getDayOfWeek = (dataStr: string): number => {
   if (!dataStr) return -1;

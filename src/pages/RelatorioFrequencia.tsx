@@ -135,7 +135,7 @@ export default function RelatorioFrequencia() {
       const hojeISO = new Date().toISOString().split('T')[0];
 
       if (opcaoFiltro === 'Período') {
-        const period = APP_CONFIG.BIMESTRES.find(b => b.label === periodoSelecionado);
+        const period = APP_CONFIG.PERIODOS.find(p => p.label === periodoSelecionado);
         if (period) {
           dateStart = period.dataInicio;
           dateEnd = period.dataFim > hojeISO ? hojeISO : period.dataFim;
@@ -344,7 +344,7 @@ export default function RelatorioFrequencia() {
                       className="flex-1 py-2.5 px-4 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-blue-500/10 outline-none font-bold text-[#0f2851]"
                     >
                       {opcaoFiltro === 'Período' ? (
-                        APP_CONFIG.BIMESTRES.map(b => <option key={b.label} value={b.label}>{b.label}</option>)
+                        APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE')).map(p => <option key={p.label} value={p.label}>{p.label}</option>)
                       ) : (
                         ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'].map(m => <option key={m} value={m}>{m}</option>)
                       )}

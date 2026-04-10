@@ -262,23 +262,23 @@ export default function RelatorioMedias() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
-                  {alunos.filter(a => a.nome.toLowerCase().includes(searchTerm.toLowerCase())).map((aluno, index) => {
-                    const m1 = calcularMediaBimestre(aluno.id, '1. BIMESTRE');
-                    const m2 = calcularMediaBimestre(aluno.id, '2. BIMESTRE');
-                    const m3 = calcularMediaBimestre(aluno.id, '3. BIMESTRE');
-                    const m4 = calcularMediaBimestre(aluno.id, '4. BIMESTRE');
-                    
-                    const validMedias = [m1, m2, m3, m4].filter(m => m !== null) as number[];
-                    const mediaFinal = validMedias.length > 0 ? validMedias.reduce((a, b) => a + b, 0) / validMedias.length : null;
-                    
-                    // Lógica robusta para Fase e Turma
+                    // Lógica robusta para Fase e Turma (Mover para fora do loop para performance)
                     const turmaObj = turmas.find(t => `${t.id}|${t.componente}` === selectedTurma);
                     const turmaNomeRaw = turmaObj?.nome || 'N/D';
-                    const partes = turmaNomeRaw.split(' ');
-                    const turmaPart = partes.length > 1 ? partes.pop() : '';
-                    const fasePart = partes.join(' ') || turmaNomeRaw;
+                    const partesTurma = turmaNomeRaw.split(' ');
+                    const turmaPart = partesTurma.length > 1 ? partesTurma.pop() : '';
+                    const fasePart = partesTurma.join(' ') || turmaNomeRaw;
 
-                    const renderMediaPill = (val: number | null, isFinal = false) => {
+                    return alunos.filter(a => a.nome.toLowerCase().includes(searchTerm.toLowerCase())).map((aluno, index) => {
+                      const m1 = calcularMediaBimestre(aluno.id, '1. BIMESTRE');
+                      const m2 = calcularMediaBimestre(aluno.id, '2. BIMESTRE');
+                      const m3 = calcularMediaBimestre(aluno.id, '3. BIMESTRE');
+                      const m4 = calcularMediaBimestre(aluno.id, '4. BIMESTRE');
+                      
+                      const validMedias = [m1, m2, m3, m4].filter(m => m !== null) as number[];
+                      const mediaFinal = validMedias.length > 0 ? validMedias.reduce((a, b) => a + b, 0) / validMedias.length : null;
+                      
+                      const renderMediaPill = (val: number | null, isFinal = false) => {
                       if (val === null) return <span className="inline-flex min-w-[48px] justify-center text-slate-300 px-2 py-1 text-[13px] font-bold">-</span>;
                       const isLow = val < 6.0;
                       return (

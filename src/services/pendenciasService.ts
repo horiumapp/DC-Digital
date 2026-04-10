@@ -90,7 +90,7 @@ export const fetchPendenciasPorEscola = async (
             componente: h.componente,
             periodo: periodoNome,
             turno: h.turmas?.turno || 'N/D',
-            ensino: 'Ensino Fundamental',
+            ensino: h.turmas?.ensino || 'Ensino Fundamental',
             fase: fasePart,
             tempos: new Set([h.tempo_ordem.toString() + 'º TEMPO']),
             totalAulasEsperadas: 0,
