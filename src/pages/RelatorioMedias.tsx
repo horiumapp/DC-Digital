@@ -260,9 +260,8 @@ export default function RelatorioMedias() {
                       </div>
                     </th>
                   </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-slate-100">
-                    // Lógica robusta para Fase e Turma (Mover para fora do loop para performance)
+                               <tbody className="bg-white divide-y divide-slate-100">
+                  {(() => {
                     const turmaObj = turmas.find(t => `${t.id}|${t.componente}` === selectedTurma);
                     const turmaNomeRaw = turmaObj?.nome || 'N/D';
                     const partesTurma = turmaNomeRaw.split(' ');
@@ -279,50 +278,50 @@ export default function RelatorioMedias() {
                       const mediaFinal = validMedias.length > 0 ? validMedias.reduce((a, b) => a + b, 0) / validMedias.length : null;
                       
                       const renderMediaPill = (val: number | null, isFinal = false) => {
-                      if (val === null) return <span className="inline-flex min-w-[48px] justify-center text-slate-300 px-2 py-1 text-[13px] font-bold">-</span>;
-                      const isLow = val < 6.0;
-                      return (
-                        <span className={`inline-flex min-w-[52px] justify-center px-2.5 py-1.5 rounded-lg text-[13px] font-black transition-all shadow-sm ${
-                          isLow 
-                            ? 'bg-red-50 text-red-600 border border-red-100' 
-                            : isFinal ? 'bg-[#0f2851] text-white shadow-[#0f2851]/20' : 'bg-blue-50 text-[#0f2851] border border-blue-100'
-                        }`}>
-                          {val.toFixed(1).replace('.', ',')}
-                        </span>
-                      );
-                    };
-
-                    return (
-                      <tr key={aluno.id} className="hover:bg-blue-50/40 transition-colors group border-b border-slate-50 last:border-0">
-                        <td className="px-4 py-4 text-[#64748b] font-bold text-center text-[12px] tracking-tight">
-                          {(index + 1).toString().padStart(2, '0')}
-                        </td>
-                        <td className="px-4 py-4 text-slate-500 font-bold text-center text-[11px] border-l border-slate-50 uppercase tracking-tighter">
-                          {fasePart}
-                        </td>
-                        <td className="px-3 py-4 text-[#0f2851] font-black text-center text-[14px] border-l border-slate-50 uppercase">
-                          {turmaPart}
-                        </td>
-                        <td className="px-6 py-4 border-l border-slate-50">
-                          <span className="text-[#0f2851] font-bold uppercase text-[13px] group-hover:text-blue-700 transition-colors tracking-tight">
-                            {aluno.nome}
+                        if (val === null) return <span className="inline-flex min-w-[48px] justify-center text-slate-300 px-2 py-1 text-[13px] font-bold">-</span>;
+                        const isLow = val < 6.0;
+                        return (
+                          <span className={`inline-flex min-w-[52px] justify-center px-2.5 py-1.5 rounded-lg text-[13px] font-black transition-all shadow-sm ${
+                            isLow 
+                              ? 'bg-red-50 text-red-600 border border-red-100' 
+                              : isFinal ? 'bg-[#0f2851] text-white shadow-[#0f2851]/20' : 'bg-blue-50 text-[#0f2851] border border-blue-100'
+                          }`}>
+                            {val.toFixed(1).replace('.', ',')}
                           </span>
-                        </td>
-                        <td className="px-4 py-4 border-l border-slate-50 text-center">
-                          <span className="text-[11px] text-slate-300 font-bold">ATIVA</span>
-                        </td>
-                        <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m1)}</td>
-                        <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m2)}</td>
-                        <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m3)}</td>
-                        <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m4)}</td>
-                        <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(null)}</td>
-                        <td className="px-4 py-4 border-l border-slate-100 text-center bg-slate-50/50 font-black">
-                          {renderMediaPill(mediaFinal, true)}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                        );
+                      };
 
+                      return (
+                        <tr key={aluno.id} className="hover:bg-blue-50/40 transition-colors group border-b border-slate-50 last:border-0">
+                          <td className="px-4 py-4 text-[#64748b] font-bold text-center text-[12px] tracking-tight">
+                            {(index + 1).toString().padStart(2, '0')}
+                          </td>
+                          <td className="px-4 py-4 text-slate-500 font-bold text-center text-[11px] border-l border-slate-50 uppercase tracking-tighter">
+                            {fasePart}
+                          </td>
+                          <td className="px-3 py-4 text-[#0f2851] font-black text-center text-[14px] border-l border-slate-50 uppercase">
+                            {turmaPart}
+                          </td>
+                          <td className="px-6 py-4 border-l border-slate-50">
+                            <span className="text-[#0f2851] font-bold uppercase text-[13px] group-hover:text-blue-700 transition-colors tracking-tight">
+                              {aluno.nome}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 border-l border-slate-50 text-center">
+                            <span className="text-[11px] text-slate-300 font-bold">ATIVA</span>
+                          </td>
+                          <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m1)}</td>
+                          <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m2)}</td>
+                          <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m3)}</td>
+                          <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m4)}</td>
+                          <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(null)}</td>
+                          <td className="px-4 py-4 border-l border-slate-100 text-center bg-slate-50/50 font-black">
+                            {renderMediaPill(mediaFinal, true)}
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
