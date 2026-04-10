@@ -133,27 +133,40 @@ export const fetchPendenciasPorEscola = async (
         ? await supabase.from('notas').select('avaliacao_id').in('avaliacao_id', avIds)
         : { data: [] };
 
+      // Helper: converte 'DD/MM/YYYY' ou 'YYYY-MM-DD' para Date para comparação
+      const parseDataField = (d: string): Date | null => {
+        if (!d) return null;
+        if (d.includes('/')) {
+          const [dia, mes, ano] = d.split('/').map(Number);
+          return new Date(ano, mes - 1, dia);
+        }
+        const [ano, mes, dia] = d.split('-').map(Number);
+        return new Date(ano, mes - 1, dia);
+      };
+
       // Processar cada grupo do lote localmente (sem novas queries)
       batchGroups.forEach(group => {
         const temposArr = Array.from(group.tempos);
-        const startStr = group.dateStart.toISOString().split('T')[0];
-        const endStr = group.dateEnd.toISOString().split('T')[0];
+        const dateStart = group.dateStart;
+        const dateEnd = group.dateEnd;
 
-        // Contar Frequências
-        const freqCount = (fData.data || []).filter(f => 
-          f.turma_id === group.turmaId && 
-          f.disciplina === group.componente && 
-          temposArr.includes(f.tempo) &&
-          f.data >= startStr && f.data <= endStr
-        ).length;
+        // Contar Frequências (comparar como Date, não como string)
+        const freqCount = new Set(
+          (fData.data || []).filter(f => {
+            if (f.turma_id !== group.turmaId || f.disciplina !== group.componente || !temposArr.includes(f.tempo)) return false;
+            const fDate = parseDataField(f.data);
+            return fDate && fDate >= dateStart && fDate <= dateEnd;
+          }).map(f => `${f.data}|${f.tempo}`)
+        ).size;
 
-        // Contar Conteúdos
-        const contCount = (cData.data || []).filter(c => 
-          c.turma_id === group.turmaId && 
-          c.disciplina === group.componente && 
-          temposArr.includes(c.tempo) &&
-          c.data >= startStr && c.data <= endStr
-        ).length;
+        // Contar Conteúdos (comparar como Date, não como string)
+        const contCount = new Set(
+          (cData.data || []).filter(c => {
+            if (c.turma_id !== group.turmaId || c.disciplina !== group.componente || !temposArr.includes(c.tempo)) return false;
+            const cDate = parseDataField(c.data);
+            return cDate && cDate >= dateStart && cDate <= dateEnd;
+          }).map(c => `${c.data}|${c.tempo}`)
+        ).size;
 
         // Contar Alunos
         const totalAlunos = (aluData.data || []).filter(a => a.turma_id === group.turmaId).length;
