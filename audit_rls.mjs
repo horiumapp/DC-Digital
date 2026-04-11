@@ -5,60 +5,72 @@ const supabase = createClient(
   '***REMOVED_ANON_KEY***'
 );
 
-// Tabelas usadas pelo frontend
-const tabelas = [
-  'alunos', 'turmas', 'escolas', 'frequencias', 'conteudos',
-  'avaliacoes', 'notas', 'professores', 'professor_horarios', 'professor_alocacoes'
+console.log('=== AUDITORIA RLS DETALHADA - DC DIGITAL ===\n');
+
+// 1. Verificar RLS status via rpc (se existir)
+console.log('--- 1. DADOS EXPOSTOS SEM AUTENTICAÇÃO ---\n');
+
+// Professor Horarios - já sabemos que está exposta
+const { data: horarios } = await supabase.from('professor_horarios').select('*').limit(5);
+if (horarios && horarios.length > 0) {
+  console.log(`🔴 professor_horarios: ${horarios.length} registros expostos`);
+  console.log('   Amostra:', JSON.stringify(horarios[0], null, 2));
+}
+
+// Professor Alocações
+const { data: alocacoes } = await supabase.from('professor_alocacoes').select('*').limit(5);
+if (alocacoes && alocacoes.length > 0) {
+  console.log(`\n🔴 professor_alocacoes: ${alocacoes.length} registros expostos`);
+  console.log('   Amostra:', JSON.stringify(alocacoes[0], null, 2));
+}
+
+// 2. Teste de ESCRITA (INSERT) em cada tabela sem auth
+console.log('\n--- 2. TESTES DE ESCRITA SEM AUTH ---\n');
+
+const writeTests = [
+  { table: 'escolas', data: { nome: 'AUDIT_TEST', status: 'Ativa', distrito: 'TESTE', inep: '0000000', diretor: 'TESTE' } },
+  { table: 'turmas', data: { nome: 'AUDIT_TEST', turno: 'Manhã', ano_letivo: '2026' } },
+  { table: 'professores', data: { nome: 'AUDIT_TEST', email: 'audit@test.com', cpf: '000.000.000-00' } },
+  { table: 'conteudos', data: { data: '2026-01-01', tempo: '1º TEMPO', descricao: 'AUDIT_TEST', disciplina: 'TESTE' } },
 ];
 
-console.log('=== AUDITORIA RLS - DC DIGITAL ===\n');
-console.log('Teste: Tentando ler dados SEM autenticação (anon key)\n');
-
-for (const tabela of tabelas) {
-  const { data, error, count } = await supabase
-    .from(tabela)
-    .select('*', { count: 'exact', head: false })
-    .limit(1);
-
+for (const test of writeTests) {
+  const { data, error } = await supabase.from(test.table).insert([test.data]).select();
   if (error) {
-    console.log(`✅ ${tabela.padEnd(25)} → BLOQUEADO (${error.code}: ${error.message.slice(0, 60)})`);
+    console.log(`✅ ${test.table.padEnd(25)} INSERT → BLOQUEADO (${error.code})`);
   } else {
-    const rowCount = data?.length || 0;
-    if (rowCount > 0) {
-      console.log(`🔴 ${tabela.padEnd(25)} → EXPOSTA! ${rowCount} registro(s) acessível(is) sem auth`);
-      // Mostrar colunas disponíveis
-      console.log(`   Colunas visíveis: ${Object.keys(data[0]).join(', ')}`);
-    } else {
-      console.log(`⚠️  ${tabela.padEnd(25)} → Acessível mas vazia (0 registros)`);
+    console.log(`🔴 ${test.table.padEnd(25)} INSERT → VULNERÁVEL! Registro criado com ID: ${data?.[0]?.id}`);
+    // Limpar registro de teste
+    if (data?.[0]?.id) {
+      await supabase.from(test.table).delete().eq('id', data[0].id);
+      console.log(`   → Registro de teste removido`);
     }
   }
 }
 
-console.log('\n--- Teste de ESCRITA sem autenticação ---\n');
+// 3. Teste de UPDATE sem auth
+console.log('\n--- 3. TESTES DE UPDATE SEM AUTH ---\n');
 
-// Tentar inserir um registro falso em "alunos"
-const { error: insertErr } = await supabase
-  .from('alunos')
-  .insert([{ nome: 'TESTE_AUDIT_DELETE_ME', turma_id: '99999' }]);
-
-if (insertErr) {
-  console.log(`✅ alunos INSERT              → BLOQUEADO (${insertErr.code}: ${insertErr.message.slice(0, 80)})`);
-} else {
-  console.log(`🔴 alunos INSERT              → VULNERÁVEL! Inserção sem auth permitida`);
-  // Limpar o registro de teste
-  await supabase.from('alunos').delete().eq('nome', 'TESTE_AUDIT_DELETE_ME');
+const updateTests = ['alunos', 'turmas', 'escolas', 'professores', 'frequencias', 'notas', 'avaliacoes', 'conteudos'];
+for (const table of updateTests) {
+  const { error } = await supabase.from(table).update({ nome: 'HACKED' }).eq('id', '00000000-0000-0000-0000-000000000000');
+  if (error) {
+    console.log(`✅ ${table.padEnd(25)} UPDATE → BLOQUEADO (${error.code})`);
+  } else {
+    console.log(`🔴 ${table.padEnd(25)} UPDATE → ACEITO (sem erro, mas talvez 0 linhas afetadas)`);
+  }
 }
 
-// Tentar deletar sem auth
-const { error: deleteErr } = await supabase
-  .from('frequencias')
-  .delete()
-  .eq('turma_id', '99999_fake');
+// 4. Teste de DELETE sem auth
+console.log('\n--- 4. TESTES DE DELETE SEM AUTH ---\n');
 
-if (deleteErr) {
-  console.log(`✅ frequencias DELETE         → BLOQUEADO (${deleteErr.code}: ${deleteErr.message.slice(0, 80)})`);
-} else {
-  console.log(`🔴 frequencias DELETE         → VULNERÁVEL! Deleção sem auth permitida`);
+for (const table of updateTests) {
+  const { error } = await supabase.from(table).delete().eq('id', '00000000-0000-0000-0000-000000000000');
+  if (error) {
+    console.log(`✅ ${table.padEnd(25)} DELETE → BLOQUEADO (${error.code})`);
+  } else {
+    console.log(`🔴 ${table.padEnd(25)} DELETE → ACEITO (sem erro, provavelmente 0 linhas afetadas)`);
+  }
 }
 
-console.log('\n=== FIM DA AUDITORIA ===');
+console.log('\n=== FIM DA AUDITORIA DETALHADA ===');
