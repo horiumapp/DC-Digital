@@ -1,0 +1,203 @@
+import React, { useState } from 'react';
+import { ArrowLeft, Plus, GraduationCap, Building2, Clock, Calendar, BookOpen } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useTurma } from '../contexts/TurmaContext';
+import { APP_CONFIG } from '../config/appConfig';
+
+export default function Atividades() {
+  const { turmaAtiva } = useTurma();
+  const [isCreating, setIsCreating] = useState(false);
+  const year = APP_CONFIG.YEAR;
+  
+  if (!turmaAtiva) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-6 relative">
+        <Link to="/turmas" className="px-6 py-3 bg-[#0f2851] text-white font-bold rounded-xl shadow-lg">Voltar para Turmas</Link>
+      </div>
+    );
+  }
+
+  const periodoDisplay = "1. BIMESTRE";
+  
+  return (
+    <div className="min-h-screen bg-[#f8f9fc] dark:bg-slate-900 relative">
+      <div className="relative z-10 p-8 max-w-[1400px] mx-auto space-y-6">
+        
+        {/* Header Section */}
+        <div className="flex items-center gap-4">
+          <Link to="/diario" className="flex items-center gap-1 px-4 py-2 bg-[#d6e4ff] text-[#4f46e5] text-sm font-bold rounded-lg hover:bg-blue-200 transition">
+            <ArrowLeft className="w-4 h-4" /> 
+            Voltar
+          </Link>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-medium text-slate-700">Atividades da Turma</h2>
+            <span className="bg-emerald-100/80 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full ml-1">Ano: {year}</span>
+            <span className="bg-[#d6e4ff]/70 text-[#4f46e5] text-xs font-bold px-3 py-1 rounded-full">Período: {periodoDisplay}</span>
+          </div>
+        </div>
+
+        {/* Info Card */}
+        <div className="bg-[#f0f4ff] rounded-2xl py-5 px-6 border border-[#d6e4ff]">
+          <div className="grid grid-cols-5 gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#d6e4ff] text-[#4f46e5] flex items-center justify-center shrink-0">
+                <GraduationCap className="w-5 h-5" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-slate-500 font-medium">Professor</span>
+                <span className="text-xs font-bold text-slate-800 uppercase line-clamp-2 mt-0.5">{turmaAtiva.professor || 'NÃO ATRIBUÍDO'}</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3 relative pl-4">
+              <div className="absolute left-0 top-1 bottom-1 w-px bg-slate-300"></div>
+              <div className="w-10 h-10 rounded-full bg-[#d6e4ff] text-[#4f46e5] flex items-center justify-center shrink-0">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-slate-500 font-medium">Escola</span>
+                <span className="text-xs font-bold text-slate-800 uppercase line-clamp-2 mt-0.5">{turmaAtiva.escola || 'CETI AGOSTINHO ERNESTO'}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 relative pl-4">
+              <div className="absolute left-0 top-1 bottom-1 w-px bg-slate-300"></div>
+              <div className="w-10 h-10 rounded-full bg-[#d6e4ff] text-[#4f46e5] flex items-center justify-center shrink-0">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-slate-500 font-medium">Turno</span>
+                <span className="text-sm font-bold text-slate-800 uppercase mt-0.5">{turmaAtiva.turno || 'INTEGRAL'}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 relative pl-4">
+              <div className="absolute left-0 top-1 bottom-1 w-px bg-slate-300"></div>
+              <div className="w-10 h-10 rounded-full bg-[#d6e4ff] text-[#4f46e5] flex items-center justify-center shrink-0">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-slate-500 font-medium">Período</span>
+                <span className="text-sm font-bold text-slate-800 uppercase mt-0.5">{periodoDisplay}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 relative pl-4">
+              <div className="absolute left-0 top-1 bottom-1 w-px bg-slate-300"></div>
+              <div className="w-10 h-10 rounded-full bg-[#d6e4ff] text-[#4f46e5] flex items-center justify-center shrink-0">
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-slate-500 font-medium">Componente</span>
+                <span className="text-xs font-bold text-slate-800 uppercase mt-0.5">{turmaAtiva.disciplina}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 min-h-[450px]">
+          {!isCreating ? (
+            <>
+              {/* Header List View */}
+              <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+                <h3 className="text-[15px] font-medium text-slate-700">Atividades da Turma</h3>
+                <button 
+                  onClick={() => setIsCreating(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-[#4f46e5] text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition"
+                >
+                  <Plus className="w-4 h-4" />
+                  Adicionar atividade
+                </button>
+              </div>
+
+              {/* Empty State */}
+              <div className="p-6">
+                <div className="bg-[#fde2e2] border border-[#f5c6c6] rounded p-4">
+                  <h4 className="text-[#a42b2b] font-medium text-[15px] mb-1">Aviso</h4>
+                  <p className="text-[#a42b2b]/90 text-[13.5px]">A turma ainda não possui atividades cadastradas</p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Header Form View */}
+              <div className="p-6 border-b border-slate-100">
+                <h3 className="text-base font-medium text-slate-700">Cadastrar atividade</h3>
+              </div>
+
+              {/* Form View */}
+              <div className="p-6 pb-12 space-y-5 max-w-5xl">
+                <div>
+                  <label className="block text-[13px] text-slate-700 mb-1.5">Descrição</label>
+                  <textarea 
+                    className="w-full bg-[#f8f9fa] border border-slate-200 rounded p-3 text-[13px] focus:outline-none focus:border-[#4f46e5] focus:bg-white min-h-[90px] resize-none"
+                    maxLength={100}
+                  ></textarea>
+                  <p className="text-[11px] text-slate-400 mt-1">Tamanho máximo: 100 caracteres</p>
+                </div>
+
+                <div>
+                  <label className="block text-[13px] text-slate-700 mb-1.5">Unidade didática</label>
+                  <select className="w-full bg-white border border-slate-200 rounded px-3 py-2.5 text-[13px] text-slate-600 focus:outline-none focus:border-[#4f46e5]">
+                    <option>Selecione uma unidade</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[13px] text-slate-700 mb-1.5">Objetos de Conhecimento:</label>
+                  <div className="w-full bg-[#f8f9fa] border border-slate-200 rounded px-3 py-2.5 text-[13px] text-slate-500 h-[40px] flex items-center">
+                    Selecione uma unidade didática para visualizar os Objetos de conhecimento.
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[13px] text-slate-700 mb-1.5">Anexo</label>
+                  <div className="flex items-center w-full bg-[#f8f9fa] border border-slate-200 rounded overflow-hidden text-[13px]">
+                    <button className="bg-white border-r border-slate-200 px-3 py-2 font-medium text-slate-600 hover:bg-slate-50 transition border-y-0 border-l-0">Escolher arquivo</button>
+                    <span className="px-3 text-slate-400">Nenhum arquivo escolhido</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">Tamanho máximo do arquivo: 5MB</p>
+                </div>
+
+                <div className="grid grid-cols-[1fr_1fr_2fr] gap-6 max-w-3xl">
+                  <div>
+                    <label className="block text-[13px] text-slate-700 mb-1.5">Data Inicial:</label>
+                    <div className="relative group">
+                      <input type="date" className="w-full bg-[#f8f9fa] border border-slate-200 rounded pl-3 pr-10 py-2 text-[13px] text-slate-600 focus:outline-none focus:border-[#4f46e5] h-[38px] [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:z-10" />
+                      <div className="absolute right-0 top-0 bottom-0 w-10 bg-[#4f46e5] rounded-r flex items-center justify-center text-white pointer-events-none">
+                        <Calendar className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[13px] text-slate-700 mb-1.5">Data Entrega:</label>
+                    <div className="relative group">
+                      <input type="date" className="w-full bg-[#f8f9fa] border border-slate-200 rounded pl-3 pr-10 py-2 text-[13px] text-slate-600 focus:outline-none focus:border-[#4f46e5] h-[38px] [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:z-10" />
+                      <div className="absolute right-0 top-0 bottom-0 w-10 bg-[#4f46e5] rounded-r flex items-center justify-center text-white pointer-events-none">
+                        <Calendar className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="pt-2 flex gap-3">
+                  <button className="px-5 py-2 bg-[#4f46e5] hover:bg-indigo-700 text-white rounded text-[13px] font-medium transition shadow-sm">
+                    Adicionar
+                  </button>
+                  <button 
+                    onClick={() => setIsCreating(false)}
+                    className="px-5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded text-[13px] font-medium transition"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -20,6 +20,7 @@ const RelatorioMedias = React.lazy(() => import('./pages/RelatorioMedias'));
 const RelatorioConteudos = React.lazy(() => import('./pages/RelatorioConteudos'));
 const RelatorioFrequencia = React.lazy(() => import('./pages/RelatorioFrequencia'));
 const Frequencia = React.lazy(() => import('./pages/Frequencia'));
+const Atividades = React.lazy(() => import('./pages/Atividades'));
 const Estatisticas = React.lazy(() => import('./pages/Estatisticas'));
 const PendenciasLancamento = React.lazy(() => import('./pages/PendenciasLancamento'));
 const PendenciasFrequencia = React.lazy(() => import('./pages/PendenciasFrequencia'));
@@ -50,6 +51,7 @@ export default function App() {
                   <Route path="/relatorio-conteudos" element={<RelatorioConteudos />} />
                   <Route path="/relatorio-frequencia" element={<RelatorioFrequencia />} />
                   <Route path="/frequencia" element={<Frequencia />} />
+                  <Route path="/atividades" element={<Atividades />} />
                   <Route path="/estatisticas" element={<Estatisticas />} />
                   <Route path="/pendencias-lancamento" element={<PendenciasLancamento />} />
                   <Route path="/pendencias-frequencia" element={<PendenciasFrequencia />} />

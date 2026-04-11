@@ -220,10 +220,10 @@ export default function Diario() {
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
               <div className="p-4 flex items-center justify-between">
                 <h4 className="text-base font-bold text-slate-700">Atividades da Turma</h4>
-                <button className="bg-[#0f2851] hover:bg-[#1a3a6d] transition text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-lg shadow-[#0f2851]/20">
+                <Link to="/atividades" className="bg-[#0f2851] hover:bg-[#1a3a6d] transition text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-lg shadow-[#0f2851]/20">
                   <CheckSquare className="w-4 h-4" /> 
                   Ver atividades
-                </button>
+                </Link>
               </div>
             </div>
           </div>
