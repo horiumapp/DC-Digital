@@ -25,22 +25,22 @@ export default function Atividades() {
         
         {/* Header Section */}
         <div className="flex items-center gap-4">
-          <Link to="/diario" className="flex items-center gap-1 px-4 py-2 bg-[#d6e4ff] text-[#4f46e5] text-sm font-bold rounded-lg hover:bg-blue-200 transition">
+          <Link to="/diario" className="flex items-center gap-1 px-4 py-2 bg-[#eef2ff] text-[#0f2851] text-sm font-bold rounded-xl border border-blue-100 hover:bg-[#e0e7ff] transition">
             <ArrowLeft className="w-4 h-4" /> 
             Voltar
           </Link>
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-medium text-slate-700">Atividades da Turma</h2>
             <span className="bg-emerald-100/80 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full ml-1">Ano: {year}</span>
-            <span className="bg-[#d6e4ff]/70 text-[#4f46e5] text-xs font-bold px-3 py-1 rounded-full">Período: {periodoDisplay}</span>
+            <span className="bg-[#eef2ff] text-[#0f2851] text-xs font-bold px-3 py-1 rounded-full border border-blue-100">Período: {periodoDisplay}</span>
           </div>
         </div>
 
         {/* Info Card */}
-        <div className="bg-[#f0f4ff] rounded-2xl py-5 px-6 border border-[#d6e4ff]">
+        <div className="bg-white/70 dark:bg-slate-800/70 rounded-2xl py-5 px-6 border border-slate-200 dark:border-slate-700">
           <div className="grid grid-cols-5 gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#d6e4ff] text-[#4f46e5] flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-full bg-blue-50 text-[#0f2851] flex items-center justify-center shrink-0">
                 <GraduationCap className="w-5 h-5" />
               </div>
               <div className="flex flex-col">
@@ -49,9 +49,8 @@ export default function Atividades() {
               </div>
             </div>
             
-            <div className="flex items-center gap-3 relative pl-4">
-              <div className="absolute left-0 top-1 bottom-1 w-px bg-slate-300"></div>
-              <div className="w-10 h-10 rounded-full bg-[#d6e4ff] text-[#4f46e5] flex items-center justify-center shrink-0">
+            <div className="flex items-center gap-3 relative pl-4 border-l border-slate-200">
+              <div className="w-10 h-10 rounded-full bg-blue-50 text-[#0f2851] flex items-center justify-center shrink-0">
                 <Building2 className="w-5 h-5" />
               </div>
               <div className="flex flex-col">
@@ -60,9 +59,8 @@ export default function Atividades() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 relative pl-4">
-              <div className="absolute left-0 top-1 bottom-1 w-px bg-slate-300"></div>
-              <div className="w-10 h-10 rounded-full bg-[#d6e4ff] text-[#4f46e5] flex items-center justify-center shrink-0">
+            <div className="flex items-center gap-3 relative pl-4 border-l border-slate-200">
+              <div className="w-10 h-10 rounded-full bg-blue-50 text-[#0f2851] flex items-center justify-center shrink-0">
                 <Clock className="w-5 h-5" />
               </div>
               <div className="flex flex-col">
@@ -71,9 +69,8 @@ export default function Atividades() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 relative pl-4">
-              <div className="absolute left-0 top-1 bottom-1 w-px bg-slate-300"></div>
-              <div className="w-10 h-10 rounded-full bg-[#d6e4ff] text-[#4f46e5] flex items-center justify-center shrink-0">
+            <div className="flex items-center gap-3 relative pl-4 border-l border-slate-200">
+              <div className="w-10 h-10 rounded-full bg-blue-50 text-[#0f2851] flex items-center justify-center shrink-0">
                 <Calendar className="w-5 h-5" />
               </div>
               <div className="flex flex-col">
@@ -82,9 +79,8 @@ export default function Atividades() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 relative pl-4">
-              <div className="absolute left-0 top-1 bottom-1 w-px bg-slate-300"></div>
-              <div className="w-10 h-10 rounded-full bg-[#d6e4ff] text-[#4f46e5] flex items-center justify-center shrink-0">
+            <div className="flex items-center gap-3 relative pl-4 border-l border-slate-200">
+              <div className="w-10 h-10 rounded-full bg-blue-50 text-[#0f2851] flex items-center justify-center shrink-0">
                 <BookOpen className="w-5 h-5" />
               </div>
               <div className="flex flex-col">
@@ -101,10 +97,10 @@ export default function Atividades() {
             <>
               {/* Header List View */}
               <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-                <h3 className="text-[15px] font-medium text-slate-700">Atividades da Turma</h3>
+                <h3 className="text-[15px] font-bold text-slate-700">Atividades da Turma</h3>
                 <button 
                   onClick={() => setIsCreating(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-[#4f46e5] text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-[#0f2851] text-white text-sm font-bold rounded-xl hover:bg-[#1a3a6d] transition shadow-md shadow-[#0f2851]/10"
                 >
                   <Plus className="w-4 h-4" />
                   Adicionar atividade
@@ -131,7 +127,7 @@ export default function Atividades() {
                 <div>
                   <label className="block text-[13px] text-slate-700 mb-1.5">Descrição</label>
                   <textarea 
-                    className="w-full bg-[#f8f9fa] border border-slate-200 rounded p-3 text-[13px] focus:outline-none focus:border-[#4f46e5] focus:bg-white min-h-[90px] resize-none"
+                    className="w-full bg-[#f8f9fa] border border-slate-200 rounded p-3 text-[13px] focus:outline-none focus:border-[#0f2851] focus:bg-white min-h-[90px] resize-none"
                     maxLength={100}
                   ></textarea>
                   <p className="text-[11px] text-slate-400 mt-1">Tamanho máximo: 100 caracteres</p>
@@ -139,7 +135,7 @@ export default function Atividades() {
 
                 <div>
                   <label className="block text-[13px] text-slate-700 mb-1.5">Unidade didática</label>
-                  <select className="w-full bg-white border border-slate-200 rounded px-3 py-2.5 text-[13px] text-slate-600 focus:outline-none focus:border-[#4f46e5]">
+                  <select className="w-full bg-white border border-slate-200 rounded px-3 py-2.5 text-[13px] text-slate-600 focus:outline-none focus:border-[#0f2851]">
                     <option>Selecione uma unidade</option>
                   </select>
                 </div>
@@ -164,8 +160,8 @@ export default function Atividades() {
                   <div>
                     <label className="block text-[13px] text-slate-700 mb-1.5">Data Inicial:</label>
                     <div className="relative group">
-                      <input type="date" className="w-full bg-[#f8f9fa] border border-slate-200 rounded pl-3 pr-10 py-2 text-[13px] text-slate-600 focus:outline-none focus:border-[#4f46e5] h-[38px] [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:z-10" />
-                      <div className="absolute right-0 top-0 bottom-0 w-10 bg-[#4f46e5] rounded-r flex items-center justify-center text-white pointer-events-none">
+                      <input type="date" className="w-full bg-[#f8f9fa] border border-slate-200 rounded pl-3 pr-10 py-2 text-[13px] text-slate-600 focus:outline-none focus:border-[#0f2851] h-[38px] [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:z-10" />
+                      <div className="absolute right-0 top-0 bottom-0 w-10 bg-[#0f2851] rounded-r flex items-center justify-center text-white pointer-events-none">
                         <Calendar className="w-4 h-4" />
                       </div>
                     </div>
@@ -173,8 +169,8 @@ export default function Atividades() {
                   <div>
                     <label className="block text-[13px] text-slate-700 mb-1.5">Data Entrega:</label>
                     <div className="relative group">
-                      <input type="date" className="w-full bg-[#f8f9fa] border border-slate-200 rounded pl-3 pr-10 py-2 text-[13px] text-slate-600 focus:outline-none focus:border-[#4f46e5] h-[38px] [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:z-10" />
-                      <div className="absolute right-0 top-0 bottom-0 w-10 bg-[#4f46e5] rounded-r flex items-center justify-center text-white pointer-events-none">
+                      <input type="date" className="w-full bg-[#f8f9fa] border border-slate-200 rounded pl-3 pr-10 py-2 text-[13px] text-slate-600 focus:outline-none focus:border-[#0f2851] h-[38px] [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:z-10" />
+                      <div className="absolute right-0 top-0 bottom-0 w-10 bg-[#0f2851] rounded-r flex items-center justify-center text-white pointer-events-none">
                         <Calendar className="w-4 h-4" />
                       </div>
                     </div>
@@ -183,7 +179,7 @@ export default function Atividades() {
 
                 {/* Actions */}
                 <div className="pt-2 flex gap-3">
-                  <button className="px-5 py-2 bg-[#4f46e5] hover:bg-indigo-700 text-white rounded text-[13px] font-medium transition shadow-sm">
+                  <button className="px-5 py-2 bg-[#0f2851] hover:bg-[#1a3a6d] text-white rounded text-[13px] font-bold transition shadow-sm">
                     Adicionar
                   </button>
                   <button 
