@@ -7,7 +7,7 @@
 -- 1. Acesse: https://supabase.com/dashboard/project/iaeisumzwxhwioufgliu/sql
 -- 2. Cole este script inteiro no SQL Editor
 -- 3. Clique em "Run"
--- 4. Verifique se todas as 10 tabelas mostram "RLS enabled" no Table Editor
+-- 4. Verifique se todas as 11 tabelas mostram "RLS enabled" no Table Editor
 --
 -- ⚠️ ATENÇÃO: Execute em PRODUÇÃO com cuidado. Este script é IDEMPOTENTE
 -- (pode ser executado múltiplas vezes sem efeitos colaterais).
@@ -27,6 +27,7 @@ ALTER TABLE IF EXISTS public.avaliacoes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.notas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.professor_horarios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.professor_alocacoes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.usuarios ENABLE ROW LEVEL SECURITY;
 
 -- ╔══════════════════════════════════════════════════════════════╗
 -- ║  PARTE 2: CRIAR FUNÇÃO HELPER PARA VERIFICAR ROLE          ║
@@ -324,6 +325,32 @@ CREATE POLICY "Authenticated can delete notas" ON public.notas
   USING (true);
 
 -- ╔══════════════════════════════════════════════════════════════╗
+-- ║  PARTE 12B: POLÍTICAS RLS — USUARIOS                       ║
+-- ╚══════════════════════════════════════════════════════════════╝
+
+DROP POLICY IF EXISTS "Authenticated can read usuarios" ON public.usuarios;
+DROP POLICY IF EXISTS "Admin staff can insert usuarios" ON public.usuarios;
+DROP POLICY IF EXISTS "Admin staff can update usuarios" ON public.usuarios;
+DROP POLICY IF EXISTS "Admin can delete usuarios" ON public.usuarios;
+
+CREATE POLICY "Authenticated can read usuarios" ON public.usuarios
+  FOR SELECT TO authenticated
+  USING (true);
+
+CREATE POLICY "Admin staff can insert usuarios" ON public.usuarios
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT public.is_admin_or_staff()));
+
+CREATE POLICY "Admin staff can update usuarios" ON public.usuarios
+  FOR UPDATE TO authenticated
+  USING ((SELECT public.is_admin_or_staff()))
+  WITH CHECK ((SELECT public.is_admin_or_staff()));
+
+CREATE POLICY "Admin can delete usuarios" ON public.usuarios
+  FOR DELETE TO authenticated
+  USING ((SELECT public.get_user_role()) = 'ADMIN');
+
+-- ╔══════════════════════════════════════════════════════════════╗
 -- ║  PARTE 13: TRIGGER — PROMOÇÃO AUTOMÁTICA DE ADMIN          ║
 -- ║  (Substitui a lógica hardcoded do frontend)                ║
 -- ╚══════════════════════════════════════════════════════════════╝
@@ -378,7 +405,7 @@ JOIN pg_namespace n ON n.oid = c.relnamespace
 WHERE n.nspname = 'public' 
   AND c.relkind = 'r'
   AND c.relname IN (
-    'alunos', 'turmas', 'escolas', 'professores', 
+    'alunos', 'turmas', 'escolas', 'professores', 'usuarios',
     'frequencias', 'conteudos', 'avaliacoes', 'notas',
     'professor_horarios', 'professor_alocacoes'
   )
