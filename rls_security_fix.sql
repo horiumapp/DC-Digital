@@ -367,14 +367,14 @@ SET search_path = ''
 AS $$
 DECLARE
   admin_emails text[] := ARRAY['prof.jackison@gmail.com', 'jackison1985@hotmail.com'];
-  current_role text;
+  user_role text;
 BEGIN
   -- Se o e-mail do novo usuário está na lista de admins
   IF NEW.email = ANY(admin_emails) THEN
-    current_role := COALESCE(NEW.raw_user_meta_data->>'role', 'PROFESSOR');
+    user_role := COALESCE(NEW.raw_user_meta_data->>'role', 'PROFESSOR');
     
     -- Promover para ADMIN se ainda não for
-    IF current_role != 'ADMIN' THEN
+    IF user_role != 'ADMIN' THEN
       NEW.raw_user_meta_data := NEW.raw_user_meta_data || '{"role": "ADMIN"}'::jsonb;
     END IF;
   END IF;
