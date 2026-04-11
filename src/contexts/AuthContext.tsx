@@ -61,10 +61,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
 
-  // LOGOUT
+  // LOGOUT — Revoga sessão no servidor ANTES de limpar o state da UI
   const logout = async () => {
-    setUser(null);
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      setUser(null);
+    }
   };
 
   return (

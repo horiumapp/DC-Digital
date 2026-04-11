@@ -7,9 +7,9 @@ export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
     plugins: [react(), tailwindcss()],
-    define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-    },
+    // SEGURANÇA: GEMINI_API_KEY removida do bundle frontend.
+    // Para usar a Gemini API, utilize uma Edge Function do Supabase (server-side).
+    define: {},
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

@@ -3,14 +3,14 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Background from '../components/Background';
 import { supabase } from '../lib/supabase';
-import { UserRole } from '../contexts/AuthContext';
+import type { UserRole } from '../contexts/AuthContext';
 import { translateSupabaseError } from '../utils/supabaseErrors';
 
 export default function Cadastro() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState<UserRole>('PROFESSOR');
+
   
   // Mascaras locais de formatação para UX
   const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,18 +39,12 @@ export default function Cadastro() {
     const email = (formData.get('email') as string).trim();
     const password = formData.get('password') as string;
     const name = formData.get('name') as string;
-    let role = formData.get('role') as UserRole;
+    const role: UserRole = 'PROFESSOR'; // Segurança: role fixo. Promoção via painel admin.
     
-    // Pegando dados adicionais (caso existam)
+    // Pegando dados adicionais do docente
     const cpf = formData.get('cpf') as string | null;
     const telefone = formData.get('telefone') as string | null;
     const vinculo = formData.get('vinculo') as string | null;
-
-    // Regra de segurança: O Administrador é apenas o dono do sistema
-    const adminEmails = ['prof.jackison@gmail.com', 'jackison1985@hotmail.com'];
-    if (adminEmails.includes(email.toLowerCase())) {
-      role = 'ADMIN';
-    }
 
     try {
       const { data, error: signUpError } = await supabase.auth.signUp({
@@ -152,24 +146,10 @@ export default function Cadastro() {
               />
             </div>
 
-            <div className="space-y-2">
-              <label htmlFor="role" className="block text-sm font-medium text-slate-700">Perfil de Acesso</label>
-              <select
-                id="role"
-                name="role"
-                required
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value as UserRole)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
-              >
-                <option value="PROFESSOR">Professor</option>
-                <option value="GESTOR">Gestor</option>
-                <option value="SECRETARIO">Secretário</option>
-              </select>
-            </div>
 
-            {/* Sub-Forms Condicionais Baseados no Role */}
-            {selectedRole === 'PROFESSOR' && (
+
+            {/* Dados do Docente */}
+            {(
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-4">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Dados do Docente</p>
                 <div className="grid grid-cols-2 gap-4">

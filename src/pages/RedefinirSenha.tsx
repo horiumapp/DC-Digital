@@ -14,14 +14,15 @@ export default function RedefinirSenha() {
   // Verificamos se há hash de sessão da recuperação.
   // Quando o usuário clica no link, o Supabase passa o hash na URL.
   useEffect(() => {
-    supabase.auth.onAuthStateChange((event, session) => {
-      // Se não for evento de redefinição de senha ou login de recuperação,
-      // a nova senha pode não atualizar, mas normalmente a sessão já é estabelecida
-      // pela URL. O update abaixo usa a sessão ativa recém-criada pelo click do email.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, _session) => {
+      // A lib do Supabase já gerencia a sessão da URL automaticamente.
+      // Este listener apenas monitora o evento PASSWORD_RECOVERY.
       if (event === 'PASSWORD_RECOVERY') {
-        // Redundância opcional, a lib por si só entende a sessão da URL.
+        // Sessão de recuperação detectada.
       }
     });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleRedefinir = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -89,7 +90,7 @@ export default function RedefinirSenha() {
                 name="password" 
                 placeholder="••••••••" 
                 required 
-                minLength={6}
+                minLength={8}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
               />
             </div>
@@ -102,7 +103,7 @@ export default function RedefinirSenha() {
                 name="confirmPassword" 
                 placeholder="••••••••" 
                 required 
-                minLength={6}
+                minLength={8}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
               />
             </div>
