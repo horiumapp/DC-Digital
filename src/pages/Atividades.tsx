@@ -97,10 +97,10 @@ export default function Atividades() {
 
                 <div>
                   <label className="block text-[13px] text-slate-700 mb-1.5">Anexo</label>
-                  <div className="flex items-center w-full bg-[#f8f9fa] border border-slate-200 rounded overflow-hidden text-[13px]">
-                    <button className="bg-white border-r border-slate-200 px-3 py-2 font-medium text-slate-600 hover:bg-slate-50 transition border-y-0 border-l-0">Escolher arquivo</button>
-                    <span className="px-3 text-slate-400">Nenhum arquivo escolhido</span>
-                  </div>
+                  <input 
+                    type="file" 
+                    className="block w-full text-[13px] text-slate-400 bg-[#f8f9fa] border border-slate-200 rounded focus:outline-none focus:border-[#0f2851] file:mr-3 file:py-2 file:px-3 file:border-0 file:border-r file:border-solid file:border-slate-200 file:bg-white file:text-slate-600 file:font-medium hover:file:bg-slate-50 file:cursor-pointer cursor-pointer"
+                  />
                   <p className="text-[11px] text-slate-400 mt-1">Tamanho máximo do arquivo: 5MB</p>
                 </div>
 
