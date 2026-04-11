@@ -86,13 +86,7 @@ export default function Diario() {
               <span className="bg-green-100 text-green-700 text-sm font-bold px-3 py-1 rounded-full border border-green-200 ml-2">Ano: {APP_CONFIG.YEAR}</span>
             </h2>
           </div>
-          <div className="relative">
-            <button className="flex items-center gap-2 px-4 py-2 bg-[#0f2851] hover:bg-[#1a3a6d] text-white text-sm font-bold rounded-xl shadow-lg shadow-[#0f2851]/20 transition">
-              <Bell className="w-4 h-4" /> 
-              Notificações 
-              <ChevronDown className="w-4 h-4" />
-            </button>
-          </div>
+
         </div>
 
         {/* Main Info Cards */}
