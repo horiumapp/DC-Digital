@@ -47,7 +47,7 @@ export default function CalendarWidget({
   ];
 
   const handlePrevMonth = () => {
-    if (currentMonth > 0) onMonthChange(currentMonth - 1);
+    if (currentMonth > 1) onMonthChange(currentMonth - 1);
   };
 
   const handleNextMonth = () => {
@@ -73,13 +73,13 @@ export default function CalendarWidget({
       <div className="p-5 flex items-center justify-between border-b border-slate-200">
         <button 
           onClick={handlePrevMonth}
-          disabled={currentMonth === 0}
+          disabled={currentMonth <= 1}
           className="flex items-center gap-1 px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <ChevronLeft className="w-4 h-4" />
           Anterior
         </button>
-        <h3 className="text-lg font-semibold text-slate-700">{monthNames[currentMonth]} de {year}</h3>
+        <h3 className="text-lg font-semibold text-slate-700">{monthNames[currentMonth].toUpperCase()}</h3>
         <button 
           onClick={handleNextMonth}
           disabled={currentMonth === 11}
