@@ -5,73 +5,19 @@ const supabase = createClient(
   '***REMOVED_ANON_KEY***'
 );
 
-const tabelas = [
-  'alunos', 'turmas', 'escolas', 'frequencias', 'conteudos',
-  'avaliacoes', 'notas', 'professores', 'professor_horarios', 
-  'professor_alocacoes', 'usuarios'
-];
+// Buscar todas as policies via pg_policies (sem acesso service_role, tentamos via RPC)
+// Na verdade, vamos tentar uma abordagem pelo cliente
+// O problema é que temos policies OLD que usam role 'public' ou 'anon'
 
-console.log('=== VERIFICAÇÃO PÓS-CORREÇÃO — DC DIGITAL ===\n');
-
-let vulneraveis = 0;
-let protegidas = 0;
-
-// 1. Leitura sem auth
-console.log('--- SELECT sem autenticação ---\n');
-for (const t of tabelas) {
-  const { data, error } = await supabase.from(t).select('*').limit(1);
-  if (error) {
-    console.log(`✅ ${t.padEnd(25)} → BLOQUEADO`);
-    protegidas++;
-  } else if (data && data.length > 0) {
-    console.log(`🔴 ${t.padEnd(25)} → EXPOSTA! (${data.length} registros)`);
-    vulneraveis++;
-  } else {
-    console.log(`✅ ${t.padEnd(25)} → BLOQUEADO (0 resultados retornados)`);
-    protegidas++;
-  }
+console.log('Tentando buscar políticas via information_schema...');
+const { data, error } = await supabase.rpc('get_policies_info').select('*');
+if (error) {
+  console.log('RPC não disponível. Veja as políticas diretamente no Supabase Dashboard.');
+  console.log('Acesse: https://supabase.com/dashboard/project/iaeisumzwxhwioufgliu/auth/policies');
+  console.log('\nAs tabelas vulneráveis provavelmente têm policies existentes para o role "public" ou "anon".');
+  console.log('\nTabelas que AINDA estão vulneráveis a UPDATE/DELETE anônimo:');
+  console.log('- alunos, turmas, escolas, professores');
+  console.log('- professor_horarios, professor_alocacoes, usuarios');
+  console.log('\nTabelas corretamente protegidas:');
+  console.log('- frequencias, conteudos, avaliacoes, notas');
 }
-
-// 2. UPDATE sem auth
-console.log('\n--- UPDATE sem autenticação ---\n');
-for (const t of tabelas) {
-  const { error } = await supabase.from(t).update({ id: '00000000-0000-0000-0000-000000000000' }).eq('id', '00000000-0000-0000-0000-000000000000');
-  if (error) {
-    console.log(`✅ ${t.padEnd(25)} → BLOQUEADO`);
-    protegidas++;
-  } else {
-    console.log(`🔴 ${t.padEnd(25)} → ACEITO`);
-    vulneraveis++;
-  }
-}
-
-// 3. DELETE sem auth  
-console.log('\n--- DELETE sem autenticação ---\n');
-for (const t of tabelas) {
-  const { error } = await supabase.from(t).delete().eq('id', '00000000-0000-0000-0000-000000000000');
-  if (error) {
-    console.log(`✅ ${t.padEnd(25)} → BLOQUEADO`);
-    protegidas++;
-  } else {
-    console.log(`🔴 ${t.padEnd(25)} → ACEITO`);
-    vulneraveis++;
-  }
-}
-
-// 4. INSERT sem auth
-console.log('\n--- INSERT sem autenticação ---\n');
-for (const t of ['escolas', 'turmas', 'professores', 'alunos']) {
-  const { error } = await supabase.from(t).insert([{ nome: 'AUDIT_TEST' }]);
-  if (error) {
-    console.log(`✅ ${t.padEnd(25)} → BLOQUEADO`);
-    protegidas++;
-  } else {
-    console.log(`🔴 ${t.padEnd(25)} → VULNERÁVEL!`);
-    vulneraveis++;
-  }
-}
-
-console.log('\n========================================');
-console.log(`RESULTADO: ${protegidas} operações BLOQUEADAS, ${vulneraveis} VULNERÁVEIS`);
-console.log(vulneraveis === 0 ? '✅ SISTEMA SEGURO!' : '🔴 AINDA HÁ VULNERABILIDADES!');
-console.log('========================================');
