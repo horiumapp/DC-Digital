@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Plus, GraduationCap, Building2, Clock, Calendar, BookOpen } from 'lucide-react';
+import { ArrowLeft, Plus, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
 import { APP_CONFIG } from '../config/appConfig';
+import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
 
 export default function Atividades() {
   const { turmaAtiva } = useTurma();
@@ -17,78 +18,23 @@ export default function Atividades() {
     );
   }
 
-  const periodoDisplay = "1. BIMESTRE";
-  
-  return (
-    <div className="min-h-screen bg-[#f8f9fc] dark:bg-slate-900 relative">
-      <div className="relative z-10 p-8 max-w-[1400px] mx-auto space-y-6">
-        
         {/* Header Section */}
-        <div className="flex items-center gap-4">
-          <Link to="/diario" className="flex items-center gap-1 px-4 py-2 bg-[#eef2ff] text-[#0f2851] text-sm font-bold rounded-xl border border-blue-100 hover:bg-[#e0e7ff] transition">
-            <ArrowLeft className="w-4 h-4" /> 
-            Voltar
-          </Link>
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-medium text-slate-700">Atividades da Turma</h2>
-            <span className="bg-emerald-100/80 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full ml-1">Ano: {year}</span>
-            <span className="bg-[#eef2ff] text-[#0f2851] text-xs font-bold px-3 py-1 rounded-full border border-blue-100">Período: {periodoDisplay}</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link to="/diario" className="flex items-center gap-1 px-4 py-2 bg-[#eef2ff] text-[#0f2851] text-sm font-bold rounded-xl border border-blue-100 hover:bg-[#e0e7ff] transition">
+              <ArrowLeft className="w-4 h-4" /> 
+              Voltar
+            </Link>
+            <h2 className="text-xl font-medium text-slate-700 dark:text-slate-100">
+              {turmaAtiva.ensino} - {turmaAtiva.fase}
+              <span className="bg-green-100 text-green-700 text-sm font-bold px-3 py-1 rounded-full border border-green-200 ml-2">Ano: {year}</span>
+            </h2>
           </div>
         </div>
 
         {/* Info Card */}
-        <div className="bg-white/70 dark:bg-slate-800/70 rounded-2xl py-5 px-6 border border-slate-200 dark:border-slate-700">
-          <div className="grid grid-cols-5 gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-50 text-[#0f2851] flex items-center justify-center shrink-0">
-                <GraduationCap className="w-5 h-5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-slate-500 font-medium">Professor</span>
-                <span className="text-xs font-bold text-slate-800 uppercase line-clamp-2 mt-0.5">{turmaAtiva.professor || 'NÃO ATRIBUÍDO'}</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 relative pl-4 border-l border-slate-200">
-              <div className="w-10 h-10 rounded-full bg-blue-50 text-[#0f2851] flex items-center justify-center shrink-0">
-                <Building2 className="w-5 h-5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-slate-500 font-medium">Escola</span>
-                <span className="text-xs font-bold text-slate-800 uppercase line-clamp-2 mt-0.5">{turmaAtiva.escola || 'CETI AGOSTINHO ERNESTO'}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 relative pl-4 border-l border-slate-200">
-              <div className="w-10 h-10 rounded-full bg-blue-50 text-[#0f2851] flex items-center justify-center shrink-0">
-                <Clock className="w-5 h-5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-slate-500 font-medium">Turno</span>
-                <span className="text-sm font-bold text-slate-800 uppercase mt-0.5">{turmaAtiva.turno || 'INTEGRAL'}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 relative pl-4 border-l border-slate-200">
-              <div className="w-10 h-10 rounded-full bg-blue-50 text-[#0f2851] flex items-center justify-center shrink-0">
-                <Calendar className="w-5 h-5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-slate-500 font-medium">Período</span>
-                <span className="text-sm font-bold text-slate-800 uppercase mt-0.5">{periodoDisplay}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 relative pl-4 border-l border-slate-200">
-              <div className="w-10 h-10 rounded-full bg-blue-50 text-[#0f2851] flex items-center justify-center shrink-0">
-                <BookOpen className="w-5 h-5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-slate-500 font-medium">Componente</span>
-                <span className="text-xs font-bold text-slate-800 uppercase mt-0.5">{turmaAtiva.disciplina}</span>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white/70 dark:bg-slate-800/70 rounded-2xl p-6 border border-slate-200 dark:border-slate-700">
+          <TurmaHeaderInfo turmaAtiva={turmaAtiva} />
         </div>
 
         {/* Main Content Area */}
