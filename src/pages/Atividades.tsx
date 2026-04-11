@@ -17,7 +17,9 @@ export default function Atividades() {
       </div>
     );
   }
-
+  return (
+    <div className="min-h-screen bg-[#f8f9fc] dark:bg-slate-900 relative">
+      <div className="relative z-10 p-8 max-w-[1400px] mx-auto space-y-6">
         {/* Header Section */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -105,18 +107,18 @@ export default function Atividades() {
                 <div className="grid grid-cols-[1fr_1fr_2fr] gap-6 max-w-3xl">
                   <div>
                     <label className="block text-[13px] text-slate-700 mb-1.5">Data Inicial:</label>
-                    <div className="relative group">
-                      <input type="date" className="w-full bg-[#f8f9fa] border border-slate-200 rounded pl-3 pr-10 py-2 text-[13px] text-slate-600 focus:outline-none focus:border-[#0f2851] h-[38px] [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:z-10" />
-                      <div className="absolute right-0 top-0 bottom-0 w-10 bg-[#0f2851] rounded-r flex items-center justify-center text-white pointer-events-none">
+                    <div className="relative group overflow-hidden rounded border border-slate-200 focus-within:border-[#0f2851]">
+                      <input type="date" className="w-full bg-[#f8f9fa] pl-3 pr-10 py-2 text-[13px] text-slate-600 focus:outline-none h-[38px] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-10 [&::-webkit-calendar-picker-indicator]:h-[38px] [&::-webkit-calendar-picker-indicator]:m-0 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:z-20" />
+                      <div className="absolute right-0 top-0 bottom-0 w-10 bg-[#0f2851] flex items-center justify-center text-white pointer-events-none z-10">
                         <Calendar className="w-4 h-4" />
                       </div>
                     </div>
                   </div>
                   <div>
                     <label className="block text-[13px] text-slate-700 mb-1.5">Data Entrega:</label>
-                    <div className="relative group">
-                      <input type="date" className="w-full bg-[#f8f9fa] border border-slate-200 rounded pl-3 pr-10 py-2 text-[13px] text-slate-600 focus:outline-none focus:border-[#0f2851] h-[38px] [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:z-10" />
-                      <div className="absolute right-0 top-0 bottom-0 w-10 bg-[#0f2851] rounded-r flex items-center justify-center text-white pointer-events-none">
+                    <div className="relative group overflow-hidden rounded border border-slate-200 focus-within:border-[#0f2851]">
+                      <input type="date" className="w-full bg-[#f8f9fa] pl-3 pr-10 py-2 text-[13px] text-slate-600 focus:outline-none h-[38px] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-10 [&::-webkit-calendar-picker-indicator]:h-[38px] [&::-webkit-calendar-picker-indicator]:m-0 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:z-20" />
+                      <div className="absolute right-0 top-0 bottom-0 w-10 bg-[#0f2851] flex items-center justify-center text-white pointer-events-none z-10">
                         <Calendar className="w-4 h-4" />
                       </div>
                     </div>
