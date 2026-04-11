@@ -129,15 +129,7 @@ export default function Login() {
             </div>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-            <p className="text-sm text-slate-500">
-              Não possui uma conta?{' '}
-              <Link to="/cadastro" className="text-[#0f2851] font-bold hover:underline transition-all">Criar conta</Link>
-            </p>
-            <p className="mt-4 text-[10px] text-slate-400 uppercase tracking-widest">
-              Protegido por Supabase Auth
-            </p>
-          </div>
+
         </section>
 
         <footer className="mt-6 text-center text-slate-400 text-xs">
