@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { APP_CONFIG } from '../config/appConfig';
 import { TurmaService } from '../services/turmaService';
 import { Aluno, Avaliacao } from '../contexts/TurmaContext';
+import { useToast } from '../components/common/Toast';
 
 export default function RelatorioMedias() {
   const { user } = useAuth();
