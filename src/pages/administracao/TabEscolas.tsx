@@ -5,8 +5,11 @@ import { Search, Plus, Edit2, Trash2, Building2, MapPin, User, Hash, ChevronRigh
 import NovaEscolaModal from '../../components/NovaEscolaModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 
+import { useToast } from '../../components/common/Toast';
+
 export default function TabEscolas() {
   const { user } = useAuth();
+  const { showError } = useToast();
   const [buscaEscola, setBuscaEscola] = useState('');
   const [isNovaEscolaModalOpen, setIsNovaEscolaModalOpen] = useState(false);
   const [escolaParaEditar, setEscolaParaEditar] = useState<any>(null);
@@ -46,7 +49,7 @@ export default function TabEscolas() {
 
       if (error) {
         console.error("Erro ao atualizar:", error);
-        alert("Erro ao atualizar escola: " + error.message);
+        showError("Erro ao atualizar escola: " + error.message);
       } else {
         fetchEscolas();
         setEscolaParaEditar(null);
@@ -65,7 +68,7 @@ export default function TabEscolas() {
 
       if (error) {
         console.error("Erro ao inserir:", error);
-        alert("Erro ao criar escola: " + error.message);
+        showError("Erro ao criar escola: " + error.message);
       } else {
         fetchEscolas();
         setEscolaParaEditar(null);

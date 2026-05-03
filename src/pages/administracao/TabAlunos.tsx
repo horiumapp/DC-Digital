@@ -7,8 +7,11 @@ import NovoAlunoModal from '../../components/NovoAlunoModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import { formatCpfObscured } from '../../utils/formatters';
 
+import { useToast } from '../../components/common/Toast';
+
 export default function TabAlunos() {
   const { user } = useAuth();
+  const { showError } = useToast();
   const [buscaAluno, setBuscaAluno] = useState('');
   const [isNovoAlunoModalOpen, setIsNovoAlunoModalOpen] = useState(false);
   const [alunoParaEditar, setAlunoParaEditar] = useState<any>(null);
@@ -48,7 +51,7 @@ export default function TabAlunos() {
         })
         .eq('id', alunoParaEditar.id);
 
-      if (error) alert("Erro ao editar aluno: " + error.message);
+      if (error) showError("Erro ao editar aluno: " + error.message);
       else {
         fetchAlunos();
         setAlunoParaEditar(null);
@@ -70,7 +73,7 @@ export default function TabAlunos() {
           status: novoAluno.status
         }]);
 
-      if (error) alert("Erro ao criar aluno: " + error.message);
+      if (error) showError("Erro ao criar aluno: " + error.message);
       else {
         fetchAlunos();
         setAlunoParaEditar(null);
@@ -91,7 +94,7 @@ export default function TabAlunos() {
         .delete()
         .eq('id', alunoParaExcluir.id);
 
-      if (error) alert("Erro ao excluir aluno: " + error.message);
+      if (error) showError("Erro ao excluir aluno: " + error.message);
       else {
         fetchAlunos();
         setAlunoParaExcluir(null);

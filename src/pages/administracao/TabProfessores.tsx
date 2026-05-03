@@ -16,8 +16,11 @@ const DISCIPLINAS = [
   'MATEMÁTICA', 'PORTUGUÊS', 'QUÍMICA', 'SOCIOLOGIA'
 ];
 
+import { useToast } from '../../components/common/Toast';
+
 export default function TabProfessores() {
   const { user } = useAuth();
+  const { showError, showWarning } = useToast();
   const [buscaProfessor, setBuscaProfessor] = useState('');
   const [isNovoProfessorModalOpen, setIsNovoProfessorModalOpen] = useState(false);
   const [professorParaEditar, setProfessorParaEditar] = useState<any>(null);
@@ -94,7 +97,7 @@ export default function TabProfessores() {
 
       if (error) {
         console.error("Erro ao atualizar:", error);
-        alert("Erro ao atualizar professor: " + error.message);
+        showError("Erro ao atualizar professor: " + error.message);
       } else {
         fetchProfessores();
         setProfessorParaEditar(null);
@@ -113,7 +116,7 @@ export default function TabProfessores() {
 
       if (error) {
         console.error("Erro ao inserir:", error);
-        alert("Erro ao criar professor: " + error.message);
+        showError("Erro ao criar professor: " + error.message);
       } else {
         const newProf = newProfList?.[0];
         // Se existe uma escola selecionada, alocamos ele automaticamente nela!
@@ -139,7 +142,7 @@ export default function TabProfessores() {
 
   const handleInlineSubmit = () => {
     if (!inlineFormData.nome) {
-      alert("Por favor, informe o nome do professor.");
+      showWarning("Por favor, informe o nome do professor.");
       return;
     }
     
@@ -170,7 +173,7 @@ export default function TabProfessores() {
 
       if (error) {
         console.error("Erro ao deletar:", error);
-        alert("Erro ao deletar professor: " + error.message);
+        showError("Erro ao deletar professor: " + error.message);
       } else {
         fetchProfessores();
         setProfessorParaExcluir(null);
