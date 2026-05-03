@@ -219,7 +219,8 @@ export const TurmaService = {
       .from('frequencias')
       .select('data, aluno_id, status')
       .eq('turma_id', tid)
-      .eq('disciplina', disciplina);
+      .eq('disciplina', disciplina)
+      .eq('status', 'F');
     if (error) throw error;
     return freqData || [];
   },

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Background from '../components/Background';
@@ -16,39 +16,10 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Rate Limiting SEC-07
-  const [lockoutTime, setLockoutTime] = useState<number>(0);
-  
-  useEffect(() => {
-    const checkLockout = () => {
-      const lockoutUntil = localStorage.getItem('loginLockoutUntil');
-      if (lockoutUntil) {
-        const remaining = Math.ceil((parseInt(lockoutUntil) - Date.now()) / 1000);
-        if (remaining > 0) {
-          setLockoutTime(remaining);
-        } else {
-          localStorage.removeItem('loginLockoutUntil');
-          localStorage.removeItem('loginAttempts');
-          setLockoutTime(0);
-        }
-      }
-    };
-
-    checkLockout();
-    const interval = setInterval(checkLockout, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
   // Manipulador do form REAL conectado ao Supabase
   const handleRealLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    
-    if (lockoutTime > 0) {
-      setError(`Muitas tentativas falhas. Tente novamente em ${lockoutTime} segundos.`);
-      return;
-    }
-
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
@@ -63,23 +34,10 @@ export default function Login() {
 
       if (signInError) throw signInError;
       
-      // Reset attempts on success
-      localStorage.removeItem('loginAttempts');
-      localStorage.removeItem('loginLockoutUntil');
       navigate('/turmas');
 
     } catch (err: any) {
-      const currentAttempts = parseInt(localStorage.getItem('loginAttempts') || '0') + 1;
-      localStorage.setItem('loginAttempts', currentAttempts.toString());
-      
-      if (currentAttempts >= 5) {
-        const lockoutUntil = Date.now() + 30000; // 30 seconds
-        localStorage.setItem('loginLockoutUntil', lockoutUntil.toString());
-        setLockoutTime(30);
-        setError('Muitas tentativas falhas. O login foi bloqueado por 30 segundos.');
-      } else {
-        setError(translateSupabaseError(err.message));
-      }
+      setError(translateSupabaseError(err.message));
     } finally {
       setIsLoading(false);
     }
@@ -148,13 +106,11 @@ export default function Login() {
             <div className="pt-2">
               <button 
                 type="submit"
-                disabled={isLoading || lockoutTime > 0}
+                disabled={isLoading}
                 className="w-full flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-4 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all active:scale-95"
               >
                 {isLoading ? (
                   <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Entrando...</>
-                ) : lockoutTime > 0 ? (
-                  `Bloqueado (${lockoutTime}s)`
                 ) : (
                   'Entrar'
                 )}

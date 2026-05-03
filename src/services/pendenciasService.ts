@@ -80,6 +80,20 @@ export const fetchPendenciasPorEscola = async (
     const hoje = new Date();
     const mapConsolidado: Record<string, any> = {};
 
+    let minDate: Date | null = null;
+    let maxDate: Date | null = null;
+
+    for (const periodoNome of periodosSelecionados) {
+      const dates = PERIOD_DATES[periodoNome];
+      if (dates) {
+        if (!minDate || dates.start < minDate) minDate = dates.start;
+        if (!maxDate || dates.end > maxDate) maxDate = dates.end;
+      }
+    }
+
+    const minDateISO = minDate ? minDate.toISOString().split('T')[0] : null;
+    const maxDateISO = maxDate ? maxDate.toISOString().split('T')[0] : null;
+
     // 1. Agrupar horários por Turma+Componente+Periodo
     for (const periodoNome of periodosSelecionados) {
       const dates = PERIOD_DATES[periodoNome];
@@ -171,12 +185,22 @@ export const fetchPendenciasPorEscola = async (
       };
 
       const [fAll, cAll, avAll, aluAll] = await Promise.all([
-        fetchAll<any>(() => supabase.from('frequencias')
-          .select('turma_id, disciplina, tempo, data')
-          .in('turma_id', batchTurmaIds)),
-        fetchAll<any>(() => supabase.from('conteudos')
-          .select('turma_id, disciplina, tempo, data')
-          .in('turma_id', batchTurmaIds)),
+        fetchAll<any>(() => {
+          let q = supabase.from('frequencias')
+            .select('turma_id, disciplina, tempo, data')
+            .in('turma_id', batchTurmaIds);
+          if (minDateISO) q = q.gte('data', minDateISO);
+          if (maxDateISO) q = q.lte('data', maxDateISO);
+          return q;
+        }),
+        fetchAll<any>(() => {
+          let q = supabase.from('conteudos')
+            .select('turma_id, disciplina, tempo, data')
+            .in('turma_id', batchTurmaIds);
+          if (minDateISO) q = q.gte('data', minDateISO);
+          if (maxDateISO) q = q.lte('data', maxDateISO);
+          return q;
+        }),
         fetchAll<any>(() => supabase.from('avaliacoes')
           .select('id, turma_id, disciplina, bimestre')
           .in('turma_id', batchTurmaIds)),
