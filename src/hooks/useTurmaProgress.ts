@@ -65,7 +65,7 @@ export function useTurmaProgress(
     const fim = hoje < fimBimestre ? hoje : fimBimestre;
 
     const curso = new Date(inicio.getTime());
-    const activeTurmaId = String(turmaAtiva.id).split('_')[0];
+    const activeTurmaId = String(turmaAtiva.id).split('||')[0];
 
     while (curso <= fim) {
       const dow = curso.getDay();
@@ -81,14 +81,14 @@ export function useTurmaProgress(
             l.data === dayStr && 
             l.tempo === `${horario.tempo_ordem}º TEMPO` && 
             l.tipo === 'frequencia' &&
-            String(l.turmaId).split('_')[0] === activeTurmaId
+            String(l.turmaId).split('||')[0] === activeTurmaId
           );
           
           const temConteudo = lancamentos.some(l => 
             l.data === dayStr && 
             l.tempo === `${horario.tempo_ordem}º TEMPO` && 
             l.tipo === 'conteudo' &&
-            String(l.turmaId).split('_')[0] === activeTurmaId
+            String(l.turmaId).split('||')[0] === activeTurmaId
           );
 
           if (temFrequencia) freqLancadas++;
@@ -102,7 +102,7 @@ export function useTurmaProgress(
     const pObj  = totalEsperado > 0 ? Math.min(100, Math.round((conteudoLancados / totalEsperado) * 100)) : 0;
 
     const avaliacoesDaTurma = avaliacoes.filter(av => {
-      const avTurmaId = String(av.turmaId).split('_')[0];
+      const avTurmaId = String(av.turmaId).split('||')[0];
       if (avTurmaId !== activeTurmaId) return false;
       if (!av.data || !av.data.includes(APP_CONFIG.YEAR.toString()) || av.id.includes('temp_')) return false;
       const bNome = av.bimestre || getBimestrePorData(av.data);
