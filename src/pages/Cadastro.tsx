@@ -13,6 +13,7 @@ export default function Cadastro() {
   const [error, setError] = useState<string | null>(null);
   const [cpfValue, setCpfValue] = useState('');
   const [cpfError, setCpfError] = useState<string | null>(null);
+  const [senhaConfirm, setSenhaConfirm] = useState('');
 
   
   // Formata e valida o CPF em tempo real
@@ -57,14 +58,29 @@ export default function Cadastro() {
       return;
     }
 
+    // Validar confirmação de senha antes de enviar
+    const passwordConfirm = formData.get('password_confirm') as string;
+    if (password !== passwordConfirm) {
+      setError('As senhas não coincidem. Verifique e tente novamente.');
+      setLoading(false);
+      return;
+    }
+
+    if (password.length < 8) {
+      setError('A senha deve ter no mínimo 8 caracteres.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
+            // SEGURANÇA: role NÃO é definido via user_metadata (controlado por app_metadata no servidor)
+            // O trigger handle_new_user define o cargo padrão como PROFESSOR automaticamente
             full_name: name,
-            role: role,
             ...(cpf && { cpf }),
             ...(telefone && { telefone }),
             ...(vinculo && { vinculo }),
@@ -150,11 +166,33 @@ export default function Cadastro() {
                 type="password" 
                 id="password" 
                 name="password" 
-                placeholder="Mínimo 6 caracteres" 
-                minLength={6}
+                placeholder="Mínimo 8 caracteres" 
+                minLength={8}
                 required 
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
               />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="password_confirm" className="block text-sm font-medium text-slate-700">Confirmar Senha</label>
+              <input 
+                type="password" 
+                id="password_confirm" 
+                name="password_confirm"
+                value={senhaConfirm}
+                onChange={(e) => setSenhaConfirm(e.target.value)}
+                placeholder="Repita a senha" 
+                minLength={8}
+                required 
+                className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30 ${
+                  senhaConfirm && senhaConfirm !== (document.getElementById('password') as HTMLInputElement)?.value
+                    ? 'border-red-400'
+                    : 'border-slate-200'
+                }`}
+              />
+              {senhaConfirm && senhaConfirm !== (document.getElementById('password') as HTMLInputElement)?.value && (
+                <p className="text-xs text-red-600 font-medium mt-1">As senhas não coincidem.</p>
+              )}
             </div>
 
 

@@ -36,24 +36,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { user: authUser } = session;
       const metadata = authUser.user_metadata;
 
-      // Segurança: Prioriza app_metadata ou consulta a tabela 'usuarios'
-      // app_metadata não pode ser alterado pelo cliente.
+      // Segurança: Prioriza app_metadata (não alterável pelo cliente)
       let role: UserRole = (authUser.app_metadata?.role as UserRole);
 
       if (!role) {
         // Fallback: busca da tabela de usuários se não estiver no app_metadata
-        const { data: userData } = await supabase
-          .from('usuarios')
-          .select('cargo')
-          .eq('id', authUser.id)
-          .single();
-        
-        role = (userData?.cargo as UserRole) || 'PROFESSOR';
+        try {
+          const { data: userData, error } = await supabase
+            .from('usuarios')
+            .select('cargo')
+            .eq('id', authUser.id)
+            .single();
+          
+          if (!error && userData) {
+            role = (userData.cargo as UserRole) || 'PROFESSOR';
+          } else {
+            role = 'PROFESSOR';
+          }
+        } catch {
+          role = 'PROFESSOR';
+        }
       }
 
       setUser({
         id: authUser.id,
-        name: metadata.full_name || 'Usuário Sem Nome',
+        name: metadata?.full_name || authUser.email?.split('@')[0] || 'Usuário',
         email: authUser.email || '',
         role: role,
         title: role,
@@ -66,8 +73,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       fetchUserData(session);
     });
 
-    // Escuta mudanças de sessão (login real, logout real, etc)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Escuta TODOS os eventos de sessão explicitamente para segurança
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Eventos que encerram a sessão — limpar estado imediatamente
+      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      // Recuperação de senha — não redirecionar, manter sessão parcial
+      if (event === 'PASSWORD_RECOVERY') {
+        setLoading(false);
+        return;
+      }
+      // Login, token refresh e outros — recarregar dados do usuário
       fetchUserData(session);
     });
 
