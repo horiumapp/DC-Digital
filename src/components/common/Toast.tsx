@@ -54,7 +54,7 @@ interface ToastItemProps {
   onRemove: (id: string) => void;
 }
 
-function ToastItem({ toast, onRemove }: ToastItemProps) {
+const ToastItem: React.FC<ToastItemProps> = ({ toast, onRemove }) => {
   return (
     <div
       className={`
