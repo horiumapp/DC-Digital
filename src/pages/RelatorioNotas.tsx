@@ -121,7 +121,7 @@ export default function RelatorioNotas() {
     setHasSearched(true);
     try {
       const [turmaId, componente] = selectedTurma.split('|');
-      const tid = turmaId.split('_')[0];
+      const tid = turmaId.split('||')[0];
       
       const alunosData = await TurmaService.fetchAlunos(tid);
       setAlunos(alunosData);

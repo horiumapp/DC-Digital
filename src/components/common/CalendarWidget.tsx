@@ -119,8 +119,8 @@ export default function CalendarWidget({
           
           if (isDiaDeAula) {
             const dayStr = `${day.toString().padStart(2, '0')}/${(currentMonth + 1).toString().padStart(2, '0')}/${year}`;
-            const activeTurmaId = String(turmaAtiva?.id).split('_')[0];
-            const lancamentosDoDia = lancamentos.filter(l => l.data === dayStr && String(l.turmaId).split('_')[0] === activeTurmaId);
+            const activeTurmaId = String(turmaAtiva?.id).split('||')[0];
+            const lancamentosDoDia = lancamentos.filter(l => l.data === dayStr && String(l.turmaId).split('||')[0] === activeTurmaId);
             
             // Filtramos apenas os tempos que realmente existem no horário para este dia
             const temposValidos = horarioTurma?.filter(h => Number(h.dia_semana) === dayOfWeek).map(h => `${h.tempo_ordem}º TEMPO`) || [];
@@ -129,7 +129,7 @@ export default function CalendarWidget({
             const temConteudo = lancamentosDoDia.some(l => l.tipo === 'conteudo' && temposValidos.includes(l.tempo));
             
             // Buscar avaliações no dia
-            const avaliacoesDoDia = avaliacoes.filter(av => av.data === dayStr && String(av.turmaId).split('_')[0] === activeTurmaId);
+            const avaliacoesDoDia = avaliacoes.filter(av => av.data === dayStr && String(av.turmaId).split('||')[0] === activeTurmaId);
             const temAvaliacao = avaliacoesDoDia.length > 0;
             
             // Verificar se as avaliações têm notas para todos (ou maioria) dos alunos
