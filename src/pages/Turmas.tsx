@@ -80,6 +80,12 @@ export default function Turmas() {
   const fetchAlocacoes = async () => {
     if (!user || !user.email) return;
     
+    // Usuários administrativos não precisam buscar lotações de professor
+    if (['ADMIN', 'GESTOR', 'SECRETARIO'].includes(user.role)) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const emailLimpo = user.email.trim();
