@@ -118,7 +118,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
         setConteudos([]);
 
         try {
-          const rawId = turmaAtiva.id.toString().split('_')[0];
+          const rawId = turmaAtiva.id.toString().split('||')[0];
           const [ls, hs, alumnosData, conts, freqs] = await Promise.all([
             TurmaService.fetchLancamentos(rawId, turmaAtiva.componente),
             TurmaService.fetchHorario(rawId, turmaAtiva.componente),
@@ -207,7 +207,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const salvarAvaliacao = async (av: Avaliacao): Promise<string> => {
     if (!turmaAtiva) return '';
-    const rawId = turmaAtiva.id.toString().split('_')[0];
+    const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
       const createdId = await TurmaService.salvarAvaliacao(av, rawId, turmaAtiva.componente);
       await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunos);
@@ -231,7 +231,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const salvarNotas = async (avaliacaoId: string, notas: { alunoId: string, valor: string }[]) => {
     if (!turmaAtiva) return;
-    const rawId = turmaAtiva.id.toString().split('_')[0];
+    const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
       await TurmaService.salvarNotas(avaliacaoId, notas);
       await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunos);
@@ -264,7 +264,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const salvarConteudo = async (cont: Conteudo) => {
     if (!turmaAtiva) return;
-    const rawId = turmaAtiva.id.toString().split('_')[0];
+    const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
       await TurmaService.salvarConteudo(rawId, turmaAtiva.componente, cont);
       registrarLancamento({ turmaId: rawId, data: cont.data, tipo: 'conteudo', tempo: cont.tempo });
@@ -278,7 +278,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const buscarFrequencia = async (data: string, tempo: string) => {
     if (!turmaAtiva) return;
-    const rawId = turmaAtiva.id.toString().split('_')[0];
+    const rawId = turmaAtiva.id.toString().split('||')[0];
     const freqData = await TurmaService.buscarFrequencia(rawId, turmaAtiva.componente, data, tempo);
 
     if (freqData.length > 0) {
@@ -295,7 +295,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const buscarConteudo = async (data: string, tempo: string): Promise<Conteudo | null> => {
     if (!turmaAtiva) return null;
-    const rawId = turmaAtiva.id.toString().split('_')[0];
+    const rawId = turmaAtiva.id.toString().split('||')[0];
     const contData = await TurmaService.buscarConteudo(rawId, turmaAtiva.componente, data, tempo);
     if (contData) {
       registrarLancamento({ turmaId: rawId, data: contData.data, tipo: 'conteudo', tempo: contData.tempo });
@@ -305,7 +305,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const removerFrequencia = async (data: string, tempo: string) => {
     if (!turmaAtiva) return;
-    const rawId = turmaAtiva.id.toString().split('_')[0];
+    const rawId = turmaAtiva.id.toString().split('||')[0];
     await TurmaService.removerFrequencia(rawId, turmaAtiva.componente, data, tempo);
     removerLancamento({ turmaId: rawId, data, tipo: 'frequencia', tempo });
     setAlunos(prev => prev.map(a => ({ ...a, freq: '', part: 'Presencial' })));
@@ -315,7 +315,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const removerConteudo = async (data: string, tempo: string) => {
     if (!turmaAtiva) return;
-    const rawId = turmaAtiva.id.toString().split('_')[0];
+    const rawId = turmaAtiva.id.toString().split('||')[0];
     await TurmaService.removerConteudo(rawId, turmaAtiva.componente, data, tempo);
     removerLancamento({ turmaId: rawId, data, tipo: 'conteudo', tempo });
     // Recarregar conteúdos
@@ -326,7 +326,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const carregarFaltasDaData = async (data: string) => {
     if (!turmaAtiva) return;
     try {
-      const rawId = turmaAtiva.id.toString().split('_')[0];
+      const rawId = turmaAtiva.id.toString().split('||')[0];
       const resp = await TurmaService.buscarFrequenciaPorDia(rawId, turmaAtiva.componente, data);
       const idsFaltosos = new Set(resp.filter((f: any) => f.status === 'F').map((f: any) => f.aluno_id.toString()));
       const normalizedDate = formatarDataParaISO(data);

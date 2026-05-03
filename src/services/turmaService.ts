@@ -3,7 +3,7 @@ import { getBimestrePorData } from '../utils/dateUtils';
 import { Aluno, Avaliacao, Conteudo, Horario, Lancamento } from '../contexts/TurmaContext';
 import { APP_CONFIG } from '../config/appConfig';
 
-const getTid = (turmaId: string | number): string => turmaId.toString().split('_')[0];
+const getTid = (turmaId: string | number): string => turmaId.toString().split('||')[0];
 
 export const TurmaService = {
   fetchHorario: async (turmaId: string | number, disciplina: string): Promise<Horario[]> => {

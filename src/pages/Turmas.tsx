@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Search, ChevronDown, Edit2, GraduationCap, Building2, Clock, Calendar } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import NovaTurmaModal from '../components/NovaTurmaModal';
@@ -15,6 +15,7 @@ export default function Turmas() {
 
   const handleSelectTurma = (turma: Turma) => {
     selecionarTurma(turma);
+    sessionStorage.setItem('turmaAtivaId', turma.id.toString());
     navigate('/diario');
   };
   
@@ -120,7 +121,7 @@ export default function Turmas() {
     setAlocacaoAtiva(aloc);
   };
 
-  const filteredTurmas: Turma[] = (() => {
+  const filteredTurmas: Turma[] = useMemo(() => {
     const rawFiltered = turmasBD.filter(t => t.nome.toLowerCase().includes(searchTerm.toLowerCase()));
     const exploded: Turma[] = [];
 
@@ -130,10 +131,10 @@ export default function Turmas() {
     rawFiltered.forEach(t => {
       disciplinasList.forEach(disc => {
         exploded.push({
-          id: `${t.id}_${disc}`, // ID composto para evitar problemas de key no React
+          id: `${t.id}||${disc}`, // Separador '||' evita colisão com disciplinas que contêm '_'
           ensino: 'Ensino Fundamental', 
           fase: t.nome,
-          componente: disc, // Uma linha para cada disciplina
+          componente: disc,
           professor: user?.name || '',
           escola: t.escolas?.nome || alocacaoAtiva?.escolas?.nome || 'Escola',
           turno: t.turno,
@@ -153,7 +154,7 @@ export default function Turmas() {
     });
 
     return exploded;
-  })();
+  }, [turmasBD, searchTerm, professorDisciplinas, user?.name, alocacaoAtiva]);
 
   if (loading) {
     return (
