@@ -9,6 +9,7 @@ import { Aluno, Avaliacao } from '../contexts/TurmaContext';
 
 export default function RelatorioMedias() {
   const { user } = useAuth();
+  const { showError } = useToast();
   const [turmas, setTurmas] = useState<any[]>([]);
   const [selectedTurma, setSelectedTurma] = useState('');
   const [loading, setLoading] = useState(true);
@@ -32,11 +33,12 @@ export default function RelatorioMedias() {
       if (!user) return;
 
       if (user.role === 'ADMIN' || user.role === 'GESTOR' || user.role === 'SECRETARIO') {
-        const { data: todasTurmas } = await supabase
+        const { data: todasTurmas, error } = await supabase
           .from('turmas')
           .select('id, nome, turno')
           .order('nome');
         
+        if (error) throw error;
         if (todasTurmas) {
           const finalTurmas = todasTurmas.map(t => ({ ...t, componente: 'GERAL' }));
           setTurmas(finalTurmas);
@@ -46,11 +48,12 @@ export default function RelatorioMedias() {
         }
       } else {
         const emailLimpo = user.email.trim();
-        const { data: profs } = await supabase
+        const { data: profs, error: profError } = await supabase
           .from('professores')
           .select('id, disciplinas')
           .ilike('email', `%${emailLimpo}%`);
 
+        if (profError) throw profError;
         if (profs && profs.length > 0) {
           let allDisciplinas: string[] = [];
           profs.forEach(p => {
@@ -62,19 +65,21 @@ export default function RelatorioMedias() {
           if (componentes.length === 0) componentes = ['POLIVALENTE'];
 
           const profIds = profs.map(p => p.id);
-          const { data: alocs } = await supabase
+          const { data: alocs, error: alocError } = await supabase
             .from('professor_alocacoes')
             .select('escola_id, turno')
             .in('professor_id', profIds);
 
+          if (alocError) throw alocError;
           if (alocs && alocs.length > 0) {
             const orConditions = alocs.map(a => `and(escola_id.eq.${a.escola_id},turno.eq.${a.turno})`).join(',');
-            const { data: turmasAlocadas } = await supabase
+            const { data: turmasAlocadas, error: turmasError } = await supabase
               .from('turmas')
               .select('id, nome, turno')
               .or(orConditions)
               .order('nome');
 
+            if (turmasError) throw turmasError;
             if (turmasAlocadas) {
               const finalTurmas: any[] = [];
               turmasAlocadas.forEach(t => {
@@ -92,6 +97,7 @@ export default function RelatorioMedias() {
       }
     } catch (err) {
       console.error('Erro ao buscar turmas:', err);
+      showError('Não foi possível carregar as turmas.');
     } finally {
       setLoading(false);
     }
@@ -113,7 +119,7 @@ export default function RelatorioMedias() {
       setNotas(notasData);
     } catch (err) {
       console.error(err);
-      alert('Erro ao buscar dados do relatório.');
+      showError('Erro ao buscar dados do relatório.');
     } finally {
       setDataLoading(false);
     }

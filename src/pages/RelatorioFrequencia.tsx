@@ -7,6 +7,8 @@ import { formatarDataParaISO, getBimestrePorData } from '../utils/dateUtils';
 import { APP_CONFIG } from '../config/appConfig';
 import { TurmaService } from '../services/turmaService';
 
+import { useToast } from '../components/common/Toast';
+
 interface TurmaRelatorio {
   id: string;
   nome: string;
@@ -30,6 +32,7 @@ interface AlunoFrequencia {
 
 export default function RelatorioFrequencia() {
   const { user } = useAuth();
+  const { showError, showWarning } = useToast();
   const [turmas, setTurmas] = useState<TurmaRelatorio[]>([]);
   const [selectedTurmaId, setSelectedTurmaId] = useState('');
   const [buscaTurma, setBuscaTurma] = useState('');
@@ -61,10 +64,12 @@ export default function RelatorioFrequencia() {
     try {
       if (!user) return;
       const emailLimpo = user.email.trim();
-      const { data: profs } = await supabase
+      const { data: profs, error: profError } = await supabase
         .from('professores')
         .select('id, disciplinas')
         .ilike('email', `%${emailLimpo}%`);
+
+      if (profError) throw profError;
 
       if (profs && profs.length > 0) {
         let allDisciplinas: string[] = [];
@@ -77,18 +82,22 @@ export default function RelatorioFrequencia() {
         if (componentes.length === 0) componentes = ['POLIVALENTE'];
 
         const profIds = profs.map(p => p.id);
-        const { data: alocs } = await supabase
+        const { data: alocs, error: alocError } = await supabase
           .from('professor_alocacoes')
           .select('escola_id, turno')
           .in('professor_id', profIds);
 
+        if (alocError) throw alocError;
+
         if (alocs && alocs.length > 0) {
           const orConditions = alocs.map(a => `and(escola_id.eq.${a.escola_id},turno.eq.${a.turno})`).join(',');
-          const { data: turmasAlocadas } = await supabase
+          const { data: turmasAlocadas, error: turmasError } = await supabase
             .from('turmas')
             .select('*, escolas(nome)')
             .or(orConditions)
             .order('nome');
+
+          if (turmasError) throw turmasError;
 
           if (turmasAlocadas) {
             const finalTurmas: TurmaRelatorio[] = [];
@@ -116,6 +125,7 @@ export default function RelatorioFrequencia() {
       }
     } catch (err) {
       console.error('Erro ao buscar turmas:', err);
+      showError('Não foi possível carregar as turmas.');
     } finally {
       setLoading(false);
     }
@@ -123,7 +133,7 @@ export default function RelatorioFrequencia() {
 
   const handleExibir = async () => {
     if (!selectedTurmaId) {
-      alert('Por favor, selecione uma turma.');
+      showWarning('Por favor, selecione uma turma.');
       return;
     }
 
@@ -202,7 +212,7 @@ export default function RelatorioFrequencia() {
            console.log(`Fallback encontrou ${filteredFallback.length} registros.`);
            finalFreqs.push(...filteredFallback);
         } else {
-           alert('Nenhuma frequência encontrada para os critérios selecionados.');
+           showWarning('Nenhuma frequência encontrada para os critérios selecionados.');
            setDataLoading(false);
            return;
         }
@@ -268,7 +278,7 @@ export default function RelatorioFrequencia() {
 
     } catch (err) {
       console.error(err);
-      alert('Erro ao carregar dados.');
+      showError('Erro ao carregar dados.');
       setDataLoading(false);
     }
   };
