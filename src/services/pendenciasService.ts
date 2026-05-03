@@ -40,24 +40,33 @@ function countWeekDaysInRange(start: Date, end: Date, dayOfWeek: number): number
   return count;
 }
 
+export interface PaginatedPendencias {
+  data: PendenciaDocente[];
+  total: number;
+}
+
 export const fetchPendenciasPorEscola = async (
   escolaId: string, 
   periodosSelecionados: string[],
+  page: number = 1,
+  pageSize: number = 20,
   professorEmail?: string
-): Promise<PendenciaDocente[]> => {
+): Promise<PaginatedPendencias> => {
   try {
     let query = supabase
       .from('professor_horarios')
-      .select('*, turmas(id, nome, turno), professores(id, nome, email)')
-      .limit(10000);
+      .select('*, turmas(id, nome, turno), professores(id, nome, email)', { count: 'exact' });
 
     if (escolaId !== 'TODAS') {
       query = query.eq('escola_id', escolaId);
     }
 
-    const { data: horarios, error: hError } = await query;
+    const offset = (page - 1) * pageSize;
+    const { data: horarios, error: hError, count } = await query
+      .range(offset, offset + pageSize - 1);
+
     if (hError) throw hError;
-    if (!horarios) return [];
+    if (!horarios) return { data: [], total: 0 };
 
     const professorEmailLower = professorEmail?.toLowerCase().trim();
     const horariosFiltrados = professorEmailLower
@@ -225,9 +234,12 @@ export const fetchPendenciasPorEscola = async (
       });
     }
 
-    return finalResult.sort((a, b) => a.professor.localeCompare(b.professor));
+    return {
+      data: finalResult.sort((a, b) => a.professor.localeCompare(b.professor)),
+      total: count || 0
+    };
   } catch (err) {
     console.error('Erro no cálculo de pendências:', err);
-    return [];
+    return { data: [], total: 0 };
   }
 };
