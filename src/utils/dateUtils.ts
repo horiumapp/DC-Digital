@@ -23,7 +23,13 @@ export const getBimestrePorData = (dataStr: string): string => {
 };
 export const getDayOfWeek = (dataStr: string): number => {
   if (!dataStr) return -1;
-  const [dia, mes, ano] = dataStr.split('/').map(Number);
+  let dia, mes, ano;
+  if (dataStr.includes('/')) {
+    [dia, mes, ano] = dataStr.split('/').map(Number);
+  } else {
+    [ano, mes, dia] = dataStr.split('-').map(Number);
+  }
+  if (!dia || !mes || !ano) return -1;
   return new Date(ano, mes - 1, dia).getDay();
 };
 

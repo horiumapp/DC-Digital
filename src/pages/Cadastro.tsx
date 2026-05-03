@@ -5,21 +5,25 @@ import Background from '../components/Background';
 import { supabase } from '../lib/supabase';
 import type { UserRole } from '../contexts/AuthContext';
 import { translateSupabaseError } from '../utils/supabaseErrors';
+import { validarCPF, formatarCPF } from '../utils/cpfUtils';
 
 export default function Cadastro() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cpfValue, setCpfValue] = useState('');
+  const [cpfError, setCpfError] = useState<string | null>(null);
 
   
-  // Mascaras locais de formatação para UX
+  // Formata e valida o CPF em tempo real
   const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, '');
-    if (value.length > 11) value = value.slice(0, 11);
-    value = value.replace(/(\d{3})(\d)/, '$1.$2');
-    value = value.replace(/(\d{3})(\d)/, '$1.$2');
-    value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-    e.target.value = value;
+    const formatted = formatarCPF(e.target.value);
+    setCpfValue(formatted);
+    if (formatted.replace(/\D/g, '').length === 11) {
+      setCpfError(validarCPF(formatted) ? null : 'CPF inválido. Verifique os dígitos.');
+    } else {
+      setCpfError(null);
+    }
   };
 
   const handleTelefoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,9 +46,16 @@ export default function Cadastro() {
     const role: UserRole = 'PROFESSOR'; // Segurança: role fixo. Promoção via painel admin.
     
     // Pegando dados adicionais do docente
-    const cpf = formData.get('cpf') as string | null;
+    const cpf = cpfValue || null;
     const telefone = formData.get('telefone') as string | null;
     const vinculo = formData.get('vinculo') as string | null;
+
+    // Validar CPF antes de enviar
+    if (cpf && !validarCPF(cpf)) {
+      setError('CPF inválido. Verifique os dígitos e tente novamente.');
+      setLoading(false);
+      return;
+    }
 
     try {
       const { data, error: signUpError } = await supabase.auth.signUp({
@@ -159,11 +170,17 @@ export default function Cadastro() {
                       type="text" 
                       id="cpf" 
                       name="cpf" 
+                      value={cpfValue}
                       onChange={handleCpfChange}
                       placeholder="000.000.000-00" 
                       required 
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all font-medium bg-white"
+                      className={`w-full px-4 py-2.5 rounded-xl border focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all font-medium bg-white ${
+                        cpfError ? 'border-red-400' : 'border-slate-200'
+                      }`}
                     />
+                    {cpfError && (
+                      <p className="text-xs text-red-600 font-medium mt-1">{cpfError}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2 col-span-2 sm:col-span-1">

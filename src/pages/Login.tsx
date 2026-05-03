@@ -95,18 +95,7 @@ export default function Login() {
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input 
-                  type="checkbox" 
-                  id="remember_me" 
-                  name="remember_me" 
-                  className="h-5 w-5 text-[#0f2851] focus:ring-[#0f2851] border-slate-300 rounded" 
-                />
-                <label htmlFor="remember_me" className="ml-2 block text-sm font-bold text-slate-600 select-none">
-                  Lembrar-me
-                </label>
-              </div>
+            <div className="flex items-center justify-end">
               <div className="text-sm">
                 <Link to="/recuperar-senha" className="font-bold text-[#0f2851] hover:underline transition-all">
                   Esqueceu a senha?

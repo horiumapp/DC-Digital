@@ -80,7 +80,7 @@ interface TurmaContextType {
   conteudos: Conteudo[];
   horarioTurma: Horario[];
   loading: boolean;
-  salvarAvaliacao: (av: Avaliacao) => Promise<void>;
+  salvarAvaliacao: (av: Avaliacao) => Promise<string>;
   removerAvaliacao: (id: string) => Promise<void>;
   salvarNotas: (avaliacaoId: string, notas: { alunoId: string, valor: string }[]) => Promise<void>;
   salvarFrequencia: (data: string, tempo: string, alunosFreq: Aluno[]) => Promise<void>;
@@ -254,20 +254,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
         tempo
       });
 
-      // Atualizar faltasPorData em tempo real
-      setFaltasPorData(prev => {
-        const newMap = { ...prev };
-        const normalizedDate = formatarDataParaISO(data);
-        const currentAlunosFaltosos = new Set(newMap[normalizedDate] || []);
-        alunosFreq.forEach(a => {
-          if (a.freq === 'F') {
-            currentAlunosFaltosos.add(a.id);
-          }
-        });
-        newMap[normalizedDate] = currentAlunosFaltosos;
-        return newMap;
-      });
-
+      // Buscar do servidor para garantir consistência (única fonte de verdade)
       await carregarFaltasDaData(data);
     } catch (err) {
       console.error('Erro ao salvar frequência:', err);
@@ -322,6 +309,8 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     await TurmaService.removerFrequencia(rawId, turmaAtiva.componente, data, tempo);
     removerLancamento({ turmaId: rawId, data, tipo: 'frequencia', tempo });
     setAlunos(prev => prev.map(a => ({ ...a, freq: '', part: 'Presencial' })));
+    // Sincronizar faltasPorData com o servidor após a remoção
+    await carregarFaltasDaData(data);
   };
 
   const removerConteudo = async (data: string, tempo: string) => {

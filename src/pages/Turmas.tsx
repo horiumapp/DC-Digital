@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, ChevronDown, ChevronRight, ChevronLeft, Edit2, GraduationCap, Building2, Clock, Calendar } from 'lucide-react';
+import { Search, ChevronDown, Edit2, GraduationCap, Building2, Clock, Calendar } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import NovaTurmaModal from '../components/NovaTurmaModal';
 import { APP_CONFIG } from '../config/appConfig';
@@ -26,7 +26,7 @@ export default function Turmas() {
 
   React.useEffect(() => {
     fetchAlocacoes();
-  }, [user]);
+  }, [user?.id]);
 
   React.useEffect(() => {
     if (alocacaoAtiva) {
@@ -60,11 +60,11 @@ export default function Turmas() {
       const emailLimpo = user.email.trim();
       
       // 1. Encontrar o(s) registro(s) do professor vinculado ao usuário logado
-      // Buscamos TODOS que baterem com o email (caso o admin tenha criado o mesmo professor duas vezes)
+      // Usamos eq com correspondência exata para evitar falsos positivos
       const { data: professorDataResult, error: profError } = await supabase
         .from('professores')
         .select('id, disciplinas')
-        .ilike('email', `%${emailLimpo}%`);
+        .eq('email', emailLimpo);
 
       if (profError) {
         console.error("Erro ao achar professor pelo email:", profError);
@@ -302,33 +302,14 @@ export default function Turmas() {
               </table>
             </div>
 
-            {/* Pagination Footer */}
-            <div className="px-6 py-5 flex items-center justify-between border-t border-slate-100">
-              <div className="flex items-center gap-4 text-base text-slate-600">
-                <p>Mostrando de 1 até {filteredTurmas.length} de {filteredTurmas.length} registros</p>
-                <div className="flex items-center gap-2">
-                  <span>Mostrar</span>
-                  <select className="border border-slate-200 rounded px-3 py-1.5 text-sm bg-white focus:ring-0 focus:border-[#0f2851] outline-none font-bold text-[#0f2851]">
-                    <option>{filteredTurmas.length}</option>
-                  </select>
-                  <span>registros</span>
-                </div>
-              </div>
-              <div className="flex items-center">
-                <div className="inline-flex rounded-md shadow-sm" role="group">
-                  <button className="px-4 py-2 text-sm font-medium text-slate-500 bg-white border border-slate-200 rounded-l-lg hover:bg-slate-50 flex items-center gap-1">
-                    <ChevronLeft className="w-4 h-4" />
-                    Anterior
-                  </button>
-                  <button className="px-4 py-2 text-sm font-bold text-white bg-[#0f2851] border-t border-b border-[#0f2851]">
-                    1
-                  </button>
-                  <button className="px-4 py-2 text-sm font-medium text-slate-500 bg-white border border-slate-200 rounded-r-lg hover:bg-slate-50 flex items-center gap-1">
-                    Seguinte
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+            {/* Rodapé com contagem */}
+            <div className="px-6 py-4 flex items-center justify-between border-t border-slate-100 bg-slate-50/50">
+              <p className="text-sm text-slate-500">
+                {filteredTurmas.length === 0
+                  ? 'Nenhum registro encontrado'
+                  : `Exibindo ${filteredTurmas.length} registro${filteredTurmas.length !== 1 ? 's' : ''}`
+                }
+              </p>
             </div>
           </div>
         </main>

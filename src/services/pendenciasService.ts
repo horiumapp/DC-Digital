@@ -209,7 +209,9 @@ export const fetchPendenciasPorEscola = async (
 
         finalResult.push({
           professor: group.professor,
-          dataLotacao: '01/02/2026',
+          dataLotacao: APP_CONFIG.PERIODOS[0]?.dataInicio
+            ? APP_CONFIG.PERIODOS[0].dataInicio.split('-').reverse().join('/')
+            : '01/01/' + APP_CONFIG.YEAR,
           periodo: group.periodo,
           turno: group.turno,
           ensino: group.ensino,
