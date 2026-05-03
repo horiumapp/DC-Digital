@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Avaliacao, Horario, Lancamento, Turma, Aluno } from '../contexts/TurmaContext';
-import { APP_CONFIG } from '../config/appConfig';
+import { APP_CONFIG, PeriodoLetivo } from '../config/appConfig';
 import { getBimestrePorData } from '../utils/dateUtils';
 
 // Interfazes para as dependências e retornos
@@ -17,7 +17,7 @@ interface ProgressStats {
 
 export function useTurmaProgress(
   turmaAtiva: Turma | null,
-  periodoSelecionado: any,
+  periodoSelecionado: PeriodoLetivo | null,
   lancamentos: Lancamento[],
   horarioTurma: Horario[],
   avaliacoes: Avaliacao[],

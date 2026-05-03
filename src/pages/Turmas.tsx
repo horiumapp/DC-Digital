@@ -25,6 +25,8 @@ export default function Turmas() {
   const [loading, setLoading] = useState(true);
   const [professorDisciplinas, setProfessorDisciplinas] = useState<string>('');
 
+  const { showSuccess, showError } = useToast();
+
   React.useEffect(() => {
     fetchAlocacoes();
   }, [user?.id]);
@@ -45,11 +47,13 @@ export default function Turmas() {
         .eq('turno', alocacaoAtiva.turno)
         .order('nome');
 
+      if (error) throw error;
       if (data) {
         setTurmasBD(data);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao carregar turmas:', err);
+      showError('Não foi possível carregar as turmas.');
     }
   };
 
@@ -67,9 +71,7 @@ export default function Turmas() {
         .select('id, disciplinas')
         .eq('email', emailLimpo);
 
-      if (profError) {
-        console.error("Erro ao achar professor pelo email:", profError);
-      }
+      if (profError) throw profError;
 
       if (professorDataResult && professorDataResult.length > 0) {
         // Pegar todas as disciplinas de todos os perfis encontrados e unificar (caso um tenha e outro não)
@@ -92,9 +94,7 @@ export default function Turmas() {
           .select('id, escola_id, turno, escolas(nome)')
           .in('professor_id', profIds);
 
-        if (alocError) {
-          console.error("Erro na busca de alocacoes:", alocError);
-        }
+        if (alocError) throw alocError;
 
         if (alocData && alocData.length > 0) {
           // Remove duplicadas reais (mesma escola & mesmo turno) se houver
@@ -106,19 +106,18 @@ export default function Turmas() {
           setAlocacaoAtiva(uniqueAlocs[0]); // Seleciona a primeira por padrão
         } else {
           console.warn("Nenhuma alocacão encontrada para os professores encontrados.");
+          showError("Nenhuma alocação (escola/turno) encontrada para seu usuário.");
         }
       } else {
         console.warn("Nenhum professor encontrado com o e-mail:", emailLimpo);
+        showError("Cadastro de professor não encontrado para este e-mail.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao carregar lotações:', err);
+      showError('Ocorreu um erro ao carregar suas lotações.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const shiftToActiveAlocacao = (aloc: any) => {
-    setAlocacaoAtiva(aloc);
   };
 
   const filteredTurmas: Turma[] = useMemo(() => {

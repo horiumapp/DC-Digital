@@ -1,3 +1,11 @@
+export interface PeriodoLetivo {
+  id: string;
+  nome: string;
+  label: string;
+  dataInicio: string;
+  dataFim: string;
+}
+
 export const APP_CONFIG = {
   YEAR: 2026,
   PERIODOS: [
