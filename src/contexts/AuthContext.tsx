@@ -75,8 +75,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Escuta TODOS os eventos de sessão explicitamente para segurança
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Eventos que encerram a sessão — limpar estado imediatamente
-      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+      // Evento que encerra a sessão — limpar estado imediatamente
+      if (event === 'SIGNED_OUT') {
         setUser(null);
         setLoading(false);
         return;
