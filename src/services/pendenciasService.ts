@@ -57,17 +57,17 @@ export const fetchPendenciasPorEscola = async (
   professorEmail?: string
 ): Promise<PaginatedPendencias> => {
   try {
+    // Buscar TODOS os horários relevantes para consolidar pendências corretamente.
+    // A paginação é aplicada sobre o resultado consolidado, não sobre os horários brutos.
     let query = supabase
       .from('professor_horarios')
-      .select('*, turmas(id, nome, turno), professores(id, nome, email)', { count: 'exact' });
+      .select('*, turmas(id, nome, turno), professores(id, nome, email)');
 
     if (escolaId !== 'TODAS') {
       query = query.eq('escola_id', escolaId);
     }
 
-    const offset = (page - 1) * pageSize;
-    const { data: horarios, error: hError, count } = await query
-      .range(offset, offset + pageSize - 1);
+    const { data: horarios, error: hError } = await query;
 
     if (hError) throw hError;
     if (!horarios) return { data: [], total: 0 };
@@ -254,9 +254,16 @@ export const fetchPendenciasPorEscola = async (
       });
     }
 
+    // Paginação aplicada sobre o resultado consolidado (correto)
+    const totalConsolidado = finalResult.length;
+    const offset = (page - 1) * pageSize;
+    const resultadoPaginado = finalResult
+      .sort((a, b) => a.professor.localeCompare(b.professor))
+      .slice(offset, offset + pageSize);
+
     return {
-      data: finalResult.sort((a, b) => a.professor.localeCompare(b.professor)),
-      total: count || 0
+      data: resultadoPaginado,
+      total: totalConsolidado
     };
   } catch (err) {
     console.error('Erro no cálculo de pendências:', err);

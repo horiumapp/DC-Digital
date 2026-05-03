@@ -5,6 +5,23 @@ import { APP_CONFIG } from '../config/appConfig';
 
 const getTid = (turmaId: string | number): string => turmaId.toString().split('||')[0];
 
+/**
+ * Normaliza data para o formato ISO YYYY-MM-DD.
+ * Aceita DD/MM/YYYY ou YYYY-MM-DD como entrada.
+ * Garante consistência dos dados gravados no banco.
+ */
+const normalizarDataISO = (data: string): string => {
+  if (!data) return data;
+  // Já está em ISO
+  if (/^\d{4}-\d{2}-\d{2}$/.test(data)) return data;
+  // Converte DD/MM/YYYY -> YYYY-MM-DD
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(data)) {
+    const [d, m, y] = data.split('/');
+    return `${y}-${m}-${d}`;
+  }
+  return data;
+};
+
 export const TurmaService = {
   fetchHorario: async (turmaId: string | number, disciplina: string): Promise<Horario[]> => {
     const tid = getTid(turmaId);
@@ -52,8 +69,9 @@ export const TurmaService = {
   fetchAlunos: async (turmaId: string | number): Promise<Aluno[]> => {
     const { data, error } = await supabase
       .from('alunos')
-      .select('*')
+      .select('id, nome, matricula')
       .eq('turma_id', turmaId.toString())
+      .eq('status', 'Ativo')
       .order('nome');
     if (error) throw error;
     
@@ -149,10 +167,12 @@ export const TurmaService = {
 
   salvarFrequencia: async (turmaId: string | number, disciplina: string, data: string, tempo: string, alunosFreq: Aluno[]): Promise<void> => {
     const tid = getTid(turmaId);
+    // Normalizar data para ISO (YYYY-MM-DD) antes de gravar
+    const dataISO = normalizarDataISO(data);
     const upserts = alunosFreq.map(aluno => ({
       turma_id: tid,
       aluno_id: aluno.id,
-      data,
+      data: dataISO,
       tempo,
       status: aluno.freq || 'P',
       participacao: aluno.part || 'Presencial',
@@ -164,9 +184,11 @@ export const TurmaService = {
 
   salvarConteudo: async (turmaId: string | number, disciplina: string, cont: Conteudo): Promise<void> => {
     const tid = getTid(turmaId);
+    // Normalizar data para ISO (YYYY-MM-DD) antes de gravar
+    const dataISO = normalizarDataISO(cont.data);
     const payload = {
       turma_id: tid,
-      data: cont.data,
+      data: dataISO,
       tempo: cont.tempo,
       objetos: cont.objetos,
       habilidades: cont.habilidades,
@@ -179,11 +201,12 @@ export const TurmaService = {
 
   buscarFrequencia: async (turmaId: string | number, disciplina: string, data: string, tempo: string): Promise<any[]> => {
     const tid = getTid(turmaId);
+    const dataISO = normalizarDataISO(data);
     const { data: freqData, error } = await supabase
       .from('frequencias')
-      .select('*')
+      .select('aluno_id, status, participacao')
       .eq('turma_id', tid)
-      .eq('data', data)
+      .eq('data', dataISO)
       .eq('tempo', tempo)
       .eq('disciplina', disciplina);
     if (error) throw error;
