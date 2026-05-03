@@ -146,12 +146,11 @@ export default function TabProfessores() {
       return;
     }
     
-    // O email PRECISA ser previsível para que a coordenação saiba qual email o professor vai usar para criar a conta depois.
-    const emailPrevisivel = `${inlineFormData.nome.toLowerCase().replace(/\s+/g, '.')}@escola.com`;
-
+    // No cadastro rápido, o e-mail fica nulo.
+    // O professor preencherá seu e-mail real ao se cadastrar pelo formulário de acesso.
     handleSaveProfessor({
       ...inlineFormData,
-      email: emailPrevisivel,
+      email: null,
       cpf: '',
       telefone: '',
       status: 'Ativo',

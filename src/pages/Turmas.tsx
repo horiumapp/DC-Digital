@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { Search, ChevronDown, Edit2, GraduationCap, Building2, Clock, Calendar } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import NovaTurmaModal from '../components/NovaTurmaModal';
+import { Search, ChevronDown, GraduationCap, Building2, Clock, Calendar, AlertCircle } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import { APP_CONFIG } from '../config/appConfig';
 import { useTurma, Turma } from '../contexts/TurmaContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { useToast } from '../components/common/Toast';
 
 export default function Turmas() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -155,10 +155,38 @@ export default function Turmas() {
     return exploded;
   }, [turmasBD, searchTerm, professorDisciplinas, user?.name, alocacaoAtiva]);
 
+  // Usuários administrativos (ADMIN, GESTOR, SECRETARIO) não têm alocação de professor.
+  // Redirecioná-los para a área de administração é a UX correta.
+  const isAdminUser = user?.role && ['ADMIN', 'GESTOR', 'SECRETARIO'].includes(user.role);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-slate-500 animate-pulse font-medium">Carregando sua lotação...</div>
+      </div>
+    );
+  }
+
+  // Tela especial para administradores sem lotação de professor
+  if (isAdminUser && alocacoes.length === 0) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-10 max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
+            <AlertCircle className="w-8 h-8 text-[#0f2851]" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">Acesso Administrativo</h2>
+          <p className="text-slate-500 text-sm mb-6">
+            Sua conta possui perfil <strong>{user?.role}</strong>. A visualização de turmas é reservada
+            para professores com lotação ativa. Acesse o painel administrativo para gerenciar o sistema.
+          </p>
+          <Link
+            to="/administracao"
+            className="inline-flex items-center justify-center gap-2 w-full bg-[#0f2851] hover:bg-[#1a3a6d] text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-[#0f2851]/20"
+          >
+            Ir para Administração
+          </Link>
+        </div>
       </div>
     );
   }

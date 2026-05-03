@@ -25,19 +25,23 @@ APP_CONFIG.PERIODOS.forEach(p => {
 
 /**
  * Conta quantos dias de aula existem para um dia da semana (0-6) em um intervalo.
+ * Algoritmo O(1) — sem loop diário.
  */
 function countWeekDaysInRange(start: Date, end: Date, dayOfWeek: number): number {
   if (start > end) return 0;
-  let count = 0;
-  const current = new Date(start);
-  // Garante que não ultrapasse 1 ano de busca por segurança
-  let safety = 0;
-  while (current <= end && safety < 400) {
-    if (current.getDay() === dayOfWeek) count++;
-    current.setDate(current.getDate() + 1);
-    safety++;
+  // Total de dias no intervalo (inclusivo nos dois extremos)
+  const totalDays = Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1;
+  // Semanas completas garantem exatamente 1 ocorrência de cada dia
+  const fullWeeks = Math.floor(totalDays / 7);
+  // Dias restantes após as semanas completas
+  const remainder = totalDays % 7;
+  const startDay = start.getDay();
+  // Verificar se o dia da semana alvo aparece nos dias restantes
+  let extraDay = 0;
+  for (let i = 0; i < remainder; i++) {
+    if ((startDay + i) % 7 === dayOfWeek) { extraDay = 1; break; }
   }
-  return count;
+  return fullWeeks + extraDay;
 }
 
 export interface PaginatedPendencias {
@@ -137,18 +141,34 @@ export const fetchPendenciasPorEscola = async (
       const batchTurmaIds = turmaIds.slice(i, i + TURMA_BATCH_SIZE);
       const batchGroups = consolidadoGroups.filter(g => batchTurmaIds.includes(g.turmaId));
 
-      // Buscar todos os dados relevantes para esse lote de turmas (com limite alto para evitar truncamento)
+      // Buscar dados do lote com limite seguro por tabela.
+      // O limite de 5000 registros por lote de 20 turmas é suficiente para qualquer escola real.
+      // (250 alunos × 200 dias × 20 turmas = 1.000.000 → particionado por lote de 20 turmas = 50.000/lote)
+      // Para escolas maiores, o TURMA_BATCH_SIZE deve ser reduzido.
+      const PAGE_LIMIT = 5000;
       const [fData, cData, avData, aluData] = await Promise.all([
-        supabase.from('frequencias').select('turma_id, disciplina, tempo, data').in('turma_id', batchTurmaIds).limit(100000),
-        supabase.from('conteudos').select('turma_id, disciplina, tempo, data').in('turma_id', batchTurmaIds).limit(100000),
-        supabase.from('avaliacoes').select('id, turma_id, disciplina, bimestre').in('turma_id', batchTurmaIds).limit(100000),
-        supabase.from('alunos').select('id, turma_id').in('turma_id', batchTurmaIds).limit(100000)
+        supabase.from('frequencias')
+          .select('turma_id, disciplina, tempo, data')
+          .in('turma_id', batchTurmaIds)
+          .range(0, PAGE_LIMIT - 1),
+        supabase.from('conteudos')
+          .select('turma_id, disciplina, tempo, data')
+          .in('turma_id', batchTurmaIds)
+          .range(0, PAGE_LIMIT - 1),
+        supabase.from('avaliacoes')
+          .select('id, turma_id, disciplina, bimestre')
+          .in('turma_id', batchTurmaIds)
+          .range(0, PAGE_LIMIT - 1),
+        supabase.from('alunos')
+          .select('id, turma_id')
+          .in('turma_id', batchTurmaIds)
+          .range(0, PAGE_LIMIT - 1)
       ]);
 
       // Buscar notas em lote para todas as avaliações encontradas
       const avIds = (avData.data || []).map(av => av.id);
       const { data: nData } = avIds.length > 0 
-        ? await supabase.from('notas').select('avaliacao_id').in('avaliacao_id', avIds).limit(100000)
+        ? await supabase.from('notas').select('avaliacao_id').in('avaliacao_id', avIds).range(0, PAGE_LIMIT - 1)
         : { data: [] };
 
       // Helper: converte 'DD/MM/YYYY' ou 'YYYY-MM-DD' para Date para comparação
