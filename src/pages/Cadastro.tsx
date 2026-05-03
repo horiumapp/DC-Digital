@@ -7,6 +7,14 @@ import type { UserRole } from '../contexts/AuthContext';
 import { translateSupabaseError } from '../utils/supabaseErrors';
 import { validarCPF, formatarCPF } from '../utils/cpfUtils';
 
+/** Avalia a força da senha: mínimo 8 chars, 1 maiúscula, 1 número */
+function validarForcaSenha(senha: string): string | null {
+  if (senha.length < 8) return 'A senha deve ter no mínimo 8 caracteres.';
+  if (!/[A-Z]/.test(senha)) return 'A senha deve conter pelo menos uma letra maiúscula.';
+  if (!/[0-9]/.test(senha)) return 'A senha deve conter pelo menos um número.';
+  return null;
+}
+
 export default function Cadastro() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -14,6 +22,8 @@ export default function Cadastro() {
   const [cpfValue, setCpfValue] = useState('');
   const [cpfError, setCpfError] = useState<string | null>(null);
   const [senhaConfirm, setSenhaConfirm] = useState('');
+  const [senhaPrincipal, setSenhaPrincipal] = useState('');
+  const [senhaError, setSenhaError] = useState<string | null>(null);
 
   
   // Formata e valida o CPF em tempo real
@@ -58,16 +68,17 @@ export default function Cadastro() {
       return;
     }
 
-    // Validar confirmação de senha antes de enviar
-    const passwordConfirm = formData.get('password_confirm') as string;
-    if (password !== passwordConfirm) {
-      setError('As senhas não coincidem. Verifique e tente novamente.');
+    // Validar força da senha
+    const forcaError = validarForcaSenha(password);
+    if (forcaError) {
+      setError(forcaError);
       setLoading(false);
       return;
     }
 
-    if (password.length < 8) {
-      setError('A senha deve ter no mínimo 8 caracteres.');
+    // Validar confirmação de senha antes de enviar
+    if (password !== senhaConfirm) {
+      setError('As senhas não coincidem. Verifique e tente novamente.');
       setLoading(false);
       return;
     }
@@ -165,12 +176,22 @@ export default function Cadastro() {
               <input 
                 type="password" 
                 id="password" 
-                name="password" 
-                placeholder="Mínimo 8 caracteres" 
+                name="password"
+                value={senhaPrincipal}
+                onChange={(e) => {
+                  setSenhaPrincipal(e.target.value);
+                  setSenhaError(validarForcaSenha(e.target.value));
+                }}
+                placeholder="Mín. 8 chars, 1 maiúscula, 1 número" 
                 minLength={8}
                 required 
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
+                className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30 ${
+                  senhaError ? 'border-amber-400' : 'border-slate-200'
+                }`}
               />
+              {senhaError && (
+                <p className="text-xs text-amber-600 font-medium mt-1">{senhaError}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -185,12 +206,12 @@ export default function Cadastro() {
                 minLength={8}
                 required 
                 className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30 ${
-                  senhaConfirm && senhaConfirm !== (document.getElementById('password') as HTMLInputElement)?.value
+                  senhaConfirm && senhaConfirm !== senhaPrincipal
                     ? 'border-red-400'
                     : 'border-slate-200'
                 }`}
               />
-              {senhaConfirm && senhaConfirm !== (document.getElementById('password') as HTMLInputElement)?.value && (
+              {senhaConfirm && senhaConfirm !== senhaPrincipal && (
                 <p className="text-xs text-red-600 font-medium mt-1">As senhas não coincidem.</p>
               )}
             </div>

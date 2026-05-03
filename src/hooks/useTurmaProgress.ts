@@ -15,6 +15,23 @@ interface ProgressStats {
   barColor: (pct: number) => string;
 }
 
+/**
+ * Conta ocorrências de um dia-da-semana em um intervalo — O(1).
+ * Substitui o loop diário anterior que era O(N×dias).
+ */
+function countWeekDaysInRange(start: Date, end: Date, dayOfWeek: number): number {
+  if (start > end) return 0;
+  const totalDays = Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1;
+  const fullWeeks = Math.floor(totalDays / 7);
+  const remainder = totalDays % 7;
+  const startDay = start.getDay();
+  let extra = 0;
+  for (let i = 0; i < remainder; i++) {
+    if ((startDay + i) % 7 === dayOfWeek) { extra = 1; break; }
+  }
+  return fullWeeks + extra;
+}
+
 export function useTurmaProgress(
   turmaAtiva: Turma | null,
   periodoSelecionado: PeriodoLetivo | null,
@@ -38,65 +55,45 @@ export function useTurmaProgress(
       };
     }
 
-    let dataInicioValida = new Date(0);
-    let dataFimValida = new Date(9999, 11, 31);
-    
-    if (periodoSelecionado) {
-      const [inicioAno, inicioMes, inicioDia] = periodoSelecionado.dataInicio.split('-');
-      dataInicioValida = new Date(Number(inicioAno), Number(inicioMes) - 1, Number(inicioDia));
-      const [fimAno, fimMes, fimDia] = periodoSelecionado.dataFim.split('-');
-      dataFimValida = new Date(Number(fimAno), Number(fimMes) - 1, Number(fimDia));
-    }
-
-    let totalEsperado = 0;
-    let freqLancadas = 0;
-    let conteudoLancados = 0;
-
-    const inicio = new Date(dataInicioValida);
+    // Calcular intervalo válido
+    const [inicioAno, inicioMes, inicioDia] = periodoSelecionado.dataInicio.split('-').map(Number);
+    const inicio = new Date(inicioAno, inicioMes - 1, inicioDia);
     inicio.setHours(0, 0, 0, 0);
-    
-    // Limitar o cálculo até HOJE ou até o fim do bimestre (o que for menor)
+
+    const [fimAno, fimMes, fimDia] = periodoSelecionado.dataFim.split('-').map(Number);
+    const fimBimestre = new Date(fimAno, fimMes - 1, fimDia);
+    fimBimestre.setHours(23, 59, 59, 999);
+
     const hoje = new Date();
     hoje.setHours(23, 59, 59, 999);
-    
-    const fimBimestre = new Date(dataFimValida);
-    fimBimestre.setHours(23, 59, 59, 999);
-    
     const fim = hoje < fimBimestre ? hoje : fimBimestre;
 
-    const curso = new Date(inicio.getTime());
     const activeTurmaId = String(turmaAtiva.id).split('||')[0];
 
-    while (curso <= fim) {
-      const dow = curso.getDay();
-      const temposNoHorario = horarioTurma.filter(h => Number(h.dia_semana) === dow);
-      
-      if (temposNoHorario.length > 0) {
-        const dayStr = `${curso.getDate().toString().padStart(2, '0')}/${(curso.getMonth() + 1).toString().padStart(2, '0')}/${curso.getFullYear()}`;
-        
-        temposNoHorario.forEach(horario => {
-          totalEsperado++;
-          
-          const temFrequencia = lancamentos.some(l => 
-            l.data === dayStr && 
-            l.tempo === `${horario.tempo_ordem}º TEMPO` && 
-            l.tipo === 'frequencia' &&
-            String(l.turmaId).split('||')[0] === activeTurmaId
-          );
-          
-          const temConteudo = lancamentos.some(l => 
-            l.data === dayStr && 
-            l.tempo === `${horario.tempo_ordem}º TEMPO` && 
-            l.tipo === 'conteudo' &&
-            String(l.turmaId).split('||')[0] === activeTurmaId
-          );
+    // --- O(1): calcular total de aulas esperadas agrupando por dia da semana ---
+    let totalEsperado = 0;
+    const slotsPorDia = new Map<number, number>(); // dia_semana -> quantidade de tempos
+    horarioTurma.forEach(h => {
+      const dow = Number(h.dia_semana);
+      slotsPorDia.set(dow, (slotsPorDia.get(dow) || 0) + 1);
+    });
+    slotsPorDia.forEach((qtd, dow) => {
+      totalEsperado += countWeekDaysInRange(inicio, fim, dow) * qtd;
+    });
 
-          if (temFrequencia) freqLancadas++;
-          if (temConteudo) conteudoLancados++;
-        });
-      }
-      curso.setDate(curso.getDate() + 1);
-    }
+    // --- Contar lançamentos com Set para O(1) por lookup ---
+    const freqSet = new Set<string>();
+    const contSet = new Set<string>();
+
+    lancamentos.forEach(l => {
+      if (String(l.turmaId).split('||')[0] !== activeTurmaId) return;
+      const key = `${l.data}|${l.tempo}`;
+      if (l.tipo === 'frequencia') freqSet.add(key);
+      if (l.tipo === 'conteudo') contSet.add(key);
+    });
+
+    const freqLancadas = freqSet.size;
+    const conteudoLancados = contSet.size;
 
     const pFreq = totalEsperado > 0 ? Math.min(100, Math.round((freqLancadas / totalEsperado) * 100)) : 0;
     const pObj  = totalEsperado > 0 ? Math.min(100, Math.round((conteudoLancados / totalEsperado) * 100)) : 0;

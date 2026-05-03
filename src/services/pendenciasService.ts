@@ -141,35 +141,53 @@ export const fetchPendenciasPorEscola = async (
       const batchTurmaIds = turmaIds.slice(i, i + TURMA_BATCH_SIZE);
       const batchGroups = consolidadoGroups.filter(g => batchTurmaIds.includes(g.turmaId));
 
-      // Buscar dados do lote com limite seguro por tabela.
-      // O limite de 5000 registros por lote de 20 turmas é suficiente para qualquer escola real.
-      // (250 alunos × 200 dias × 20 turmas = 1.000.000 → particionado por lote de 20 turmas = 50.000/lote)
-      // Para escolas maiores, o TURMA_BATCH_SIZE deve ser reduzido.
-      const PAGE_LIMIT = 5000;
-      const [fData, cData, avData, aluData] = await Promise.all([
-        supabase.from('frequencias')
+      // Buscar TODOS os dados do lote sem hard cap.
+      // Usamos paginação automática via loop para esgotar todos os registros.
+      const PAGE_SIZE = 1000; // Limite máximo do PostgREST por request
+
+      /** Busca todos os registros de uma tabela em lote com paginação automática */
+      const fetchAll = async <T>(
+        builder: () => ReturnType<typeof supabase.from>
+      ): Promise<T[]> => {
+        const result: T[] = [];
+        let offset = 0;
+        while (true) {
+          const { data, error } = await (builder() as any).range(offset, offset + PAGE_SIZE - 1);
+          if (error) throw error;
+          if (!data || data.length === 0) break;
+          result.push(...data);
+          if (data.length < PAGE_SIZE) break;
+          offset += PAGE_SIZE;
+        }
+        return result;
+      };
+
+      const [fAll, cAll, avAll, aluAll] = await Promise.all([
+        fetchAll<any>(() => supabase.from('frequencias')
           .select('turma_id, disciplina, tempo, data')
-          .in('turma_id', batchTurmaIds)
-          .range(0, PAGE_LIMIT - 1),
-        supabase.from('conteudos')
+          .in('turma_id', batchTurmaIds)),
+        fetchAll<any>(() => supabase.from('conteudos')
           .select('turma_id, disciplina, tempo, data')
-          .in('turma_id', batchTurmaIds)
-          .range(0, PAGE_LIMIT - 1),
-        supabase.from('avaliacoes')
+          .in('turma_id', batchTurmaIds)),
+        fetchAll<any>(() => supabase.from('avaliacoes')
           .select('id, turma_id, disciplina, bimestre')
-          .in('turma_id', batchTurmaIds)
-          .range(0, PAGE_LIMIT - 1),
-        supabase.from('alunos')
+          .in('turma_id', batchTurmaIds)),
+        fetchAll<any>(() => supabase.from('alunos')
           .select('id, turma_id')
-          .in('turma_id', batchTurmaIds)
-          .range(0, PAGE_LIMIT - 1)
+          .in('turma_id', batchTurmaIds))
       ]);
 
+      // Alias para compatibilidade com o código abaixo
+      const fData = { data: fAll };
+      const cData = { data: cAll };
+      const avData = { data: avAll };
+      const aluData = { data: aluAll };
+
       // Buscar notas em lote para todas as avaliações encontradas
-      const avIds = (avData.data || []).map(av => av.id);
-      const { data: nData } = avIds.length > 0 
-        ? await supabase.from('notas').select('avaliacao_id').in('avaliacao_id', avIds).range(0, PAGE_LIMIT - 1)
-        : { data: [] };
+      const avIds = avAll.map(av => av.id);
+      const nData = avIds.length > 0
+        ? await fetchAll<any>(() => supabase.from('notas').select('avaliacao_id').in('avaliacao_id', avIds))
+        : [];
 
       // Helper: converte 'DD/MM/YYYY' ou 'YYYY-MM-DD' para Date para comparação
       const parseDataField = (d: string): Date | null => {

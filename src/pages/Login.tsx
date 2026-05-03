@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Background from '../components/Background';
@@ -15,6 +15,13 @@ export default function Login() {
   
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redireciona automaticamente se o usuário já estiver autenticado
+  useEffect(() => {
+    if (user) {
+      navigate('/turmas', { replace: true });
+    }
+  }, [user, navigate]);
 
   // Manipulador do form REAL conectado ao Supabase
   const handleRealLogin = async (e: React.FormEvent<HTMLFormElement>) => {
