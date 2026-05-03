@@ -14,6 +14,9 @@ export default function PendenciasLancamento() {
   const [escolaId, setEscolaId] = useState('');
   const [escolas, setEscolas] = useState<any[]>([]);
   const [docentes, setDocentes] = useState<any[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
   const [buscaDocente, setBuscaDocente] = useState('');
   const [selectedPeriodos, setSelectedPeriodos] = useState<string[]>(['1. BIMESTRE']);
   const [hasSearched, setHasSearched] = useState(false);
@@ -35,6 +38,12 @@ export default function PendenciasLancamento() {
       }
     }
   }, [escolaId, escolas]);
+
+  useEffect(() => {
+    if (hasSearched) {
+      fetchDocentes(escolaId, currentPage);
+    }
+  }, [currentPage]);
 
   const fetchInitialData = async () => {
     setLoading(true);
@@ -59,21 +68,27 @@ export default function PendenciasLancamento() {
     setLoading(false);
   };
 
-   const fetchDocentes = async (id: string) => {
+   const fetchDocentes = async (id: string, page: number = 1) => {
      if (!id) return;
      setHasSearched(true);
      setLoadingDocentes(true);
      try {
        // Se o usuário logado for PROFESSOR, passamos o e-mail dele para filtrar apenas as SUAS turmas em todas as escolas ou na escola selecionada
        const professorEmail = (user?.role === 'PROFESSOR') ? user.email : undefined;
-       const resultados = await fetchPendenciasPorEscola(id, selectedPeriodos, professorEmail);
-       setDocentes(resultados);
+       const { data, total } = await fetchPendenciasPorEscola(id, selectedPeriodos, page, pageSize, professorEmail);
+       setDocentes(data);
+       setTotalRecords(total);
      } catch (err) {
        console.error('Erro ao buscar docentes:', err);
      } finally {
        setLoadingDocentes(false);
      }
    };
+
+  const handleSearch = () => {
+    setCurrentPage(1);
+    fetchDocentes(escolaId, 1);
+  };
 
   const escolasPorDistrito = (!distrito || distrito === 'TODOS') ? escolas : escolas.filter(e => e.distrito === distrito);
 
@@ -84,6 +99,8 @@ export default function PendenciasLancamento() {
       d.fase.toLowerCase().includes(searchLower) ||
       d.componente.toLowerCase().includes(searchLower);
   });
+
+  const totalPages = Math.ceil(totalRecords / pageSize);
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-slate-50 dark:bg-slate-900 pb-12">
@@ -191,7 +208,7 @@ export default function PendenciasLancamento() {
 
           <div className="flex items-center justify-between pt-6 border-t border-slate-100 dark:border-slate-700">
             <button 
-              onClick={() => fetchDocentes(escolaId)}
+              onClick={handleSearch}
               disabled={loadingDocentes}
               className="flex items-center gap-3 px-10 py-4 bg-[#0f2851] text-white rounded-2xl hover:bg-[#1a3a6d] transition-all text-sm font-black shadow-xl shadow-[#0f2851]/20 active:scale-95 disabled:opacity-50"
             >
@@ -302,6 +319,46 @@ export default function PendenciasLancamento() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Footer */}
+          {hasSearched && !loadingDocentes && totalRecords > 0 && (
+            <div className="p-6 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 flex items-center justify-between">
+              <div className="text-sm font-bold text-slate-500">
+                Mostrando <span className="text-[#0f2851] dark:text-blue-400">{(currentPage - 1) * pageSize + 1}</span> a <span className="text-[#0f2851] dark:text-blue-400">{Math.min(currentPage * pageSize, totalRecords)}</span> de <span className="text-[#0f2851] dark:text-blue-400">{totalRecords}</span> registros
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 transition-all"
+                >
+                  Anterior
+                </button>
+                <div className="flex items-center gap-1">
+                  {[...Array(totalPages)].map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentPage(i + 1)}
+                      className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${
+                        currentPage === i + 1
+                          ? 'bg-[#0f2851] text-white shadow-lg shadow-[#0f2851]/20'
+                          : 'text-slate-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700'
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  )).slice(Math.max(0, currentPage - 3), Math.min(totalPages, currentPage + 2))}
+                </div>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 transition-all"
+                >
+                  Próxima
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -17,6 +17,9 @@ export default function PendenciasFrequencia() {
   const [turno, setTurno] = useState('Matutino');
   const [tipoPendencia, setTipoPendencia] = useState('FREQUENCIA');
   const [docentes, setDocentes] = useState<any[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
   const [buscaDocente, setBuscaDocente] = useState('');
   const [selectedPeriodos, setSelectedPeriodos] = useState<string[]>(['1. BIMESTRE']);
   const [hasSearched, setHasSearched] = useState(false);
@@ -42,6 +45,12 @@ export default function PendenciasFrequencia() {
     }
   }, [escolaId, escolas]);
 
+  useEffect(() => {
+    if (hasSearched) {
+      fetchDocentes(escolaId, currentPage);
+    }
+  }, [currentPage]);
+
   const fetchInitialData = async () => {
     setLoading(true);
     try {
@@ -65,18 +74,24 @@ export default function PendenciasFrequencia() {
     setLoading(false);
   };
 
-  const fetchDocentes = async (id: string) => {
+  const fetchDocentes = async (id: string, page: number = 1) => {
     if (!id) return;
     setHasSearched(true);
     setLoadingDocentes(true);
     try {
-      const resultados = await fetchPendenciasPorEscola(id, selectedPeriodos);
-      setDocentes(resultados);
+      const { data, total } = await fetchPendenciasPorEscola(id, selectedPeriodos, page, pageSize);
+      setDocentes(data);
+      setTotalRecords(total);
     } catch (err) {
       console.error('Erro ao buscar docentes:', err);
     } finally {
       setLoadingDocentes(false);
     }
+  };
+
+  const handleSearch = () => {
+    setCurrentPage(1);
+    fetchDocentes(escolaId, 1);
   };
 
   const escolasPorDistrito = (!distrito || distrito === 'TODOS') ? escolas : escolas.filter(e => e.distrito === distrito);
@@ -92,6 +107,8 @@ export default function PendenciasFrequencia() {
     
     return matchesSearch && matchesPeriodo;
   });
+
+  const totalPages = Math.ceil(totalRecords / pageSize);
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-slate-50 dark:bg-slate-900">
@@ -219,7 +236,7 @@ export default function PendenciasFrequencia() {
 
           <div className="mb-6">
             <button 
-              onClick={() => fetchDocentes(escolaId)}
+              onClick={handleSearch}
               className="flex items-center gap-2 px-8 py-3 bg-[#0f2851] text-white rounded-xl hover:bg-[#1a3a6d] transition-all text-sm font-bold shadow-lg shadow-[#0f2851]/20 active:scale-95"
             >
               <Search className="w-4 h-4" />
@@ -305,6 +322,46 @@ export default function PendenciasFrequencia() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Footer */}
+          {hasSearched && !loadingDocentes && totalRecords > 0 && (
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-center justify-between">
+              <div className="text-sm font-bold text-slate-500">
+                Mostrando <span className="text-[#0f2851] dark:text-blue-400">{(currentPage - 1) * pageSize + 1}</span> a <span className="text-[#0f2851] dark:text-blue-400">{Math.min(currentPage * pageSize, totalRecords)}</span> de <span className="text-[#0f2851] dark:text-blue-400">{totalRecords}</span> registros
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 transition-all"
+                >
+                  Anterior
+                </button>
+                <div className="flex items-center gap-1">
+                  {[...Array(totalPages)].map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentPage(i + 1)}
+                      className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${
+                        currentPage === i + 1
+                          ? 'bg-[#0f2851] text-white shadow-lg shadow-[#0f2851]/20'
+                          : 'text-slate-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700'
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  )).slice(Math.max(0, currentPage - 3), Math.min(totalPages, currentPage + 2))}
+                </div>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 transition-all"
+                >
+                  Próxima
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
