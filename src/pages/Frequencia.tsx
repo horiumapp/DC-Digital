@@ -15,7 +15,7 @@ export default function Frequencia() {
   const { turmaAtiva, horarioTurma } = useTurma();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
-  const selectedDateParam = searchParams.get('date') || `06/02/${APP_CONFIG.YEAR}`;
+  const selectedDateParam = searchParams.get('date') || `${APP_CONFIG.YEAR}-02-06`;
 
   // ── Shared state ──
   const [activeTab, setActiveTab] = useState('frequencia');
