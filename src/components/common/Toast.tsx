@@ -49,7 +49,12 @@ const STYLES: Record<ToastType, string> = {
 // ============================================================
 // Componente individual de Toast
 // ============================================================
-function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) => void }) {
+interface ToastItemProps {
+  toast: Toast;
+  onRemove: (id: string) => void;
+}
+
+function ToastItem({ toast, onRemove }: ToastItemProps) {
   return (
     <div
       className={`
