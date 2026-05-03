@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .from('usuarios')
             .select('cargo')
             .eq('id', authUser.id)
-            .single();
+            .maybeSingle();
           
           if (!error && userData) {
             role = (userData.cargo as UserRole) || 'PROFESSOR';
