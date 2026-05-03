@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { getBimestrePorData, formatarDataParaISO } from '../utils/dateUtils';
 import { TurmaService } from '../services/turmaService';
+import { useToast } from '../components/common/Toast';
 
 export interface TurmaMetricas {
   frequencia: number;
@@ -104,11 +105,39 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const [horarioTurma, setHorarioTurma] = useState<Horario[]>([]);
   const [loading, setLoading] = useState(false);
   const [faltasPorData, setFaltasPorData] = useState<Record<string, Set<string>>>({});
+  
+  const { showError, showSuccess } = useToast();
+
+  const fetchAvaliacoesInterno = useCallback(async (turmaId: string | number, disciplina: string, contextAlunos: Aluno[], signal?: { cancelled: boolean }) => {
+    try {
+      const { avaliacoes: avsFormatadas, notasData } = await TurmaService.fetchAvaliacoes(turmaId, disciplina);
+      
+      if (signal?.cancelled) return;
+
+      setAvaliacoes(avsFormatadas);
+      
+      if (notasData.length > 0) {
+        setAlunos(prevAlunos => {
+          const baseAlunos = contextAlunos.length > 0 ? contextAlunos : prevAlunos;
+          return baseAlunos.map(aluno => {
+            const notasAluno: Record<string, string> = {};
+            notasData.filter((n: any) => n.aluno_id.toString() === aluno.id).forEach((n: any) => {
+              notasAluno[n.avaliacao_id.toString()] = parseFloat(n.valor).toFixed(2).replace('.', ',');
+            });
+            return { ...aluno, notas: notasAluno };
+          });
+        });
+      }
+    } catch (err) {
+      console.error('Erro ao carregar avaliações:', err);
+    }
+  }, []);
 
   useEffect(() => {
-    let isCancelled = false;
+    const signal = { cancelled: false };
+    
     const carregarDados = async () => {
-      if (turmaAtiva && !isCancelled) {
+      if (turmaAtiva && !signal.cancelled) {
         setLoading(true);
         // Limpeza antecipada
         setAlunos([]);
@@ -127,7 +156,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
             TurmaService.fetchAllFrequencias(rawId, turmaAtiva.componente)
           ]);
           
-          if (isCancelled) return;
+          if (signal.cancelled) return;
 
           setLancamentos(ls);
           setHorarioTurma(hs);
@@ -144,40 +173,18 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
           });
           setFaltasPorData(faltasMap);
           
-          await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alumnosData);
+          await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alumnosData, signal);
         } catch (err) {
           console.error('Erro ao carregar dados da turma:', err);
-          alert('Não foi possível carregar todos os dados desta turma. Verifique sua conexão.');
+          showError('Não foi possível carregar todos os dados desta turma. Verifique sua conexão.');
         } finally {
-          if (!isCancelled) setLoading(false);
+          if (!signal.cancelled) setLoading(false);
         }
       }
     };
     carregarDados();
-    return () => { isCancelled = true; };
-  }, [turmaAtiva]);
-
-  const fetchAvaliacoesInterno = async (turmaId: string | number, disciplina: string, contextAlunos: Aluno[]) => {
-    try {
-      const { avaliacoes: avsFormatadas, notasData } = await TurmaService.fetchAvaliacoes(turmaId, disciplina);
-      setAvaliacoes(avsFormatadas);
-      
-      if (notasData.length > 0) {
-        setAlunos(prevAlunos => {
-          const baseAlunos = contextAlunos.length > 0 ? contextAlunos : prevAlunos;
-          return baseAlunos.map(aluno => {
-            const notasAluno: Record<string, string> = {};
-            notasData.filter((n: any) => n.aluno_id.toString() === aluno.id).forEach((n: any) => {
-              notasAluno[n.avaliacao_id.toString()] = parseFloat(n.valor).toFixed(2).replace('.', ',');
-            });
-            return { ...aluno, notas: notasAluno };
-          });
-        });
-      }
-    } catch (err) {
-      console.error('Erro ao carregar avaliações:', err);
-    }
-  };
+    return () => { signal.cancelled = true; };
+  }, [turmaAtiva, fetchAvaliacoesInterno, showError]);
 
   const selecionarTurma = (turma: Turma) => {
     setTurmaAtiva(turma);
@@ -211,10 +218,11 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     try {
       const createdId = await TurmaService.salvarAvaliacao(av, rawId, turmaAtiva.componente);
       await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunos);
+      showSuccess('Avaliação salva com sucesso!');
       return createdId;
     } catch (err) {
       console.error('Erro ao salvar avaliação:', err);
-      alert('Não foi possível salvar a avaliação. Verifique sua conexão.');
+      showError('Não foi possível salvar a avaliação. Verifique sua conexão.');
       return '';
     }
   };
@@ -223,9 +231,10 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     try {
       await TurmaService.removerAvaliacao(id);
       setAvaliacoes(prev => prev.filter(a => a.id !== id));
+      showSuccess('Avaliação removida.');
     } catch (err) {
       console.error('Erro ao remover avaliação:', err);
-      alert('Não foi possível remover a avaliação.');
+      showError('Não foi possível remover a avaliação.');
     }
   };
 
@@ -235,9 +244,10 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     try {
       await TurmaService.salvarNotas(avaliacaoId, notas);
       await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunos);
+      showSuccess('Notas salvas com sucesso!');
     } catch (err) {
       console.error('Erro ao salvar notas:', err);
-      alert('Ocorreu um erro ao salvar as notas.');
+      showError('Ocorreu um erro ao salvar as notas.');
     }
   };
 
@@ -246,7 +256,6 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     try {
       await TurmaService.salvarFrequencia(turmaAtiva.id, turmaAtiva.componente, data, tempo, alunosFreq);
       
-      // Atualizar lançamentos (UI)
       registrarLancamento({
         turmaId: turmaAtiva.id,
         data,
@@ -254,11 +263,11 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
         tempo
       });
 
-      // Buscar do servidor para garantir consistência (única fonte de verdade)
       await carregarFaltasDaData(data);
+      showSuccess('Frequência salva!');
     } catch (err) {
       console.error('Erro ao salvar frequência:', err);
-      alert('Erro ao salvar a frequência.');
+      showError('Erro ao salvar a frequência.');
     }
   };
 
@@ -270,9 +279,10 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       registrarLancamento({ turmaId: rawId, data: cont.data, tipo: 'conteudo', tempo: cont.tempo });
       const conts = await TurmaService.fetchAllConteudos(rawId, turmaAtiva.componente);
       setConteudos(conts);
+      showSuccess('Conteúdo salvo!');
     } catch (err) {
       console.error('Erro ao salvar conteúdo:', err);
-      alert('Erro ao salvar o conteúdo ministrado.');
+      showError('Erro ao salvar o conteúdo ministrado.');
     }
   };
 
@@ -306,21 +316,29 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const removerFrequencia = async (data: string, tempo: string) => {
     if (!turmaAtiva) return;
     const rawId = turmaAtiva.id.toString().split('||')[0];
-    await TurmaService.removerFrequencia(rawId, turmaAtiva.componente, data, tempo);
-    removerLancamento({ turmaId: rawId, data, tipo: 'frequencia', tempo });
-    setAlunos(prev => prev.map(a => ({ ...a, freq: '', part: 'Presencial' })));
-    // Sincronizar faltasPorData com o servidor após a remoção
-    await carregarFaltasDaData(data);
+    try {
+      await TurmaService.removerFrequencia(rawId, turmaAtiva.componente, data, tempo);
+      removerLancamento({ turmaId: rawId, data, tipo: 'frequencia', tempo });
+      setAlunos(prev => prev.map(a => ({ ...a, freq: '', part: 'Presencial' })));
+      await carregarFaltasDaData(data);
+      showSuccess('Lançamento de frequência removido.');
+    } catch (err) {
+      showError('Não foi possível remover a frequência.');
+    }
   };
 
   const removerConteudo = async (data: string, tempo: string) => {
     if (!turmaAtiva) return;
     const rawId = turmaAtiva.id.toString().split('||')[0];
-    await TurmaService.removerConteudo(rawId, turmaAtiva.componente, data, tempo);
-    removerLancamento({ turmaId: rawId, data, tipo: 'conteudo', tempo });
-    // Recarregar conteúdos
-    const conts = await TurmaService.fetchAllConteudos(rawId, turmaAtiva.componente);
-    setConteudos(conts);
+    try {
+      await TurmaService.removerConteudo(rawId, turmaAtiva.componente, data, tempo);
+      removerLancamento({ turmaId: rawId, data, tipo: 'conteudo', tempo });
+      const conts = await TurmaService.fetchAllConteudos(rawId, turmaAtiva.componente);
+      setConteudos(conts);
+      showSuccess('Conteúdo removido.');
+    } catch (err) {
+      showError('Não foi possível remover o conteúdo.');
+    }
   };
 
   const carregarFaltasDaData = async (data: string) => {
