@@ -4,9 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 
 interface ProtectedRouteProps {
   allowedRoles?: string[];
+  publicOnly?: boolean;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, publicOnly }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -15,6 +16,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
         <div className="text-slate-500 animate-pulse font-medium">Verificando acesso...</div>
       </div>
     );
+  }
+
+  if (publicOnly) {
+    if (user) {
+      return <Navigate to="/turmas" replace />;
+    }
+    return <Outlet />;
   }
 
   if (!user) {

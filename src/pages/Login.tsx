@@ -39,13 +39,6 @@ export default function Login() {
     return () => clearInterval(interval);
   }, []);
 
-  // Redireciona automaticamente se o usuário já estiver autenticado
-  useEffect(() => {
-    if (user) {
-      navigate('/turmas', { replace: true });
-    }
-  }, [user, navigate]);
-
   // Manipulador do form REAL conectado ao Supabase
   const handleRealLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

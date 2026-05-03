@@ -145,18 +145,27 @@ export const fetchPendenciasPorEscola = async (
       // Usamos paginação automática via loop para esgotar todos os registros.
       const PAGE_SIZE = 1000; // Limite máximo do PostgREST por request
 
-      /** Busca todos os registros de uma tabela em lote com paginação automática */
+      /** Busca todos os registros de uma tabela em lote com paginação automática e timeout */
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const fetchAll = async <T>(builder: () => any): Promise<T[]> => {
         const result: T[] = [];
         let offset = 0;
-        while (true) {
-          const { data, error } = await builder().range(offset, offset + PAGE_SIZE - 1);
-          if (error) throw error;
-          if (!data || data.length === 0) break;
-          result.push(...data);
-          if (data.length < PAGE_SIZE) break;
-          offset += PAGE_SIZE;
+        
+        // Timeout de 15 segundos (15000 ms) por chamada de lote
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort('Timeout excedido'), 15000);
+
+        try {
+          while (true) {
+            const { data, error } = await builder().abortSignal(controller.signal).range(offset, offset + PAGE_SIZE - 1);
+            if (error) throw error;
+            if (!data || data.length === 0) break;
+            result.push(...data);
+            if (data.length < PAGE_SIZE) break;
+            offset += PAGE_SIZE;
+          }
+        } finally {
+          clearTimeout(timeoutId);
         }
         return result;
       };

@@ -38,10 +38,13 @@ export default function App() {
             {/* Suspense isola e exibe a tela de carregamento para as páginas fatiadas serem importadas */}
             <Suspense fallback={<LoadingFallback />}>
               <Routes>
-                <Route path="/" element={<Login />} />
-                <Route path="/cadastro" element={<Cadastro />} />
-                <Route path="/recuperar-senha" element={<RecuperarSenha />} />
-                <Route path="/redefinir-senha" element={<RedefinirSenha />} />
+                {/* Rotas Públicas Apenas (Visitantes) */}
+                <Route element={<ProtectedRoute publicOnly />}>
+                  <Route path="/" element={<Login />} />
+                  <Route path="/cadastro" element={<Cadastro />} />
+                  <Route path="/recuperar-senha" element={<RecuperarSenha />} />
+                  <Route path="/redefinir-senha" element={<RedefinirSenha />} />
+                </Route>
                 
                 {/* Rotas Privadas (Qualquer Usuário Logado) */}
                 <Route element={<ProtectedRoute />}>

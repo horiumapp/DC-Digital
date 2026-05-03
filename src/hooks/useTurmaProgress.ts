@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Avaliacao, Horario, Lancamento, Turma, Aluno } from '../contexts/TurmaContext';
 import { APP_CONFIG, PeriodoLetivo } from '../config/appConfig';
-import { getBimestrePorData } from '../utils/dateUtils';
+import { getBimestrePorData, formatarDataParaISO } from '../utils/dateUtils';
 
 // Interfazes para as dependências e retornos
 interface ProgressStats {
@@ -101,7 +101,9 @@ export function useTurmaProgress(
     const avaliacoesDaTurma = avaliacoes.filter(av => {
       const avTurmaId = String(av.turmaId).split('||')[0];
       if (avTurmaId !== activeTurmaId) return false;
-      if (!av.data || !av.data.includes(APP_CONFIG.YEAR.toString()) || av.id.includes('temp_')) return false;
+      if (!av.data || av.id.includes('temp_')) return false;
+      const dataIso = formatarDataParaISO(av.data);
+      if (!dataIso.startsWith(APP_CONFIG.YEAR.toString())) return false;
       const bNome = av.bimestre || getBimestrePorData(av.data);
       return bNome === periodoSelecionado.nome;
     });

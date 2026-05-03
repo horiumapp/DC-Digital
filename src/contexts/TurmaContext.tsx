@@ -108,11 +108,11 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   
   const { showError, showSuccess } = useToast();
 
-  const fetchAvaliacoesInterno = useCallback(async (turmaId: string | number, disciplina: string, contextAlunos: Aluno[], signal?: { cancelled: boolean }) => {
+  const fetchAvaliacoesInterno = useCallback(async (turmaId: string | number, disciplina: string, contextAlunos: Aluno[], signal?: AbortSignal) => {
     try {
       const { avaliacoes: avsFormatadas, notasData } = await TurmaService.fetchAvaliacoes(turmaId, disciplina);
       
-      if (signal?.cancelled) return;
+      if (signal?.aborted) return;
 
       setAvaliacoes(avsFormatadas);
       
@@ -134,10 +134,11 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const signal = { cancelled: false };
+    const abortController = new AbortController();
+    const signal = abortController.signal;
     
     const carregarDados = async () => {
-      if (turmaAtiva && !signal.cancelled) {
+      if (turmaAtiva && !signal.aborted) {
         setLoading(true);
         // Limpeza antecipada
         setAlunos([]);
@@ -156,7 +157,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
             TurmaService.fetchAllFrequencias(rawId, turmaAtiva.componente)
           ]);
           
-          if (signal.cancelled) return;
+          if (signal.aborted) return;
 
           setLancamentos(ls);
           setHorarioTurma(hs);
@@ -178,12 +179,12 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
           console.error('Erro ao carregar dados da turma:', err);
           showError('Não foi possível carregar todos os dados desta turma. Verifique sua conexão.');
         } finally {
-          if (!signal.cancelled) setLoading(false);
+          if (!signal.aborted) setLoading(false);
         }
       }
     };
     carregarDados();
-    return () => { signal.cancelled = true; };
+    return () => { abortController.abort(); };
   }, [turmaAtiva, fetchAvaliacoesInterno, showError]);
 
   const selecionarTurma = (turma: Turma) => {

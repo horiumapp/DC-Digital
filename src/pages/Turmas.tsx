@@ -7,6 +7,26 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/common/Toast';
 
+interface EscolaAlocacao {
+  id: string;
+  escola_id: string;
+  turno: string;
+  escolas?: {
+    nome: string;
+  };
+}
+
+interface TurmaBD {
+  id: string | number;
+  nome: string;
+  turno: string;
+  ensino: string;
+  escola_id: string;
+  escolas?: {
+    nome: string;
+  };
+}
+
 export default function Turmas() {
   const [searchTerm, setSearchTerm] = useState('');
   const { selecionarTurma } = useTurma();
@@ -19,9 +39,9 @@ export default function Turmas() {
     navigate('/diario');
   };
   
-  const [alocacoes, setAlocacoes] = useState<any[]>([]);
-  const [alocacaoAtiva, setAlocacaoAtiva] = useState<any>(null);
-  const [turmasBD, setTurmasBD] = useState<any[]>([]);
+  const [alocacoes, setAlocacoes] = useState<EscolaAlocacao[]>([]);
+  const [alocacaoAtiva, setAlocacaoAtiva] = useState<EscolaAlocacao | null>(null);
+  const [turmasBD, setTurmasBD] = useState<TurmaBD[]>([]);
   const [loading, setLoading] = useState(true);
   const [professorDisciplinas, setProfessorDisciplinas] = useState<string>('');
 
