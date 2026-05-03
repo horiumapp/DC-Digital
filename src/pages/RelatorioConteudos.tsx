@@ -6,6 +6,8 @@ import { supabase } from '../lib/supabase';
 import { formatarDataParaISO, getBimestrePorData, getDayOfWeek } from '../utils/dateUtils';
 import { APP_CONFIG } from '../config/appConfig';
 
+import { useToast } from '../components/common/Toast';
+
 interface TurmaRelatorio {
   id: string;
   nome: string;
@@ -26,6 +28,7 @@ interface ConteudoLinha {
 
 export default function RelatorioConteudos() {
   const { user } = useAuth();
+  const { showError, showWarning } = useToast();
   const [turmas, setTurmas] = useState<TurmaRelatorio[]>([]);
   const [selectedTurmaId, setSelectedTurmaId] = useState('');
   const [buscaTurma, setBuscaTurma] = useState('');
@@ -56,10 +59,12 @@ export default function RelatorioConteudos() {
       if (!user) return;
 
       const emailLimpo = user.email.trim();
-      const { data: profs } = await supabase
+      const { data: profs, error: profError } = await supabase
         .from('professores')
         .select('id, disciplinas')
         .ilike('email', `%${emailLimpo}%`);
+
+      if (profError) throw profError;
 
       if (profs && profs.length > 0) {
         let allDisciplinas: string[] = [];
@@ -73,18 +78,22 @@ export default function RelatorioConteudos() {
 
         const profIds = profs.map(p => p.id);
 
-        const { data: alocs } = await supabase
+        const { data: alocs, error: alocError } = await supabase
           .from('professor_alocacoes')
           .select('escola_id, turno')
           .in('professor_id', profIds);
 
+        if (alocError) throw alocError;
+
         if (alocs && alocs.length > 0) {
           const orConditions = alocs.map(a => `and(escola_id.eq.${a.escola_id},turno.eq.${a.turno})`).join(',');
-          const { data: turmasAlocadas } = await supabase
+          const { data: turmasAlocadas, error: turmasError } = await supabase
             .from('turmas')
             .select('*, escolas(nome)')
             .or(orConditions)
             .order('nome');
+
+          if (turmasError) throw turmasError;
 
           if (turmasAlocadas) {
             const finalTurmas: TurmaRelatorio[] = [];
@@ -116,6 +125,7 @@ export default function RelatorioConteudos() {
       }
     } catch (err) {
       console.error('Erro ao buscar turmas para o relatório:', err);
+      showError('Não foi possível carregar as turmas.');
     } finally {
       setLoading(false);
     }
@@ -123,7 +133,7 @@ export default function RelatorioConteudos() {
 
   const handleExibir = async () => {
     if (!selectedTurmaId) {
-      alert('Por favor, selecione uma turma.');
+      showWarning('Por favor, selecione uma turma.');
       return;
     }
 
@@ -206,7 +216,7 @@ export default function RelatorioConteudos() {
       }
 
       if (contentsRes.length === 0) {
-        alert('Nenhum conteúdo encontrado para os critérios selecionados no diário.');
+        showWarning('Nenhum conteúdo encontrado para os critérios selecionados no diário.');
         setDataLoading(false);
         return;
       }
@@ -257,7 +267,7 @@ export default function RelatorioConteudos() {
 
     } catch (err) {
       console.error(err);
-      alert('Erro ao gerar relatório.');
+      showError('Erro ao gerar relatório.');
       setDataLoading(false);
     }
   };

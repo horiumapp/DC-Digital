@@ -5,8 +5,11 @@ import { Search, Plus, Edit2, Trash2, Building2, ArrowLeft, GraduationCap, Users
 import NovaTurmaModal from '../../components/NovaTurmaModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 
+import { useToast } from '../../components/common/Toast';
+
 export default function TabTurmas() {
   const { user } = useAuth();
+  const { showError } = useToast();
   const [buscaTurma, setBuscaTurma] = useState('');
   const [isNovaTurmaModalOpen, setIsNovaTurmaModalOpen] = useState(false);
   const [turmaParaEditar, setTurmaParaEditar] = useState<any>(null);
@@ -80,7 +83,7 @@ export default function TabTurmas() {
         .eq('id', turmaParaEditar.id);
 
       if (error) {
-        alert("Erro ao editar turma: " + error.message);
+        showError("Erro ao editar turma: " + error.message);
       } else {
         fetchTurmas();
         setTurmaParaEditar(null);
@@ -97,7 +100,7 @@ export default function TabTurmas() {
         }]);
 
       if (error) {
-        alert("Erro ao criar turma: " + error.message);
+        showError("Erro ao criar turma: " + error.message);
       } else {
         fetchTurmas();
         setTurmaParaEditar(null);
@@ -119,7 +122,7 @@ export default function TabTurmas() {
         .eq('id', turmaParaExcluir.id);
 
       if (error) {
-        alert("Erro ao deletar turma: " + error.message);
+        showError("Erro ao deletar turma: " + error.message);
       } else {
         fetchTurmas();
         setTurmaParaExcluir(null);
