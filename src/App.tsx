@@ -6,6 +6,7 @@ import LoadingFallback from './components/common/LoadingFallback';
 import { AuthProvider } from './contexts/AuthContext';
 import { TurmaProvider } from './contexts/TurmaContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import { ToastProvider } from './components/common/Toast';
 
 // Lazy loading das páginas principais para dividir o peso do javascript
 const Login = React.lazy(() => import('./pages/Login'));
