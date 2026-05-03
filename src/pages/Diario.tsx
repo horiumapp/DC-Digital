@@ -9,7 +9,7 @@ import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
 
 export default function Diario() {
   const { turmaAtiva, lancamentos, avaliacoes, alunos, horarioTurma } = useTurma();
-  const [currentMonth, setCurrentMonth] = useState(1); // 1 = February (0-indexed)
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const year = APP_CONFIG.YEAR;
 
   const periodosLetivos = APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE'));
@@ -29,19 +29,6 @@ export default function Diario() {
     }
   };
 
-  const getDaysArray = () => {
-    const daysInMonth = new Date(year, currentMonth + 1, 0).getDate();
-    const firstDayOfMonth = new Date(year, currentMonth, 1).getDay();
-    
-    const days = [];
-    for (let i = 0; i < firstDayOfMonth; i++) {
-      days.push(null);
-    }
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push(i);
-    }
-    return days;
-  };
 
   if (!turmaAtiva) {
     return (

@@ -146,7 +146,7 @@ export default function Layout() {
             <span className="hidden md:inline">Início</span>
           </Link>
           <button
-            onClick={() => { logout(); navigate('/'); }}
+            onClick={async () => { await logout(); navigate('/'); }}
             className="flex items-center space-x-2 bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-all shadow-md hover:shadow-lg active:scale-95"
           >
             <span className="hidden md:inline">Sair</span>
