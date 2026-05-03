@@ -146,13 +146,12 @@ export const fetchPendenciasPorEscola = async (
       const PAGE_SIZE = 1000; // Limite máximo do PostgREST por request
 
       /** Busca todos os registros de uma tabela em lote com paginação automática */
-      const fetchAll = async <T>(
-        builder: () => ReturnType<typeof supabase.from>
-      ): Promise<T[]> => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fetchAll = async <T>(builder: () => any): Promise<T[]> => {
         const result: T[] = [];
         let offset = 0;
         while (true) {
-          const { data, error } = await (builder() as any).range(offset, offset + PAGE_SIZE - 1);
+          const { data, error } = await builder().range(offset, offset + PAGE_SIZE - 1);
           if (error) throw error;
           if (!data || data.length === 0) break;
           result.push(...data);
