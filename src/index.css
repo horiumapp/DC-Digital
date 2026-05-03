@@ -2,7 +2,13 @@
 @variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* Escalonamento Aumentado (Globais) */
+  /* ── Paleta de Cores do Sistema ── */
+  --color-primary: #0f2851;
+  --color-primary-hover: #1a3a6d;
+  --color-primary-light: #eef2ff;
+  --color-primary-light-hover: #e0e7ff;
+
+  /* ── Escalonamento Aumentado (Globais) ── */
   --text-xs: 0.8125rem; /* 13px (Padrão era 12px) */
   --text-xs--line-height: 1.125rem;
   
@@ -18,4 +24,3 @@
   --text-xl: 1.3125rem; /* 21px (Padrão era 20px) */
   --text-xl--line-height: 1.875rem;
 }
-

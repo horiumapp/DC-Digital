@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { BookOpen, BarChart2, FileText, Calendar, User, Home, LogOut, ChevronDown, Check } from 'lucide-react';
 import ScheduleModal from './ScheduleModal';
@@ -17,6 +17,19 @@ export default function Layout() {
 
   const isDiario = location.pathname === '/diario';
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [isRelatoriosOpen, setIsRelatoriosOpen] = useState(false);
+  const relatoriosRef = useRef<HTMLDivElement>(null);
+
+  // Fechar dropdown ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (relatoriosRef.current && !relatoriosRef.current.contains(e.target as Node)) {
+        setIsRelatoriosOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.remove('dark');
@@ -51,28 +64,58 @@ export default function Layout() {
             Estatísticas
           </Link>
           
-          <div className="relative group">
-            <button className="px-6 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold flex items-center space-x-2 hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95">
+          <div className="relative" ref={relatoriosRef}>
+            <button
+              onClick={() => setIsRelatoriosOpen(prev => !prev)}
+              aria-expanded={isRelatoriosOpen}
+              aria-haspopup="true"
+              className="px-6 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold flex items-center space-x-2 hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95"
+            >
               <span>Relatórios</span>
-              <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
+              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isRelatoriosOpen ? 'rotate-180' : ''}`} />
             </button>
             {/* Dropdown menu */}
-            <div className="absolute left-1/2 -translate-x-1/2 mt-3 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 border border-slate-100 dark:border-slate-700 transform origin-top scale-95 group-hover:scale-100 p-1">
-              <div className="py-2">
-                <Link to="/relatorio-conteudos" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                  Conteúdos Ministrados
-                </Link>
-                <Link to="/relatorio-frequencia" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                  Frequências da Turma
-                </Link>
-                <Link to="/relatorio-medias" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                  Médias do Componente
-                </Link>
-                <Link to="/relatorio-notas" className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                  Notas da Turma
-                </Link>
+            {isRelatoriosOpen && (
+              <div
+                role="menu"
+                className="absolute left-1/2 -translate-x-1/2 mt-3 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl z-50 border border-slate-100 dark:border-slate-700 p-1 animate-in"
+              >
+                <div className="py-2">
+                  <Link
+                    to="/relatorio-conteudos"
+                    role="menuitem"
+                    onClick={() => setIsRelatoriosOpen(false)}
+                    className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors rounded-xl"
+                  >
+                    Conteúdos Ministrados
+                  </Link>
+                  <Link
+                    to="/relatorio-frequencia"
+                    role="menuitem"
+                    onClick={() => setIsRelatoriosOpen(false)}
+                    className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors rounded-xl"
+                  >
+                    Frequências da Turma
+                  </Link>
+                  <Link
+                    to="/relatorio-medias"
+                    role="menuitem"
+                    onClick={() => setIsRelatoriosOpen(false)}
+                    className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors rounded-xl"
+                  >
+                    Médias do Componente
+                  </Link>
+                  <Link
+                    to="/relatorio-notas"
+                    role="menuitem"
+                    onClick={() => setIsRelatoriosOpen(false)}
+                    className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors rounded-xl"
+                  >
+                    Notas da Turma
+                  </Link>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {user?.role !== 'ADMIN' && (
