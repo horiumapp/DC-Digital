@@ -226,11 +226,13 @@ export const TurmaService = {
 
   buscarFrequenciaPorDia: async (turmaId: string | number, disciplina: string, data: string): Promise<any[]> => {
     const tid = getTid(turmaId);
+    // BUG-03 FIX: normalizar data para ISO antes de consultar (igual a buscarFrequencia)
+    const dataISO = normalizarDataISO(data);
     const { data: freqData, error } = await supabase
       .from('frequencias')
       .select('aluno_id, status')
       .eq('turma_id', tid)
-      .eq('data', data)
+      .eq('data', dataISO)
       .eq('disciplina', disciplina);
     if (error) throw error;
     return freqData || [];

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, Calendar, CreditCard, Users, Phone, MapPin, Activity, Building2, BookOpen } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useToast } from './common/Toast';
+import { validarCPF } from '../utils/cpfUtils';
 
 interface NovoAlunoModalProps {
   isOpen: boolean;
@@ -10,6 +12,7 @@ interface NovoAlunoModalProps {
 }
 
 export default function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEditar }: NovoAlunoModalProps) {
+  const { showError } = useToast();
   const [escolas, setEscolas] = useState<any[]>([]);
   const [turmas, setTurmas] = useState<any[]>([]);
   const [loadingEscolas, setLoadingEscolas] = useState(false);
@@ -107,8 +110,20 @@ export default function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEdita
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.escola_id) return alert('Selecione uma Escola.');
-    if (!formData.turma_id) return alert('Selecione uma Turma.');
+    // BUG-01 FIX: substituir alert() bloqueante por Toast
+    if (!formData.escola_id) {
+      showError('Selecione uma Escola antes de continuar.');
+      return;
+    }
+    if (!formData.turma_id) {
+      showError('Selecione uma Turma antes de continuar.');
+      return;
+    }
+    // BUG-01 FIX: validar CPF matematicamente antes de salvar
+    if (formData.cpf && !validarCPF(formData.cpf)) {
+      showError('CPF inválido. Verifique os dígitos e tente novamente.');
+      return;
+    }
     onSave({
       ...formData,
       data_nascimento: formData.dataNascimento,

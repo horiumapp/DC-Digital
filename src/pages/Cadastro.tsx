@@ -217,10 +217,8 @@ export default function Cadastro() {
             </div>
 
 
-
             {/* Dados do Docente */}
-            {(
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-4">
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-4">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Dados do Docente</p>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2 col-span-2 sm:col-span-1">
@@ -269,8 +267,7 @@ export default function Cadastro() {
                     </select>
                   </div>
                 </div>
-              </div>
-            )}
+            </div>
 
             <div className="pt-4">
               <button 

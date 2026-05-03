@@ -17,6 +17,7 @@ const DISCIPLINAS = [
 ];
 
 import { useToast } from '../../components/common/Toast';
+import { ADMIN_ROLES } from '../../constants/authConstants';
 
 export default function TabProfessores() {
   const { user } = useAuth();
@@ -58,13 +59,20 @@ export default function TabProfessores() {
       .select('id, nome')
       .order('nome');
     
+    // BUG-06 FIX: tratar erro silenciado anteriormente
+    if (error) {
+      console.error('Erro ao carregar escolas:', error);
+      showError('Não foi possível carregar a lista de escolas.');
+      return;
+    }
     if (data) setEscolas(data);
   };
 
   const fetchProfessores = async () => {
+    // SEC-04 FIX: especificar campos em vez de select('*') para evitar expor CPF e dados desnecessários
     const { data, error } = await supabase
       .from('professores')
-      .select('*, professor_alocacoes(id, escola_id, turno, escolas(nome)), professor_horarios(id, escola_id)')
+      .select('id, nome, email, status, departamento, disciplinas, vinculo, telefone, professor_alocacoes(id, escola_id, turno, escolas(nome)), professor_horarios(id, escola_id)')
       .order('nome');
       
     if (error) {

@@ -4,6 +4,7 @@ import { BookOpen, BarChart2, FileText, Calendar, User, Home, LogOut, ChevronDow
 import ScheduleModal from './ScheduleModal';
 import Background from './Background';
 import { useAuth } from '../contexts/AuthContext';
+import { ADMIN_ROLES } from '../constants/authConstants';
 
 export default function Layout() {
   const location = useLocation();
@@ -11,7 +12,7 @@ export default function Layout() {
   const { user, logout } = useAuth();
 
   // If no user, mock a fallback slightly just to not break layout in weird state
-  const hasAdminAccess = ['ADMIN', 'GESTOR', 'SECRETARIO'].includes(user?.role || '');
+  const hasAdminAccess = ADMIN_ROLES.includes(user?.role as any);
   const nameDisplay = user?.name || 'Visitante';
   const titleDisplay = user?.title || 'Convidado';
 
@@ -31,9 +32,10 @@ export default function Layout() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    document.documentElement.classList.remove('dark');
-  }, []);
+  // BUG-08 FIX: removido o useEffect que forçava a remoção da classe dark,
+  // pois conflitava com o suporte a dark mode do CSS. O tema é controlado
+  // pelo sistema operacional / preferências do usuário.
+  
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-200 relative">

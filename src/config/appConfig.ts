@@ -6,8 +6,19 @@ export interface PeriodoLetivo {
   dataFim: string;
 }
 
+/**
+ * Converte uma string 'YYYY-MM-DD' em um objeto Date no horário local,
+ * evitando o bug de timezone onde datas ISO são interpretadas como UTC
+ * (o que causaria deslocamento de 1 dia para usuários no fuso UTC-3/Brasil).
+ */
+const isoParaDataLocal = (isoStr: string): Date => {
+  const [y, m, d] = isoStr.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
 export const APP_CONFIG = {
-  YEAR: 2026,
+  /** Ano letivo vigente. Configurável via VITE_ANO_LETIVO no .env */
+  YEAR: parseInt(import.meta.env.VITE_ANO_LETIVO || '2026'),
   PERIODOS: [
     { id: '1. BIMESTRE', nome: '1º Bimestre', label: '1. BIMESTRE', dataInicio: '2026-02-05', dataFim: '2026-04-23' },
     { id: '2. BIMESTRE', nome: '2º Bimestre', label: '2. BIMESTRE', dataInicio: '2026-04-24', dataFim: '2026-07-07' },
@@ -24,8 +35,9 @@ export const APP_CONFIG = {
 export const getPeriodoPorData = (date: Date | string = new Date()) => {
   const dataRef = typeof date === 'string' ? new Date(date) : date;
   return APP_CONFIG.PERIODOS.find(p => {
-    const start = new Date(p.dataInicio);
-    const end = new Date(p.dataFim);
+    // BUG-04 FIX: usar isoParaDataLocal para evitar deslocamento de timezone
+    const start = isoParaDataLocal(p.dataInicio);
+    const end = isoParaDataLocal(p.dataFim);
     return dataRef >= start && dataRef <= end;
   });
 };
@@ -34,8 +46,9 @@ export const getBimestreAtual = () => {
   const hoje = new Date();
   const bimestres = APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE'));
   return bimestres.find(b => {
-    const start = new Date(b.dataInicio);
-    const end = new Date(b.dataFim);
+    // BUG-04 FIX: usar isoParaDataLocal para evitar deslocamento de timezone
+    const start = isoParaDataLocal(b.dataInicio);
+    const end = isoParaDataLocal(b.dataFim);
     return hoje >= start && hoje <= end;
   }) || null;
 };

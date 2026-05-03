@@ -7,6 +7,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { TurmaProvider } from './contexts/TurmaContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ToastProvider } from './components/common/Toast';
+import { ADMIN_ROLES } from './constants/authConstants';
 
 // Lazy loading das páginas principais para dividir o peso do javascript
 const Login = React.lazy(() => import('./pages/Login'));
@@ -59,7 +60,7 @@ export default function App() {
                     <Route path="/aparata-detalhes" element={<AparataDetalhes />} />
                     
                     {/* Rotas Restritas (Apenas Administrativo) */}
-                    <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'GESTOR', 'SECRETARIO']} />}>
+                    <Route element={<ProtectedRoute allowedRoles={ADMIN_ROLES} />}>
                       <Route path="/administracao" element={<Administracao />} />
                     </Route>
                   </Route>

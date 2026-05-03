@@ -6,6 +6,14 @@ import { supabase } from '../lib/supabase';
 import { APP_CONFIG } from '../config/appConfig';
 import { translateSupabaseError } from '../utils/supabaseErrors';
 
+/** SEC-05 FIX: mesma validação de força usada no Cadastro */
+function validarForcaSenha(senha: string): string | null {
+  if (senha.length < 8) return 'A senha deve ter no mínimo 8 caracteres.';
+  if (!/[A-Z]/.test(senha)) return 'A senha deve conter pelo menos uma letra maiúscula.';
+  if (!/[0-9]/.test(senha)) return 'A senha deve conter pelo menos um número.';
+  return null;
+}
+
 export default function RedefinirSenha() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +44,14 @@ export default function RedefinirSenha() {
 
     if (password !== confirmPassword) {
       setError('As senhas não coincidem. Tente novamente.');
+      setIsLoading(false);
+      return;
+    }
+
+    // SEC-05 FIX: validar força da nova senha antes de atualizar
+    const forcaError = validarForcaSenha(password);
+    if (forcaError) {
+      setError(forcaError);
       setIsLoading(false);
       return;
     }
