@@ -30,43 +30,45 @@ const AparataDetalhes = React.lazy(() => import('./pages/AparataDetalhes'));
 
 export default function App() {
   return (
-    <AuthProvider>
-      <TurmaProvider>
-        <Router>
-          {/* Suspense isola e exibe a tela de carregamento para as páginas fatiadas serem importadas */}
-          <Suspense fallback={<LoadingFallback />}>
-            <Routes>
-              <Route path="/" element={<Login />} />
-              <Route path="/cadastro" element={<Cadastro />} />
-              <Route path="/recuperar-senha" element={<RecuperarSenha />} />
-              <Route path="/redefinir-senha" element={<RedefinirSenha />} />
-              
-              {/* Rotas Privadas (Qualquer Usuário Logado) */}
-              <Route element={<ProtectedRoute />}>
-                <Route element={<Layout />}>
-                  <Route path="/turmas" element={<Turmas />} />
-                  <Route path="/diario" element={<Diario />} />
-                  <Route path="/relatorio-notas" element={<RelatorioNotas />} />
-                  <Route path="/relatorio-medias" element={<RelatorioMedias />} />
-                  <Route path="/relatorio-conteudos" element={<RelatorioConteudos />} />
-                  <Route path="/relatorio-frequencia" element={<RelatorioFrequencia />} />
-                  <Route path="/frequencia" element={<Frequencia />} />
-                  <Route path="/estatisticas" element={<Estatisticas />} />
-                  <Route path="/pendencias-lancamento" element={<PendenciasLancamento />} />
-                  <Route path="/pendencias-frequencia" element={<PendenciasFrequencia />} />
-                  <Route path="/aparata" element={<Aparata />} />
-                  <Route path="/aparata-detalhes" element={<AparataDetalhes />} />
-                  
-                  {/* Rotas Restritas (Apenas Administrativo) */}
-                  <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'GESTOR', 'SECRETARIO']} />}>
-                    <Route path="/administracao" element={<Administracao />} />
+    <ToastProvider>
+      <AuthProvider>
+        <TurmaProvider>
+          <Router>
+            {/* Suspense isola e exibe a tela de carregamento para as páginas fatiadas serem importadas */}
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                <Route path="/" element={<Login />} />
+                <Route path="/cadastro" element={<Cadastro />} />
+                <Route path="/recuperar-senha" element={<RecuperarSenha />} />
+                <Route path="/redefinir-senha" element={<RedefinirSenha />} />
+                
+                {/* Rotas Privadas (Qualquer Usuário Logado) */}
+                <Route element={<ProtectedRoute />}>
+                  <Route element={<Layout />}>
+                    <Route path="/turmas" element={<Turmas />} />
+                    <Route path="/diario" element={<Diario />} />
+                    <Route path="/relatorio-notas" element={<RelatorioNotas />} />
+                    <Route path="/relatorio-medias" element={<RelatorioMedias />} />
+                    <Route path="/relatorio-conteudos" element={<RelatorioConteudos />} />
+                    <Route path="/relatorio-frequencia" element={<RelatorioFrequencia />} />
+                    <Route path="/frequencia" element={<Frequencia />} />
+                    <Route path="/estatisticas" element={<Estatisticas />} />
+                    <Route path="/pendencias-lancamento" element={<PendenciasLancamento />} />
+                    <Route path="/pendencias-frequencia" element={<PendenciasFrequencia />} />
+                    <Route path="/aparata" element={<Aparata />} />
+                    <Route path="/aparata-detalhes" element={<AparataDetalhes />} />
+                    
+                    {/* Rotas Restritas (Apenas Administrativo) */}
+                    <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'GESTOR', 'SECRETARIO']} />}>
+                      <Route path="/administracao" element={<Administracao />} />
+                    </Route>
                   </Route>
                 </Route>
-              </Route>
-            </Routes>
-          </Suspense>
-        </Router>
-      </TurmaProvider>
-    </AuthProvider>
+              </Routes>
+            </Suspense>
+          </Router>
+        </TurmaProvider>
+      </AuthProvider>
+    </ToastProvider>
   );
 }

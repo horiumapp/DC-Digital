@@ -26,36 +26,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Monitora a sessão real do Supabase
   useEffect(() => {
+    const fetchUserData = async (session: any) => {
+      if (!session?.user) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      const { user: authUser } = session;
+      const metadata = authUser.user_metadata;
+
+      // Segurança: Prioriza app_metadata ou consulta a tabela 'usuarios'
+      // app_metadata não pode ser alterado pelo cliente.
+      let role: UserRole = (authUser.app_metadata?.role as UserRole);
+
+      if (!role) {
+        // Fallback: busca da tabela de usuários se não estiver no app_metadata
+        const { data: userData } = await supabase
+          .from('usuarios')
+          .select('cargo')
+          .eq('id', authUser.id)
+          .single();
+        
+        role = (userData?.cargo as UserRole) || 'PROFESSOR';
+      }
+
+      setUser({
+        id: authUser.id,
+        name: metadata.full_name || 'Usuário Sem Nome',
+        email: authUser.email || '',
+        role: role,
+        title: role,
+      });
+      setLoading(false);
+    };
+
     // Busca a sessão assim que inicializa
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        const metadata = session.user.user_metadata;
-        setUser({
-          id: session.user.id,
-          name: metadata.full_name || 'Usuário Sem Nome',
-          email: session.user.email || '',
-          role: (metadata.role as UserRole) || 'PROFESSOR',
-          title: (metadata.role as UserRole) || 'Usuário Real',
-        });
-      }
-      setLoading(false);
+      fetchUserData(session);
     });
 
     // Escuta mudanças de sessão (login real, logout real, etc)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        const metadata = session.user.user_metadata;
-        setUser({
-          id: session.user.id,
-          name: metadata.full_name || 'Usuário Sem Nome',
-          email: session.user.email || '',
-          role: (metadata.role as UserRole) || 'PROFESSOR',
-          title: (metadata.role as UserRole) || 'Usuário Real',
-        });
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
+      fetchUserData(session);
     });
 
     return () => subscription.unsubscribe();
