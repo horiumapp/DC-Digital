@@ -17,11 +17,26 @@ export default function Diario() {
   const hoje = new Date();
   hoje.setHours(23, 59, 59, 999);
   
-  let periodosVisiveis = periodosLetivos.filter(p => {
+  let periodosVisiveis = [];
+  for (let i = 0; i < periodosLetivos.length; i++) {
+    const p = periodosLetivos[i];
     const [ano, mes, dia] = p.dataInicio.split('-').map(Number);
     const dataInicio = new Date(ano, mes - 1, dia);
-    return dataInicio <= hoje;
-  });
+    
+    // Regra 1: O bimestre já começou no calendário anual?
+    if (dataInicio > hoje) break;
+    
+    // Regra 2: Se não for o primeiro bimestre, o anterior precisa estar fechado na Aparata!
+    if (i > 0) {
+      const bimestreAnterior = periodosLetivos[i - 1];
+      const isAnteriorFechado = turmaAtiva ? localStorage.getItem(`aparata_fechada_${turmaAtiva.id}_${bimestreAnterior.id}`) === 'true' : false;
+      
+      // Se o anterior não está fechado, impede a visualização deste e dos próximos
+      if (!isAnteriorFechado) break;
+    }
+    
+    periodosVisiveis.push(p);
+  }
 
   if (periodosVisiveis.length === 0) {
     periodosVisiveis = [periodosLetivos[0]];
