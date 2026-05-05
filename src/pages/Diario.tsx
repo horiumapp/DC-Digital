@@ -91,7 +91,7 @@ export default function Diario() {
                 onChange={(e) => {
                   const newId = e.target.value;
                   setPeriodoSelecionadoId(newId);
-                  const selectedPeriod = periodosLetivos.find(p => p.id === newId);
+                  const selectedPeriod = periodosVisiveis.find(p => p.id === newId);
                   if (selectedPeriod) {
                     const month = parseInt(selectedPeriod.dataInicio.split('-')[1], 10) - 1;
                     setCurrentMonth(month);
@@ -99,7 +99,7 @@ export default function Diario() {
                 }}
                 className="w-full border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-700 dark:text-slate-100 px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] cursor-pointer font-bold text-[#0f2851]"
               >
-                {periodosLetivos.map(p => {
+                {periodosVisiveis.map(p => {
                   const format = (d: string) => d.split('-').reverse().join('/');
                   return (
                     <option key={p.id} value={p.id}>
