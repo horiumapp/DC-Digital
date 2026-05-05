@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Bell, ChevronDown, BookOpen, Folder } from 'lucide-react';
+import { ArrowLeft, BookOpen, Folder } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
 import { APP_CONFIG } from '../config/appConfig';
@@ -16,19 +16,6 @@ export default function Diario() {
 
   const [periodoSelecionadoId, setPeriodoSelecionadoId] = useState(periodosLetivos[0]?.id || '1. BIMESTRE');
   const periodoSelecionado = periodosLetivos.find(p => p.id === periodoSelecionadoId) || periodosLetivos[0];
-
-  const handlePrevMonth = () => {
-    if (currentMonth > 0) {
-      setCurrentMonth(prev => prev - 1);
-    }
-  };
-
-  const handleNextMonth = () => {
-    if (currentMonth < 11) {
-      setCurrentMonth(prev => prev + 1);
-    }
-  };
-
 
   const { pFreq, pObj, pAvaliacoes, pNotas, barColor } = useTurmaProgress(
     turmaAtiva, 

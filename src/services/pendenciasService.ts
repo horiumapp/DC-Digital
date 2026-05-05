@@ -78,7 +78,7 @@ export const fetchPendenciasPorEscola = async (
       : horarios;
 
     const hoje = new Date();
-    const mapConsolidado: Record<string, any> = {};
+    const mapConsolidado: Record<string, unknown> = {};
 
     let minDate: Date | null = null;
     let maxDate: Date | null = null;
@@ -103,7 +103,7 @@ export const fetchPendenciasPorEscola = async (
       const dateEnd = dates.end > hoje ? hoje : dates.end;
 
       for (const h of horariosFiltrados) {
-        const profId = h.professores?.id || 'SEM-ID';
+
         const key = `${h.turma_id}-${h.componente}-${periodoNome}`;
         
         if (!mapConsolidado[key]) {
