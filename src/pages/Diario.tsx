@@ -17,6 +17,8 @@ export default function Diario() {
   const [periodoSelecionadoId, setPeriodoSelecionadoId] = useState(periodosLetivos[0]?.id || '1. BIMESTRE');
   const periodoSelecionado = periodosLetivos.find(p => p.id === periodoSelecionadoId) || periodosLetivos[0];
 
+  const isAparataFechada = turmaAtiva ? localStorage.getItem(`aparata_fechada_${turmaAtiva.id}_${periodoSelecionadoId}`) === 'true' : false;
+
   const { pFreq, pObj, pAvaliacoes, pNotas, barColor } = useTurmaProgress(
     turmaAtiva, 
     periodoSelecionado, 
@@ -182,7 +184,9 @@ export default function Diario() {
               <div className="p-4 space-y-4">
                 <div className="flex justify-between items-center text-[12px] font-bold text-slate-500 uppercase">
                   <span>Situação</span>
-                  <span className="bg-emerald-500 text-white px-2.5 py-1 rounded-full text-[10px]">ABERTO</span>
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] text-white ${isAparataFechada ? 'bg-red-500' : 'bg-emerald-500'}`}>
+                    {isAparataFechada ? 'FECHADO' : 'ABERTO'}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center text-[12px] font-bold text-slate-500 uppercase">
                   <span>Sincronização</span>
@@ -195,16 +199,26 @@ export default function Diario() {
 
           {/* Calendar Section */}
           <div className="col-span-8">
-            <CalendarWidget
-              year={year}
-              currentMonth={currentMonth}
-              onMonthChange={setCurrentMonth}
-              turmaAtiva={turmaAtiva}
-              lancamentos={lancamentos}
-              avaliacoes={avaliacoes}
-              alunos={alunos}
-              horarioTurma={horarioTurma}
-            />
+            {isAparataFechada ? (
+              <div className="bg-[#fcf3f3] border border-[#f5c6c6] p-6 rounded-xl text-[#842029]">
+                <h3 className="text-lg font-bold mb-4">Aparata Fechada</h3>
+                <div className="space-y-2 text-sm">
+                  <p>- Para realizar lançamentos, solicite reabertura de aparata ao gestor da escola;</p>
+                  <p>- Visualização somente através dos relatórios</p>
+                </div>
+              </div>
+            ) : (
+              <CalendarWidget
+                year={year}
+                currentMonth={currentMonth}
+                onMonthChange={setCurrentMonth}
+                turmaAtiva={turmaAtiva}
+                lancamentos={lancamentos}
+                avaliacoes={avaliacoes}
+                alunos={alunos}
+                horarioTurma={horarioTurma}
+              />
+            )}
           </div>
         </div>
       </div>
