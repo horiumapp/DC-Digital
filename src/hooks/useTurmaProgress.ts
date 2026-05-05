@@ -73,10 +73,16 @@ export function useTurmaProgress(
     // --- O(1): calcular total de aulas esperadas agrupando por dia da semana ---
     let totalEsperado = 0;
     const slotsPorDia = new Map<number, number>(); // dia_semana -> quantidade de tempos
+    const temposPorDia = new Map<number, Set<string>>(); // dia_semana -> tempos válidos
+
     horarioTurma.forEach(h => {
       const dow = Number(h.dia_semana);
       slotsPorDia.set(dow, (slotsPorDia.get(dow) || 0) + 1);
+      
+      if (!temposPorDia.has(dow)) temposPorDia.set(dow, new Set());
+      temposPorDia.get(dow)!.add(`${h.tempo_ordem}º TEMPO`);
     });
+    
     slotsPorDia.forEach((qtd, dow) => {
       totalEsperado += countWeekDaysInRange(inicio, fim, dow) * qtd;
     });
@@ -87,6 +93,15 @@ export function useTurmaProgress(
 
     lancamentos.forEach(l => {
       if (String(l.turmaId).split('||')[0] !== activeTurmaId) return;
+      
+      const [lY, lM, lD] = l.data.split('-').map(Number);
+      const lDate = new Date(lY, lM - 1, lD);
+      if (lDate < inicio || lDate > fim) return;
+      
+      const dow = lDate.getDay();
+      const temposValidos = temposPorDia.get(dow);
+      if (!temposValidos || !temposValidos.has(l.tempo)) return;
+
       const key = `${l.data}|${l.tempo}`;
       if (l.tipo === 'frequencia') freqSet.add(key);
       if (l.tipo === 'conteudo') contSet.add(key);
