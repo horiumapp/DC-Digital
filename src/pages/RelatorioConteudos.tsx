@@ -50,12 +50,6 @@ export default function RelatorioConteudos() {
     }
   }, [opcaoFiltro]);
 
-  useEffect(() => {
-    if (user?.email) {
-      fetchTurmasProfessor();
-    }
-  }, [user]);
-
   const fetchTurmasProfessor = async () => {
     setLoading(true);
     try {
@@ -133,6 +127,12 @@ export default function RelatorioConteudos() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user?.email) {
+      fetchTurmasProfessor();
+    }
+  }, [user]);
 
   const handleExibir = async () => {
     if (!selectedTurmaId) {
@@ -255,6 +255,7 @@ export default function RelatorioConteudos() {
       const turmaNome = selectedTurmaObj?.nome?.replace(/\s+/g, '_') || 'Turma';
       const disciplinaNome = componente?.replace(/\s+/g, '_') || 'Disciplina';
       const periodoLimpo = periodoSelecionado.replace(/\s+/g, '');
+      // eslint-disable-next-line react-hooks/immutability
       document.title = `CM_${periodoLimpo}_${turmaNome}_${disciplinaNome}`;
 
       // Pequeno timeout para garantir que o componente de impressão renderizou
