@@ -166,8 +166,7 @@ export default function RelatorioConteudos() {
         }
       }
 
-      console.log('--- INICIO BUSCA RELATORIO ---');
-      console.log('Critérios:', { turmaId, componente, dateStart, dateEnd, hoje: hojeISO });
+
 
       // Busca Primária por UUID (Sem filtro agressivo de data no SQL para evitar problemas de formato string)
       const { data: rawContents, error } = await supabase
@@ -177,7 +176,7 @@ export default function RelatorioConteudos() {
 
       if (error) throw error;
 
-      console.log(`Registros totais da turma no banco: ${rawContents?.length || 0}`);
+
 
       // Filtragem Inteligente em Memória (JS) usando normalização de datas
       const filtered = (rawContents || []).filter(c => {
@@ -189,14 +188,12 @@ export default function RelatorioConteudos() {
         return matchDate && matchComp;
       });
 
-      console.log(`Registros após filtragem de Data/Disciplina: ${filtered.length}`);
+
 
       let contentsRes = filtered;
 
       // Fallback: Se não achou nada pelo ID, tentamos buscar pelo NOME da disciplina em todo o período
-      // Isso ajuda se o ID da turma foi corrompido ou trocado por outro formato
       if (contentsRes.length === 0) {
-        console.log('Tentando Fallback Amplo por Disciplina/Escola...');
         const { data: fallbackData } = await supabase
           .from('conteudos')
           .select('*')
@@ -211,7 +208,6 @@ export default function RelatorioConteudos() {
 
         if (fallbackFiltered.length > 0) {
           contentsRes = fallbackFiltered;
-          console.log(`Fallback encontrou ${contentsRes.length} registros.`);
         }
       }
 
@@ -439,7 +435,7 @@ export default function RelatorioConteudos() {
 
       {/* ÁREA DE IMPRESSÃO (Oculta na tela, visível no PDF) */}
       <div id="printable-relatorio" className="hidden print:block fixed inset-0 bg-white z-[9999] overflow-y-auto">
-        <style dangerouslySetInnerHTML={{ __html: `
+        <style>{`
           @media print {
             @page { margin: 1cm; size: A4 landscape; }
             html, body { height: 100%; overflow: hidden; background: white !important; }
@@ -467,7 +463,7 @@ export default function RelatorioConteudos() {
           #printable-relatorio .content-table td { border: 1px solid black; padding: 4px; font-size: 8px; }
           #printable-relatorio .signatures { margin-top: 40px; display: flex; justify-content: space-around; }
           #printable-relatorio .sig-line { border-top: 1px solid black; width: 250px; text-align: center; padding-top: 4px; font-size: 8px; font-weight: bold; margin-top: 25px; }
-        `}} />
+        `}</style>
 
         <div className="p-4 bg-white text-black h-auto">
           {/* Header Area Oficial */}

@@ -155,13 +155,15 @@ export const fetchPendenciasPorEscola = async (
       const batchTurmaIds = turmaIds.slice(i, i + TURMA_BATCH_SIZE);
       const batchGroups = consolidadoGroups.filter(g => batchTurmaIds.includes(g.turmaId));
 
-      // Buscar TODOS os dados do lote sem hard cap.
-      // Usamos paginação automática via loop para esgotar todos os registros.
-      const PAGE_SIZE = 1000; // Limite máximo do PostgREST por request
+      const batchComponentes = [...new Set(batchGroups.map(g => g.componente))];
+
+      interface PostgrestQueryBuilder {
+        abortSignal: (signal: AbortSignal) => this;
+        range: (from: number, to: number) => Promise<{ data: unknown[] | null; error: Error | null }>;
+      }
 
       /** Busca todos os registros de uma tabela em lote com paginação automática e timeout */
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const fetchAll = async <T>(builder: () => any): Promise<T[]> => {
+      const fetchAll = async <T>(builder: () => PostgrestQueryBuilder): Promise<T[]> => {
         const result: T[] = [];
         let offset = 0;
         
@@ -174,7 +176,7 @@ export const fetchPendenciasPorEscola = async (
             const { data, error } = await builder().abortSignal(controller.signal).range(offset, offset + PAGE_SIZE - 1);
             if (error) throw error;
             if (!data || data.length === 0) break;
-            result.push(...data);
+            result.push(...(data as T[]));
             if (data.length < PAGE_SIZE) break;
             offset += PAGE_SIZE;
           }
@@ -184,29 +186,38 @@ export const fetchPendenciasPorEscola = async (
         return result;
       };
 
+      interface FrequenciaLote { turma_id: string; disciplina: string; tempo: string; data: string; }
+      interface ConteudoLote { turma_id: string; disciplina: string; tempo: string; data: string; }
+      interface AvaliacaoLote { id: string; turma_id: string; disciplina: string; bimestre: string; }
+      interface AlunoLote { id: string; turma_id: string; }
+      interface NotaLote { avaliacao_id: string; }
+
       const [fAll, cAll, avAll, aluAll] = await Promise.all([
-        fetchAll<any>(() => {
+        fetchAll<FrequenciaLote>(() => {
           let q = supabase.from('frequencias')
             .select('turma_id, disciplina, tempo, data')
-            .in('turma_id', batchTurmaIds);
+            .in('turma_id', batchTurmaIds)
+            .in('disciplina', batchComponentes);
           if (minDateISO) q = q.gte('data', minDateISO);
           if (maxDateISO) q = q.lte('data', maxDateISO);
-          return q;
+          return q as unknown as PostgrestQueryBuilder;
         }),
-        fetchAll<any>(() => {
+        fetchAll<ConteudoLote>(() => {
           let q = supabase.from('conteudos')
             .select('turma_id, disciplina, tempo, data')
-            .in('turma_id', batchTurmaIds);
+            .in('turma_id', batchTurmaIds)
+            .in('disciplina', batchComponentes);
           if (minDateISO) q = q.gte('data', minDateISO);
           if (maxDateISO) q = q.lte('data', maxDateISO);
-          return q;
+          return q as unknown as PostgrestQueryBuilder;
         }),
-        fetchAll<any>(() => supabase.from('avaliacoes')
+        fetchAll<AvaliacaoLote>(() => supabase.from('avaliacoes')
           .select('id, turma_id, disciplina, bimestre')
-          .in('turma_id', batchTurmaIds)),
-        fetchAll<any>(() => supabase.from('alunos')
+          .in('turma_id', batchTurmaIds)
+          .in('disciplina', batchComponentes) as unknown as PostgrestQueryBuilder),
+        fetchAll<AlunoLote>(() => supabase.from('alunos')
           .select('id, turma_id')
-          .in('turma_id', batchTurmaIds))
+          .in('turma_id', batchTurmaIds) as unknown as PostgrestQueryBuilder)
       ]);
 
       // Alias para compatibilidade com o código abaixo
@@ -218,7 +229,7 @@ export const fetchPendenciasPorEscola = async (
       // Buscar notas em lote para todas as avaliações encontradas
       const avIds = avAll.map(av => av.id);
       const nData = avIds.length > 0
-        ? await fetchAll<any>(() => supabase.from('notas').select('avaliacao_id').in('avaliacao_id', avIds))
+        ? await fetchAll<NotaLote>(() => supabase.from('notas').select('avaliacao_id').in('avaliacao_id', avIds) as unknown as PostgrestQueryBuilder)
         : [];
 
       // Helper: converte 'DD/MM/YYYY' ou 'YYYY-MM-DD' para Date para comparação

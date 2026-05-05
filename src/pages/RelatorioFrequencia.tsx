@@ -164,12 +164,11 @@ export default function RelatorioFrequencia() {
         }
       }
 
-      console.log('--- BUSCA DE FREQUÊNCIAS ---');
-      console.log('Filtros:', { turmaId, componente, dateStart, dateEnd });
+
 
       // 1. Buscar Alunos
       const alunosList = await TurmaService.fetchAlunos(turmaId);
-      console.log(`Alunos encontrados: ${alunosList.length}`);
+
       
       // 2. Buscar Frequências de forma ampla
       const { data: rawFreqs, error: freqError } = await supabase
@@ -178,7 +177,7 @@ export default function RelatorioFrequencia() {
         .eq('turma_id', turmaId);
 
       if (freqError) throw freqError;
-      console.log(`Registros brutos da turma: ${rawFreqs?.length || 0}`);
+
 
       // Filtragem em Memória (JS)
       const finalFreqs = (rawFreqs || []).filter(f => {
@@ -191,11 +190,10 @@ export default function RelatorioFrequencia() {
         return matchProp && matchDate;
       });
 
-      console.log(`Registros após filtragem (Disciplina + Data): ${finalFreqs.length}`);
+
 
       if (finalFreqs.length === 0) {
         // Fallback: Tenta buscar pelo NOME da disciplina caso o ID da turma esteja vinculado de forma diferente
-        console.log('Tentando fallback por disciplina ilike...');
         const { data: fallbackFreqs } = await supabase
           .from('frequencias')
           .select('*')
@@ -209,7 +207,6 @@ export default function RelatorioFrequencia() {
         });
 
         if (filteredFallback.length > 0) {
-           console.log(`Fallback encontrou ${filteredFallback.length} registros.`);
            finalFreqs.push(...filteredFallback);
         } else {
            showWarning('Nenhuma frequência encontrada para os critérios selecionados.');
@@ -462,7 +459,7 @@ export default function RelatorioFrequencia() {
 
       {/* ÁREA DE IMPRESSÃO OFICIAL */}
       <div id="printable-relatorio" className="hidden print:block fixed inset-0 bg-white z-[9999] overflow-y-auto">
-        <style dangerouslySetInnerHTML={{ __html: `
+        <style>{`
           @media print {
             @page { margin: 1cm; size: A4 landscape; }
             html, body { height: 100%; overflow: hidden; background: white !important; }
@@ -508,7 +505,7 @@ export default function RelatorioFrequencia() {
             border-top: 0.5px solid #eee;
             background: white;
           }
-        `}} />
+        `}</style>
 
         <div className="doc-container">
           <div className="official-header">

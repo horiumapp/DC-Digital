@@ -30,6 +30,15 @@ export default function Diario() {
   };
 
 
+  const { pFreq, pObj, pAvaliacoes, pNotas, barColor } = useTurmaProgress(
+    turmaAtiva, 
+    periodoSelecionado, 
+    lancamentos, 
+    horarioTurma, 
+    avaliacoes, 
+    alunos
+  );
+
   if (!turmaAtiva) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-6 relative">
@@ -47,15 +56,6 @@ export default function Diario() {
       </div>
     );
   }
-
-  const { pFreq, pObj, pAvaliacoes, pNotas, barColor } = useTurmaProgress(
-    turmaAtiva, 
-    periodoSelecionado, 
-    lancamentos, 
-    horarioTurma, 
-    avaliacoes, 
-    alunos
-  );
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 relative">
