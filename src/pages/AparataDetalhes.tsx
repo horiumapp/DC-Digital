@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, GraduationCap, Building2, Clock, BookOpen, Printer, Search } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
+import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { formatMatricula } from '../utils/formatters';
 import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
@@ -9,6 +10,7 @@ import { APP_CONFIG, getBimestreAtual } from '../config/appConfig';
 
 export default function AparataDetalhes() {
   const { turmaAtiva, alunos, avaliacoes, lancamentos } = useTurma();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const periodoQuery = searchParams.get('periodo');
@@ -116,6 +118,15 @@ export default function AparataDetalhes() {
     }
   };
 
+  const handleReabrirAparata = () => {
+    if (window.confirm(`Tem certeza que deseja REABRIR a aparata do ${periodo}? O professor voltará a ter acesso para fazer lançamentos.`)) {
+      localStorage.removeItem(`aparata_fechada_${turmaAtiva.id}_${bimestreInfo.id}`);
+      navigate('/diario');
+    }
+  };
+
+  const canReabrir = user?.role === 'GESTOR' || user?.role === 'SECRETARIO' || user?.role === 'ADMIN';
+
   return (
     <div className="min-h-screen bg-slate-50 relative">
       <div className="relative z-10 p-8 max-w-7xl mx-auto space-y-6">
@@ -161,6 +172,14 @@ export default function AparataDetalhes() {
                       className="flex items-center gap-2 bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-800 transition"
                     >
                       Fechar aparata
+                    </button>
+                  )}
+                  {isAparataFechada && canReabrir && (
+                    <button
+                      onClick={handleReabrirAparata}
+                      className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 transition"
+                    >
+                      Reabrir aparata
                     </button>
                   )}
                 </div>
