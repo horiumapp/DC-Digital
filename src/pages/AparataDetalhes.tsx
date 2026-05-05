@@ -58,17 +58,27 @@ export default function AparataDetalhes() {
   const dataHoje = `${hoje.getDate().toString().padStart(2, '0')}/${(hoje.getMonth() + 1).toString().padStart(2, '0')}/${hoje.getFullYear()}`;
 
   const alunosDetalhados = useMemo(() => {
+    const principalAvs = avaliacoes.filter(a => a.tipo.startsWith('AV') && !a.tipo.startsWith('RP'));
+
     return (alunos || []).map((aluno, index) => {
-      // Cálculo da Média (Soma das notas dividida pelo total de avaliações existentes)
-      const notasValues = Object.values(aluno.notas || {}) as string[];
-      const soma = notasValues.reduce((acc, val) => {
-        const num = parseFloat(val.replace(',', '.'));
-        return isNaN(num) ? acc : acc + num;
-      }, 0);
-      
-      const media = (avaliacoes.length > 0) 
-        ? (soma / avaliacoes.length).toFixed(2).replace('.', ',') 
-        : '0,00';
+      // Cálculo Correto da Média (considerando as notas e eventuais recuperações)
+      let media = '0,00';
+      if (principalAvs.length > 0) {
+        let soma = 0;
+        let counted = 0;
+        principalAvs.forEach(av => {
+          const rp = avaliacoes.find(a => a.parent_id?.toString() === av.id?.toString());
+          const valAvStr = aluno.notas?.[av.id];
+          const valRpStr = rp ? aluno.notas?.[rp.id] : undefined;
+          
+          const valAv = valAvStr ? parseFloat(valAvStr.replace(',', '.')) : 0;
+          const valRp = valRpStr ? parseFloat(valRpStr.replace(',', '.')) : 0;
+          
+          soma += Math.max(isNaN(valAv) ? 0 : valAv, isNaN(valRp) ? 0 : valRp);
+          counted++;
+        });
+        media = counted > 0 ? (soma / counted).toFixed(2).replace('.', ',') : '0,00';
+      }
       
       const faltas = faltasMap[aluno.id] || 0;
 
