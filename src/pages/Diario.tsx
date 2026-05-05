@@ -14,8 +14,22 @@ export default function Diario() {
 
   const periodosLetivos = APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE'));
 
-  const [periodoSelecionadoId, setPeriodoSelecionadoId] = useState(periodosLetivos[0]?.id || '1. BIMESTRE');
-  const periodoSelecionado = periodosLetivos.find(p => p.id === periodoSelecionadoId) || periodosLetivos[0];
+  const hoje = new Date();
+  hoje.setHours(23, 59, 59, 999);
+  
+  let periodosVisiveis = periodosLetivos.filter(p => {
+    const [ano, mes, dia] = p.dataInicio.split('-').map(Number);
+    const dataInicio = new Date(ano, mes - 1, dia);
+    return dataInicio <= hoje;
+  });
+
+  if (periodosVisiveis.length === 0) {
+    periodosVisiveis = [periodosLetivos[0]];
+  }
+
+  // Define o período inicial como o mais recente/atual (último da lista de visíveis)
+  const [periodoSelecionadoId, setPeriodoSelecionadoId] = useState(periodosVisiveis[periodosVisiveis.length - 1]?.id || '1. BIMESTRE');
+  const periodoSelecionado = periodosVisiveis.find(p => p.id === periodoSelecionadoId) || periodosVisiveis[periodosVisiveis.length - 1];
 
   const isAparataFechada = turmaAtiva ? localStorage.getItem(`aparata_fechada_${turmaAtiva.id}_${periodoSelecionadoId}`) === 'true' : false;
 
