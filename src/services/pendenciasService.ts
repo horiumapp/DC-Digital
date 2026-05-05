@@ -162,6 +162,8 @@ export const fetchPendenciasPorEscola = async (
         range: (from: number, to: number) => Promise<{ data: unknown[] | null; error: Error | null }>;
       }
 
+      const PAGE_SIZE = 1000;
+
       /** Busca todos os registros de uma tabela em lote com paginação automática e timeout */
       const fetchAll = async <T>(builder: () => PostgrestQueryBuilder): Promise<T[]> => {
         const result: T[] = [];
