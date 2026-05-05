@@ -15,6 +15,8 @@ interface CalendarWidgetProps {
   horarioTurma?: any[];
   minMonth?: number;
   maxMonth?: number;
+  periodoStart?: string;
+  periodoEnd?: string;
 }
 
 export default function CalendarWidget({ 
@@ -27,7 +29,9 @@ export default function CalendarWidget({
   alunos,
   horarioTurma,
   minMonth = 1,
-  maxMonth = 11
+  maxMonth = 11,
+  periodoStart,
+  periodoEnd
 }: CalendarWidgetProps) {
 
   // Re-calcular datas do período baseadas no Bimestre selecionado (poderiam vir de props, mas mantemos isolado)
@@ -112,12 +116,23 @@ export default function CalendarWidget({
           const today = new Date();
           today.setHours(0, 0, 0, 0);
 
-          const isWithinPeriod = isDateWithinSchoolYear(currentDate);
+          const isWithinSchoolYear = isDateWithinSchoolYear(currentDate);
+          
+          // Verifica se o dia pertence EXATAMENTE ao bimestre selecionado
+          let isWithinSelectedPeriod = true;
+          if (periodoStart && periodoEnd) {
+            const [sY, sM, sD] = periodoStart.split('-').map(Number);
+            const pStart = new Date(sY, sM - 1, sD);
+            const [eY, eM, eD] = periodoEnd.split('-').map(Number);
+            const pEnd = new Date(eY, eM - 1, eD);
+            isWithinSelectedPeriod = currentDate >= pStart && currentDate <= pEnd;
+          }
+
           const isPastOrToday = currentDate <= today;
           
           // Agora verificamos se o dia da semana existe no horário cadastrado para esta turma
           const temAulaHoje = horarioTurma?.some(h => Number(h.dia_semana) === dayOfWeek);
-          const isDiaDeAula = temAulaHoje && isWithinPeriod && isPastOrToday;
+          const isDiaDeAula = temAulaHoje && isWithinSchoolYear && isPastOrToday && isWithinSelectedPeriod;
           
           if (isDiaDeAula) {
             const dayStr = `${year}-${(currentMonth + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
