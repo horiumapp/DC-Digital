@@ -53,12 +53,6 @@ export default function RelatorioFrequencia() {
     }
   }, [opcaoFiltro]);
 
-  useEffect(() => {
-    if (user?.email) {
-      fetchTurmasProfessor();
-    }
-  }, [user]);
-
   const fetchTurmasProfessor = async () => {
     setLoading(true);
     try {
@@ -130,6 +124,13 @@ export default function RelatorioFrequencia() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user?.email) {
+      fetchTurmasProfessor();
+    }
+  }, [user]);
+
 
   const handleExibir = async () => {
     if (!selectedTurmaId) {
@@ -237,7 +238,7 @@ export default function RelatorioFrequencia() {
       const mappedAlunos: AlunoFrequencia[] = alunosList.map(a => {
         const freqsAlun: Record<string, string> = {};
         let faltas = 0;
-        let totalTempos = colunasSorted.length;
+        const totalTempos = colunasSorted.length;
 
         colunasSorted.forEach(colKey => {
           const [data, tempo] = colKey.split('|');
@@ -265,6 +266,7 @@ export default function RelatorioFrequencia() {
       const oldTitle = document.title;
       const turmaNome = selectedTurmaObj?.nome?.replace(/\s+/g, '_') || 'Turma';
       const disciplinaNome = componente?.replace(/\s+/g, '_') || 'Disciplina';
+      // eslint-disable-next-line react-hooks/immutability
       document.title = `FREQ_${periodoSelecionado.replace(/\s+/g, '')}_${turmaNome}_${disciplinaNome}`;
       
       setTimeout(() => {
@@ -410,7 +412,6 @@ export default function RelatorioFrequencia() {
                        {colunasDatas.map(col => {
                          const [data, tempo] = col.split('|');
                          const dateObj = new Date(formatarDataParaISO(data));
-                         const diaMes = data.substring(0, 5).split('/').join('\n');
                          return (
                            <th key={col} className="px-2 py-3 font-black text-[9px] text-center border-r border-slate-200 min-w-[45px] leading-tight">
                               {data.split('/')[0]}<br/>{['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'][dateObj.getMonth()]}<br/>{tempo?.charAt(0)}T
