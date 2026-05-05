@@ -1,0 +1,396 @@
+﻿[
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\components\\GerenciarAlocacoesModal.tsx",
+    "errors": 2,
+    "warnings": 4,
+    "msgs": [
+      "@typescript-eslint/no-explicit-any",
+      "react-hooks/immutability",
+      "react-hooks/exhaustive-deps"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\components\\Layout.tsx",
+    "errors": 0,
+    "warnings": 7,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "@typescript-eslint/no-explicit-any"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\components\\NovaEscolaModal.tsx",
+    "errors": 1,
+    "warnings": 2,
+    "msgs": [
+      "@typescript-eslint/no-explicit-any",
+      "react-hooks/set-state-in-effect"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\components\\NovaTurmaModal.tsx",
+    "errors": 2,
+    "warnings": 4,
+    "msgs": [
+      "@typescript-eslint/no-explicit-any",
+      "react-hooks/immutability",
+      "react-hooks/set-state-in-effect",
+      "react-hooks/exhaustive-deps"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\components\\NovoAlunoModal.tsx",
+    "errors": 4,
+    "warnings": 4,
+    "msgs": [
+      "@typescript-eslint/no-explicit-any",
+      "react-hooks/immutability",
+      "react-hooks/set-state-in-effect"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\components\\NovoProfessorModal.tsx",
+    "errors": 1,
+    "warnings": 2,
+    "msgs": [
+      "@typescript-eslint/no-explicit-any",
+      "react-hooks/set-state-in-effect"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\components\\ScheduleModal.tsx",
+    "errors": 2,
+    "warnings": 6,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "@typescript-eslint/no-explicit-any",
+      "react-hooks/immutability",
+      "react-hooks/exhaustive-deps"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\components\\common\\CalendarWidget.tsx",
+    "errors": 0,
+    "warnings": 8,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "@typescript-eslint/no-explicit-any"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\components\\common\\Toast.tsx",
+    "errors": 0,
+    "warnings": 1,
+    "msgs": [
+      "react-refresh/only-export-components"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\components\\frequencia\\AnotacoesTab.tsx",
+    "errors": 0,
+    "warnings": 3,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "@typescript-eslint/no-explicit-any"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\components\\frequencia\\AvaliacoesTab.tsx",
+    "errors": 4,
+    "warnings": 7,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "@typescript-eslint/no-explicit-any",
+      "react-hooks/set-state-in-effect",
+      "prefer-const"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\components\\frequencia\\FrequenciaTab.tsx",
+    "errors": 1,
+    "warnings": 3,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "react-hooks/exhaustive-deps",
+      "react-hooks/set-state-in-effect"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\components\\frequencia\\ObjetoConhecimentoTab.tsx",
+    "errors": 2,
+    "warnings": 8,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "@typescript-eslint/no-explicit-any",
+      "react-hooks/set-state-in-effect",
+      "react-hooks/exhaustive-deps"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\components\\frequencia\\avaliacoes\\AvaliacaoDetailsView.tsx",
+    "errors": 0,
+    "warnings": 2,
+    "msgs": [
+      "@typescript-eslint/no-explicit-any"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\components\\frequencia\\avaliacoes\\AvaliacaoForm.tsx",
+    "errors": 0,
+    "warnings": 3,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "@typescript-eslint/no-explicit-any"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\components\\frequencia\\avaliacoes\\AvaliacoesList.tsx",
+    "errors": 0,
+    "warnings": 1,
+    "msgs": [
+      "@typescript-eslint/no-explicit-any"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\components\\frequencia\\avaliacoes\\NotasEditor.tsx",
+    "errors": 0,
+    "warnings": 2,
+    "msgs": [
+      "@typescript-eslint/no-explicit-any"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\components\\frequencia\\avaliacoes\\SegundaChamadaEditor.tsx",
+    "errors": 1,
+    "warnings": 6,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "@typescript-eslint/no-explicit-any",
+      "prefer-const"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\contexts\\AuthContext.tsx",
+    "errors": 0,
+    "warnings": 2,
+    "msgs": [
+      "@typescript-eslint/no-explicit-any",
+      "react-refresh/only-export-components"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\contexts\\TurmaContext.tsx",
+    "errors": 0,
+    "warnings": 13,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "@typescript-eslint/no-explicit-any",
+      "react-refresh/only-export-components"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\pages\\Aparata.tsx",
+    "errors": 0,
+    "warnings": 1,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\pages\\AparataDetalhes.tsx",
+    "errors": 0,
+    "warnings": 3,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\pages\\Cadastro.tsx",
+    "errors": 0,
+    "warnings": 3,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "@typescript-eslint/no-explicit-any"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\pages\\Diario.tsx",
+    "errors": 1,
+    "warnings": 4,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "react-hooks/rules-of-hooks"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\pages\\Frequencia.tsx",
+    "errors": 2,
+    "warnings": 1,
+    "msgs": [
+      "react-hooks/set-state-in-effect",
+      "react-hooks/exhaustive-deps"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\pages\\Login.tsx",
+    "errors": 0,
+    "warnings": 2,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "@typescript-eslint/no-explicit-any"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\pages\\PendenciasFrequencia.tsx",
+    "errors": 3,
+    "warnings": 6,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "@typescript-eslint/no-explicit-any",
+      "react-hooks/immutability",
+      "react-hooks/set-state-in-effect",
+      "react-hooks/exhaustive-deps"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\pages\\PendenciasLancamento.tsx",
+    "errors": 3,
+    "warnings": 4,
+    "msgs": [
+      "@typescript-eslint/no-explicit-any",
+      "react-hooks/immutability",
+      "react-hooks/set-state-in-effect",
+      "react-hooks/exhaustive-deps",
+      "@typescript-eslint/no-unused-vars"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\pages\\RecuperarSenha.tsx",
+    "errors": 0,
+    "warnings": 1,
+    "msgs": [
+      "@typescript-eslint/no-explicit-any"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\pages\\RedefinirSenha.tsx",
+    "errors": 0,
+    "warnings": 1,
+    "msgs": [
+      "@typescript-eslint/no-explicit-any"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\pages\\RelatorioConteudos.tsx",
+    "errors": 3,
+    "warnings": 4,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "react-hooks/set-state-in-effect",
+      "react-hooks/immutability",
+      "react-hooks/exhaustive-deps"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\pages\\RelatorioFrequencia.tsx",
+    "errors": 4,
+    "warnings": 8,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "react-hooks/set-state-in-effect",
+      "react-hooks/immutability",
+      "react-hooks/exhaustive-deps",
+      "prefer-const"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\pages\\RelatorioMedias.tsx",
+    "errors": 1,
+    "warnings": 4,
+    "msgs": [
+      "@typescript-eslint/no-explicit-any",
+      "react-hooks/immutability",
+      "react-hooks/exhaustive-deps"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\pages\\RelatorioNotas.tsx",
+    "errors": 1,
+    "warnings": 5,
+    "msgs": [
+      "@typescript-eslint/no-explicit-any",
+      "react-hooks/immutability",
+      "react-hooks/exhaustive-deps",
+      "@typescript-eslint/no-unused-vars"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\pages\\Turmas.tsx",
+    "errors": 2,
+    "warnings": 5,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "react-hooks/immutability",
+      "react-hooks/exhaustive-deps",
+      "@typescript-eslint/no-explicit-any"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\pages\\administracao\\TabAlunos.tsx",
+    "errors": 1,
+    "warnings": 5,
+    "msgs": [
+      "@typescript-eslint/no-explicit-any",
+      "react-hooks/immutability"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\pages\\administracao\\TabEscolas.tsx",
+    "errors": 1,
+    "warnings": 8,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "@typescript-eslint/no-explicit-any",
+      "react-hooks/immutability"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\pages\\administracao\\TabProfessores.tsx",
+    "errors": 1,
+    "warnings": 24,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "@typescript-eslint/no-explicit-any",
+      "react-hooks/immutability",
+      "react-hooks/exhaustive-deps"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\pages\\administracao\\TabTurmas.tsx",
+    "errors": 1,
+    "warnings": 10,
+    "msgs": [
+      "@typescript-eslint/no-unused-vars",
+      "@typescript-eslint/no-explicit-any",
+      "react-hooks/immutability",
+      "react-hooks/exhaustive-deps"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\services\\pendenciasService.ts",
+    "errors": 0,
+    "warnings": 7,
+    "msgs": [
+      "@typescript-eslint/no-explicit-any",
+      "@typescript-eslint/no-unused-vars"
+    ]
+  },
+  {
+    "file": "C:\\Users\\jacki\\OneDrive\\Ôö£├╝rea de Trabalho\\DC Digital\\src\\services\\turmaService.ts",
+    "errors": 0,
+    "warnings": 4,
+    "msgs": [
+      "@typescript-eslint/no-explicit-any"
+    ]
+  }
+]
