@@ -27,19 +27,17 @@ export default function CalendarWidget({
 }: CalendarWidgetProps) {
 
   // Re-calcular datas do período baseadas no Bimestre selecionado (poderiam vir de props, mas mantemos isolado)
-  const periodosLetivos = APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE'));
+  const periodosLetivos = APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE')).map(p => {
+    const [aiY, aiM, aiD] = p.dataInicio.split('-');
+    const start = new Date(Number(aiY), Number(aiM) - 1, Number(aiD));
+    const [afY, afM, afD] = p.dataFim.split('-');
+    const end = new Date(Number(afY), Number(afM) - 1, Number(afD));
+    return { start, end };
+  });
 
-  // Identificar em qual período estamos (heurística baseada no mês atual)
-  // Nota: Isso é uma redundância para manter o widget funcionando se as props de data sumirem.
-  const periodoAtual = periodosLetivos.find(p => {
-    const [y, m, d] = p.dataInicio.split('-');
-    return parseInt(m, 10) - 1 <= currentMonth;
-  }) || periodosLetivos[0];
-
-  const [aiY, aiM, aiD] = periodoAtual.dataInicio.split('-');
-  const dataInicioValida = new Date(Number(aiY), Number(aiM) - 1, Number(aiD));
-  const [afY, afM, afD] = periodoAtual.dataFim.split('-');
-  const dataFimValida = new Date(Number(afY), Number(afM) - 1, Number(afD));
+  const isDateWithinSchoolYear = (date: Date) => {
+    return periodosLetivos.some(p => date >= p.start && date <= p.end);
+  };
 
   const monthNames = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -110,7 +108,7 @@ export default function CalendarWidget({
           const today = new Date();
           today.setHours(0, 0, 0, 0);
 
-          const isWithinPeriod = currentDate >= dataInicioValida && currentDate <= dataFimValida;
+          const isWithinPeriod = isDateWithinSchoolYear(currentDate);
           const isPastOrToday = currentDate <= today;
           
           // Agora verificamos se o dia da semana existe no horário cadastrado para esta turma
