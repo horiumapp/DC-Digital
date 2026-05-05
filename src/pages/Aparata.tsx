@@ -169,7 +169,14 @@ export default function Aparata() {
                           <tr className="bg-white hover:bg-slate-50 transition">
                             <td className="px-4 py-3 text-slate-700 font-medium">{periodoSelecionado}</td>
                             <td className="px-4 py-3">
-                              <span className="bg-slate-100 text-slate-700 text-xs font-semibold px-2.5 py-1 rounded">ABERTO</span>
+                              {(() => {
+                                const isFechado = localStorage.getItem(`aparata_fechada_${turmaAtiva.id}_${periodoSelecionado}`) === 'true';
+                                return (
+                                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest border ${isFechado ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                                    {isFechado ? 'FECHADO' : 'ABERTO'}
+                                  </span>
+                                );
+                              })()}
                             </td>
                             <td className="px-4 py-3 text-slate-700">{turmaAtiva.fase} - {turmaAtiva.turno.toUpperCase()}</td>
                             <td className="px-4 py-3 text-slate-700">{turmaAtiva.componente}</td>
@@ -222,7 +229,7 @@ export default function Aparata() {
                               <td className="px-4 py-3 text-slate-600 font-medium">{mov.usuario}</td>
                               <td className="px-4 py-3">
                                 <Link
-                                  to="/aparata-detalhes"
+                                  to={`/aparata-detalhes?periodo=${encodeURIComponent(periodoSelecionado)}`}
                                   className="bg-[#0f2851] text-white text-[10px] font-bold px-5 py-2 rounded-xl hover:bg-[#1a3a6d] transition inline-flex items-center justify-center gap-2 w-32 uppercase tracking-widest shadow-md shadow-[#0f2851]/20 active:scale-95"
                                 >
                                   <Eye className="w-3.5 h-3.5" />

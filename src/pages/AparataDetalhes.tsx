@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, GraduationCap, Building2, Clock, BookOpen, Printer, Search } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
 import { supabase } from '../lib/supabase';
 import { formatMatricula } from '../utils/formatters';
@@ -10,6 +10,9 @@ import { APP_CONFIG, getBimestreAtual } from '../config/appConfig';
 export default function AparataDetalhes() {
   const { turmaAtiva, alunos, avaliacoes, lancamentos } = useTurma();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const periodoQuery = searchParams.get('periodo');
+  
   const [search, setSearch] = useState('');
   const [faltasMap, setFaltasMap] = useState<Record<string, number>>({});
 
@@ -100,9 +103,18 @@ export default function AparataDetalhes() {
   }
 
   const bimestres = APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE'));
-  const bimestreInfo = getBimestreAtual() || bimestres[0];
+  const bimestreInfo = bimestres.find(b => b.id === periodoQuery) || getBimestreAtual() || bimestres[0];
   const periodo = bimestreInfo.nome;
   const meses = `${new Date(bimestreInfo.dataInicio).toLocaleDateString('pt-BR', { month: 'long' })} - ${new Date(bimestreInfo.dataFim).toLocaleDateString('pt-BR', { month: 'long' })}`;
+
+  const isAparataFechada = localStorage.getItem(`aparata_fechada_${turmaAtiva.id}_${bimestreInfo.id}`) === 'true';
+
+  const handleFecharAparata = () => {
+    if (window.confirm(`Tem certeza que deseja FECHAR a aparata do ${periodo}? Não será mais possível fazer lançamentos de frequência, conteúdos e notas neste período.`)) {
+      localStorage.setItem(`aparata_fechada_${turmaAtiva.id}_${bimestreInfo.id}`, 'true');
+      navigate('/diario');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 relative">
@@ -111,13 +123,13 @@ export default function AparataDetalhes() {
 
           {/* Header */}
           <div className="flex items-center gap-3">
-            <Link
-              to="/aparata"
-              className="flex items-center gap-1 px-4 py-2 bg-[#eef2ff] text-[#0f2851] text-sm font-bold rounded-xl border border-blue-100 hover:bg-[#e0e7ff] transition shadow-sm"
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-1 px-4 py-2 bg-[#eef2ff] text-[#0f2851] text-sm font-bold rounded-xl border border-blue-100 hover:bg-[#e0e7ff] transition shadow-sm cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
               Voltar
-            </Link>
+            </button>
             <h2 className="text-xl font-medium text-slate-700 flex items-center gap-2">
               Detalhes da Movimentação
               <span className="bg-emerald-100 text-emerald-800 text-sm font-bold px-3 py-1 rounded">Ano: {APP_CONFIG.YEAR}</span>
@@ -143,12 +155,14 @@ export default function AparataDetalhes() {
                     <Printer className="w-4 h-4" />
                     Imprimir
                   </button>
-                  <button
-                    onClick={() => navigate('/aparata')}
-                    className="flex items-center gap-2 bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-800 transition"
-                  >
-                    Fechar aparata
-                  </button>
+                  {!isAparataFechada && (
+                    <button
+                      onClick={handleFecharAparata}
+                      className="flex items-center gap-2 bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-800 transition"
+                    >
+                      Fechar aparata
+                    </button>
+                  )}
                 </div>
               </div>
 
