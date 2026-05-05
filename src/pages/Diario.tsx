@@ -231,6 +231,8 @@ export default function Diario() {
                 avaliacoes={avaliacoes}
                 alunos={alunos}
                 horarioTurma={horarioTurma}
+                minMonth={periodoSelecionado ? parseInt(periodoSelecionado.dataInicio.split('-')[1], 10) - 1 : 1}
+                maxMonth={periodoSelecionado ? parseInt(periodoSelecionado.dataFim.split('-')[1], 10) - 1 : 11}
               />
             )}
           </div>

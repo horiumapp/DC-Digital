@@ -13,6 +13,8 @@ interface CalendarWidgetProps {
   avaliacoes: any[];
   alunos: any[];
   horarioTurma?: any[];
+  minMonth?: number;
+  maxMonth?: number;
 }
 
 export default function CalendarWidget({ 
@@ -23,7 +25,9 @@ export default function CalendarWidget({
   lancamentos,
   avaliacoes,
   alunos,
-  horarioTurma
+  horarioTurma,
+  minMonth = 1,
+  maxMonth = 11
 }: CalendarWidgetProps) {
 
   // Re-calcular datas do período baseadas no Bimestre selecionado (poderiam vir de props, mas mantemos isolado)
@@ -45,11 +49,11 @@ export default function CalendarWidget({
   ];
 
   const handlePrevMonth = () => {
-    if (currentMonth > 1) onMonthChange(currentMonth - 1);
+    if (currentMonth > minMonth) onMonthChange(currentMonth - 1);
   };
 
   const handleNextMonth = () => {
-    if (currentMonth < 11) onMonthChange(currentMonth + 1);
+    if (currentMonth < maxMonth) onMonthChange(currentMonth + 1);
   };
 
   const getDaysArray = () => {
@@ -71,7 +75,7 @@ export default function CalendarWidget({
       <div className="p-5 flex items-center justify-between border-b border-slate-200">
         <button 
           onClick={handlePrevMonth}
-          disabled={currentMonth <= 1}
+          disabled={currentMonth <= minMonth}
           className="flex items-center gap-1 px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -80,7 +84,7 @@ export default function CalendarWidget({
         <h3 className="text-lg font-semibold text-slate-700">{monthNames[currentMonth].toUpperCase()}</h3>
         <button 
           onClick={handleNextMonth}
-          disabled={currentMonth === 11}
+          disabled={currentMonth >= maxMonth}
           className="flex items-center gap-1 px-4 py-2 bg-[#0f2851] text-white rounded-xl text-sm font-bold hover:bg-[#1a3a6d] transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#0f2851]/20"
         >
           Próximo
