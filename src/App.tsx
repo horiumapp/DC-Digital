@@ -68,6 +68,20 @@ export default function App() {
                     </Route>
                   </Route>
                 </Route>
+
+                {/* Rota 404 — Página não encontrada */}
+                <Route path="*" element={
+                  <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+                    <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-200 text-center max-w-md w-full">
+                      <div className="text-6xl font-black text-slate-200 mb-4">404</div>
+                      <h2 className="text-xl font-bold text-slate-800 mb-2">Página não encontrada</h2>
+                      <p className="text-slate-500 mb-6">A página que você procura não existe ou foi movida.</p>
+                      <a href="/turmas" className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#0f2851] text-white font-bold rounded-xl hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20">
+                        Voltar ao Início
+                      </a>
+                    </div>
+                  </div>
+                } />
               </Routes>
             </Suspense>
           </Router>

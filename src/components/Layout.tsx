@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, BarChart2, FileText, Calendar, User, Home, LogOut, ChevronDown, Check, Menu, X } from 'lucide-react';
+import { User, Home, LogOut, ChevronDown, Menu, X } from 'lucide-react';
 import ScheduleModal from './ScheduleModal';
 import Background from './Background';
 import { useAuth } from '../contexts/AuthContext';
