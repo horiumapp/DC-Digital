@@ -162,8 +162,8 @@ export default function Diario() {
         </div>
 
         {/* Progress Section */}
-        <div className="grid grid-cols-12 gap-6">
-          <div className="col-span-4 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-4 space-y-6">
             <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm transition-all">
               <h4 className="text-base font-bold text-slate-700 mb-6 uppercase tracking-tight">Lançamentos da Turma</h4>
               
@@ -235,7 +235,7 @@ export default function Diario() {
           </div>
 
           {/* Calendar Section */}
-          <div className="col-span-8">
+          <div className="lg:col-span-8">
             {isAparataFechada ? (
               <div className="bg-[#fcf3f3] border border-[#f5c6c6] p-6 rounded-xl text-[#842029]">
                 <h3 className="text-lg font-bold mb-4">Aparata Fechada</h3>
