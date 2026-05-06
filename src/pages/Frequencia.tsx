@@ -11,7 +11,6 @@ import ObjetoConhecimentoTab from '../components/frequencia/ObjetoConhecimentoTa
 import AnotacoesTab from '../components/frequencia/AnotacoesTab';
 import AvaliacoesTab from '../components/frequencia/AvaliacoesTab';
 import { getBimestrePorData } from '../utils/dateUtils';
-import AvaliacoesTab from '../components/frequencia/AvaliacoesTab';
 
 export default function Frequencia() {
   const { turmaAtiva, horarioTurma } = useTurma();
