@@ -154,7 +154,7 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
     let targetEscolaId = escolaId;
 
     if (!targetProfId && user?.email) {
-      const { data: p } = await supabase.from('professores').select('id').eq('email', user.email).single();
+      const { data: p } = await supabase.from('professores').select('id').eq('email', user.email).maybeSingle();
       targetProfId = p?.id;
     }
 

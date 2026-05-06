@@ -241,16 +241,17 @@ export const TurmaService = {
 
   buscarConteudo: async (turmaId: string | number, disciplina: string, data: string, tempo: string): Promise<Conteudo | null> => {
     const tid = getTid(turmaId);
+    const dataISO = normalizarDataISO(data);
     const { data: contData, error } = await supabase
       .from('conteudos')
       .select('*')
       .eq('turma_id', tid)
-      .eq('data', data)
+      .eq('data', dataISO)
       .eq('tempo', tempo)
       .eq('disciplina', disciplina)
-      .single();
+      .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') throw error;
+    if (error) throw error;
 
     if (contData) {
       return {
