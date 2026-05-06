@@ -254,8 +254,9 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const salvarFrequencia = async (data: string, tempo: string, alunosFreq: Aluno[]) => {
     if (!turmaAtiva) return;
+    const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
-      await TurmaService.salvarFrequencia(turmaAtiva.id, turmaAtiva.componente, data, tempo, alunosFreq);
+      await TurmaService.salvarFrequencia(rawId, turmaAtiva.componente, data, tempo, alunosFreq);
       
       registrarLancamento({
         turmaId: turmaAtiva.id,

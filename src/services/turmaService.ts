@@ -269,11 +269,13 @@ export const TurmaService = {
 
   removerFrequencia: async (turmaId: string | number, disciplina: string, data: string, tempo: string): Promise<void> => {
     const tid = getTid(turmaId);
+    // FIX: normalizar data para ISO antes de deletar (consistente com salvarFrequencia)
+    const dataISO = normalizarDataISO(data);
     const { error } = await supabase
       .from('frequencias')
       .delete()
       .eq('turma_id', tid)
-      .eq('data', data)
+      .eq('data', dataISO)
       .eq('tempo', tempo)
       .eq('disciplina', disciplina);
     if (error) throw error;
@@ -281,11 +283,13 @@ export const TurmaService = {
 
   removerConteudo: async (turmaId: string | number, disciplina: string, data: string, tempo: string): Promise<void> => {
     const tid = getTid(turmaId);
+    // FIX: normalizar data para ISO antes de deletar (consistente com salvarConteudo)
+    const dataISO = normalizarDataISO(data);
     const { error } = await supabase
     .from('conteudos')
     .delete()
     .eq('turma_id', tid)
-    .eq('data', data)
+    .eq('data', dataISO)
     .eq('tempo', tempo)
     .eq('disciplina', disciplina);
     if (error) throw error;

@@ -14,8 +14,11 @@ export const getBimestrePorData = (dataStr: string): string => {
   const dataRef = new Date(ano, mes - 1, dia);
 
   const periodo = APP_CONFIG.PERIODOS.find(p => {
-    const start = new Date(p.dataInicio);
-    const end = new Date(p.dataFim);
+    // FIX: usar parsing manual para evitar bug de timezone (UTC-3)
+    const [sy, sm, sd] = p.dataInicio.split('-').map(Number);
+    const start = new Date(sy, sm - 1, sd);
+    const [ey, em, ed] = p.dataFim.split('-').map(Number);
+    const end = new Date(ey, em - 1, ed);
     return dataRef >= start && dataRef <= end;
   });
 
