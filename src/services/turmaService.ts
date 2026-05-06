@@ -69,13 +69,15 @@ export const TurmaService = {
   fetchAlunos: async (turmaId: string | number): Promise<Aluno[]> => {
     const { data, error } = await supabase
       .from('alunos')
-      .select('id, nome, matricula')
+      .select('id, nome, matricula, status')
       .eq('turma_id', turmaId.toString())
-      .eq('status', 'Ativo')
       .order('nome');
     if (error) throw error;
     
-    return (data || []).map(a => ({
+    // Filtra no cliente para considerar status nulo ou variações de "Ativo"
+    const alunosAtivos = (data || []).filter(a => !a.status || a.status.toLowerCase() === 'ativo');
+    
+    return alunosAtivos.map(a => ({
       id: a.id.toString(),
       nome: a.nome,
       matricula: a.matricula || `${APP_CONFIG.YEAR}/${a.id.toString().slice(-7)}`,
