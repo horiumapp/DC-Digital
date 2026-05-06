@@ -305,10 +305,10 @@ export default function AparataDetalhes() {
                     Mostrando de 1 até {alunosFiltrados.length} de{' '}
                     <span className="font-bold text-slate-700">{alunosFiltrados.length}</span> registros
                     &nbsp;&nbsp;Mostrar{' '}
-                    <select className="border border-slate-300 rounded px-1 py-0.5 text-xs bg-white ml-1 mr-1">
-                      <option>10</option>
-                      <option>25</option>
-                      <option value="100" selected>100</option>
+                    <select defaultValue="100" className="border border-slate-300 rounded px-1 py-0.5 text-xs bg-white ml-1 mr-1">
+                      <option value="10">10</option>
+                      <option value="25">25</option>
+                      <option value="100">100</option>
                     </select>{' '}
                     registros
                   </span>
