@@ -15,6 +15,9 @@ export default function AparataDetalhes() {
   const [searchParams] = useSearchParams();
   const periodoQuery = searchParams.get('periodo');
   
+  const bimestres = APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE'));
+  const bimestreInfo = bimestres.find(b => b.id === periodoQuery) || getBimestreAtual() || bimestres[0];
+
   const [search, setSearch] = useState('');
   const [faltasMap, setFaltasMap] = useState<Record<string, number>>({});
 
@@ -123,8 +126,6 @@ export default function AparataDetalhes() {
     );
   }
 
-  const bimestres = APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE'));
-  const bimestreInfo = bimestres.find(b => b.id === periodoQuery) || getBimestreAtual() || bimestres[0];
   const periodo = bimestreInfo.nome;
   const meses = `${new Date(bimestreInfo.dataInicio).toLocaleDateString('pt-BR', { month: 'long' })} - ${new Date(bimestreInfo.dataFim).toLocaleDateString('pt-BR', { month: 'long' })}`;
 
