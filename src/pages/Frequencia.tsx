@@ -115,7 +115,7 @@ export default function Frequencia() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-slate-500">Período</p>
-                    <p className="text-sm font-medium text-slate-800">1. BIMESTRE</p>
+                    <p className="text-sm font-medium text-slate-800">{getBimestrePorData(selectedDate) || 'N/D'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
