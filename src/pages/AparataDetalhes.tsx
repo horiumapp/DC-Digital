@@ -18,22 +18,31 @@ export default function AparataDetalhes() {
   const [search, setSearch] = useState('');
   const [faltasMap, setFaltasMap] = useState<Record<string, number>>({});
 
-  // Buscar histórico de faltas para todos os alunos da turma
+  // Buscar histórico de faltas para todos os alunos da turma filtrados pelo período da aparata
   useEffect(() => {
     async function fetchFaltas() {
       if (!turmaAtiva) return;
       try {
+        const rawId = turmaAtiva.id.toString().split('||')[0];
         const { data, error } = await supabase
           .from('frequencias')
-          .select('aluno_id, status')
-          .eq('turma_id', turmaAtiva.id.toString())
+          .select('aluno_id, status, data')
+          .eq('turma_id', rawId)
+          .eq('disciplina', turmaAtiva.componente)
           .in('status', ['F', 'FJ']);
 
         if (error) throw error;
         
         const map: Record<string, number> = {};
+        
+        const pStart = new Date(bimestreInfo.dataInicio + 'T00:00:00');
+        const pEnd = new Date(bimestreInfo.dataFim + 'T23:59:59');
+
         data?.forEach(f => {
-          map[f.aluno_id] = (map[f.aluno_id] || 0) + 1;
+          const dataFreq = new Date(f.data + 'T12:00:00'); // Evitar fuso horário
+          if (dataFreq >= pStart && dataFreq <= pEnd) {
+            map[f.aluno_id] = (map[f.aluno_id] || 0) + 1;
+          }
         });
         setFaltasMap(map);
       } catch (err) {
@@ -41,7 +50,7 @@ export default function AparataDetalhes() {
       }
     }
     fetchFaltas();
-  }, [turmaAtiva]);
+  }, [turmaAtiva, bimestreInfo]);
 
   // Cálculo de Aulas Dadas (Lançamentos únicos de frequência)
   const aulasDadas = useMemo(() => {
