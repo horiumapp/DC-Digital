@@ -9,7 +9,6 @@ import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
 
 export default function Diario() {
   const { turmaAtiva, lancamentos, avaliacoes, alunos, horarioTurma } = useTurma();
-  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const year = APP_CONFIG.YEAR;
 
   const periodosLetivos = APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE'));
@@ -43,8 +42,17 @@ export default function Diario() {
   }
 
   // Define o período inicial como o mais recente/atual (último da lista de visíveis)
-  const [periodoSelecionadoId, setPeriodoSelecionadoId] = useState(periodosVisiveis[periodosVisiveis.length - 1]?.id || '1. BIMESTRE');
+  const initialPeriodoId = periodosVisiveis[periodosVisiveis.length - 1]?.id || '1. BIMESTRE';
+  const [periodoSelecionadoId, setPeriodoSelecionadoId] = useState(initialPeriodoId);
   const periodoSelecionado = periodosVisiveis.find(p => p.id === periodoSelecionadoId) || periodosVisiveis[periodosVisiveis.length - 1];
+
+  // Garante que o calendário inicie em um mês válido para o bimestre carregado
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const minM = periodoSelecionado ? parseInt(periodoSelecionado.dataInicio.split('-')[1], 10) - 1 : 1;
+    const maxM = periodoSelecionado ? parseInt(periodoSelecionado.dataFim.split('-')[1], 10) - 1 : 11;
+    const actualMonth = new Date().getMonth();
+    return (actualMonth >= minM && actualMonth <= maxM) ? actualMonth : minM;
+  });
 
   const isAparataFechada = turmaAtiva ? localStorage.getItem(`aparata_fechada_${turmaAtiva.id}_${periodoSelecionadoId}`) === 'true' : false;
 
