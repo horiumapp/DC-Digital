@@ -16,7 +16,7 @@ export interface PendenciaDocente {
   unidade?: string;
 }
 
-const PERIOD_DATES: Record<string, { start: Date; end: Date }> = {};
+const PERIOD_DATES: Record<string, { start: Date; end: Date }> = Object.create(null);
 APP_CONFIG.PERIODOS.forEach(p => {
   const [sy, sm, sd] = p.dataInicio.split('-').map(Number);
   const [ey, em, ed] = p.dataFim.split('-').map(Number);
@@ -96,7 +96,7 @@ export const fetchPendenciasPorEscola = async (
       : horarios;
 
     const hoje = new Date();
-    const mapConsolidado: Record<string, ConsolidadoGroup> = {};
+    const mapConsolidado: Record<string, ConsolidadoGroup> = Object.create(null);
 
     let minDate: Date | null = null;
     let maxDate: Date | null = null;
