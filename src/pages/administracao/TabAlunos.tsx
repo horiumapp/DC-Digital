@@ -22,7 +22,7 @@ export default function TabAlunos() {
     fetchAlunos();
   }, []);
 
-  const fetchAlunos = async () => {
+  async function fetchAlunos() {
     const { data, error } = await supabase
       .from('alunos')
       .select('*, escolas(nome), turmas(nome, turno)')

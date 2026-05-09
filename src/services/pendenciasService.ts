@@ -49,6 +49,24 @@ export interface PaginatedPendencias {
   total: number;
 }
 
+interface ConsolidadoGroup {
+  professor: string;
+  turmaId: string;
+  turma: string;
+  componente: string;
+  periodo: string;
+  turno: string;
+  ensino: string;
+  fase: string;
+  tempos: Set<string>;
+  totalAulasEsperadas: number;
+  lancamentosFreq: number;
+  lancamentosCont: number;
+  dateStart: Date;
+  dateEnd: Date;
+  countedSlots: Set<string>;
+}
+
 export const fetchPendenciasPorEscola = async (
   escolaId: string, 
   periodosSelecionados: string[],
@@ -78,7 +96,7 @@ export const fetchPendenciasPorEscola = async (
       : horarios;
 
     const hoje = new Date();
-    const mapConsolidado: Record<string, unknown> = {};
+    const mapConsolidado: Record<string, ConsolidadoGroup> = {};
 
     let minDate: Date | null = null;
     let maxDate: Date | null = null;

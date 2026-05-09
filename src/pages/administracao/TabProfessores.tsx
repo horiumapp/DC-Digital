@@ -47,13 +47,13 @@ export default function TabProfessores() {
     fetchInitialData();
   }, []);
 
-  const fetchInitialData = async () => {
+  async function fetchInitialData() {
     setLoading(true);
     await Promise.all([fetchProfessores(), fetchEscolas()]);
     setLoading(false);
   };
 
-  const fetchEscolas = async () => {
+  async function fetchEscolas() {
     const { data, error } = await supabase
       .from('escolas')
       .select('id, nome')
@@ -68,7 +68,7 @@ export default function TabProfessores() {
     if (data) setEscolas(data);
   };
 
-  const fetchProfessores = async () => {
+  async function fetchProfessores() {
     // SEC-04 FIX: especificar campos em vez de select('*') para evitar expor CPF e dados desnecessários
     const { data, error } = await supabase
       .from('professores')

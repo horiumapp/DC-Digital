@@ -23,7 +23,7 @@ export default function TabTurmas() {
     fetchInitialData();
   }, []);
 
-  const fetchInitialData = async () => {
+  async function fetchInitialData() {
     setLoading(true);
     await Promise.all([
       fetchEscolas(),
@@ -32,7 +32,7 @@ export default function TabTurmas() {
     setLoading(false);
   };
 
-  const fetchEscolas = async () => {
+  async function fetchEscolas() {
     const { data: escolasData } = await supabase
       .from('escolas')
       .select('id, nome')
@@ -59,7 +59,7 @@ export default function TabTurmas() {
     }
   };
 
-  const fetchTurmas = async () => {
+  async function fetchTurmas() {
     const { data, error } = await supabase
       .from('turmas')
       .select('*, escolas(nome)')
