@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { GraduationCap, BookOpen, CalendarCheck, BarChart3, Loader2, LogOut, User } from 'lucide-react';
+import { GraduationCap, BookOpen, CalendarCheck, BarChart3, Loader2, LogOut, User, ChevronRight, Calendar } from 'lucide-react';
 import { APP_CONFIG } from '../config/appConfig';
 import { formatMatriculaCpf } from '../utils/formatters';
 import { getBimestrePorData } from '../utils/dateUtils';
@@ -49,6 +49,22 @@ export default function PortalAluno() {
   const [frequencias, setFrequencias] = useState<FrequenciaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'notas' | 'frequencia' | 'boletim'>('notas');
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+
+  const toggleMonth = (monthKey: string) => {
+    const newExpanded = new Set(expandedMonths);
+    if (newExpanded.has(monthKey)) {
+      newExpanded.delete(monthKey);
+    } else {
+      newExpanded.add(monthKey);
+    }
+    setExpandedMonths(newExpanded);
+  };
+
+  const NOMES_MESES = [
+    'JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
+    'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'
+  ];
 
   useEffect(() => {
     if (user?.email) {
@@ -188,6 +204,18 @@ export default function PortalAluno() {
       return getPeso(a.tipo) - getPeso(b.tipo);
     });
   });
+
+  // Agrupar frequências por mês
+  const frequenciasPorMes = frequencias.reduce((acc, freq) => {
+    const date = new Date(freq.data + 'T00:00:00');
+    const mesKey = `${date.getFullYear()}-${date.getMonth()}`;
+    if (!acc[mesKey]) acc[mesKey] = [];
+    acc[mesKey].push(freq);
+    return acc;
+  }, {} as Record<string, FrequenciaItem[]>);
+
+  // Ordenar meses decrescente
+  const mesesOrdenados = Object.keys(frequenciasPorMes).sort((a, b) => b.localeCompare(a));
 
   if (loading) {
     return (
@@ -384,41 +412,88 @@ export default function PortalAluno() {
                   </div>
                 </div>
 
-                {/* Lista de frequências */}
-                {frequencias.length > 0 ? (
-                  <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                    <table className="w-full">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</th>
-                          <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Disciplina</th>
-                          <th className="px-5 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50">
-                        {frequencias.map((freq, i) => (
-                          <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-5 py-3 text-sm font-medium text-slate-700 tabular-nums">
-                              {freq.data ? new Date(freq.data + 'T00:00:00').toLocaleDateString('pt-BR') : '---'}
-                            </td>
-                            <td className="px-5 py-3 text-sm font-medium text-slate-600">{freq.disciplina || '---'}</td>
-                            <td className="px-5 py-3 text-center">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-colors ${
-                                freq.status === 'P'
-                                  ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                                  : freq.status === 'F'
-                                  ? 'bg-red-50 text-red-500 border-red-200'
-                                  : freq.status === 'FJ'
-                                  ? 'bg-amber-50 text-amber-600 border-amber-200'
-                                  : 'bg-slate-50 text-slate-400 border-slate-200'
+                {/* Lista de frequências agrupadas por mês */}
+                {mesesOrdenados.length > 0 ? (
+                  <div className="space-y-3">
+                    {mesesOrdenados.map((mesKey) => {
+                      const [ano, mesIdx] = mesKey.split('-').map(Number);
+                      const mesNome = NOMES_MESES[mesIdx];
+                      const freqsDoMes = frequenciasPorMes[mesKey];
+                      const isExpanded = expandedMonths.has(mesKey);
+
+                      // Estatísticas do mês
+                      const presencasMes = freqsDoMes.filter(f => f.status === 'P').length;
+                      const faltasMes = freqsDoMes.filter(f => f.status === 'F').length;
+                      const justificadasMes = freqsDoMes.filter(f => f.status === 'FJ').length;
+
+                      return (
+                        <div key={mesKey} className="space-y-2">
+                          <button
+                            onClick={() => toggleMonth(mesKey)}
+                            className={`w-full flex items-center justify-between p-4 bg-white border rounded-2xl transition-all hover:shadow-md ${
+                              isExpanded ? 'border-blue-200 shadow-sm ring-1 ring-blue-50' : 'border-slate-100 hover:border-slate-200'
+                            }`}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                                isExpanded ? 'bg-[#0f2851] text-white' : 'bg-slate-50 text-slate-400'
                               }`}>
-                                {freq.status || '-'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                                <Calendar className="w-5 h-5" />
+                              </div>
+                              <div className="text-left">
+                                <h4 className="font-black text-[#0f2851] text-sm uppercase tracking-wider">{mesNome}</h4>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                                  {presencasMes.toString().padStart(2, '0')} Presenças • {faltasMes.toString().padStart(2, '0')} Faltas
+                                  {justificadasMes > 0 && ` • ${justificadasMes.toString().padStart(2, '0')} Justificadas`}
+                                </p>
+                              </div>
+                            </div>
+                            <div className={`p-2 rounded-lg transition-transform duration-300 ${isExpanded ? 'rotate-180 bg-blue-50 text-blue-600' : 'text-slate-300'}`}>
+                              <ChevronRight className="w-5 h-5" />
+                            </div>
+                          </button>
+
+                          {isExpanded && (
+                            <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                              <div className="overflow-x-auto">
+                                <table className="w-full">
+                                  <thead className="bg-slate-50/50">
+                                    <tr>
+                                      <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</th>
+                                      <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Disciplina</th>
+                                      <th className="px-5 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-50">
+                                    {freqsDoMes.map((freq, i) => (
+                                      <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-5 py-3 text-sm font-medium text-slate-700 tabular-nums">
+                                          {freq.data ? new Date(freq.data + 'T00:00:00').toLocaleDateString('pt-BR') : '---'}
+                                        </td>
+                                        <td className="px-5 py-3 text-sm font-medium text-slate-600">{freq.disciplina || '---'}</td>
+                                        <td className="px-5 py-3 text-center">
+                                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-colors ${
+                                            freq.status === 'P'
+                                              ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                                              : freq.status === 'F'
+                                              ? 'bg-red-50 text-red-500 border-red-200'
+                                              : freq.status === 'FJ'
+                                              ? 'bg-amber-50 text-amber-600 border-amber-200'
+                                              : 'bg-slate-50 text-slate-400 border-slate-200'
+                                          }`}>
+                                            {freq.status || '-'}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="bg-white rounded-2xl border border-slate-200 p-12 shadow-sm text-center">
