@@ -92,61 +92,61 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
               </div>
               <div className="space-y-1">
                 <h2 className="text-sm font-black uppercase leading-tight">SEMED</h2>
-                <h3 className="text-xs font-bold uppercase leading-tight text-slate-700">Secretaria Municipal de Educação Lábrea - AM</h3>
+                <h3 className="text-[10px] font-bold uppercase leading-tight text-slate-700">Secretaria Municipal de Educação Lábrea - AM</h3>
               </div>
             </div>
-            <div className="text-[10px] space-y-0.5 text-right flex-1 border-l border-black pl-4">
-              <p><strong>ESCOLA:</strong> {alunoData.escola_nome}</p>
-              <p><strong>ENDEREÇO:</strong> {alunoData.escola_endereco}</p>
-              <p><strong>DIRETOR(A):</strong> {alunoData.escola_diretor}</p>
-              <p><strong>DATA EMISSÃO:</strong> {new Date().toLocaleDateString('pt-BR')}</p>
+            <div className="text-[10px] space-y-1 text-right flex-1 border-l border-black pl-4">
+              <p><strong className="text-[9px]">ESCOLA:</strong> {alunoData.escola_nome}</p>
+              <p><strong className="text-[9px]">ENDEREÇO:</strong> {alunoData.escola_endereco}</p>
+              <p><strong className="text-[9px]">DIRETOR(A):</strong> {alunoData.escola_diretor}</p>
+              <p><strong className="text-[9px]">DATA EMISSÃO:</strong> {new Date().toLocaleDateString('pt-BR')}</p>
             </div>
           </div>
         </div>
 
-        <div className="text-center border-y border-black py-1.5 mb-6 bg-slate-50 print:bg-transparent">
+        <div className="text-center border-y border-black py-2 mb-6 bg-slate-50 print:bg-transparent">
           <h1 className="text-sm font-black uppercase tracking-[0.2em]">Boletim Individual</h1>
         </div>
 
-        {/* Informações Aluno - Layout Novo */}
-        <div className="border-t border-l border-black text-[9px] mb-6">
+        {/* Informações Aluno - Layout Padronizado */}
+        <div className="border-t border-l border-black mb-6">
           {/* Linha 1 */}
           <div className="flex w-full">
-            <div className="border-r border-b border-black p-1.5 w-[20%]">
-              <p className="font-bold text-[7px] text-slate-500 uppercase">Matrícula</p>
-              <p className="font-black text-[11px]">{alunoData.matricula}</p>
+            <div className="border-r border-b border-black p-2 w-[20%]">
+              <p className="font-bold text-[8px] text-slate-500 uppercase leading-none mb-1">Matrícula</p>
+              <p className="font-black text-[11px] leading-none">{alunoData.matricula}</p>
             </div>
-            <div className="border-r border-b border-black p-1.5 w-[10%] text-center">
-              <p className="font-bold text-[7px] text-slate-500 uppercase">Nº Aluno</p>
-              <p className="font-black text-[11px]">{alunoData.numero_aluno || '---'}</p>
+            <div className="border-r border-b border-black p-2 w-[12%] text-center">
+              <p className="font-bold text-[8px] text-slate-500 uppercase leading-none mb-1">Nº Aluno</p>
+              <p className="font-black text-[11px] leading-none">{alunoData.numero_aluno || '---'}</p>
             </div>
-            <div className="border-r border-b border-black p-1.5 flex-1">
-              <p className="font-bold text-[7px] text-slate-500 uppercase">Nome do Aluno</p>
-              <p className="font-black text-[11px] uppercase">{alunoData.nome}</p>
+            <div className="border-r border-b border-black p-2 flex-1">
+              <p className="font-bold text-[8px] text-slate-500 uppercase leading-none mb-1">Nome do Aluno</p>
+              <p className="font-black text-[11px] uppercase leading-none">{alunoData.nome}</p>
             </div>
           </div>
           
           {/* Linha 2 */}
           <div className="flex w-full">
-            <div className="border-r border-b border-black p-1.5 w-[40%]">
-              <p className="font-bold text-[7px] text-slate-500 uppercase">Ensino / Modalidade</p>
-              <p className="font-black">{alunoData.ensino_modalidade}</p>
+            <div className="border-r border-b border-black p-2 w-[40%]">
+              <p className="font-bold text-[8px] text-slate-500 uppercase leading-none mb-1">Ensino / Modalidade</p>
+              <p className="font-black text-[10px] leading-none">{alunoData.ensino_modalidade}</p>
             </div>
-            <div className="border-r border-b border-black p-1.5 w-[15%] text-center">
-              <p className="font-bold text-[7px] text-slate-500 uppercase">Ano Letivo</p>
-              <p className="font-black">{alunoData.turma_ano}</p>
+            <div className="border-r border-b border-black p-2 w-[15%] text-center">
+              <p className="font-bold text-[8px] text-slate-500 uppercase leading-none mb-1">Ano Letivo</p>
+              <p className="font-black text-[10px] leading-none">{alunoData.turma_ano}</p>
             </div>
-            <div className="border-r border-b border-black p-1.5 w-[15%] text-center">
-              <p className="font-bold text-[7px] text-slate-500 uppercase">Série</p>
-              <p className="font-black">{serie}</p>
+            <div className="border-r border-b border-black p-2 w-[15%] text-center">
+              <p className="font-bold text-[8px] text-slate-500 uppercase leading-none mb-1">Série</p>
+              <p className="font-black text-[10px] leading-none">{serie}</p>
             </div>
-            <div className="border-r border-b border-black p-1.5 w-[10%] text-center">
-              <p className="font-bold text-[7px] text-slate-500 uppercase">Turma</p>
-              <p className="font-black">{turmaLetra}</p>
+            <div className="border-r border-b border-black p-2 w-[10%] text-center">
+              <p className="font-bold text-[8px] text-slate-500 uppercase leading-none mb-1">Turma</p>
+              <p className="font-black text-[10px] leading-none">{turmaLetra}</p>
             </div>
-            <div className="border-r border-b border-black p-1.5 w-[20%] text-center">
-              <p className="font-bold text-[7px] text-slate-500 uppercase">Turno</p>
-              <p className="font-black uppercase">{alunoData.turma_turno}</p>
+            <div className="border-r border-b border-black p-2 w-[20%] text-center">
+              <p className="font-bold text-[8px] text-slate-500 uppercase leading-none mb-1">Turno</p>
+              <p className="font-black text-[10px] uppercase leading-none">{alunoData.turma_turno}</p>
             </div>
           </div>
         </div>
