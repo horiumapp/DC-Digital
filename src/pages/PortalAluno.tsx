@@ -343,7 +343,7 @@ export default function PortalAluno() {
                                   ? 'bg-amber-50 text-amber-600 border-amber-200'
                                   : 'bg-slate-50 text-slate-400 border-slate-200'
                               }`}>
-                                {freq.status === 'P' ? 'Presente' : freq.status === 'F' ? 'Falta' : freq.status === 'FJ' ? 'Justificada' : (freq.status || '-')}
+                                {freq.status || '-'}
                               </span>
                             </td>
                           </tr>
