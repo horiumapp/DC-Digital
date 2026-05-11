@@ -119,8 +119,9 @@ export default function PortalAluno() {
 
   // Calcular estatísticas de frequência
   const totalAulas = frequencias.length;
-  const presencas = frequencias.filter(f => f.status === 'Presente').length;
-  const faltas = frequencias.filter(f => f.status === 'Ausente' || f.status === 'Falta').length;
+  const presencas = frequencias.filter(f => f.status === 'P').length;
+  const faltas = frequencias.filter(f => f.status === 'F').length;
+  const faltasJustificadas = frequencias.filter(f => f.status === 'FJ').length;
   const percentual = totalAulas > 0 ? Math.round((presencas / totalAulas) * 100) : 0;
 
   // Agrupar notas por disciplina e bimestre
@@ -304,6 +305,10 @@ export default function PortalAluno() {
                     <span className="text-[10px] font-black text-red-400 uppercase tracking-widest">Faltas</span>
                     <p className="text-2xl font-black text-red-500 mt-1">{faltas}</p>
                   </div>
+                  <div className="bg-amber-50 rounded-2xl border border-amber-100 p-4 text-center">
+                    <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Justificadas</span>
+                    <p className="text-2xl font-black text-amber-600 mt-1">{faltasJustificadas}</p>
+                  </div>
                   <div className={`rounded-2xl border p-4 text-center ${percentual >= 75 ? 'bg-blue-50 border-blue-100' : 'bg-orange-50 border-orange-100'}`}>
                     <span className={`text-[10px] font-black uppercase tracking-widest ${percentual >= 75 ? 'text-blue-500' : 'text-orange-500'}`}>Frequência</span>
                     <p className={`text-2xl font-black mt-1 ${percentual >= 75 ? 'text-blue-600' : 'text-orange-600'}`}>{percentual}%</p>
@@ -329,12 +334,16 @@ export default function PortalAluno() {
                             </td>
                             <td className="px-5 py-3 text-sm font-medium text-slate-600">{freq.disciplina || '---'}</td>
                             <td className="px-5 py-3 text-center">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                                freq.status === 'Presente'
-                                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                                  : 'bg-red-50 text-red-500 border border-red-100'
+                              <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-black uppercase tracking-widest border transition-colors ${
+                                freq.status === 'P'
+                                  ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                                  : freq.status === 'F'
+                                  ? 'bg-red-50 text-red-500 border-red-200'
+                                  : freq.status === 'FJ'
+                                  ? 'bg-amber-50 text-amber-600 border-amber-200'
+                                  : 'bg-slate-50 text-slate-400 border-slate-200'
                               }`}>
-                                {freq.status}
+                                {freq.status || '-'}
                               </span>
                             </td>
                           </tr>
