@@ -331,6 +331,13 @@ export default function TabAlunos() {
               </div>
 
               <div className="flex items-center gap-6">
+                <div className="bg-white/10 border border-white/20 backdrop-blur-sm rounded-xl p-2.5 flex flex-col items-center justify-center min-w-[70px] shadow-lg">
+                  <span className="text-[7px] font-black text-blue-100 uppercase tracking-tighter">ALUNOS</span>
+                  <span className="text-xl font-black text-white leading-none mt-1">
+                    {alunosDaEscola.length.toString().padStart(2, '0')}
+                  </span>
+                </div>
+
                 {selectedEscola.logo_url && (
                   <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-2xl p-2 border border-white/20 flex items-center justify-center overflow-hidden group hover:bg-white transition-all duration-300 shadow-2xl">
                     <img 
@@ -340,13 +347,6 @@ export default function TabAlunos() {
                     />
                   </div>
                 )}
-                
-                <div className="bg-white/10 border border-white/20 backdrop-blur-sm rounded-2xl p-4 flex flex-col items-center justify-center min-w-[100px] shadow-lg">
-                  <span className="text-[10px] font-black text-blue-100 uppercase tracking-tighter">ALUNOS</span>
-                  <span className="text-3xl font-black text-white leading-none mt-1">
-                    {alunosDaEscola.length.toString().padStart(2, '0')}
-                  </span>
-                </div>
               </div>
             </div>
           </div>
