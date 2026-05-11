@@ -41,7 +41,8 @@ export default function App() {
                 {/* Rotas Públicas Apenas (Visitantes) */}
                 <Route element={<ProtectedRoute publicOnly />}>
                   <Route path="/" element={<Login />} />
-                  <Route path="/cadastro" element={<Cadastro />} />
+                  {/* Cadastro público desativado — contas são criadas exclusivamente pelo Admin */}
+                  {/* <Route path="/cadastro" element={<Cadastro />} /> */}
                   <Route path="/recuperar-senha" element={<RecuperarSenha />} />
                   <Route path="/redefinir-senha" element={<RedefinirSenha />} />
                 </Route>
