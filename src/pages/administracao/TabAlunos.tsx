@@ -334,7 +334,7 @@ export default function TabAlunos() {
                 {selectedEscola.logo_url && (
                   <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-2xl p-2 border border-white/20 flex items-center justify-center overflow-hidden group hover:bg-white transition-all duration-300 shadow-2xl">
                     <img 
-                      src={(/^https?:\/\//.test(selectedEscola.logo_url) || selectedEscola.logo_url.startsWith('data:image/')) ? selectedEscola.logo_url : undefined} 
+                      src={(/^https?:\/\//.test(selectedEscola.logo_url) || selectedEscola.logo_url.startsWith('data:image/') || selectedEscola.logo_url.startsWith('/')) ? selectedEscola.logo_url : undefined} 
                       alt="Logo Escola" 
                       className="max-w-full max-h-full object-contain filter drop-shadow-md" 
                     />
@@ -406,7 +406,7 @@ export default function TabAlunos() {
                   {escola.logo_url ? (
                     <div className="w-12 h-12 bg-white rounded-xl p-1 shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden">
                       <img 
-                        src={(/^https?:\/\//.test(escola.logo_url) || escola.logo_url.startsWith('data:image/')) ? escola.logo_url : undefined} 
+                        src={(/^https?:\/\//.test(escola.logo_url) || escola.logo_url.startsWith('data:image/') || escola.logo_url.startsWith('/')) ? escola.logo_url : undefined} 
                         alt="Logo" 
                         className="max-w-full max-h-full object-contain" 
                       />
