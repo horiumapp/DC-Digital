@@ -69,7 +69,7 @@ export const TurmaService = {
   fetchAlunos: async (turmaId: string | number): Promise<Aluno[]> => {
     const { data, error } = await supabase
       .from('alunos')
-      .select('id, nome, matricula, status')
+      .select('id, nome, cpf, status')
       .eq('turma_id', turmaId.toString())
       .order('nome');
     if (error) throw error;
@@ -77,14 +77,21 @@ export const TurmaService = {
     // Filtra no cliente para considerar status nulo ou variações de "Ativo"
     const alunosAtivos = (data || []).filter(a => !a.status || a.status.toLowerCase() === 'ativo');
     
-    return alunosAtivos.map(a => ({
-      id: a.id.toString(),
-      nome: a.nome,
-      matricula: a.matricula || `${APP_CONFIG.YEAR}/${a.id.toString().slice(-7)}`,
-      freq: 'P',
-      part: 'Presencial',
-      notas: {}
-    }));
+    return alunosAtivos.map(a => {
+      const cpfClean = a.cpf ? a.cpf.replace(/\D/g, '') : '';
+      const matriculaDisplay = cpfClean.length === 11
+        ? `${cpfClean.substring(0, 3)}.${cpfClean.substring(3, 6)}.${cpfClean.substring(6, 9)}-${cpfClean.substring(9, 11)}`
+        : 'CPF Pendente';
+      return {
+        id: a.id.toString(),
+        nome: a.nome,
+        cpf: a.cpf || undefined,
+        matricula: matriculaDisplay,
+        freq: 'P',
+        part: 'Presencial',
+        notas: {}
+      };
+    });
   },
 
   fetchAvaliacoes: async (turmaId: string | number, disciplina: string): Promise<{ avaliacoes: Avaliacao[], notasData: any[] }> => {
