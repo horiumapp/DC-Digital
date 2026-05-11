@@ -21,7 +21,7 @@ import { ADMIN_ROLES } from '../../constants/authConstants';
 
 export default function TabProfessores() {
   const { user } = useAuth();
-  const { showError, showWarning } = useToast();
+  const { showError, showWarning, showSuccess } = useToast();
   const [buscaProfessor, setBuscaProfessor] = useState('');
   const [isNovoProfessorModalOpen, setIsNovoProfessorModalOpen] = useState(false);
   const [professorParaEditar, setProfessorParaEditar] = useState<any>(null);
@@ -46,6 +46,16 @@ export default function TabProfessores() {
   useEffect(() => {
     fetchInitialData();
   }, []);
+
+  // Fase 2: Se o usuário é GESTOR, auto-selecionar a escola dele
+  useEffect(() => {
+    if (user?.role === 'GESTOR' && user.escola_id && escolas.length > 0 && !selectedEscola) {
+      const minhaEscola = escolas.find(e => e.id === user.escola_id);
+      if (minhaEscola) {
+        setSelectedEscola(minhaEscola);
+      }
+    }
+  }, [user, escolas, selectedEscola]);
 
   async function fetchInitialData() {
     setLoading(true);
@@ -137,6 +147,32 @@ export default function TabProfessores() {
                turno: 'Manhã'
             });
           if (alocError) console.error("Erro ao alocar:", alocError);
+        }
+
+        // Fase 2: Se forneceu e-mail e senha, criar conta de acesso via Edge Function
+        if (novoProfessor.email && novoProfessor.senha && novoProfessor.senha.length >= 6 && selectedEscola) {
+          try {
+            const { data: authData, error: authError } = await supabase.functions.invoke('admin-create-user', {
+              body: {
+                nome: novoProfessor.nome,
+                email: novoProfessor.email.trim().toLowerCase(),
+                senha: novoProfessor.senha,
+                cargo: 'PROFESSOR',
+                escola_id: selectedEscola.id,
+              },
+            });
+
+            if (authError || authData?.error) {
+              const msg = authData?.error || authError?.message || 'Erro desconhecido';
+              showWarning(`Professor cadastrado, mas não foi possível criar a conta de acesso: ${msg}`);
+            } else {
+              showSuccess(`Professor ${novoProfessor.nome} cadastrado com conta de acesso!`);
+            }
+          } catch (err: any) {
+            showWarning(`Professor cadastrado, mas erro ao criar conta: ${err.message}`);
+          }
+        } else if (novoProfessor.email && novoProfessor.senha && novoProfessor.senha.length < 6) {
+          showWarning('Professor cadastrado, mas a senha deve ter no mínimo 6 caracteres para criar conta de acesso.');
         }
 
         fetchProfessores();
