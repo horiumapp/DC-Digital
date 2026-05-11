@@ -398,7 +398,9 @@ export default function PortalAluno() {
                   <div className="bg-white rounded-2xl border border-slate-200 p-12 shadow-sm text-center">
                     <CalendarCheck className="w-12 h-12 text-slate-200 mx-auto mb-3" />
                     <p className="text-sm text-slate-400 font-medium italic">Nenhum registro de frequência encontrado.</p>
-                </div>
+                  </div>
+                )}
+              </div>
             )}
 
             {activeTab === 'boletim' && (
