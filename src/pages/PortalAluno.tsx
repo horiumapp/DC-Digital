@@ -239,10 +239,10 @@ export default function PortalAluno() {
         {/* Tabs */}
         {alunoData && (
           <>
-            <div className="flex bg-white rounded-xl p-1.5 border border-slate-200 shadow-sm">
+            <div className="flex bg-white rounded-xl p-1.5 border border-slate-200 shadow-sm overflow-x-auto no-print">
               <button
                 onClick={() => setActiveTab('notas')}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all ${
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
                   activeTab === 'notas'
                     ? 'bg-[#0f2851] text-white shadow-md'
                     : 'text-slate-500 hover:text-[#0f2851] hover:bg-slate-50'
@@ -253,7 +253,7 @@ export default function PortalAluno() {
               </button>
               <button
                 onClick={() => setActiveTab('frequencia')}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all ${
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
                   activeTab === 'frequencia'
                     ? 'bg-[#0f2851] text-white shadow-md'
                     : 'text-slate-500 hover:text-[#0f2851] hover:bg-slate-50'
@@ -261,6 +261,17 @@ export default function PortalAluno() {
               >
                 <CalendarCheck className="w-4 h-4" />
                 Minha Frequência
+              </button>
+              <button
+                onClick={() => setActiveTab('boletim')}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+                  activeTab === 'boletim'
+                    ? 'bg-[#0f2851] text-white shadow-md'
+                    : 'text-slate-500 hover:text-[#0f2851] hover:bg-slate-50'
+                }`}
+              >
+                <BookOpen className="w-4 h-4" />
+                Boletim
               </button>
             </div>
 
