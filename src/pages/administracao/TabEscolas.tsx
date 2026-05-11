@@ -45,7 +45,8 @@ export default function TabEscolas() {
           distrito: novaEscola.localizacao,
           inep: novaEscola.inep,
           diretor: novaEscola.gestor,
-          status: novaEscola.ativo ? 'Ativa' : 'Inativa'
+          status: novaEscola.ativo ? 'Ativa' : 'Inativa',
+          logo_url: novaEscola.logo_url
         })
         .eq('id', escolaParaEditar.id);
 
@@ -65,7 +66,8 @@ export default function TabEscolas() {
           distrito: novaEscola.localizacao,
           inep: novaEscola.inep,
           diretor: novaEscola.gestor,
-          status: novaEscola.ativo ? 'Ativa' : 'Inativa'
+          status: novaEscola.ativo ? 'Ativa' : 'Inativa',
+          logo_url: novaEscola.logo_url
         }]);
 
       if (error) {
@@ -85,7 +87,8 @@ export default function TabEscolas() {
       ...escola,
       localizacao: escola.distrito,
       gestor: escola.diretor,
-      ativo: escola.status === 'Ativa'
+      ativo: escola.status === 'Ativa',
+      logo_url: escola.logo_url
     };
     setEscolaParaEditar(escolaParaModal);
     setIsNovaEscolaModalOpen(true);
@@ -193,26 +196,32 @@ export default function TabEscolas() {
                   </button>
                 </div>
 
-                {/* Background Decoration */}
-                <div className="absolute -top-4 -right-4 p-4 opacity-5 pointer-events-none">
-                  <Building2 className="w-20 h-20 text-blue-900" />
-                </div>
-
-                <div className="flex items-start justify-between mb-4">
-                  {/* Main Icon */}
-                  <div className="w-10 h-10 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center group-hover:bg-[#0f2851] group-hover:text-white transition-colors duration-300">
-                    <Building2 className="w-5 h-5" />
-                  </div>
+                {/* Logo and Status (Top Right) */}
+                <div className="absolute top-4 right-4 flex flex-col items-end gap-2">
+                  {escola.logo_url ? (
+                    <div className="w-14 h-14 bg-white rounded-xl p-1 shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden">
+                      <img src={escola.logo_url} alt="Logo" className="max-w-full max-h-full object-contain" />
+                    </div>
+                  ) : (
+                    <div className="w-14 h-14 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 opacity-20">
+                      <Building2 className="w-8 h-8 text-[#0f2851]" />
+                    </div>
+                  )}
 
                   {/* Status Badge */}
-                  <div className="opacity-100 group-hover:opacity-0 transition-opacity">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest ${
-                      escola.status === 'Ativa' 
-                        ? 'bg-emerald-50 text-emerald-600' 
-                        : 'bg-slate-100 text-slate-500'
-                    }`}>
-                      {escola.status}
-                    </span>
+                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest ${
+                    escola.status === 'Ativa' 
+                      ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
+                      : 'bg-slate-100 text-slate-500 border border-slate-200'
+                  }`}>
+                    {escola.status}
+                  </span>
+                </div>
+
+                <div className="flex items-start mb-4">
+                  {/* Main Icon (Always Building for consistency or Logo if small) */}
+                  <div className="w-10 h-10 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center group-hover:bg-[#0f2851] group-hover:text-white transition-colors duration-300">
+                    <Building2 className="w-5 h-5" />
                   </div>
                 </div>
 

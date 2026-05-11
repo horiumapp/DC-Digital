@@ -134,16 +134,48 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-              <ImageIcon className="w-4 h-4 text-slate-400" />
-              URL do Logo da Escola
+            <label className="text-sm font-medium text-slate-700 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-slate-400" />
+                Logo da Escola
+              </div>
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Local ou URL</span>
             </label>
+            <div className="grid grid-cols-[1fr,auto] gap-2">
+              <select
+                value={formData.logo_url}
+                onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all bg-white text-sm"
+              >
+                <option value="">Sem Logo</option>
+                <optgroup label="Logos Locais (Pasta Public)">
+                  <option value="/Filadelfia.png">Filadelfia.png</option>
+                  <option value="/Francisca Mendes.png">Francisca Mendes.png</option>
+                  <option value="/José Maia.png">José Maia.png</option>
+                  <option value="/Pastor José Reis.png">Pastor José Reis.png</option>
+                  <option value="/Presidente Vargas.png">Presidente Vargas.png</option>
+                  <option value="/Socorro Brito.png">Socorro Brito.png</option>
+                  <option value="/São Francisco.png">São Francisco.png</option>
+                  <option value="/PML.png">PML.png</option>
+                  <option value="/semed.png">semed.png</option>
+                  <option value="/logo.png">logo.png</option>
+                </optgroup>
+              </select>
+              {formData.logo_url && (
+                <div className="w-11 h-11 border border-slate-200 rounded-lg p-1 flex items-center justify-center bg-slate-50">
+                  <img src={formData.logo_url} alt="Preview" className="max-w-full max-h-full object-contain" />
+                </div>
+              )}
+            </div>
+            <p className="text-[10px] text-slate-400 mt-1">
+              Selecione uma logo da lista ou cole uma URL externa abaixo.
+            </p>
             <input
               type="text"
-              value={formData.logo_url}
+              value={formData.logo_url.startsWith('/') ? '' : formData.logo_url}
               onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
-              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
-              placeholder="Ex: https://link-da-imagem.png"
+              className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all text-xs"
+              placeholder="Ou cole uma URL externa aqui..."
             />
           </div>
 

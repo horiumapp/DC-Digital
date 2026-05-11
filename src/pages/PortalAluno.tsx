@@ -24,6 +24,7 @@ interface AlunoData {
   sexo: string;
   numero_aluno: number;
   ensino_modalidade: string;
+  escola_logo_url?: string;
 }
 
 interface NotaItem {
@@ -126,6 +127,7 @@ export default function PortalAluno() {
       sexo: alunoEncontrado.sexo || '---',
       numero_aluno: numeroAluno,
       ensino_modalidade: modalidade,
+      escola_logo_url: escolaData?.logo_url || '',
     });
 
     // Buscar notas do aluno

@@ -19,6 +19,7 @@ interface AlunoData {
   sexo: string;
   numero_aluno: number;
   ensino_modalidade: string;
+  escola_logo_url?: string;
 }
 
 interface NotaItem {
@@ -85,8 +86,8 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
             <div className="flex items-center gap-4 flex-1">
               <div className="w-24 h-24 flex items-center justify-center">
                 <img 
-                  src="/semed.png" 
-                  alt="SEMED Logo" 
+                  src={alunoData.escola_logo_url || "/semed.png"} 
+                  alt="Escola/SEMED Logo" 
                   className="w-full h-full object-contain" 
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
@@ -97,6 +98,11 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
                   }} 
                 />
               </div>
+              {alunoData.escola_logo_url && alunoData.escola_logo_url !== '/semed.png' && (
+                <div className="w-16 h-16 flex items-center justify-center opacity-50 ml-2">
+                   <img src="/semed.png" alt="SEMED Logo" className="w-full h-full object-contain grayscale" />
+                </div>
+              )}
               <div className="space-y-0">
                 <h2 className="text-sm font-black uppercase leading-tight">SEMED</h2>
                 <h3 className="text-[10px] font-bold uppercase leading-tight text-slate-700">Secretaria Municipal de Educação</h3>
