@@ -229,10 +229,11 @@ export default function TabTurmas() {
                 )}
                 
                 <div className="bg-white/10 border border-white/20 backdrop-blur-sm rounded-2xl p-4 flex flex-col items-center justify-center min-w-[100px] shadow-lg">
-                <span className="text-[10px] font-black text-blue-100 uppercase tracking-tighter">TURMAS</span>
-                <span className="text-3xl font-black text-white leading-none mt-1">
-                  {turmasFiltradas.length.toString().padStart(2, '0')}
-                </span>
+                  <span className="text-[10px] font-black text-blue-100 uppercase tracking-tighter">TURMAS</span>
+                  <span className="text-3xl font-black text-white leading-none mt-1">
+                    {turmasFiltradas.length.toString().padStart(2, '0')}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
