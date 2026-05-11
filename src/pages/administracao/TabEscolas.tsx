@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Search, Plus, Edit2, Trash2, Building2, MapPin, User, Hash, ChevronRight } from 'lucide-react';
-import { sanitizeUrl } from '../../utils/securityUtils';
 import NovaEscolaModal from '../../components/NovaEscolaModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import EscolaDetalhes from './EscolaDetalhes';
@@ -201,7 +200,11 @@ export default function TabEscolas() {
                 <div className="absolute top-4 right-4 flex flex-col items-end gap-2">
                   {escola.logo_url ? (
                     <div className="w-14 h-14 bg-white rounded-xl p-1 shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden">
-                      <img src={sanitizeUrl(escola.logo_url)} alt="Logo" className="max-w-full max-h-full object-contain" />
+                      <img 
+                        src={(/^https?:\/\//.test(escola.logo_url) || escola.logo_url.startsWith('data:image/')) ? escola.logo_url : ''} 
+                        alt="Logo" 
+                        className="max-w-full max-h-full object-contain" 
+                      />
                     </div>
                   ) : (
                     <div className="w-14 h-14 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 opacity-20">
