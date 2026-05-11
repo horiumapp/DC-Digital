@@ -108,21 +108,21 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
           <h1 className="text-sm font-black uppercase tracking-[0.2em]">Boletim Individual</h1>
         </div>
 
-        {/* Informações Aluno - Layout Padronizado */}
+        {/* Informações Aluno - Layout Totalmente Padronizado */}
         <div className="border-t border-l border-black mb-6">
           {/* Linha 1 */}
           <div className="flex w-full">
             <div className="border-r border-b border-black p-2 w-[20%]">
               <p className="font-bold text-[8px] text-slate-500 uppercase leading-none mb-1">Matrícula</p>
-              <p className="font-black text-[11px] leading-none">{alunoData.matricula}</p>
+              <p className="font-bold text-[10px] leading-none">{alunoData.matricula}</p>
             </div>
             <div className="border-r border-b border-black p-2 w-[12%] text-center">
               <p className="font-bold text-[8px] text-slate-500 uppercase leading-none mb-1">Nº Aluno</p>
-              <p className="font-black text-[11px] leading-none">{alunoData.numero_aluno || '---'}</p>
+              <p className="font-bold text-[10px] leading-none">{alunoData.numero_aluno || '---'}</p>
             </div>
             <div className="border-r border-b border-black p-2 flex-1">
               <p className="font-bold text-[8px] text-slate-500 uppercase leading-none mb-1">Nome do Aluno</p>
-              <p className="font-black text-[11px] uppercase leading-none">{alunoData.nome}</p>
+              <p className="font-bold text-[10px] uppercase leading-none">{alunoData.nome}</p>
             </div>
           </div>
           
@@ -130,23 +130,23 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
           <div className="flex w-full">
             <div className="border-r border-b border-black p-2 w-[40%]">
               <p className="font-bold text-[8px] text-slate-500 uppercase leading-none mb-1">Ensino / Modalidade</p>
-              <p className="font-black text-[10px] leading-none">{alunoData.ensino_modalidade}</p>
+              <p className="font-bold text-[10px] leading-none">{alunoData.ensino_modalidade}</p>
             </div>
             <div className="border-r border-b border-black p-2 w-[15%] text-center">
               <p className="font-bold text-[8px] text-slate-500 uppercase leading-none mb-1">Ano Letivo</p>
-              <p className="font-black text-[10px] leading-none">{alunoData.turma_ano}</p>
+              <p className="font-bold text-[10px] leading-none">{alunoData.turma_ano}</p>
             </div>
             <div className="border-r border-b border-black p-2 w-[15%] text-center">
               <p className="font-bold text-[8px] text-slate-500 uppercase leading-none mb-1">Série</p>
-              <p className="font-black text-[10px] leading-none">{serie}</p>
+              <p className="font-bold text-[10px] leading-none">{serie}</p>
             </div>
             <div className="border-r border-b border-black p-2 w-[10%] text-center">
               <p className="font-bold text-[8px] text-slate-500 uppercase leading-none mb-1">Turma</p>
-              <p className="font-black text-[10px] leading-none">{turmaLetra}</p>
+              <p className="font-bold text-[10px] leading-none">{turmaLetra}</p>
             </div>
             <div className="border-r border-b border-black p-2 w-[20%] text-center">
               <p className="font-bold text-[8px] text-slate-500 uppercase leading-none mb-1">Turno</p>
-              <p className="font-black text-[10px] uppercase leading-none">{alunoData.turma_turno}</p>
+              <p className="font-bold text-[10px] uppercase leading-none">{alunoData.turma_turno}</p>
             </div>
           </div>
         </div>
