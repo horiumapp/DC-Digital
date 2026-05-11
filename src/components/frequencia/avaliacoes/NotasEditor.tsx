@@ -1,7 +1,7 @@
 import React from 'react';
 import { List, Check, AlertCircle } from 'lucide-react';
 import Captcha from '../../common/Captcha';
-import { formatMatricula } from '../../../utils/formatters';
+
 import { formatarDataParaISO } from '../../../utils/dateUtils';
 
 interface NotasEditorProps {
@@ -71,7 +71,7 @@ export default function NotasEditor({
                 <td className="px-8 py-6 text-slate-400 font-bold tabular-nums">{String(index + 1).padStart(2, '0')}</td>
                 <td className="px-8 py-6">
                   <p className="text-base font-bold text-slate-700">{aluno.nome}</p>
-                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mt-1">Matrícula: {formatMatricula(aluno.id)}</p>
+                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mt-1">Matrícula: {aluno.matricula}</p>
                 </td>
                 <td className="px-8 py-6">
                   <div className="relative max-w-[140px] mx-auto">
