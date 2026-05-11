@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Mail, CreditCard, Phone, Activity, Briefcase, GraduationCap, LayoutGrid } from 'lucide-react';
+import { X, User, Mail, CreditCard, Phone, Activity, Briefcase, GraduationCap, LayoutGrid, KeyRound } from 'lucide-react';
 
 interface NovoProfessorModalProps {
   isOpen: boolean;
@@ -22,6 +22,7 @@ export default function NovoProfessorModal({ isOpen, onClose, onSave, professorP
     email: '',
     cpf: '',
     telefone: '',
+    senha: '',
     status: 'Ativo',
     vinculo: 'Efetivo',
     departamento: 'Geral',
@@ -35,6 +36,7 @@ export default function NovoProfessorModal({ isOpen, onClose, onSave, professorP
         email: professorParaEditar.email || '',
         cpf: professorParaEditar.cpf || '',
         telefone: professorParaEditar.telefone || '',
+        senha: '',
         status: professorParaEditar.status || 'Ativo',
         vinculo: professorParaEditar.vinculo || 'Efetivo',
         departamento: professorParaEditar.departamento || 'Geral',
@@ -46,6 +48,7 @@ export default function NovoProfessorModal({ isOpen, onClose, onSave, professorP
         email: '',
         cpf: '',
         telefone: '',
+        senha: '',
         status: 'Ativo',
         vinculo: 'Efetivo',
         departamento: 'Geral',
@@ -174,6 +177,26 @@ export default function NovoProfessorModal({ isOpen, onClose, onSave, professorP
                   placeholder="(00) 00000-0000"
                 />
               </div>
+
+              {/* Senha de Acesso (só no cadastro novo) */}
+              {!professorParaEditar && (
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <KeyRound className="w-4 h-4 text-slate-400" />
+                    Senha de Acesso
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.senha}
+                    onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all placeholder-slate-400 font-medium"
+                    placeholder="Mín. 6 caracteres (obrigatório para criar conta de acesso)"
+                  />
+                  <p className="text-[10px] text-slate-400 font-medium ml-1">
+                    Defina uma senha para que o professor possa acessar o sistema. Se deixar vazio, será cadastrado sem conta de acesso.
+                  </p>
+                </div>
+              )}
 
               {/* Vínculo */}
               <div className="space-y-2">
