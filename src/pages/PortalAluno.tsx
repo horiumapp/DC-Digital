@@ -241,7 +241,7 @@ export default function PortalAluno() {
             {activeTab === 'notas' && (
               <div className="space-y-4">
                 {Object.keys(notasPorDisciplina).length > 0 ? (
-                  Object.entries(notasPorDisciplina).map(([disciplina, notasDisc]) => (
+                  Object.entries(notasPorDisciplina).map(([disciplina, notasDisc]: [string, NotaItem[]]) => (
                     <div key={disciplina} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                       <div className="px-5 py-4 bg-gradient-to-r from-blue-50/50 to-white border-b border-slate-100 flex items-center gap-3">
                         <BookOpen className="w-5 h-5 text-[#0f2851]" />
