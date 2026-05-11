@@ -427,6 +427,7 @@ export default function TabAlunos() {
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="border-b border-slate-100 bg-slate-50/50">
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-16">Nº</th>
                             <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome do Aluno</th>
                             <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Responsável</th>
                             <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Telefone</th>
@@ -436,8 +437,11 @@ export default function TabAlunos() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                          {turma.alunos.map((aluno: any) => (
+                          {turma.alunos.map((aluno: any, index: number) => (
                             <tr key={aluno.id} className="hover:bg-slate-50/50 transition-colors group">
+                              <td className="px-6 py-4 text-xs font-black text-slate-300 tabular-nums">
+                                {(index + 1).toString().padStart(2, '0')}
+                              </td>
                               <td className="px-6 py-4">
                                 <div className="flex items-center gap-3">
                                   <div className="w-8 h-8 bg-[#eef2ff] text-[#0f2851] rounded-full flex items-center justify-center font-bold text-xs border border-blue-100">
