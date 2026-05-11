@@ -38,6 +38,7 @@ export interface Aluno {
   id: string;
   nome: string;
   matricula: string;
+  cpf?: string;
   freq: string;
   part: string;
   notas?: Record<string, string>; // ID da avaliação -> valor da nota
