@@ -22,6 +22,8 @@ interface AlunoData {
   nome_responsavel: string;
   endereco: string;
   sexo: string;
+  numero_aluno: number;
+  ensino_modalidade: string;
 }
 
 interface NotaItem {
@@ -87,6 +89,26 @@ export default function PortalAluno() {
     const escolaData = alunoEncontrado.escolas as any;
     const turmaData = alunoEncontrado.turmas as any;
 
+    // Buscar colegas para calcular o número de chamada (por ordem alfabética)
+    const { data: colegas } = await supabase
+      .from('alunos')
+      .select('id, nome')
+      .eq('turma_id', alunoEncontrado.turma_id)
+      .order('nome', { ascending: true });
+    
+    const numeroAluno = colegas ? colegas.findIndex(c => c.id === alunoEncontrado.id) + 1 : 0;
+
+    // Determinar Modalidade de Ensino
+    let modalidade = 'ENSINO FUNDAMENTAL I (EF1) 1º AO 5º ANO';
+    const nomeTurmaUpper = (turmaData?.nome || '').toUpperCase();
+    if (nomeTurmaUpper.includes('6º') || nomeTurmaUpper.includes('7º') || nomeTurmaUpper.includes('8º') || nomeTurmaUpper.includes('9º')) {
+      modalidade = 'ENSINO FUNDAMENTAL II (EF2) 6º AO 9º ANO';
+    } else if (nomeTurmaUpper.includes('MÉDIO')) {
+      modalidade = 'ENSINO MÉDIO';
+    } else if (nomeTurmaUpper.includes('INFANTIL')) {
+      modalidade = 'EDUCAÇÃO INFANTIL';
+    }
+
     setAlunoData({
       id: alunoEncontrado.id,
       nome: alunoEncontrado.nome,
@@ -102,6 +124,8 @@ export default function PortalAluno() {
       nome_responsavel: alunoEncontrado.nome_responsavel || '---',
       endereco: alunoEncontrado.endereco || '---',
       sexo: alunoEncontrado.sexo || '---',
+      numero_aluno: numeroAluno,
+      ensino_modalidade: modalidade,
     });
 
     // Buscar notas do aluno
