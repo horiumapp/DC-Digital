@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Building2, MapPin, Hash, User, Activity } from 'lucide-react';
+import { X, Building2, MapPin, Hash, User, Activity, Image as ImageIcon } from 'lucide-react';
 
 interface NovaEscolaModalProps {
   isOpen: boolean;
