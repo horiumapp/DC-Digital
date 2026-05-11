@@ -8,7 +8,8 @@ import TabProfessores from './administracao/TabProfessores';
 
 export default function Administracao() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState(user?.role === 'ADMIN' ? 'escolas' : 'turmas');
+  const defaultTab = user?.role === 'ADMIN' ? 'escolas' : user?.role === 'GESTOR' ? 'professores' : 'turmas';
+  const [activeTab, setActiveTab] = useState(defaultTab);
 
   return (
     <div className="relative z-10 p-8 max-w-7xl mx-auto space-y-6">
