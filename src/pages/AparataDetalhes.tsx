@@ -5,7 +5,6 @@ import { useTurma } from '../contexts/TurmaContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
-import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
 import { APP_CONFIG, getBimestreAtual } from '../config/appConfig';
 
 export default function AparataDetalhes() {
