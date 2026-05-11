@@ -9,9 +9,10 @@ interface NovoAlunoModalProps {
   onClose: () => void;
   onSave: (aluno: any) => void;
   alunoParaEditar?: any;
+  fixedEscolaId?: string;
 }
 
-export default function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEditar }: NovoAlunoModalProps) {
+export default function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEditar, fixedEscolaId }: NovoAlunoModalProps) {
   const { showError } = useToast();
   const [escolas, setEscolas] = useState<any[]>([]);
   const [turmas, setTurmas] = useState<any[]>([]);
@@ -75,7 +76,7 @@ export default function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEdita
       });
     } else {
       setFormData({
-        escola_id: escolas.length === 1 ? escolas[0].id : '',
+        escola_id: fixedEscolaId || (escolas.length === 1 ? escolas[0].id : ''),
         turma_id: '',
         nome: '',
         dataNascimento: '',
@@ -87,7 +88,7 @@ export default function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEdita
         status: 'Ativo',
       });
     }
-  }, [alunoParaEditar, isOpen, escolas]);
+  }, [alunoParaEditar, isOpen, escolas, fixedEscolaId]);
 
   const formatCPF = (value: string) => {
     return value
