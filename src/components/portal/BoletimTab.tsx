@@ -90,9 +90,10 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
                   }} 
                 />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-0">
                 <h2 className="text-sm font-black uppercase leading-tight">SEMED</h2>
-                <h3 className="text-[10px] font-bold uppercase leading-tight text-slate-700">Secretaria Municipal de Educação Lábrea - AM</h3>
+                <h3 className="text-[10px] font-bold uppercase leading-tight text-slate-700">Secretaria Municipal de Educação</h3>
+                <h3 className="text-[10px] font-bold uppercase leading-tight text-slate-700">Lábrea - AM</h3>
               </div>
             </div>
             <div className="text-[10px] space-y-1 text-right flex-1 border-l border-black pl-4">
