@@ -131,6 +131,20 @@ export default function PortalAluno() {
     return acc;
   }, {} as Record<string, NotaItem[]>);
 
+  // Ordenar notas por tipo (AV1, RP1, AV2, RP2...) dentro de cada disciplina
+  Object.keys(notasPorDisciplina).forEach(disciplina => {
+    notasPorDisciplina[disciplina].sort((a, b) => {
+      const getPeso = (tipo: string) => {
+        const t = tipo.toUpperCase();
+        const num = parseInt(t.replace(/\D/g, '')) || 0;
+        if (t.startsWith('AV')) return num * 10;     // AV1=10, AV2=20
+        if (t.startsWith('RP')) return num * 10 + 5; // RP1=15, RP2=25
+        return 900 + num;                            // Outros tipos no final
+      };
+      return getPeso(a.tipo) - getPeso(b.tipo);
+    });
+  });
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
