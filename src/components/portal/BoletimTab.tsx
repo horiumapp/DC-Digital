@@ -60,6 +60,13 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
   const serie = parts.length > 1 ? parts.slice(0, -1).join(' ').toUpperCase() : alunoData.turma_nome.toUpperCase();
   const turmaLetra = parts[parts.length - 1]?.length === 1 ? parts[parts.length - 1].toUpperCase() : '---';
 
+  // Garantir um mínimo de 12 linhas na tabela para estética de documento oficial
+  const minRows = 12;
+  const disciplinasPadded = [...disciplinas];
+  while (disciplinasPadded.length < minRows) {
+    disciplinasPadded.push(`EMPTY_${disciplinasPadded.length}`);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-end gap-3 no-print">
@@ -176,17 +183,22 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
               </tr>
             </thead>
             <tbody>
-              {disciplinas.map((disc, idx) => {
-                const notasDisc = notas.filter(n => n.disciplina === disc);
-                const freqDisc = frequencias.filter(f => f.disciplina === disc);
+              {disciplinasPadded.map((disc, idx) => {
+                const isEmpty = disc.startsWith('EMPTY_');
+                const notasDisc = isEmpty ? [] : notas.filter(n => n.disciplina === disc);
+                const freqDisc = isEmpty ? [] : frequencias.filter(f => f.disciplina === disc);
                 
                 let somaMedias = 0;
                 let bimestresComNota = 0;
 
                 return (
-                  <tr key={disc} className="border-b border-black last:border-0">
-                    <td className="border-r border-black px-2 py-1.5 font-bold uppercase">{disc}</td>
-                    <td className="border-r border-black px-1 py-1.5 text-center text-slate-400">---</td>
+                  <tr key={disc} className="border-b border-black last:border-0 h-[32px]">
+                    <td className="border-r border-black px-2 py-1.5 font-bold uppercase">
+                      {isEmpty ? '' : disc}
+                    </td>
+                    <td className="border-r border-black px-1 py-1.5 text-center text-slate-400">
+                      {isEmpty ? '' : '---'}
+                    </td>
                     {bimestres.map(bim => {
                       // Calcular nota do bimestre (média das avaliações do bimestre)
                       const notasBim = notasDisc.filter(n => n.bimestre.startsWith(bim[0]));
@@ -208,20 +220,20 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
                       return (
                         <React.Fragment key={`${disc}-${bim}`}>
                           <td className="border-r border-black px-1 py-1.5 text-center font-medium">
-                            {mediaBim !== null ? mediaBim.toFixed(1) : ''}
+                            {!isEmpty && mediaBim !== null ? mediaBim.toFixed(1) : ''}
                           </td>
                           <td className="border-r border-black px-1 py-1.5 text-center text-slate-500">
-                            {faltasBim > 0 ? faltasBim : ''}
+                            {!isEmpty && faltasBim > 0 ? faltasBim : ''}
                           </td>
                         </React.Fragment>
                       );
                     })}
                     <td className="border-r border-black px-1 py-1.5 text-center"></td>
                     <td className="border-r border-black px-1 py-1.5 text-center font-black">
-                      {bimestresComNota > 0 ? (somaMedias / bimestresComNota).toFixed(1) : ''}
+                      {!isEmpty && bimestresComNota > 0 ? (somaMedias / bimestresComNota).toFixed(1) : ''}
                     </td>
                     <td className="px-1 py-1.5 text-center text-[8px] font-bold">
-                      {bimestresComNota >= 4 ? (somaMedias / 4 >= 6 ? 'APROVADO' : 'EXAME') : ''}
+                      {!isEmpty && bimestresComNota >= 4 ? (somaMedias / 4 >= 6 ? 'APROVADO' : 'EXAME') : ''}
                     </td>
                   </tr>
                 );
