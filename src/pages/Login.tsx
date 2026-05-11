@@ -132,7 +132,7 @@ export default function Login() {
               </div>
             ) : (
               <div className="space-y-2">
-                <label htmlFor="matricula" className="block text-sm font-bold text-slate-700 uppercase tracking-wide">CPF do Aluno</label>
+                <label htmlFor="matricula" className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Matrícula do Aluno</label>
                 <input 
                   type="text" 
                   id="matricula" 
@@ -142,7 +142,7 @@ export default function Login() {
                   required 
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
                 />
-                <p className="text-[10px] text-slate-400 font-medium">Digite os 11 dígitos do CPF para acessar.</p>
+                <p className="text-[10px] text-slate-400 font-medium">Digite os 11 dígitos da Matrícula para acessar.</p>
               </div>
             )}
 
