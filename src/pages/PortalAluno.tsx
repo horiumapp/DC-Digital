@@ -443,7 +443,7 @@ export default function PortalAluno() {
                               <div className="text-left">
                                 <h4 className="font-black text-[#0f2851] text-sm uppercase tracking-wider">{mesNome}</h4>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                                  {presencasMes.toString().padStart(2, '0')} Presenças • {faltasMes.toString().padStart(2, '0')} Faltas
+                                  {freqsDoMes.length.toString().padStart(2, '0')} Aulas • {presencasMes.toString().padStart(2, '0')} Presenças • {faltasMes.toString().padStart(2, '0')} Faltas
                                   {justificadasMes > 0 && ` • ${justificadasMes.toString().padStart(2, '0')} Justificadas`}
                                 </p>
                               </div>
