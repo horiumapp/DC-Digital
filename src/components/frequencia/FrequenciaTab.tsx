@@ -3,7 +3,7 @@ import { Search, Check, Trash2, ArrowLeft } from 'lucide-react';
 import Captcha from '../common/Captcha';
 import { useTurma, Aluno } from '../../contexts/TurmaContext';
 import { useCaptcha } from '../../hooks/useCaptcha';
-import { formatMatricula } from '../../utils/formatters';
+
 
 interface FrequenciaTabProps {
   selectedDate: string;
@@ -179,7 +179,7 @@ export default function FrequenciaTab({
                     <td className="px-4 py-3 text-slate-500 font-bold tabular-nums">{String(index + 1).padStart(2, '0')}</td>
                     <td className="px-4 py-3">
                       <p className="text-sm font-medium text-slate-700">{aluno.nome}</p>
-                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mt-1">Matrícula: {formatMatricula(aluno.id)}</p>
+                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mt-1">Matrícula: {aluno.matricula}</p>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <button
