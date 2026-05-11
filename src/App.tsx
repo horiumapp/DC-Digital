@@ -28,6 +28,7 @@ const PendenciasFrequencia = React.lazy(() => import('./pages/PendenciasFrequenc
 const Administracao = React.lazy(() => import('./pages/Administracao'));
 const Aparata = React.lazy(() => import('./pages/Aparata'));
 const AparataDetalhes = React.lazy(() => import('./pages/AparataDetalhes'));
+const PortalAluno = React.lazy(() => import('./pages/PortalAluno'));
 
 export default function App() {
   return (
@@ -47,7 +48,12 @@ export default function App() {
                   <Route path="/redefinir-senha" element={<RedefinirSenha />} />
                 </Route>
                 
-                {/* Rotas Privadas (Qualquer Usuário Logado) */}
+                {/* Rota exclusiva do Portal do Aluno (sem Layout/sidebar) */}
+                <Route element={<ProtectedRoute allowedRoles={['ALUNO']} />}>
+                  <Route path="/portal-aluno" element={<PortalAluno />} />
+                </Route>
+
+                {/* Rotas Privadas (Servidores - qualquer logado exceto ALUNO) */}
                 <Route element={<ProtectedRoute />}>
                   <Route element={<Layout />}>
                     <Route path="/turmas" element={<Turmas />} />
