@@ -9,9 +9,12 @@ import { formatCpfObscured } from '../../utils/formatters';
 
 import { useToast } from '../../components/common/Toast';
 
+const ALUNO_EMAIL_DOMAIN = 'aluno.dcdigital.local';
+const ALUNO_SENHA_PADRAO = 'Aluno2026';
+
 export default function TabAlunos() {
   const { user } = useAuth();
-  const { showError } = useToast();
+  const { showError, showSuccess, showWarning } = useToast();
   const [buscaAluno, setBuscaAluno] = useState('');
   const [isNovoAlunoModalOpen, setIsNovoAlunoModalOpen] = useState(false);
   const [alunoParaEditar, setAlunoParaEditar] = useState<any>(null);
@@ -58,7 +61,7 @@ export default function TabAlunos() {
         setIsNovoAlunoModalOpen(false);
       }
     } else {
-      const { error } = await supabase
+      const { data: newAlunoList, error } = await supabase
         .from('alunos')
         .insert([{
           escola_id: novoAluno.escola_id,
@@ -71,10 +74,41 @@ export default function TabAlunos() {
           telefone: novoAluno.telefone,
           endereco: novoAluno.endereco,
           status: novoAluno.status
-        }]);
+        }])
+        .select();
 
-      if (error) showError("Erro ao criar aluno: " + error.message);
-      else {
+      if (error) {
+        showError("Erro ao criar aluno: " + error.message);
+      } else {
+        const newAluno = newAlunoList?.[0];
+        
+        // Criar conta de acesso para o aluno usando matrícula como pseudo-email
+        if (newAluno && novoAluno.escola_id) {
+          const matricula = formatMatricula(newAluno.id).replace(/\s/g, '').replace('/', '');
+          const pseudoEmail = `${matricula}@${ALUNO_EMAIL_DOMAIN}`;
+          
+          try {
+            const { data: authData, error: authError } = await supabase.functions.invoke('admin-create-user', {
+              body: {
+                nome: novoAluno.nome,
+                email: pseudoEmail,
+                senha: ALUNO_SENHA_PADRAO,
+                cargo: 'ALUNO',
+                escola_id: novoAluno.escola_id,
+              },
+            });
+
+            if (authError || authData?.error) {
+              const msg = authData?.error || authError?.message || 'Erro desconhecido';
+              showWarning(`Aluno cadastrado, mas não foi possível criar a conta de acesso: ${msg}`);
+            } else {
+              showSuccess(`Aluno ${novoAluno.nome} cadastrado! Matrícula: ${formatMatricula(newAluno.id)} | Senha: ${ALUNO_SENHA_PADRAO}`);
+            }
+          } catch (err: any) {
+            showWarning(`Aluno cadastrado, mas erro ao criar conta: ${err.message}`);
+          }
+        }
+
         fetchAlunos();
         setAlunoParaEditar(null);
         setIsNovoAlunoModalOpen(false);
@@ -125,7 +159,7 @@ export default function TabAlunos() {
             className="block w-full pl-11 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f2851] focus:border-[#0f2851] bg-white transition-all font-bold text-[#0f2851]"
           />
         </div>
-        {user?.role === 'ADMIN' && (
+        {(user?.role === 'ADMIN' || user?.role === 'GESTOR' || user?.role === 'SECRETARIO') && (
           <button
             onClick={() => {
               setAlunoParaEditar(null);
@@ -204,7 +238,7 @@ export default function TabAlunos() {
                       {aluno.status || 'Ativo'}
                     </span>
                   </td>
-                  {user?.role === 'ADMIN' && (
+                  {(user?.role === 'ADMIN' || user?.role === 'GESTOR' || user?.role === 'SECRETARIO') && (
                     <td className="px-6 py-3.5 whitespace-nowrap text-right text-sm">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
