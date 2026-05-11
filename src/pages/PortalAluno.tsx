@@ -79,11 +79,18 @@ export default function PortalAluno() {
     // Extrair os dígitos do CPF do email para buscar o aluno
     const emailParts = user?.email?.split('@') || [];
     const cpfDigits = emailParts[0] || '';
+
+    if (!cpfDigits) {
+      setLoading(false);
+      return;
+    }
     
-    // Buscar aluno diretamente pelo CPF
+    // Buscar aluno diretamente pelo CPF (usando like para cobrir variações de formatação se necessário, 
+    // mas idealmente buscando os dígitos exatos)
     const { data: alunos, error: alunoError } = await supabase
       .from('alunos')
       .select('*, escolas(*), turmas(*)')
+      .or(`cpf.eq.${cpfDigits},cpf.ilike.%${cpfDigits}%`)
       .order('criado_em', { ascending: false });
 
     if (alunoError || !alunos || alunos.length === 0) {
@@ -91,7 +98,7 @@ export default function PortalAluno() {
       return;
     }
 
-    // Encontrar o aluno cujo CPF (apenas dígitos) corresponde ao login
+    // Filtrar localmente para garantir match exato dos dígitos
     const alunoEncontrado = alunos.find(a => {
       if (!a.cpf) return false;
       const alunoDigits = a.cpf.replace(/\D/g, '');

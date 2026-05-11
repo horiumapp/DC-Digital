@@ -28,8 +28,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Monitora a sessão real do Supabase
   useEffect(() => {
     const fetchUserData = async (session: any) => {
+      // Se não há sessão e já não temos usuário, apenas paramos o loading inicial
       if (!session?.user) {
-        setUser(null);
+        if (user) setUser(null);
         setLoading(false);
         return;
       }
@@ -85,6 +86,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         return;
       }
+
+      // Se for apenas uma atualização de foco/token e já temos o usuário, evitar reprocessar tudo
+      // a menos que seja um login novo ou mudança explícita
+      if ((event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') && user && session?.user?.id === user.id) {
+        return;
+      }
+
       // Recuperação de senha — não redirecionar, manter sessão parcial
       if (event === 'PASSWORD_RECOVERY') {
         setLoading(false);
