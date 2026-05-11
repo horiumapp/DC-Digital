@@ -292,7 +292,7 @@ export default function PortalAluno() {
             {activeTab === 'frequencia' && (
               <div className="space-y-4">
                 {/* Resumo */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   <div className="bg-white rounded-2xl border border-slate-200 p-4 text-center shadow-sm">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total</span>
                     <p className="text-2xl font-black text-slate-800 mt-1">{totalAulas}</p>
@@ -334,7 +334,7 @@ export default function PortalAluno() {
                             </td>
                             <td className="px-5 py-3 text-sm font-medium text-slate-600">{freq.disciplina || '---'}</td>
                             <td className="px-5 py-3 text-center">
-                              <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-black uppercase tracking-widest border transition-colors ${
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-colors ${
                                 freq.status === 'P'
                                   ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
                                   : freq.status === 'F'
@@ -343,7 +343,7 @@ export default function PortalAluno() {
                                   ? 'bg-amber-50 text-amber-600 border-amber-200'
                                   : 'bg-slate-50 text-slate-400 border-slate-200'
                               }`}>
-                                {freq.status || '-'}
+                                {freq.status === 'P' ? 'Presente' : freq.status === 'F' ? 'Falta' : freq.status === 'FJ' ? 'Justificada' : (freq.status || '-')}
                               </span>
                             </td>
                           </tr>
