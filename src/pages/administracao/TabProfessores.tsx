@@ -292,7 +292,7 @@ export default function TabProfessores() {
                     setSelectedEscola(null);
                     setBuscaProfessor('');
                   }}
-                  className="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all border border-white/10"
+                  className={`p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all border border-white/10 ${user?.role === 'GESTOR' ? 'hidden' : ''}`}
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </button>
