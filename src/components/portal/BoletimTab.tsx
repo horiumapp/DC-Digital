@@ -17,6 +17,8 @@ interface AlunoData {
   nome_responsavel: string;
   endereco: string;
   sexo: string;
+  numero_aluno: number;
+  ensino_modalidade: string;
 }
 
 interface NotaItem {
@@ -53,6 +55,11 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
     window.print();
   };
 
+  // Lógica para extrair Série e Turma
+  const parts = alunoData.turma_nome.split(' ');
+  const serie = parts.length > 1 ? parts.slice(0, -1).join(' ').toUpperCase() : alunoData.turma_nome.toUpperCase();
+  const turmaLetra = parts[parts.length - 1]?.length === 1 ? parts[parts.length - 1].toUpperCase() : '---';
+
   return (
     <div className="space-y-6">
       <div className="flex justify-end gap-3 no-print">
@@ -81,7 +88,7 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
             <div className="text-[10px] space-y-0.5 text-right flex-1 border-l border-black pl-4">
               <p><strong>ESCOLA:</strong> {alunoData.escola_nome}</p>
               <p><strong>ENDEREÇO:</strong> {alunoData.escola_endereco}</p>
-              <p><strong>INEP:</strong> {alunoData.escola_inep}</p>
+              <p><strong>DIRETOR(A):</strong> {alunoData.escola_diretor}</p>
               <p><strong>DATA EMISSÃO:</strong> {new Date().toLocaleDateString('pt-BR')}</p>
             </div>
           </div>
@@ -91,36 +98,46 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
           <h1 className="text-sm font-black uppercase tracking-[0.2em]">Boletim Individual</h1>
         </div>
 
-        {/* Informações Aluno */}
-        <div className="grid grid-cols-4 border border-black text-[10px] mb-6">
-          <div className="border-r border-b border-black p-2 col-span-1">
-            <p className="font-bold text-[8px] text-slate-500 uppercase">Matrícula</p>
-            <p className="font-black">{alunoData.matricula}</p>
-          </div>
-          <div className="border-r border-b border-black p-2 col-span-2">
-            <p className="font-bold text-[8px] text-slate-500 uppercase">Nome do Aluno</p>
-            <p className="font-black uppercase">{alunoData.nome}</p>
-          </div>
-          <div className="border-b border-black p-2 col-span-1">
-            <p className="font-bold text-[8px] text-slate-500 uppercase">Ano Letivo</p>
-            <p className="font-black">{alunoData.turma_ano}</p>
+        {/* Informações Aluno - Layout Novo */}
+        <div className="border-t border-l border-black text-[9px] mb-6">
+          {/* Linha 1 */}
+          <div className="flex w-full">
+            <div className="border-r border-b border-black p-1.5 w-[20%]">
+              <p className="font-bold text-[7px] text-slate-500 uppercase">Matrícula</p>
+              <p className="font-black text-[11px]">{alunoData.matricula}</p>
+            </div>
+            <div className="border-r border-b border-black p-1.5 w-[10%] text-center">
+              <p className="font-bold text-[7px] text-slate-500 uppercase">Nº Aluno</p>
+              <p className="font-black text-[11px]">{alunoData.numero_aluno || '---'}</p>
+            </div>
+            <div className="border-r border-b border-black p-1.5 flex-1">
+              <p className="font-bold text-[7px] text-slate-500 uppercase">Nome do Aluno</p>
+              <p className="font-black text-[11px] uppercase">{alunoData.nome}</p>
+            </div>
           </div>
           
-          <div className="border-r border-black p-2">
-            <p className="font-bold text-[8px] text-slate-500 uppercase">Nascimento</p>
-            <p className="font-black">{new Date(alunoData.data_nascimento).toLocaleDateString('pt-BR')}</p>
-          </div>
-          <div className="border-r border-black p-2">
-            <p className="font-bold text-[8px] text-slate-500 uppercase">Turma</p>
-            <p className="font-black">{alunoData.turma_nome}</p>
-          </div>
-          <div className="border-r border-black p-2">
-            <p className="font-bold text-[8px] text-slate-500 uppercase">Turno</p>
-            <p className="font-black uppercase">{alunoData.turma_turno}</p>
-          </div>
-          <div className="p-2">
-            <p className="font-bold text-[8px] text-slate-500 uppercase">Sexo</p>
-            <p className="font-black uppercase">{alunoData.sexo}</p>
+          {/* Linha 2 */}
+          <div className="flex w-full">
+            <div className="border-r border-b border-black p-1.5 w-[40%]">
+              <p className="font-bold text-[7px] text-slate-500 uppercase">Ensino / Modalidade</p>
+              <p className="font-black">{alunoData.ensino_modalidade}</p>
+            </div>
+            <div className="border-r border-b border-black p-1.5 w-[15%] text-center">
+              <p className="font-bold text-[7px] text-slate-500 uppercase">Ano Letivo</p>
+              <p className="font-black">{alunoData.turma_ano}</p>
+            </div>
+            <div className="border-r border-b border-black p-1.5 w-[15%] text-center">
+              <p className="font-bold text-[7px] text-slate-500 uppercase">Série</p>
+              <p className="font-black">{serie}</p>
+            </div>
+            <div className="border-r border-b border-black p-1.5 w-[10%] text-center">
+              <p className="font-bold text-[7px] text-slate-500 uppercase">Turma</p>
+              <p className="font-black">{turmaLetra}</p>
+            </div>
+            <div className="border-r border-b border-black p-1.5 w-[20%] text-center">
+              <p className="font-bold text-[7px] text-slate-500 uppercase">Turno</p>
+              <p className="font-black uppercase">{alunoData.turma_turno}</p>
+            </div>
           </div>
         </div>
 
