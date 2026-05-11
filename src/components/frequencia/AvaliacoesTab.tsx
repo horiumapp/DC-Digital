@@ -185,8 +185,8 @@ export default function AvaliacoesTab() {
       await salvarNotas(createdId, notasParaData);
     }
 
-      await salvarNotas(createdId, notasParaData);
-    }
+    setAvaliacaoViewMode('list');
+    setIsSaving(false);
   };
 
   const handleNotaChange = (alunoId: string, val: string) => {
