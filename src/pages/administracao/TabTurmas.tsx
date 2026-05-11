@@ -236,6 +236,7 @@ export default function TabTurmas() {
               </div>
             </div>
           </div>
+        </div>
 
           {/* Barra de Pesquisa e Botão (Estilo Referência) */}
           <div className="px-8 -mt-6 relative z-20">
