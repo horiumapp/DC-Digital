@@ -131,7 +131,8 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
     ...escola,
     localizacao: escola.distrito,
     gestor: escola.diretor,
-    ativo: escola.status === 'Ativa'
+    ativo: escola.status === 'Ativa',
+    logo_url: escola.logo_url
   };
 
   return (
