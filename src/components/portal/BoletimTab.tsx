@@ -76,13 +76,23 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
         <div className="border-b-2 border-black pb-4 mb-6">
           <div className="flex items-start justify-between gap-6">
             <div className="flex items-center gap-4 flex-1">
-              <div className="w-16 h-16 border border-black flex items-center justify-center p-2">
-                <img src="/logo.png" alt="Brasão" className="w-full h-full object-contain grayscale" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                <span className="text-[8px] font-bold text-center">BRASÃO</span>
+              <div className="w-16 h-16 flex items-center justify-center">
+                <img 
+                  src="/semed.png" 
+                  alt="SEMED Logo" 
+                  className="w-full h-full object-contain" 
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    const parent = e.currentTarget.parentElement;
+                    if (parent) {
+                      parent.innerHTML = '<span class="text-[8px] font-bold text-center border border-black p-2">LOGO</span>';
+                    }
+                  }} 
+                />
               </div>
               <div className="space-y-1">
-                <h2 className="text-sm font-black uppercase leading-tight">Estado do Amazonas</h2>
-                <h3 className="text-xs font-bold uppercase leading-tight">Secretaria de Estado de Educação e Desporto Escolar</h3>
+                <h2 className="text-sm font-black uppercase leading-tight">SEMED</h2>
+                <h3 className="text-xs font-bold uppercase leading-tight text-slate-700">Secretaria Municipal de Educação Lábrea - AM</h3>
               </div>
             </div>
             <div className="text-[10px] space-y-0.5 text-right flex-1 border-l border-black pl-4">
