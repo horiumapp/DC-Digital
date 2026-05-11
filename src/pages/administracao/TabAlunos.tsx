@@ -435,6 +435,7 @@ export default function TabAlunos() {
                 </div>
               </button>
             ))}
+          </div>
         ) : (
           <div className="space-y-12 pb-12">
             {turnosOrdenados.map((turno) => {
