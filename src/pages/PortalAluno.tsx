@@ -29,7 +29,7 @@ interface FrequenciaItem {
 }
 
 export default function PortalAluno() {
-  const { user, signOut } = useAuth();
+  const { user, logout } = useAuth();
   const [alunoData, setAlunoData] = useState<AlunoData | null>(null);
   const [notas, setNotas] = useState<NotaItem[]>([]);
   const [frequencias, setFrequencias] = useState<FrequenciaItem[]>([]);
@@ -164,7 +164,7 @@ export default function PortalAluno() {
               </p>
             </div>
             <button
-              onClick={signOut}
+              onClick={logout}
               className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/10"
               title="Sair"
             >
