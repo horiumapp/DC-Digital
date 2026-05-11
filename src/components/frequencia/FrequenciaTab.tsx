@@ -22,7 +22,6 @@ export default function FrequenciaTab({
   
   const [studentData, setStudentData] = useState<Aluno[]>([]);
   const [isLaunching, setIsLaunching] = useState(false);
-  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [showDeleteFreqModal, setShowDeleteFreqModal] = useState(false);
 
   const isLancado = lancamentos.some(l => 
@@ -71,7 +70,6 @@ export default function FrequenciaTab({
     if (validateCaptcha()) {
       if (turmaAtiva) {
         await salvarFrequencia(selectedDate, tempoAula, studentData);
-        setShowSuccessAlert(true);
         setIsLaunching(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -82,7 +80,6 @@ export default function FrequenciaTab({
 
   const handleExcluirFrequencia = async () => {
     await removerFrequencia(selectedDate, tempoAula);
-    setShowSuccessAlert(false);
     generateNewCaptcha();
     setShowDeleteFreqModal(false);
     setIsLaunching(false);
@@ -90,14 +87,6 @@ export default function FrequenciaTab({
 
   return (
     <div className="animate-in fade-in slide-in-from-top-4 duration-300">
-      {showSuccessAlert && (
-        <div className="bg-emerald-100/80 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-lg mb-6 flex items-center justify-between">
-          <span className="text-sm font-medium">Dados cadastrados com sucesso!</span>
-          <button onClick={() => setShowSuccessAlert(false)} className="text-emerald-600 hover:text-emerald-800 transition">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
-      )}
       
       <div className="flex items-end gap-4 mb-6">
         <div className="w-64">
