@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { Search, Plus, Edit2, Trash2, Building2, MapPin, User, Hash, ChevronRight } from 'lucide-react';
 import NovaEscolaModal from '../../components/NovaEscolaModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
+import EscolaDetalhes from './EscolaDetalhes';
 
 import { useToast } from '../../components/common/Toast';
 
@@ -14,6 +15,7 @@ export default function TabEscolas() {
   const [isNovaEscolaModalOpen, setIsNovaEscolaModalOpen] = useState(false);
   const [escolaParaEditar, setEscolaParaEditar] = useState<any>(null);
   const [escolaParaExcluir, setEscolaParaExcluir] = useState<any>(null);
+  const [escolaSelecionada, setEscolaSelecionada] = useState<any>(null);
 
   const [escolas, setEscolas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,6 +111,25 @@ export default function TabEscolas() {
 
   if (user?.role !== 'ADMIN') return null;
 
+  // Se uma escola está selecionada, mostrar os detalhes dela
+  if (escolaSelecionada) {
+    return (
+      <EscolaDetalhes
+        escola={escolaSelecionada}
+        onVoltar={() => {
+          setEscolaSelecionada(null);
+          fetchEscolas();
+        }}
+        onEscolaAtualizada={() => {
+          fetchEscolas();
+          // Atualizar os dados da escola selecionada
+          const updated = escolas.find(e => e.id === escolaSelecionada.id);
+          if (updated) setEscolaSelecionada(updated);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-slate-50/50">
       <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 gap-4 bg-white">
@@ -152,19 +173,20 @@ export default function TabEscolas() {
           {escolasFiltradas.length > 0 ? (
             escolasFiltradas.map((escola) => (
               <div 
-                key={escola.id} 
-                className="group relative flex flex-col bg-white border border-slate-200 rounded-2xl p-5 text-left hover:border-blue-300 hover:shadow-xl hover:shadow-blue-600/5 transition-all duration-300 transform hover:-translate-y-1 overflow-hidden"
+                key={escola.id}
+                onClick={() => setEscolaSelecionada(escola)}
+                className="group relative flex flex-col bg-white border border-slate-200 rounded-2xl p-5 text-left hover:border-blue-300 hover:shadow-xl hover:shadow-blue-600/5 transition-all duration-300 transform hover:-translate-y-1 overflow-hidden cursor-pointer"
               >
                 {/* Actions (Top Right - Hover Only) */}
                 <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all translate-y-[-10px] group-hover:translate-y-0 duration-300 z-10">
                   <button 
-                    onClick={() => handleEditEscola(escola)}
+                    onClick={(e) => { e.stopPropagation(); handleEditEscola(escola); }}
                     className="p-2 bg-white/80 backdrop-blur-sm text-slate-400 hover:text-[#0f2851] shadow-sm border border-slate-100 rounded-lg transition-colors"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button 
-                    onClick={() => setEscolaParaExcluir(escola)}
+                    onClick={(e) => { e.stopPropagation(); setEscolaParaExcluir(escola); }}
                     className="p-2 bg-white/80 backdrop-blur-sm text-slate-400 hover:text-red-600 shadow-sm border border-slate-100 rounded-lg transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
