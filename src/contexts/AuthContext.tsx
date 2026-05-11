@@ -10,6 +10,7 @@ export interface User {
   email: string; // Adicionado campo de e-mail real
   role: UserRole;
   title: string;
+  escola_id?: string; // ID da escola vinculada (para GESTOR/SECRETARIO)
 }
 
 interface AuthContextType {
@@ -39,23 +40,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Segurança: Prioriza app_metadata (não alterável pelo cliente)
       let role: UserRole = (authUser.app_metadata?.role as UserRole);
 
-      if (!role) {
-        // Fallback: busca da tabela de usuários se não estiver no app_metadata
-        try {
-          const { data: userData, error } = await supabase
-            .from('usuarios')
-            .select('cargo')
-            .eq('id', authUser.id)
-            .maybeSingle();
-          
-          if (!error && userData) {
+      // Sempre buscar dados complementares da tabela usuarios (escola_id, cargo fallback)
+      let escolaId: string | undefined;
+      try {
+        const { data: userData, error } = await supabase
+          .from('usuarios')
+          .select('cargo, escola_id')
+          .eq('id', authUser.id)
+          .maybeSingle();
+        
+        if (!error && userData) {
+          if (!role) {
             role = (userData.cargo as UserRole) || 'PROFESSOR';
-          } else {
-            role = 'PROFESSOR';
           }
-        } catch {
+          escolaId = userData.escola_id || undefined;
+        } else if (!role) {
           role = 'PROFESSOR';
         }
+      } catch {
+        if (!role) role = 'PROFESSOR';
       }
 
       setUser({
@@ -64,6 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: authUser.email || '',
         role: role,
         title: role,
+        escola_id: escolaId,
       });
       setLoading(false);
     };
