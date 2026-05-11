@@ -190,9 +190,9 @@ export default function AvaliacoesTab() {
   };
 
   const handleNotaChange = (alunoId: string, val: string) => {
-    let numStr = val.replace(/\D/g, '');
+    const numStr = val.replace(/\D/g, '');
     if (!numStr) { setLocalNotas(prev => ({ ...prev, [alunoId]: '' })); return; }
-    let numVal = parseInt(numStr, 10);
+    const numVal = parseInt(numStr, 10);
     if (numVal > 1000) return;
     const formatted = (numVal / 100).toFixed(2).replace('.', ',');
     setLocalNotas(prev => ({ ...prev, [alunoId]: formatted }));

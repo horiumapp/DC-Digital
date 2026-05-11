@@ -116,7 +116,7 @@ export default function SegundaChamadaEditor({
                     onChange={(e) => {
                       let val = e.target.value.replace(/\D/g, '');
                       if (val) {
-                        let numVal = parseInt(val, 10);
+                        const numVal = parseInt(val, 10);
                         if (numVal > 1000) return;
                         val = (numVal / 100).toFixed(2).replace('.', ',');
                       }

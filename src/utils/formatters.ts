@@ -5,7 +5,6 @@ export const formatCpfObscured = (cpf: string) => {
   return `${cleaned.substring(0, 3)}.***.***-${cleaned.substring(9, 11)}`;
 };
 
-import { APP_CONFIG } from '../config/appConfig';
 
 /**
  * @deprecated Use formatMatriculaCpf instead. Kept for backwards compatibility.

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Plus, Edit2, Trash2, Building2, MapPin, Phone, User, GraduationCap, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Building2, MapPin, Phone, User, Users, GraduationCap, ChevronRight, ArrowLeft } from 'lucide-react';
 import NovoAlunoModal from '../../components/NovoAlunoModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import { formatMatricula, getMatriculaLogin, formatCpfObscured } from '../../utils/formatters';

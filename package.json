@@ -10,8 +10,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "eslint src --ext .ts,.tsx && tsc --noEmit",
-    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "lint": "eslint . && tsc --noEmit",
+    "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "test:watch": "vitest"
   },

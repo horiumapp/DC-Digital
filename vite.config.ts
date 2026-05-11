@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 
-export default defineConfig(({mode}) => {
+export default defineConfig(({_mode}) => {
   return {
     plugins: [react(), tailwindcss()],
     // SEGURANÇA: GEMINI_API_KEY removida do bundle frontend.
