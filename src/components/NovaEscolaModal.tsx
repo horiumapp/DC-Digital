@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Building2, MapPin, Hash, User, Activity, Image as ImageIcon } from 'lucide-react';
+import logosLocais from '../config/logos.json';
 
 interface NovaEscolaModalProps {
   isOpen: boolean;
@@ -149,16 +150,11 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
               >
                 <option value="">Sem Logo</option>
                 <optgroup label="Logos Locais (Pasta Public)">
-                  <option value="/Filadelfia.png">Filadelfia.png</option>
-                  <option value="/Francisca Mendes.png">Francisca Mendes.png</option>
-                  <option value="/José Maia.png">José Maia.png</option>
-                  <option value="/Pastor José Reis.png">Pastor José Reis.png</option>
-                  <option value="/Presidente Vargas.png">Presidente Vargas.png</option>
-                  <option value="/Socorro Brito.png">Socorro Brito.png</option>
-                  <option value="/São Francisco.png">São Francisco.png</option>
-                  <option value="/PML.png">PML.png</option>
-                  <option value="/semed.png">semed.png</option>
-                  <option value="/logo.png">logo.png</option>
+                  {logosLocais.map((logo) => (
+                    <option key={logo} value={logo}>
+                      {logo.replace('/', '')}
+                    </option>
+                  ))}
                 </optgroup>
               </select>
               {formData.logo_url && (
