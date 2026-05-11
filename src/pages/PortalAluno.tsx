@@ -9,9 +9,17 @@ interface AlunoData {
   id: string;
   nome: string;
   escola_nome: string;
+  escola_inep: string;
+  escola_diretor: string;
+  escola_endereco: string;
   turma_nome: string;
   turma_turno: string;
+  turma_ano: string;
   matricula: string;
+  data_nascimento: string;
+  nome_responsavel: string;
+  endereco: string;
+  sexo: string;
 }
 
 interface NotaItem {
@@ -35,7 +43,7 @@ export default function PortalAluno() {
   const [notas, setNotas] = useState<NotaItem[]>([]);
   const [frequencias, setFrequencias] = useState<FrequenciaItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'notas' | 'frequencia'>('notas');
+  const [activeTab, setActiveTab] = useState<'notas' | 'frequencia' | 'boletim'>('notas');
 
   useEffect(() => {
     if (user?.email) {
@@ -54,7 +62,7 @@ export default function PortalAluno() {
     // Buscar aluno diretamente pelo CPF
     const { data: alunos, error: alunoError } = await supabase
       .from('alunos')
-      .select('id, nome, cpf, escola_id, turma_id, escolas(nome), turmas(nome, turno)')
+      .select('*, escolas(*), turmas(*)')
       .order('criado_em', { ascending: false });
 
     if (alunoError || !alunos || alunos.length === 0) {
@@ -81,9 +89,17 @@ export default function PortalAluno() {
       id: alunoEncontrado.id,
       nome: alunoEncontrado.nome,
       escola_nome: escolaData?.nome || 'N/D',
+      escola_inep: escolaData?.inep || '---',
+      escola_diretor: escolaData?.diretor || '---',
+      escola_endereco: escolaData?.distrito || '---',
       turma_nome: turmaData?.nome || 'Sem turma',
       turma_turno: turmaData?.turno || '',
+      turma_ano: turmaData?.ano_letivo || APP_CONFIG.YEAR,
       matricula: formatMatriculaCpf(alunoEncontrado.cpf),
+      data_nascimento: alunoEncontrado.data_nascimento || '---',
+      nome_responsavel: alunoEncontrado.nome_responsavel || '---',
+      endereco: alunoEncontrado.endereco || '---',
+      sexo: alunoEncontrado.sexo || '---',
     });
 
     // Buscar notas do aluno
