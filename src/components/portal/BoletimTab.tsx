@@ -192,15 +192,15 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
                 let bimestresComNota = 0;
 
                 return (
-                  <tr key={disc} className="border-b border-black last:border-0 h-[32px]">
-                    <td className="border-r border-black px-2 py-1.5 font-bold uppercase">
+                  <tr key={disc} className="border-b border-black last:border-0 h-[25px]">
+                    <td className="border-r border-black px-2 py-0.5 font-bold uppercase truncate max-w-[180px]">
                       {isEmpty ? '' : disc}
                     </td>
-                    <td className="border-r border-black px-1 py-1.5 text-center text-slate-400">
+                    <td className="border-r border-black px-1 py-0.5 text-center text-slate-400">
                       {isEmpty ? '' : '---'}
                     </td>
                     {bimestres.map(bim => {
-                      // Calcular nota do bimestre (média das avaliações do bimestre)
+                      // Calcular nota do bimestre
                       const notasBim = notasDisc.filter(n => n.bimestre.startsWith(bim[0]));
                       const mediaBim = notasBim.length > 0 
                         ? notasBim.reduce((s, n) => s + (n.valor || 0), 0) / notasBim.length
@@ -219,20 +219,20 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
 
                       return (
                         <React.Fragment key={`${disc}-${bim}`}>
-                          <td className="border-r border-black px-1 py-1.5 text-center font-medium">
+                          <td className="border-r border-black px-1 py-0.5 text-center font-medium">
                             {!isEmpty && mediaBim !== null ? mediaBim.toFixed(1) : ''}
                           </td>
-                          <td className="border-r border-black px-1 py-1.5 text-center text-slate-500">
+                          <td className="border-r border-black px-1 py-0.5 text-center text-slate-500">
                             {!isEmpty && faltasBim > 0 ? faltasBim : ''}
                           </td>
                         </React.Fragment>
                       );
                     })}
-                    <td className="border-r border-black px-1 py-1.5 text-center"></td>
-                    <td className="border-r border-black px-1 py-1.5 text-center font-black">
+                    <td className="border-r border-black px-1 py-0.5 text-center"></td>
+                    <td className="border-r border-black px-1 py-0.5 text-center font-black">
                       {!isEmpty && bimestresComNota > 0 ? (somaMedias / bimestresComNota).toFixed(1) : ''}
                     </td>
-                    <td className="px-1 py-1.5 text-center text-[8px] font-bold">
+                    <td className="px-1 py-0.5 text-center text-[8px] font-bold">
                       {!isEmpty && bimestresComNota >= 4 ? (somaMedias / 4 >= 6 ? 'APROVADO' : 'EXAME') : ''}
                     </td>
                   </tr>
@@ -240,17 +240,28 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
               })}
             </tbody>
           </table>
+          
+          {/* Rodapé da Tabela com Total de Faltas */}
+          <div className="flex border-t border-black">
+            <div className="flex-1 bg-slate-50 print:bg-transparent"></div>
+            <div className="border-l border-black p-1.5 w-44 bg-white">
+              <p className="text-[7px] font-bold uppercase leading-none mb-1 text-slate-500">Total de Faltas</p>
+              <p className="text-[11px] font-black leading-none text-right pr-2">
+                {frequencias.filter(f => f.status === 'F' || f.status === 'Ausente').length}
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Rodapé do Boletim */}
-        <div className="mt-12 grid grid-cols-2 gap-12">
+        {/* Rodapé do Boletim - Assinaturas */}
+        <div className="mt-16 grid grid-cols-2 gap-12">
           <div className="text-center pt-2 border-t border-black">
-            <p className="text-[8px] font-bold uppercase">{alunoData.escola_diretor || 'DIRETOR(A)'}</p>
-            <p className="text-[7px] text-slate-500">DIRETOR(A)</p>
+            <p className="text-[8px] font-bold uppercase mb-0.5">{alunoData.escola_diretor || 'DIRETOR(A)'}</p>
+            <p className="text-[7px] text-slate-500 uppercase">DIRETOR(A)</p>
           </div>
           <div className="text-center pt-2 border-t border-black">
-            <p className="text-[8px] font-bold uppercase">SECRETÁRIO(A)</p>
-            <p className="text-[7px] text-slate-500">SECRETÁRIO(A) ESCOLAR</p>
+            <p className="text-[8px] font-bold uppercase mb-0.5">SECRETÁRIO(A)</p>
+            <p className="text-[7px] text-slate-500 uppercase">SECRETÁRIO(A) ESCOLAR</p>
           </div>
         </div>
 
