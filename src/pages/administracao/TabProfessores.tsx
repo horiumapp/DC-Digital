@@ -328,7 +328,6 @@ export default function TabProfessores() {
               </div>
             </div>
           </div>
-        </div>
 
           {/* Form Inline (Image 1 style) */}
           <div className="px-8 -mt-6 relative z-20 mb-6">
