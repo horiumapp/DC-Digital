@@ -201,7 +201,7 @@ export default function TabEscolas() {
                   {escola.logo_url ? (
                     <div className="w-14 h-14 bg-white rounded-xl p-1 shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden">
                       <img 
-                        src={(/^https?:\/\//.test(escola.logo_url) || escola.logo_url.startsWith('data:image/')) ? escola.logo_url : ''} 
+                        src={(/^https?:\/\//.test(escola.logo_url) || escola.logo_url.startsWith('data:image/')) ? escola.logo_url : undefined} 
                         alt="Logo" 
                         className="max-w-full max-h-full object-contain" 
                       />
