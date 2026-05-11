@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Search, Plus, Edit2, Trash2, Users, Building2 } from 'lucide-react';
-import { formatMatricula } from '../../utils/formatters';
+import { formatMatricula, getMatriculaLogin } from '../../utils/formatters';
 import NovoAlunoModal from '../../components/NovoAlunoModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import { formatCpfObscured } from '../../utils/formatters';
@@ -82,10 +82,10 @@ export default function TabAlunos() {
       } else {
         const newAluno = newAlunoList?.[0];
         
-        // Criar conta de acesso para o aluno usando matrícula como pseudo-email
-        if (newAluno && novoAluno.escola_id) {
-          const matricula = formatMatricula(newAluno.id).replace(/\s/g, '').replace('/', '');
-          const pseudoEmail = `${matricula}@${ALUNO_EMAIL_DOMAIN}`;
+        // Criar conta de acesso para o aluno usando CPF como pseudo-email (matrícula vitalícia)
+        if (newAluno && novoAluno.escola_id && novoAluno.cpf) {
+          const cpfDigits = getMatriculaLogin(novoAluno.cpf);
+          const pseudoEmail = `${cpfDigits}@${ALUNO_EMAIL_DOMAIN}`;
           
           try {
             const { data: authData, error: authError } = await supabase.functions.invoke('admin-create-user', {
@@ -102,11 +102,13 @@ export default function TabAlunos() {
               const msg = authData?.error || authError?.message || 'Erro desconhecido';
               showWarning(`Aluno cadastrado, mas não foi possível criar a conta de acesso: ${msg}`);
             } else {
-              showSuccess(`Aluno ${novoAluno.nome} cadastrado! Matrícula: ${formatMatricula(newAluno.id)} | Senha: ${ALUNO_SENHA_PADRAO}`);
+              showSuccess(`Aluno ${novoAluno.nome} cadastrado! Matrícula (CPF): ${formatMatricula(newAluno.id, novoAluno.cpf)} | Senha: ${ALUNO_SENHA_PADRAO}`);
             }
           } catch (err: any) {
             showWarning(`Aluno cadastrado, mas erro ao criar conta: ${err.message}`);
           }
+        } else if (newAluno) {
+          showSuccess(`Aluno ${novoAluno.nome} cadastrado! CPF não informado — a conta de acesso será criada quando o CPF for adicionado.`);
         }
 
         fetchAlunos();
@@ -193,8 +195,8 @@ export default function TabAlunos() {
               {alunosFiltrados.map((aluno) => (
                 <tr key={aluno.id} className="group hover:bg-blue-50/30 transition-colors duration-150">
                   <td className="px-6 py-3.5 whitespace-nowrap">
-                    <span className="text-slate-400 font-medium tabular-nums px-3 py-1 bg-slate-100 rounded-lg text-xs">
-                      {formatMatricula(aluno.id)}
+                    <span className={`font-medium tabular-nums px-3 py-1 rounded-lg text-xs ${aluno.cpf ? 'text-slate-500 bg-slate-100' : 'text-amber-600 bg-amber-50 border border-amber-200'}`}>
+                      {formatMatricula(aluno.id, aluno.cpf)}
                     </span>
                   </td>
                   <td className="px-6 py-3.5 whitespace-nowrap">

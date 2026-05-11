@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { GraduationCap, BookOpen, CalendarCheck, BarChart3, Loader2, LogOut, User } from 'lucide-react';
 import { APP_CONFIG } from '../config/appConfig';
+import { formatMatriculaCpf } from '../utils/formatters';
 
 interface AlunoData {
   id: string;
@@ -45,19 +46,15 @@ export default function PortalAluno() {
   async function fetchAlunoData() {
     setLoading(true);
     
-    // O email do aluno é {matricula}@aluno.dcdigital.local
-    // Precisamos encontrar o aluno pelo email na tabela de auth users
-    // Mas podemos buscar diretamente todos os alunos e filtrar pelo auth user id
-    
-    // Primeiro buscar o aluno_id associado ao user
-    // O aluno é identificado pelo email pseudo: extrair matricula do email
+    // O email do aluno é {cpf_digits}@aluno.dcdigital.local
+    // Extrair os dígitos do CPF do email para buscar o aluno
     const emailParts = user?.email?.split('@') || [];
-    const matriculaPart = emailParts[0] || '';
+    const cpfDigits = emailParts[0] || '';
     
-    // Buscar aluno por matrícula (os últimos 7 chars do ID) 
+    // Buscar aluno diretamente pelo CPF
     const { data: alunos, error: alunoError } = await supabase
       .from('alunos')
-      .select('id, nome, matricula, escola_id, turma_id, escolas(nome), turmas(nome, turno)')
+      .select('id, nome, cpf, escola_id, turma_id, escolas(nome), turmas(nome, turno)')
       .order('created_at', { ascending: false });
 
     if (alunoError || !alunos || alunos.length === 0) {
@@ -65,12 +62,11 @@ export default function PortalAluno() {
       return;
     }
 
-    // Encontrar o aluno cuja matrícula formatada corresponde
+    // Encontrar o aluno cujo CPF (apenas dígitos) corresponde ao login
     const alunoEncontrado = alunos.find(a => {
-      const idStr = a.id.toString();
-      const numericPart = idStr.slice(-7);
-      const formatted = `${APP_CONFIG.YEAR}${numericPart}`;
-      return formatted === matriculaPart;
+      if (!a.cpf) return false;
+      const alunoDigits = a.cpf.replace(/\D/g, '');
+      return alunoDigits === cpfDigits;
     });
 
     if (!alunoEncontrado) {
@@ -87,7 +83,7 @@ export default function PortalAluno() {
       escola_nome: escolaData?.nome || 'N/D',
       turma_nome: turmaData?.nome || 'Sem turma',
       turma_turno: turmaData?.turno || '',
-      matricula: `${APP_CONFIG.YEAR} / ${alunoEncontrado.id.toString().slice(-7)}`,
+      matricula: formatMatriculaCpf(alunoEncontrado.cpf),
     });
 
     // Buscar notas do aluno

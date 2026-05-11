@@ -29,9 +29,9 @@ export default function Login() {
     const password = formData.get('password') as string;
 
     if (loginMode === 'aluno') {
-      const matricula = (formData.get('matricula') as string).trim();
-      if (!matricula) {
-        setError('Informe o número da matrícula.');
+      const matricula = (formData.get('matricula') as string).trim().replace(/\D/g, '');
+      if (!matricula || matricula.length !== 11) {
+        setError('Informe o CPF completo (11 dígitos).');
         setIsLoading(false);
         return;
       }
@@ -132,15 +132,17 @@ export default function Login() {
               </div>
             ) : (
               <div className="space-y-2">
-                <label htmlFor="matricula" className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Nº da Matrícula</label>
+                <label htmlFor="matricula" className="block text-sm font-bold text-slate-700 uppercase tracking-wide">CPF do Aluno</label>
                 <input 
                   type="text" 
                   id="matricula" 
                   name="matricula" 
-                  placeholder="Ex: 2026001" 
+                  placeholder="000.000.000-00" 
+                  maxLength={14}
                   required 
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
                 />
+                <p className="text-[10px] text-slate-400 font-medium">Digite os 11 dígitos do CPF para acessar.</p>
               </div>
             )}
 
