@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { formatMatricula } from '../utils/formatters';
+import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
 import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
 import { APP_CONFIG, getBimestreAtual } from '../config/appConfig';
 
@@ -97,7 +97,7 @@ export default function AparataDetalhes() {
       return {
         ...aluno,
         n: index + 1,
-        matricula: formatMatricula(aluno.id), 
+        matricula: aluno.matricula, 
         media,
         faltas
       };
