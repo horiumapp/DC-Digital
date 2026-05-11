@@ -76,7 +76,7 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
         <div className="border-b-2 border-black pb-4 mb-6">
           <div className="flex items-start justify-between gap-6">
             <div className="flex items-center gap-4 flex-1">
-              <div className="w-16 h-16 flex items-center justify-center">
+              <div className="w-24 h-24 flex items-center justify-center">
                 <img 
                   src="/semed.png" 
                   alt="SEMED Logo" 
