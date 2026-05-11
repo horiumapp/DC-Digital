@@ -113,7 +113,8 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
         distrito: dadosEscola.localizacao,
         inep: dadosEscola.inep,
         diretor: dadosEscola.gestor,
-        status: dadosEscola.ativo ? 'Ativa' : 'Inativa'
+        status: dadosEscola.ativo ? 'Ativa' : 'Inativa',
+        logo_url: dadosEscola.logo_url
       })
       .eq('id', escola.id);
 
@@ -168,18 +169,31 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
             </div>
           </div>
 
-          <div className="flex gap-3">
-            <div className="bg-white/10 border border-white/20 backdrop-blur-sm rounded-2xl p-4 flex flex-col items-center justify-center min-w-[80px]">
-              <span className="text-[10px] font-black text-blue-100 uppercase tracking-tighter">GESTORES</span>
-              <span className="text-2xl font-black text-white leading-none mt-1">
-                {gestores.length.toString().padStart(2, '0')}
-              </span>
-            </div>
-            <div className="bg-white/10 border border-white/20 backdrop-blur-sm rounded-2xl p-4 flex flex-col items-center justify-center min-w-[80px]">
-              <span className="text-[10px] font-black text-blue-100 uppercase tracking-tighter">SECRETÁRIOS</span>
-              <span className="text-2xl font-black text-white leading-none mt-1">
-                {secretarios.length.toString().padStart(2, '0')}
-              </span>
+          <div className="flex items-center gap-6">
+            {/* Logo da Escola */}
+            {escola.logo_url && (
+              <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl p-1.5 border border-white/20 flex items-center justify-center overflow-hidden group hover:bg-white transition-all duration-300">
+                <img 
+                  src={escola.logo_url} 
+                  alt="Logo Escola" 
+                  className="max-w-full max-h-full object-contain filter drop-shadow-sm" 
+                />
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <div className="bg-white/10 border border-white/20 backdrop-blur-sm rounded-xl px-3 py-2 flex flex-col items-center justify-center min-w-[65px]">
+                <span className="text-[7px] font-black text-blue-100 uppercase tracking-widest leading-none">GESTORES</span>
+                <span className="text-lg font-black text-white leading-none mt-1">
+                  {gestores.length.toString().padStart(2, '0')}
+                </span>
+              </div>
+              <div className="bg-white/10 border border-white/20 backdrop-blur-sm rounded-xl px-3 py-2 flex flex-col items-center justify-center min-w-[65px]">
+                <span className="text-[7px] font-black text-blue-100 uppercase tracking-widest leading-none">SECRETÁRIOS</span>
+                <span className="text-lg font-black text-white leading-none mt-1">
+                  {secretarios.length.toString().padStart(2, '0')}
+                </span>
+              </div>
             </div>
           </div>
         </div>

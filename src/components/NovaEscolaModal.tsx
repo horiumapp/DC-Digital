@@ -15,6 +15,7 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
     inep: '',
     gestor: '',
     ativo: true,
+    logo_url: '',
   });
 
   useEffect(() => {
@@ -25,6 +26,7 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
         inep: escolaParaEditar.inep || '',
         gestor: escolaParaEditar.diretor || '',
         ativo: escolaParaEditar.status === 'Ativa',
+        logo_url: escolaParaEditar.logo_url || '',
       });
     } else {
       setFormData({
@@ -33,6 +35,7 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
         inep: '',
         gestor: '',
         ativo: true,
+        logo_url: '',
       });
     }
   }, [escolaParaEditar, isOpen]);
@@ -127,6 +130,20 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
               onChange={(e) => setFormData({ ...formData, gestor: e.target.value })}
               className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
               placeholder="Nome do diretor(a)"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-slate-400" />
+              URL do Logo da Escola
+            </label>
+            <input
+              type="text"
+              value={formData.logo_url}
+              onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
+              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
+              placeholder="Ex: https://link-da-imagem.png"
             />
           </div>
 
