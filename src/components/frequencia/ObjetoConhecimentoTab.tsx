@@ -28,7 +28,6 @@ export default function ObjetoConhecimentoTab({
     l.tipo === 'conteudo'
   );
 
-  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [isAddingObjeto, setIsAddingObjeto] = useState(false);
   const [objetoSalvo, setObjetoSalvo] = useState(false);
   const [objetoData, setObjetoData] = useState<{ descricao: string; observacao: string; status: string } | null>(null);
@@ -134,7 +133,6 @@ export default function ObjetoConhecimentoTab({
     setObjetoSalvo(false);
     setObjetoData(null);
     setShowObjetoTable(false);
-    setShowSuccessAlert(false);
     setObjetoObservacao('');
     setCaptchaInput('');
     generateNewCaptcha();
@@ -153,7 +151,6 @@ export default function ObjetoConhecimentoTab({
       });
 
       setObjetoData({ descricao: objetoConhecimento, observacao: objetoObservacao, status: objetoStatus });
-      setShowSuccessAlert(true);
       setObjetoSalvo(true);
       setShowObjetoTable(false);
       setIsAddingObjeto(false);
@@ -167,14 +164,6 @@ export default function ObjetoConhecimentoTab({
 
   return (
     <div className="animate-in fade-in slide-in-from-top-4 duration-300 relative">
-      {showSuccessAlert && (
-        <div className="bg-emerald-100/80 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-lg mb-6 flex items-center justify-between">
-          <span className="text-sm font-medium">Dados cadastrados com sucesso!</span>
-          <button onClick={() => setShowSuccessAlert(false)} className="text-emerald-600 hover:text-emerald-800 transition">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-      )}
       {!isAddingObjeto ? (
         <>
           <div className="flex items-end gap-4 mb-6">
