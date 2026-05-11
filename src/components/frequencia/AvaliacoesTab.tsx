@@ -34,9 +34,8 @@ export default function AvaliacoesTab() {
   const [localNotas, setLocalNotas] = useState<Record<string, string>>({});
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
-  const [successMessage, setSuccessMessage] = useState('');
-  const [secondCallRows, setSecondCallRows] = useState<Record<string, { selected: boolean, date: string, grade: string }>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [secondCallRows, setSecondCallRows] = useState<Record<string, { selected: boolean, date: string, grade: string }>>({});
 
   const PERIODOS_LABELS: Record<string, string> = {};
   APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE')).forEach(b => {
@@ -186,10 +185,8 @@ export default function AvaliacoesTab() {
       await salvarNotas(createdId, notasParaData);
     }
 
-    setSuccessMessage('Avaliação(ões) de segunda chamada salva(s) com sucesso!');
-    setTimeout(() => setSuccessMessage(''), 5000);
-    setAvaliacaoViewMode('list');
-    setIsSaving(false);
+      await salvarNotas(createdId, notasParaData);
+    }
   };
 
   const handleNotaChange = (alunoId: string, val: string) => {
@@ -212,18 +209,6 @@ export default function AvaliacoesTab() {
 
   return (
     <div className="animate-in fade-in slide-in-from-top-4 duration-300">
-      {/* Banner de Sucesso */}
-      {successMessage && (
-        <div className="mb-6 flex items-center justify-between p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-700 animate-slide-in">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
-              <Check className="w-5 h-5" />
-            </div>
-            <p className="font-medium">{successMessage}</p>
-          </div>
-          <button onClick={() => setSuccessMessage('')} className="p-1 hover:bg-emerald-100 rounded-lg transition-colors"><X className="w-5 h-5" /></button>
-        </div>
-      )}
 
       {avaliacaoViewMode === 'list' && (
         <AvaliacoesList 
