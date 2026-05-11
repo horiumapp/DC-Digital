@@ -400,7 +400,14 @@ export default function PortalAluno() {
                     <p className="text-sm text-slate-400 font-medium italic">Nenhum registro de frequência encontrado.</p>
                   </div>
                 )}
-              </div>
+            )}
+
+            {activeTab === 'boletim' && (
+              <BoletimTab 
+                alunoData={alunoData} 
+                notas={notas} 
+                frequencias={frequencias} 
+              />
             )}
           </>
         )}
