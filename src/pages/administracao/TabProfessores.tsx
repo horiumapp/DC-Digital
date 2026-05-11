@@ -66,7 +66,7 @@ export default function TabProfessores() {
   async function fetchEscolas() {
     const { data, error } = await supabase
       .from('escolas')
-      .select('id, nome')
+      .select('id, nome, logo_url')
       .order('nome');
     
     // BUG-06 FIX: tratar erro silenciado anteriormente
@@ -395,8 +395,17 @@ export default function TabProfessores() {
                   }}
                   className="group relative flex flex-col bg-white border border-slate-200 rounded-2xl p-6 text-left hover:border-blue-300 hover:shadow-xl hover:shadow-blue-600/5 transition-all duration-300 transform hover:-translate-y-1 overflow-hidden"
                 >
-                  <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                    <Building2 className="w-16 h-16 text-blue-900" />
+                  {/* Logo (Top Right) */}
+                  <div className="absolute top-4 right-4 flex flex-col items-end gap-2">
+                    {escola.logo_url ? (
+                      <div className="w-12 h-12 bg-white rounded-xl p-1 shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden">
+                        <img src={escola.logo_url} alt="Logo" className="max-w-full max-h-full object-contain" />
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 opacity-20">
+                        <Building2 className="w-8 h-8 text-[#0f2851]" />
+                      </div>
+                    )}
                   </div>
                   <div className="w-12 h-12 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center mb-4 group-hover:bg-[#0f2851] group-hover:text-white transition-colors duration-300">
                     <Building2 className="w-6 h-6" />
