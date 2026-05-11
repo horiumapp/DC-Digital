@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Plus, Edit2, Trash2, Building2, ArrowLeft, GraduationCap, Users, ChevronRight } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Building2, MapPin, User, Hash, ChevronRight, GraduationCap, Users, Clock, ArrowLeft } from 'lucide-react';
+import { sanitizeUrl } from '../../utils/securityUtils';
 import NovaTurmaModal from '../../components/NovaTurmaModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 
@@ -221,7 +222,7 @@ export default function TabTurmas() {
                 {selectedEscola.logo_url && (
                   <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-2xl p-2 border border-white/20 flex items-center justify-center overflow-hidden group hover:bg-white transition-all duration-300 shadow-2xl">
                     <img 
-                      src={selectedEscola.logo_url} 
+                      src={sanitizeUrl(selectedEscola.logo_url)} 
                       alt="Logo Escola" 
                       className="max-w-full max-h-full object-contain filter drop-shadow-md" 
                     />
@@ -289,7 +290,7 @@ export default function TabTurmas() {
                   <div className="absolute top-4 right-4 flex flex-col items-end gap-2">
                     {escola.logo_url ? (
                       <div className="w-12 h-12 bg-white rounded-xl p-1 shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden">
-                        <img src={escola.logo_url} alt="Logo" className="max-w-full max-h-full object-contain" />
+                        <img src={sanitizeUrl(escola.logo_url)} alt="Logo" className="max-w-full max-h-full object-contain" />
                       </div>
                     ) : (
                       <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 opacity-20">
