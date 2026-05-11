@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase';
 import { GraduationCap, BookOpen, CalendarCheck, BarChart3, Loader2, LogOut, User } from 'lucide-react';
 import { APP_CONFIG } from '../config/appConfig';
 import { formatMatriculaCpf } from '../utils/formatters';
+import { getBimestrePorData } from '../utils/dateUtils';
+import BoletimTab from '../components/portal/BoletimTab';
 
 interface AlunoData {
   id: string;
