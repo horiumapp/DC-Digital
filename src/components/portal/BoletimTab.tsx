@@ -82,38 +82,41 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
       <div className="bg-white border border-slate-300 p-8 shadow-sm max-w-[21cm] mx-auto print:shadow-none print:border-none print:p-0 print:m-0" id="boletim-view">
         {/* Header Documento Oficial */}
         <div className="border-b-2 border-black pb-4 mb-6">
-          <div className="flex items-start justify-between gap-6">
-            <div className="flex items-center gap-4 flex-1">
-              <div className="w-24 h-24 flex items-center justify-center">
-                <img 
-                  src={alunoData.escola_logo_url || "/semed.png"} 
-                  alt="Escola/SEMED Logo" 
-                  className="w-full h-full object-contain" 
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    const parent = e.currentTarget.parentElement;
-                    if (parent) {
-                      parent.innerHTML = '<span class="text-[8px] font-bold text-center border border-black p-2">LOGO</span>';
-                    }
-                  }} 
-                />
+          <div className="flex items-center justify-between gap-4">
+            {/* Lado Esquerdo: SEMED */}
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 flex items-center justify-center">
+                <img src="/semed.png" alt="SEMED Logo" className="w-full h-full object-contain" />
               </div>
-              {alunoData.escola_logo_url && alunoData.escola_logo_url !== '/semed.png' && (
-                <div className="w-16 h-16 flex items-center justify-center opacity-50 ml-2">
-                   <img src="/semed.png" alt="SEMED Logo" className="w-full h-full object-contain grayscale" />
-                </div>
-              )}
               <div className="space-y-0">
                 <h2 className="text-sm font-black uppercase leading-tight">SEMED</h2>
                 <h3 className="text-[10px] font-bold uppercase leading-tight text-slate-700">Secretaria Municipal de Educação</h3>
                 <h3 className="text-[10px] font-bold uppercase leading-tight text-slate-700">Lábrea - AM</h3>
               </div>
             </div>
-            <div className="text-[10px] space-y-1 text-right flex-1 border-l border-black pl-4">
-              <p><strong className="text-[9px]">ESCOLA:</strong> {alunoData.escola_nome}</p>
-              <p><strong className="text-[9px]">ENDEREÇO:</strong> {alunoData.escola_endereco}</p>
-              <p><strong className="text-[9px]">DIRETOR(A):</strong> {alunoData.escola_diretor}</p>
-              <p><strong className="text-[9px]">DATA EMISSÃO:</strong> {new Date().toLocaleDateString('pt-BR')}</p>
+
+            <div className="h-16 w-[1px] bg-black/20" />
+
+            {/* Lado Direito: Escola */}
+            <div className="flex items-center gap-4 flex-1 justify-end">
+              <div className="text-[10px] space-y-1 text-right">
+                <p><strong className="text-[9px]">ESCOLA:</strong> {alunoData.escola_nome}</p>
+                <p><strong className="text-[9px]">ENDEREÇO:</strong> {alunoData.escola_endereco}</p>
+                <p><strong className="text-[9px]">DIRETOR(A):</strong> {alunoData.escola_diretor}</p>
+                <p><strong className="text-[9px]">DATA EMISSÃO:</strong> {new Date().toLocaleDateString('pt-BR')}</p>
+              </div>
+              {alunoData.escola_logo_url && (
+                <div className="w-20 h-20 flex items-center justify-center">
+                  <img 
+                    src={alunoData.escola_logo_url} 
+                    alt="Logo Escola" 
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
