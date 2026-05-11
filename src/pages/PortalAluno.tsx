@@ -67,13 +67,13 @@ export default function PortalAluno() {
   ];
 
   useEffect(() => {
-    if (user?.email) {
+    if (user?.id) {
       fetchAlunoData();
     }
-  }, [user]);
+  }, [user?.id]);
 
   async function fetchAlunoData() {
-    setLoading(true);
+    if (!alunoData) setLoading(true);
     
     // O email do aluno é {cpf_digits}@aluno.dcdigital.local
     // Extrair os dígitos do CPF do email para buscar o aluno
