@@ -85,12 +85,11 @@ export default function PortalAluno() {
       return;
     }
     
-    // Buscar aluno diretamente pelo CPF (usando like para cobrir variações de formatação se necessário, 
-    // mas idealmente buscando os dígitos exatos)
+    // Buscar alunos. Removido filtro direto no SQL pois o CPF no banco pode conter pontos/traços
+    // que inviabilizam a comparação direta com os dígitos puros do email.
     const { data: alunos, error: alunoError } = await supabase
       .from('alunos')
       .select('*, escolas(*), turmas(*)')
-      .or(`cpf.eq.${cpfDigits},cpf.ilike.%${cpfDigits}%`)
       .order('criado_em', { ascending: false });
 
     if (alunoError || !alunos || alunos.length === 0) {
@@ -98,11 +97,11 @@ export default function PortalAluno() {
       return;
     }
 
-    // Filtrar localmente para garantir match exato dos dígitos
+    // Filtrar localmente garantindo que comparamos apenas dígitos
     const alunoEncontrado = alunos.find(a => {
-      if (!a.cpf) return false;
-      const alunoDigits = a.cpf.replace(/\D/g, '');
-      return alunoDigits === cpfDigits;
+      const cpfLimpo = a.cpf?.replace(/\D/g, '') || '';
+      const matriculaLimpa = a.matricula?.replace(/\D/g, '') || '';
+      return cpfLimpo === cpfDigits || matriculaLimpa === cpfDigits;
     });
 
     if (!alunoEncontrado) {
