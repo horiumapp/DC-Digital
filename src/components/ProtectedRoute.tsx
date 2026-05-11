@@ -20,7 +20,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, publicOnl
 
   if (publicOnly) {
     if (user) {
-      return <Navigate to="/turmas" replace />;
+      return <Navigate to={user.role === 'ALUNO' ? '/portal-aluno' : '/turmas'} replace />;
     }
     return <Outlet />;
   }
@@ -30,7 +30,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, publicOnl
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/turmas" replace />;
+    return <Navigate to={user.role === 'ALUNO' ? '/portal-aluno' : '/turmas'} replace />;
   }
 
   return <Outlet />;
