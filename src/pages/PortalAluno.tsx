@@ -55,7 +55,7 @@ export default function PortalAluno() {
     const { data: alunos, error: alunoError } = await supabase
       .from('alunos')
       .select('id, nome, cpf, escola_id, turma_id, escolas(nome), turmas(nome, turno)')
-      .order('created_at', { ascending: false });
+      .order('criado_em', { ascending: false });
 
     if (alunoError || !alunos || alunos.length === 0) {
       setLoading(false);

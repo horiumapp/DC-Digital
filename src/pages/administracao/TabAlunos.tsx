@@ -228,7 +228,7 @@ export default function TabAlunos() {
                   </td>
                   <td className="px-6 py-3.5 whitespace-nowrap">
                     <span className="text-xs font-medium text-slate-500 tabular-nums">
-                      {aluno.created_at ? new Date(aluno.created_at).toLocaleDateString('pt-BR') : '---'}
+                      {aluno.criado_em ? new Date(aluno.criado_em).toLocaleDateString('pt-BR') : '---'}
                     </span>
                   </td>
                   <td className="px-6 py-3.5 whitespace-nowrap text-center">
