@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Mail, KeyRound, Loader2, Shield, Crown } from 'lucide-react';
+import { X, User, Mail, KeyRound, Loader2, Shield, Crown, Plus } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useToast } from './common/Toast';
 
@@ -113,7 +113,7 @@ export default function NovoUsuarioEscolarModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 bg-${cargoColor}-100 text-${cargoColor}-700 rounded-xl flex items-center justify-center`}>
+            <div className={cargo === 'GESTOR' ? 'w-10 h-10 bg-amber-100 text-amber-700 rounded-xl flex items-center justify-center' : 'w-10 h-10 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center'}>
               <CargoIcon className="w-5 h-5" />
             </div>
             <div>
@@ -138,7 +138,7 @@ export default function NovoUsuarioEscolarModal({
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Info box */}
-          <div className={`p-3 rounded-lg bg-${cargoColor}-50 border border-${cargoColor}-100`}>
+          <div className={cargo === 'GESTOR' ? 'p-3 rounded-lg bg-amber-50 border border-amber-100' : 'p-3 rounded-lg bg-blue-50 border border-blue-100'}>
             <p className="text-xs text-slate-600 font-medium">
               {cargo === 'GESTOR'
                 ? '⚡ O gestor terá acesso para cadastrar professores e gerenciar esta escola.'
@@ -229,14 +229,5 @@ export default function NovoUsuarioEscolarModal({
         </form>
       </div>
     </div>
-  );
-}
-
-// Importação necessária para o botão de submit
-function Plus(props: React.SVGProps<SVGSVGElement> & { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M5 12h14" /><path d="M12 5v14" />
-    </svg>
   );
 }
