@@ -421,75 +421,80 @@ export default function TabAlunos() {
                     <div className="flex-1 h-px bg-slate-200/60" />
                   </div>
 
-                  {/* Grid de Alunos da Turma */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
-                    {turma.alunos.map((aluno: any) => (
-                      <div 
-                        key={aluno.id} 
-                        className="group bg-white border border-slate-100 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all duration-300 flex flex-col"
-                      >
-                        {/* Top: Avatar and Name */}
-                        <div className="flex items-center gap-4 mb-6">
-                          <div className="w-14 h-14 bg-[#eef2ff] text-[#0f2851] rounded-full flex items-center justify-center font-bold text-xl border-4 border-white shadow-sm ring-1 ring-blue-50">
-                            {aluno.nome.charAt(0)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-black text-slate-800 text-base uppercase tracking-tight truncate leading-tight">{aluno.nome}</h4>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                              {aluno.status === 'Ativo' ? 'MATRÍCULA ATIVA' : 'INATIVO'}
-                            </p>
-                          </div>
-                          <div className={`w-2.5 h-2.5 rounded-full ${aluno.status === 'Ativo' ? 'bg-emerald-500' : 'bg-slate-300'}`} title={aluno.status} />
-                        </div>
-
-                        {/* Info Grid */}
-                        <div className="grid grid-cols-1 gap-3 mb-6">
-                          <div className="flex items-center gap-2 text-slate-500">
-                            <User className="w-3.5 h-3.5 text-slate-400" />
-                            <span className="text-xs font-semibold truncate">Resp: {aluno.nome_responsavel || '---'}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-slate-500">
-                            <Phone className="w-3.5 h-3.5 text-slate-400" />
-                            <span className="text-xs font-medium tabular-nums">{aluno.telefone || '---'}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-slate-500">
-                            <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                            <span className="text-xs font-medium truncate">{aluno.endereco || '---'}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-slate-500">
-                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                            <span className="text-xs font-medium tabular-nums">Nasc: {aluno.data_nascimento ? new Date(aluno.data_nascimento).toLocaleDateString('pt-BR') : '---'}</span>
-                          </div>
-                        </div>
-
-                        {/* Actions Row */}
-                        <div className="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between">
-                          <div className="flex flex-col">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Matrícula (CPF)</span>
-                            <span className="text-[11px] font-black text-[#0f2851] tabular-nums">
-                              {formatMatricula(aluno.id, aluno.cpf)}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <button 
-                              onClick={() => handleEditAluno(aluno)}
-                              className="p-2 text-slate-400 hover:text-blue-600 bg-slate-50 hover:bg-blue-50 rounded-lg transition-all"
-                              title="Editar"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button 
-                              onClick={() => setAlunoParaExcluir(aluno)}
-                              className="p-2 text-slate-400 hover:text-red-500 bg-slate-50 hover:bg-red-50 rounded-lg transition-all"
-                              title="Excluir"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                  {/* Tabela de Alunos da Turma */}
+                  <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-100 bg-slate-50/50">
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome do Aluno</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Responsável</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Telefone</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Matrícula (CPF)</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {turma.alunos.map((aluno: any) => (
+                            <tr key={aluno.id} className="hover:bg-slate-50/50 transition-colors group">
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 bg-[#eef2ff] text-[#0f2851] rounded-full flex items-center justify-center font-bold text-xs border border-blue-100">
+                                    {aluno.nome.charAt(0)}
+                                  </div>
+                                  <span className="font-bold text-slate-700 text-sm truncate max-w-[200px]" title={aluno.nome}>
+                                    {aluno.nome}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="text-xs text-slate-500 font-medium truncate max-w-[150px] block" title={aluno.nome_responsavel}>
+                                  {aluno.nome_responsavel || '---'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="text-xs text-slate-500 font-medium tabular-nums">
+                                  {aluno.telefone || '---'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="text-xs text-[#0f2851] font-bold tabular-nums">
+                                  {formatMatricula(aluno.id, aluno.cpf)}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-center">
+                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${
+                                  aluno.status === 'Ativo' 
+                                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
+                                    : 'bg-slate-50 text-slate-400 border border-slate-100'
+                                }`}>
+                                  {aluno.status}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                                  <button 
+                                    onClick={() => handleEditAluno(aluno)}
+                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                    title="Editar"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </button>
+                                  <button 
+                                    onClick={() => setAlunoParaExcluir(aluno)}
+                                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Excluir"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               ))
