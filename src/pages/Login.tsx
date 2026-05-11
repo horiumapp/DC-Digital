@@ -48,8 +48,8 @@ export default function Login() {
 
       if (signInError) throw signInError;
       
-      // O redirecionamento será feito baseado no role pelo App.tsx
-      navigate('/turmas');
+      // Redirecionar baseado no tipo de login
+      navigate(loginMode === 'aluno' ? '/portal-aluno' : '/turmas');
 
     } catch (err: any) {
       if (loginMode === 'aluno' && err.message?.includes('Invalid login')) {
