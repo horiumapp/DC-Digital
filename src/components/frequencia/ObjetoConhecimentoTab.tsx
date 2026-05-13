@@ -49,7 +49,7 @@ export default function ObjetoConhecimentoTab({
 
         const { data, error } = await supabase
           .from('curriculo_unidades')
-          .select('*, objetos:curriculo_objetos(*)')
+          .select('*, objetos:curriculo_objetos(*), habilidades:curriculo_habilidades(*)')
           .eq('modalidade', modalidade)
           .eq('ano', ano)
           .eq('bimestre', bimestre)
@@ -83,6 +83,11 @@ export default function ObjetoConhecimentoTab({
   const objetosDisponiveis = React.useMemo(() => {
     const unidade = unidadesDisponiveis.find(u => u.nome === objetoUnidade);
     return unidade ? unidade.objetos.map((o: any) => o.descricao) : [];
+  }, [objetoUnidade, unidadesDisponiveis]);
+
+  const habilidadesDisponiveis = React.useMemo(() => {
+    const unidade = unidadesDisponiveis.find(u => u.nome === objetoUnidade);
+    return unidade ? unidade.habilidades.map((h: any) => h.codigo) : [];
   }, [objetoUnidade, unidadesDisponiveis]);
 
   React.useEffect(() => {
@@ -154,7 +159,7 @@ export default function ObjetoConhecimentoTab({
         data: selectedDate,
         tempo: tempoAula,
         objetos: [objetoConhecimento],
-        habilidades: [objetoUnidade],
+        habilidades: objetoUnidade === 'TEXTO LIVRE' ? [] : habilidadesDisponiveis,
         descricao: objetoObservacao
       });
 
@@ -307,6 +312,18 @@ export default function ObjetoConhecimentoTab({
                 </select>
               )}
             </div>
+            {habilidadesDisponiveis.length > 0 && objetoUnidade !== 'TEXTO LIVRE' && (
+              <div className="col-span-12 mt-2">
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Habilidades Vinculadas</label>
+                <div className="flex flex-wrap gap-2">
+                  {habilidadesDisponiveis.map(hab => (
+                    <span key={hab} className="px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-[10px] font-black border border-blue-100">
+                      {hab}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="col-span-2">
               <label className="block text-sm text-slate-600 mb-1">Tempo de aula</label>
               <select
