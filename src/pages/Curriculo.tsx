@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, ChevronRight, BookOpen, Layers, Filter, Check } from 'lucide-react';
+import { Plus, Trash2, Save, ChevronRight, BookOpen, Layers, Filter, Check, RotateCcw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/common/Toast';
 
@@ -11,6 +11,7 @@ interface Unidade {
   bimestre: string;
   nome: string;
   objetos?: Objeto[];
+  habilidades?: { id: string; codigo: string }[];
 }
 
 interface Objeto {
@@ -135,10 +136,10 @@ export default function Curriculo() {
       setNewUnidade({ ...newUnidade, nome: "" });
       setNewObjetos([""]);
       setNewHabilidades([""]);
-      fetchUnidades();
-    } catch (err) {
-      console.error(err);
-      addToast('Erro ao salvar currículo', 'error');
+      await fetchUnidades();
+    } catch (err: any) {
+      console.error('Erro detalhado:', err);
+      addToast(`Erro ao salvar: ${err.message || 'Erro desconhecido'}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -355,6 +356,21 @@ export default function Curriculo() {
               <option value="">Disciplina</option>
               {DISCIPLINAS.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
+            <select 
+              value={filterBimestre} 
+              onChange={e => setFilterBimestre(e.target.value)}
+              className="bg-slate-50 border-none rounded-lg px-3 py-2 text-xs font-bold text-slate-600 focus:ring-0"
+            >
+              <option value="">Bimestre</option>
+              {BIMESTRES.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+            <button 
+              onClick={() => fetchUnidades()}
+              className="ml-auto p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              title="Atualizar lista"
+            >
+              <Check className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
           </div>
 
           <div className="space-y-4">
