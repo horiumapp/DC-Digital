@@ -155,10 +155,34 @@ export default function Turmas() {
 
     rawFiltered.forEach(t => {
       disciplinasList.forEach(disc => {
+        // Lógica para identificar Modalidade e Ano para o Currículo
+        const nomeUpper = t.nome.toUpperCase();
+        let ensinoCalculado = "Fundamental Anos Iniciais (1º ao 5º ANO)";
+        let faseCalculada = t.nome;
+
+        // Extrair o Ano (ex: "1º Ano" de "1º Ano A")
+        const matchAno = t.nome.match(/\dº Ano/i);
+        if (matchAno) {
+          faseCalculada = matchAno[0];
+          const numeroAno = parseInt(matchAno[0]);
+          if (numeroAno >= 6) {
+            ensinoCalculado = "Fundamental Anos Finais (6º ao 9º ANO)";
+          }
+        } else if (nomeUpper.includes("EJA")) {
+          ensinoCalculado = "EJA (Educação de Jovens e Adultos)";
+          faseCalculada = t.nome;
+        } else if (nomeUpper.includes("MÉDIO") || nomeUpper.includes("SÉRIE")) {
+          ensinoCalculado = "Médio";
+          faseCalculada = t.nome;
+        } else if (nomeUpper.includes("INFANTIL") || nomeUpper.includes("PRÉ") || nomeUpper.includes("MATERNAL")) {
+          ensinoCalculado = "Educação Infantil";
+          faseCalculada = t.nome;
+        }
+
         exploded.push({
-          id: `${t.id}||${disc}`, // Separador '||' evita colisão com disciplinas que contêm '_'
-          ensino: 'Ensino Fundamental', 
-          fase: t.nome,
+          id: `${t.id}||${disc}`,
+          ensino: ensinoCalculado, 
+          fase: faseCalculada,
           componente: disc,
           professor: user?.name || '',
           escola: t.escolas?.nome || alocacaoAtiva?.escolas?.nome || 'Escola',
