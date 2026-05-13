@@ -3,7 +3,8 @@ import { Check, Pencil, Trash2, X } from 'lucide-react';
 import Captcha from '../common/Captcha';
 import { useTurma } from '../../contexts/TurmaContext';
 import { useCaptcha } from '../../hooks/useCaptcha';
-import { REFERENCIAL_CURRICULAR, UnidadeCurricular } from '../../data/curriculum';
+import { supabase } from '../../lib/supabase';
+import { getBimestrePorData } from '../../utils/dateUtils';
 
 interface ObjetoConhecimentoTabProps {
   turmaAtiva: any;
@@ -32,33 +33,40 @@ export default function ObjetoConhecimentoTab({
   const [objetoSalvo, setObjetoSalvo] = useState(false);
   const [objetoData, setObjetoData] = useState<{ descricao: string; observacao: string; status: string } | null>(null);
   
-  // Lógica de Currículo Dinâmico
-  const unidadesDisponiveis = React.useMemo(() => {
-    if (!turmaAtiva) return [];
-    const segmento = turmaAtiva.ensino || "Ensino Fundamental";
-    const faseStr = turmaAtiva.fase || "";
-    const anoMatch = faseStr.match(/\d+/);
-    const ano = anoMatch ? anoMatch[0] : "1";
-    const disciplina = (turmaAtiva.componente || "").toUpperCase();
+  // Lógica de Currículo Dinâmico (Busca no Banco)
+  const [unidadesBD, setUnidadesBD] = useState<any[]>([]);
+  const [loadingCurriculo, setLoadingCurriculo] = useState(false);
 
-    const unidadesAno = REFERENCIAL_CURRICULAR[segmento]?.[ano] || [];
-    
-    // Tenta sugerir a unidade correta com base na disciplina
-    if (disciplina.includes("PORTUGUES") || disciplina.includes("LINGUA") || disciplina.includes("ALFABETIZAÇÃO")) {
-      return unidadesAno.filter(u => u.nome.includes("Unidade Didática 1"));
-    }
-    if (disciplina.includes("MATEMATICA")) {
-      return unidadesAno.filter(u => u.nome.includes("Unidade Didática 2"));
-    }
-    if (disciplina.includes("CIENCIA") || disciplina.includes("BIOLOGIA") || disciplina.includes("FISICA") || disciplina.includes("QUIMICA")) {
-      return unidadesAno.filter(u => u.nome.includes("Unidade Didática 3"));
-    }
-    if (disciplina.includes("HISTORIA") || disciplina.includes("GEOGRAFIA") || disciplina.includes("FILOSOFIA") || disciplina.includes("SOCIOLOGIA") || disciplina.includes("CONVIVENCIA")) {
-      return unidadesAno.filter(u => u.nome.includes("Unidade Didática 4"));
-    }
+  useEffect(() => {
+    async function loadCurriculo() {
+      if (!turmaAtiva) return;
+      setLoadingCurriculo(true);
+      try {
+        const modalidade = turmaAtiva.ensino || "";
+        const ano = turmaAtiva.fase || "";
+        const disciplina = turmaAtiva.componente || "";
+        const bimestre = getBimestrePorData(selectedDate) || "";
 
-    return unidadesAno;
-  }, [turmaAtiva]);
+        const { data, error } = await supabase
+          .from('curriculo_unidades')
+          .select('*, objetos:curriculo_objetos(*)')
+          .eq('modalidade', modalidade)
+          .eq('ano', ano)
+          .eq('bimestre', bimestre)
+          .ilike('disciplina', `%${disciplina}%`);
+
+        if (error) throw error;
+        setUnidadesBD(data || []);
+      } catch (err) {
+        console.error('Erro ao buscar currículo:', err);
+      } finally {
+        setLoadingCurriculo(false);
+      }
+    }
+    loadCurriculo();
+  }, [turmaAtiva, selectedDate]);
+
+  const unidadesDisponiveis = unidadesBD;
 
   const [objetoUnidade, setObjetoUnidade] = useState('');
   const [objetoConhecimento, setObjetoConhecimento] = useState('');
@@ -74,7 +82,7 @@ export default function ObjetoConhecimentoTab({
 
   const objetosDisponiveis = React.useMemo(() => {
     const unidade = unidadesDisponiveis.find(u => u.nome === objetoUnidade);
-    return unidade ? unidade.objetos : [];
+    return unidade ? unidade.objetos.map((o: any) => o.descricao) : [];
   }, [objetoUnidade, unidadesDisponiveis]);
 
   React.useEffect(() => {
