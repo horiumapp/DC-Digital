@@ -29,6 +29,7 @@ const Administracao = React.lazy(() => import('./pages/Administracao'));
 const Aparata = React.lazy(() => import('./pages/Aparata'));
 const AparataDetalhes = React.lazy(() => import('./pages/AparataDetalhes'));
 const PortalAluno = React.lazy(() => import('./pages/PortalAluno'));
+const Curriculo = React.lazy(() => import('./pages/Curriculo'));
 
 export default function App() {
   return (
@@ -72,6 +73,7 @@ export default function App() {
                     {/* Rotas Restritas (Apenas Administrativo) */}
                     <Route element={<ProtectedRoute allowedRoles={ADMIN_ROLES} />}>
                       <Route path="/administracao" element={<Administracao />} />
+                      <Route path="/curriculo" element={<Curriculo />} />
                     </Route>
                   </Route>
                 </Route>
