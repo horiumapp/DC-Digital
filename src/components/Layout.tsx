@@ -19,14 +19,19 @@ export default function Layout() {
   const isDiario = location.pathname === '/diario';
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [isRelatoriosOpen, setIsRelatoriosOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const relatoriosRef = useRef<HTMLDivElement>(null);
+  const adminRef = useRef<HTMLDivElement>(null);
 
   // Fechar dropdown ao clicar fora
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (relatoriosRef.current && !relatoriosRef.current.contains(e.target as Node)) {
         setIsRelatoriosOpen(false);
+      }
+      if (adminRef.current && !adminRef.current.contains(e.target as Node)) {
+        setIsAdminOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -59,12 +64,35 @@ export default function Layout() {
         {/* Navegação - Centro */}
         <nav className="hidden lg:flex items-center justify-center space-x-3 flex-[2]">
           {hasAdminAccess && (
-            <Link
-              to="/administracao"
-              className="px-6 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95"
-            >
-              Administração
-            </Link>
+            <div className="relative" ref={adminRef}>
+              <button
+                onClick={() => setIsAdminOpen(prev => !prev)}
+                className="px-6 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold flex items-center space-x-2 hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95"
+              >
+                <span>Administração</span>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isAdminOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isAdminOpen && (
+                <div className="absolute left-1/2 -translate-x-1/2 mt-3 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl z-50 border border-slate-100 dark:border-slate-700 p-1 animate-in">
+                  <div className="py-2">
+                    <Link
+                      to="/administracao"
+                      onClick={() => setIsAdminOpen(false)}
+                      className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors rounded-xl"
+                    >
+                      Gestão Escolar
+                    </Link>
+                    <Link
+                      to="/curriculo"
+                      onClick={() => setIsAdminOpen(false)}
+                      className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors rounded-xl"
+                    >
+                      Currículo (BNCC)
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
           <Link
             to="/estatisticas"
