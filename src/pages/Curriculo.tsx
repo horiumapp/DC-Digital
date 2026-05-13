@@ -52,6 +52,7 @@ export default function Curriculo() {
   });
   const [newObjetos, setNewObjetos] = useState<string[]>([""]);
   const [newHabilidades, setNewHabilidades] = useState<string[]>([""]);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUnidades();
@@ -97,42 +98,91 @@ export default function Curriculo() {
 
     setLoading(true);
     try {
-      // 1. Inserir Unidade
-      const { data: unitData, error: unitError } = await supabase
-        .from('curriculo_unidades')
-        .insert([newUnidade])
-        .select()
-        .single();
+      if (editingId) {
+        // --- MODO EDIÇÃO ---
+        
+        // 1. Atualizar Unidade
+        const { error: unitError } = await supabase
+          .from('curriculo_unidades')
+          .update(newUnidade)
+          .eq('id', editingId);
 
-      if (unitError) throw unitError;
+        if (unitError) throw unitError;
 
-      // 2. Inserir Objetos
-      const objectsToInsert = validObjetos.map(desc => ({
-        unidade_id: unitData.id,
-        descricao: desc
-      }));
-
-      const { error: objError } = await supabase
-        .from('curriculo_objetos')
-        .insert(objectsToInsert);
-
-      if (objError) throw objError;
-
-      // 3. Inserir Habilidades
-      if (validHabilidades.length > 0) {
-        const skillsToInsert = validHabilidades.map(code => ({
-          unidade_id: unitData.id,
-          codigo: code
+        // 2. Atualizar Objetos (Deletar e Reinserir para simplificar)
+        await supabase.from('curriculo_objetos').delete().eq('unidade_id', editingId);
+        
+        const objectsToInsert = validObjetos.map(desc => ({
+          unidade_id: editingId,
+          descricao: desc
         }));
 
-        const { error: skillError } = await supabase
-          .from('curriculo_habilidades')
-          .insert(skillsToInsert);
+        const { error: objError } = await supabase
+          .from('curriculo_objetos')
+          .insert(objectsToInsert);
 
-        if (skillError) throw skillError;
+        if (objError) throw objError;
+
+        // 3. Atualizar Habilidades (Deletar e Reinserir)
+        await supabase.from('curriculo_habilidades').delete().eq('unidade_id', editingId);
+        
+        if (validHabilidades.length > 0) {
+          const skillsToInsert = validHabilidades.map(code => ({
+            unidade_id: editingId,
+            codigo: code
+          }));
+
+          const { error: skillError } = await supabase
+            .from('curriculo_habilidades')
+            .insert(skillsToInsert);
+
+          if (skillError) throw skillError;
+        }
+
+        showSuccess('Currículo atualizado com sucesso!');
+      } else {
+        // --- MODO NOVO CADASTRO ---
+        
+        // 1. Inserir Unidade
+        const { data: unitData, error: unitError } = await supabase
+          .from('curriculo_unidades')
+          .insert([newUnidade])
+          .select()
+          .single();
+
+        if (unitError) throw unitError;
+
+        // 2. Inserir Objetos
+        const objectsToInsert = validObjetos.map(desc => ({
+          unidade_id: unitData.id,
+          descricao: desc
+        }));
+
+        const { error: objError } = await supabase
+          .from('curriculo_objetos')
+          .insert(objectsToInsert);
+
+        if (objError) throw objError;
+
+        // 3. Inserir Habilidades
+        if (validHabilidades.length > 0) {
+          const skillsToInsert = validHabilidades.map(code => ({
+            unidade_id: unitData.id,
+            codigo: code
+          }));
+
+          const { error: skillError } = await supabase
+            .from('curriculo_habilidades')
+            .insert(skillsToInsert);
+
+          if (skillError) throw skillError;
+        }
+
+        showSuccess('Currículo cadastrado com sucesso!');
       }
 
-      showSuccess('Currículo cadastrado com sucesso!');
+      // Reset Form
+      setEditingId(null);
       setNewUnidade({ ...newUnidade, nome: "" });
       setNewObjetos([""]);
       setNewHabilidades([""]);
@@ -143,6 +193,29 @@ export default function Curriculo() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleEdit(u: Unidade) {
+    setEditingId(u.id);
+    setNewUnidade({
+      modalidade: u.modalidade,
+      ano: u.ano,
+      disciplina: u.disciplina,
+      bimestre: u.bimestre,
+      nome: u.nome
+    });
+    setNewObjetos(u.objetos?.map(o => o.descricao) || [""]);
+    setNewHabilidades(u.habilidades?.map(h => h.codigo) || [""]);
+    
+    // Scroll para o topo do formulário
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setNewUnidade({ ...newUnidade, nome: "" });
+    setNewObjetos([""]);
+    setNewHabilidades([""]);
   }
 
   async function handleDelete(id: string) {
