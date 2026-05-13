@@ -369,7 +369,7 @@ export default function Curriculo() {
               className="ml-auto p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
               title="Atualizar lista"
             >
-              <Check className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RotateCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
 
