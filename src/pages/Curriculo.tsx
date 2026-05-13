@@ -32,7 +32,7 @@ const BIMESTRES = ["1º Bimestre", "2º Bimestre", "3º Bimestre", "4º Bimestre
 const DISCIPLINAS = ["Português", "Matemática", "Ciências", "História", "Geografia", "Artes", "Educação Física", "Inglês", "Ensino Religioso"];
 
 export default function Curriculo() {
-  const { addToast } = useToast();
+  const { showSuccess, showError, showWarning } = useToast();
   const [loading, setLoading] = useState(false);
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   
@@ -75,7 +75,7 @@ export default function Curriculo() {
       setUnidades(data || []);
     } catch (err) {
       console.error(err);
-      addToast('Erro ao carregar currículo', 'error');
+      showError('Erro ao carregar currículo');
     } finally {
       setLoading(false);
     }
@@ -83,7 +83,7 @@ export default function Curriculo() {
 
   async function handleSave() {
     if (!newUnidade.nome.trim()) {
-      addToast('Informe o nome da Unidade Didática', 'warning');
+      showWarning('Informe o nome da Unidade Didática');
       return;
     }
 
@@ -91,7 +91,7 @@ export default function Curriculo() {
     const validHabilidades = newHabilidades.filter(h => h.trim() !== "");
     
     if (validObjetos.length === 0) {
-      addToast('Adicione pelo menos um Objeto de Conhecimento', 'warning');
+      showWarning('Adicione pelo menos um Objeto de Conhecimento');
       return;
     }
 
@@ -132,14 +132,14 @@ export default function Curriculo() {
         if (skillError) throw skillError;
       }
 
-      addToast('Currículo cadastrado com sucesso!', 'success');
+      showSuccess('Currículo cadastrado com sucesso!');
       setNewUnidade({ ...newUnidade, nome: "" });
       setNewObjetos([""]);
       setNewHabilidades([""]);
       await fetchUnidades();
     } catch (err: any) {
       console.error('Erro detalhado:', err);
-      addToast(`Erro ao salvar: ${err.message || 'Erro desconhecido'}`, 'error');
+      showError(`Erro ao salvar: ${err.message || 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
     }
@@ -155,11 +155,11 @@ export default function Curriculo() {
         .eq('id', id);
 
       if (error) throw error;
-      addToast('Removido com sucesso', 'success');
+      showSuccess('Removido com sucesso');
       fetchUnidades();
     } catch (err) {
       console.error(err);
-      addToast('Erro ao remover', 'error');
+      showError('Erro ao remover');
     }
   }
 
