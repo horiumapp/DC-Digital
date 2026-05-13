@@ -315,18 +315,6 @@ export default function ObjetoConhecimentoTab({
                 </select>
               )}
             </div>
-            {habilidadesDisponiveis.length > 0 && objetoUnidade !== 'TEXTO LIVRE' && (
-              <div className="col-span-12 mt-2">
-                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Habilidades Vinculadas</label>
-                <div className="flex flex-wrap gap-2">
-                  {habilidadesDisponiveis.map(hab => (
-                    <span key={hab} className="px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-[10px] font-black border border-blue-100">
-                      {hab}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
             <div className="col-span-2">
               <label className="block text-sm text-slate-600 mb-1">Tempo de aula</label>
               <select
@@ -351,6 +339,19 @@ export default function ObjetoConhecimentoTab({
                 <option>Em andamento</option>
               </select>
             </div>
+
+            {habilidadesDisponiveis.length > 0 && objetoUnidade !== 'TEXTO LIVRE' && (
+              <div className="col-span-12 mt-2">
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Habilidades Vinculadas</label>
+                <div className="flex flex-wrap gap-2">
+                  {habilidadesDisponiveis.map(hab => (
+                    <span key={hab} className="px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-[10px] font-black border border-blue-100">
+                      {hab}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
