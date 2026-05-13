@@ -44,6 +44,7 @@ export default function Curriculo() {
     nome: ""
   });
   const [newObjetos, setNewObjetos] = useState<string[]>([""]);
+  const [newHabilidades, setNewHabilidades] = useState<string[]>([""]);
 
   useEffect(() => {
     fetchUnidades();
@@ -54,7 +55,7 @@ export default function Curriculo() {
     try {
       let query = supabase
         .from('curriculo_unidades')
-        .select('*, objetos:curriculo_objetos(*)');
+        .select('*, objetos:curriculo_objetos(*), habilidades:curriculo_habilidades(*)');
 
       if (filterModalidade) query = query.eq('modalidade', filterModalidade);
       if (filterAno) query = query.eq('ano', filterAno);
@@ -80,6 +81,8 @@ export default function Curriculo() {
     }
 
     const validObjetos = newObjetos.filter(o => o.trim() !== "");
+    const validHabilidades = newHabilidades.filter(h => h.trim() !== "");
+    
     if (validObjetos.length === 0) {
       addToast('Adicione pelo menos um Objeto de Conhecimento', 'warning');
       return;
@@ -108,9 +111,24 @@ export default function Curriculo() {
 
       if (objError) throw objError;
 
+      // 3. Inserir Habilidades
+      if (validHabilidades.length > 0) {
+        const skillsToInsert = validHabilidades.map(code => ({
+          unidade_id: unitData.id,
+          codigo: code
+        }));
+
+        const { error: skillError } = await supabase
+          .from('curriculo_habilidades')
+          .insert(skillsToInsert);
+
+        if (skillError) throw skillError;
+      }
+
       addToast('Currículo cadastrado com sucesso!', 'success');
       setNewUnidade({ ...newUnidade, nome: "" });
       setNewObjetos([""]);
+      setNewHabilidades([""]);
       fetchUnidades();
     } catch (err) {
       console.error(err);
@@ -224,7 +242,7 @@ export default function Curriculo() {
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>
-                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-2 max-h-[150px] overflow-y-auto pr-2 custom-scrollbar mb-4">
                   {newObjetos.map((obj, idx) => (
                     <div key={idx} className="flex gap-2">
                       <input 
@@ -241,6 +259,43 @@ export default function Curriculo() {
                       {newObjetos.length > 1 && (
                         <button 
                           onClick={() => setNewObjetos(newObjetos.filter((_, i) => i !== idx))}
+                          className="text-red-400 hover:text-red-600 p-2"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2 ml-1">
+                  <label className="block text-xs font-bold text-slate-400 uppercase">Habilidades BNCC</label>
+                  <button 
+                    onClick={() => setNewHabilidades([...newHabilidades, ""])}
+                    className="text-blue-600 hover:text-blue-700 p-1 rounded-lg hover:bg-blue-50 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="space-y-2 max-h-[150px] overflow-y-auto pr-2 custom-scrollbar">
+                  {newHabilidades.map((hab, idx) => (
+                    <div key={idx} className="flex gap-2">
+                      <input 
+                        type="text"
+                        value={hab}
+                        onChange={e => {
+                          const updated = [...newHabilidades];
+                          updated[idx] = e.target.value;
+                          setNewHabilidades(updated);
+                        }}
+                        placeholder="Ex: EF15LP01"
+                        className="flex-1 bg-slate-50 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+                      />
+                      {newHabilidades.length > 1 && (
+                        <button 
+                          onClick={() => setNewHabilidades(newHabilidades.filter((_, i) => i !== idx))}
                           className="text-red-400 hover:text-red-600 p-2"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -322,15 +377,33 @@ export default function Curriculo() {
                         <h3 className="text-xl font-bold text-[#0f2851] group-hover:text-blue-600 transition-colors">{unidade.nome}</h3>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 mt-4">
-                        {unidade.objetos?.map(obj => (
-                          <div key={obj.id} className="flex items-start gap-3 py-1">
-                            <div className="mt-1.5 p-0.5 bg-emerald-500 rounded-full">
-                              <Check className="w-2.5 h-2.5 text-white" />
-                            </div>
-                            <span className="text-sm text-slate-600 leading-relaxed">{obj.descricao}</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mt-4 pt-4 border-t border-slate-50">
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Objetos de Conhecimento</label>
+                          <div className="space-y-1.5">
+                            {unidade.objetos?.map(obj => (
+                              <div key={obj.id} className="flex items-start gap-3">
+                                <div className="mt-1.5 p-0.5 bg-emerald-500 rounded-full">
+                                  <Check className="w-2.5 h-2.5 text-white" />
+                                </div>
+                                <span className="text-sm text-slate-600 leading-relaxed">{obj.descricao}</span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        </div>
+
+                        {unidade.habilidades && unidade.habilidades.length > 0 && (
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Habilidades BNCC</label>
+                            <div className="flex flex-wrap gap-2">
+                              {unidade.habilidades.map(hab => (
+                                <span key={hab.id} className="px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-bold border border-blue-100">
+                                  {hab.codigo}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
