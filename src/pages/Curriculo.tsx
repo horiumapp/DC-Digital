@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, ChevronRight, BookOpen, Layers, Filter, Check, RotateCcw } from 'lucide-react';
+import { Plus, Trash2, Save, ChevronRight, BookOpen, Layers, Filter, Check, RotateCcw, Pencil } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/common/Toast';
 
@@ -251,9 +251,9 @@ export default function Curriculo() {
           <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-6 space-y-6 sticky top-24">
             <div className="flex items-center gap-3 text-[#0f2851]">
               <div className="p-2 bg-blue-50 rounded-xl">
-                <Plus className="w-5 h-5" />
+                {editingId ? <Pencil className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
               </div>
-              <h2 className="font-bold text-lg">Novo Cadastro</h2>
+              <h2 className="font-bold text-lg">{editingId ? 'Editar Registro' : 'Novo Cadastro'}</h2>
             </div>
 
             <div className="space-y-4">
@@ -389,11 +389,20 @@ export default function Curriculo() {
               <button
                 onClick={handleSave}
                 disabled={loading}
-                className="w-full bg-[#0f2851] text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-[#1a3a6d] transition-all shadow-lg shadow-blue-900/20 active:scale-[0.98] disabled:opacity-50"
+                className={`w-full ${editingId ? 'bg-emerald-600' : 'bg-[#0f2851]'} text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-blue-900/20 active:scale-[0.98] disabled:opacity-50`}
               >
                 <Save className="w-5 h-5" />
-                Salvar Currículo
+                {editingId ? 'Atualizar Currículo' : 'Salvar Currículo'}
               </button>
+
+              {editingId && (
+                <button
+                  onClick={cancelEdit}
+                  className="w-full bg-slate-100 text-slate-600 py-3 rounded-2xl font-bold hover:bg-slate-200 transition-all"
+                >
+                  Cancelar Edição
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -502,12 +511,22 @@ export default function Curriculo() {
                       </div>
                     </div>
 
-                    <button 
-                      onClick={() => handleDelete(unidade.id)}
-                      className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                    <div className="flex flex-col gap-2">
+                      <button 
+                        onClick={() => handleEdit(unidade)}
+                        className="p-2 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
+                        title="Editar"
+                      >
+                        <Pencil className="w-5 h-5" />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(unidade.id)}
+                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                        title="Excluir"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
