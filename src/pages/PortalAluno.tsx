@@ -103,7 +103,17 @@ export default function PortalAluno() {
       return;
     }
 
-    const alunoEncontrado = alunos[0];
+    // Validação secundária no cliente: confirmar que o CPF retornado pertence ao usuário logado
+    const alunoEncontrado = alunos.find(a => {
+      const cpfLimpo = a.cpf?.replace(/\D/g, '') || '';
+      return cpfLimpo === cpfDigits;
+    });
+
+    if (!alunoEncontrado) {
+      setLoading(false);
+      return;
+    }
+
     const escolaData = alunoEncontrado.escolas as any;
     const turmaData = alunoEncontrado.turmas as any;
 
