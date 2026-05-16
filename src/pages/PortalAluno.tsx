@@ -85,12 +85,18 @@ export default function PortalAluno() {
       return;
     }
     
-    // Buscar aluno filtrando pelo CPF ou matrícula purificados de caracteres especiais
+    // CORREÇÃO LGPD: Filtrar no servidor usando correspondência exata.
+    // Tentamos o CPF formatado (123.456.789-00) e o CPF só com dígitos.
+    // O limite .limit(5) garante que nunca retornamos dados de toda a tabela.
+    const cpfFormatado = cpfDigits.length === 11
+      ? `${cpfDigits.substring(0,3)}.${cpfDigits.substring(3,6)}.${cpfDigits.substring(6,9)}-${cpfDigits.substring(9,11)}`
+      : cpfDigits;
+
     const { data: alunos, error: alunoError } = await supabase
       .from('alunos')
       .select('*, escolas(*), turmas(*)')
-      .or(`cpf.eq.${cpfDigits},matricula.eq.${cpfDigits},cpf.ilike.%${cpfDigits}%,matricula.ilike.%${cpfDigits}%`)
-      .limit(1);
+      .or(`cpf.eq.${cpfFormatado},cpf.eq.${cpfDigits}`)
+      .limit(5);
 
     if (alunoError || !alunos || alunos.length === 0) {
       setLoading(false);
