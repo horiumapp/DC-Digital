@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Loader2, GraduationCap, Briefcase } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Background from '../components/Background';
@@ -19,8 +19,33 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [loginMode, setLoginMode] = useState<'servidor' | 'aluno'>('servidor');
 
+  // Rate limiting client-side: bloquear após 5 tentativas falhas em 60 segundos
+  const failedAttempts = useRef(0);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
+  const lockoutTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startLockout = useCallback(() => {
+    const LOCKOUT_DURATION = 60;
+    setLockoutSeconds(LOCKOUT_DURATION);
+    lockoutTimer.current = setInterval(() => {
+      setLockoutSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(lockoutTimer.current!);
+          lockoutTimer.current = null;
+          failedAttempts.current = 0;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
   const handleRealLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // Bloquear se em lockout
+    if (lockoutSeconds > 0) return;
+
     setError(null);
     setIsLoading(true);
 
@@ -51,11 +76,16 @@ export default function Login() {
       // Redirecionar baseado no tipo de login
       navigate(loginMode === 'aluno' ? '/portal-aluno' : '/turmas');
 
-    } catch (err: any) {
-      if (loginMode === 'aluno' && err.message?.includes('Invalid login')) {
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      failedAttempts.current += 1;
+      if (failedAttempts.current >= 5 && !lockoutTimer.current) {
+        startLockout();
+        setError('Muitas tentativas falhas. Aguarde 60 segundos antes de tentar novamente.');
+      } else if (loginMode === 'aluno' && errMsg.includes('Invalid login')) {
         setError('Matrícula ou senha incorreta. Verifique seus dados.');
       } else {
-        setError(translateSupabaseError(err.message));
+        setError(translateSupabaseError(errMsg));
       }
     } finally {
       setIsLoading(false);
@@ -171,11 +201,13 @@ export default function Login() {
             <div className="pt-2">
               <button 
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || lockoutSeconds > 0}
                 className="w-full flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-4 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all active:scale-95"
               >
                 {isLoading ? (
                   <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Entrando...</>
+                ) : lockoutSeconds > 0 ? (
+                  `Aguarde ${lockoutSeconds}s...`
                 ) : (
                   'Entrar'
                 )}
