@@ -85,30 +85,19 @@ export default function PortalAluno() {
       return;
     }
     
-    // Buscar alunos. Removido filtro direto no SQL pois o CPF no banco pode conter pontos/traços
-    // que inviabilizam a comparação direta com os dígitos puros do email.
+    // Buscar aluno filtrando pelo CPF ou matrícula purificados de caracteres especiais
     const { data: alunos, error: alunoError } = await supabase
       .from('alunos')
       .select('*, escolas(*), turmas(*)')
-      .order('criado_em', { ascending: false });
+      .or(`cpf.eq.${cpfDigits},matricula.eq.${cpfDigits},cpf.ilike.%${cpfDigits}%,matricula.ilike.%${cpfDigits}%`)
+      .limit(1);
 
     if (alunoError || !alunos || alunos.length === 0) {
       setLoading(false);
       return;
     }
 
-    // Filtrar localmente garantindo que comparamos apenas dígitos
-    const alunoEncontrado = alunos.find(a => {
-      const cpfLimpo = a.cpf?.replace(/\D/g, '') || '';
-      const matriculaLimpa = a.matricula?.replace(/\D/g, '') || '';
-      return cpfLimpo === cpfDigits || matriculaLimpa === cpfDigits;
-    });
-
-    if (!alunoEncontrado) {
-      setLoading(false);
-      return;
-    }
-
+    const alunoEncontrado = alunos[0];
     const escolaData = alunoEncontrado.escolas as any;
     const turmaData = alunoEncontrado.turmas as any;
 
@@ -121,16 +110,8 @@ export default function PortalAluno() {
     
     const numeroAluno = colegas ? colegas.findIndex(c => c.id === alunoEncontrado.id) + 1 : 0;
 
-    // Determinar Modalidade de Ensino
-    let modalidade = 'ENSINO FUNDAMENTAL I (EF1) 1º AO 5º ANO';
-    const nomeTurmaUpper = (turmaData?.nome || '').toUpperCase();
-    if (nomeTurmaUpper.includes('6º') || nomeTurmaUpper.includes('7º') || nomeTurmaUpper.includes('8º') || nomeTurmaUpper.includes('9º')) {
-      modalidade = 'ENSINO FUNDAMENTAL II (EF2) 6º AO 9º ANO';
-    } else if (nomeTurmaUpper.includes('MÉDIO')) {
-      modalidade = 'ENSINO MÉDIO';
-    } else if (nomeTurmaUpper.includes('INFANTIL')) {
-      modalidade = 'EDUCAÇÃO INFANTIL';
-    }
+    // Determinar Modalidade de Ensino pelo campo ensino da tabela turmas
+    const modalidade = turmaData?.ensino || 'ENSINO FUNDAMENTAL I (EF1) 1º AO 5º ANO';
 
     setAlunoData({
       id: alunoEncontrado.id,
