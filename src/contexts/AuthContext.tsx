@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import LoadingFallback from '../components/common/LoadingFallback';
 
@@ -24,6 +24,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  // Ref para evitar closure stale no callback onAuthStateChange
+  const userRef = useRef<User | null>(null);
+  useEffect(() => { userRef.current = user; }, [user]);
 
   // Monitora a sessão real do Supabase
   useEffect(() => {
@@ -58,7 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else if (!role) {
           role = 'PROFESSOR';
         }
-      } catch {
+      } catch (err: unknown) {
+        console.error('[AuthContext] Falha ao buscar dados complementares do usuário no DB:', err);
         if (!role) role = 'PROFESSOR';
       }
 
@@ -89,7 +93,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Se for apenas uma atualização de foco/token e já temos o usuário, evitar reprocessar tudo
       // a menos que seja um login novo ou mudança explícita
-      if ((event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') && user && session?.user?.id === user.id) {
+      // Usa userRef (sempre atualizado) para evitar closure stale
+      if ((event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') && userRef.current && session?.user?.id === userRef.current.id) {
         return;
       }
 
