@@ -179,7 +179,7 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
                   <th key={bim} colSpan={2} className="border-r border-black p-1 text-center uppercase">{bim} Bimestre</th>
                 ))}
                 <th rowSpan={2} className="border-r border-black p-1 text-center uppercase w-14">Recup. Final</th>
-                <th rowSpan={2} className="border-r border-black p-1 text-center uppercase w-14">Média Final</th>
+                <th rowSpan={2} className="border-r border-black p-1 text-center uppercase w-14">Total Final</th>
                 <th rowSpan={2} className="p-1 text-center uppercase w-16">Resultado</th>
               </tr>
               <tr className="border-b border-black bg-slate-50/50 print:bg-transparent text-[8px]">
@@ -211,12 +211,16 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
                     {bimestres.map(bim => {
                       // Calcular nota do bimestre
                       const notasBim = notasDisc.filter(n => n.bimestre.startsWith(bim[0]));
-                      const mediaBim = notasBim.length > 0 
-                        ? notasBim.reduce((s, n) => s + (n.valor || 0), 0) / notasBim.length
+                      let somaBim = notasBim.length > 0 
+                        ? notasBim.reduce((s, n) => s + (n.valor || 0), 0)
                         : null;
                       
-                      if (mediaBim !== null) {
-                        somaMedias += mediaBim;
+                      if (somaBim !== null) {
+                        const bimNumber = parseInt(bim[0]);
+                        const maxLimit = (bimNumber === 1 || bimNumber === 2) ? 20 : 30;
+                        if (somaBim > maxLimit) somaBim = maxLimit;
+                        
+                        somaMedias += somaBim;
                         bimestresComNota++;
                       }
 
@@ -229,7 +233,7 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
                       return (
                         <React.Fragment key={`${disc}-${bim}`}>
                           <td className="border-r border-black px-1 py-0.5 text-center font-medium">
-                            {!isEmpty && mediaBim !== null ? mediaBim.toFixed(1) : ''}
+                            {!isEmpty && somaBim !== null ? somaBim.toFixed(1) : ''}
                           </td>
                           <td className="border-r border-black px-1 py-0.5 text-center text-slate-500">
                             {!isEmpty && faltasBim > 0 ? faltasBim : ''}
@@ -239,10 +243,10 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
                     })}
                     <td className="border-r border-black px-1 py-0.5 text-center"></td>
                     <td className="border-r border-black px-1 py-0.5 text-center font-black">
-                      {!isEmpty && bimestresComNota > 0 ? (somaMedias / bimestresComNota).toFixed(1) : ''}
+                      {!isEmpty && bimestresComNota > 0 ? somaMedias.toFixed(1) : ''}
                     </td>
                     <td className="px-1 py-0.5 text-center text-[8px] font-bold">
-                      {!isEmpty && bimestresComNota >= 4 ? (somaMedias / 4 >= 6 ? 'APROVADO' : 'EXAME') : ''}
+                      {!isEmpty && bimestresComNota >= 4 ? (somaMedias >= 50 ? 'APROVADO' : 'EXAME') : ''}
                     </td>
                   </tr>
                 );

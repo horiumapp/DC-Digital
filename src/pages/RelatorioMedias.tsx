@@ -131,7 +131,7 @@ export default function RelatorioMedias() {
     return notaRow ? notaRow.valor : null;
   };
 
-  const calcularMediaBimestre = (alunoId: string, bimestre: string) => {
+  const calcularSomaBimestre = (alunoId: string, bimestre: string) => {
     const avsBimestre = avaliacoes.filter(a => a.bimestre === bimestre);
     const principalAvs = avsBimestre.filter(a => a.tipo.startsWith('AV') && !a.tipo.startsWith('RP'));
     
@@ -145,7 +145,10 @@ export default function RelatorioMedias() {
       soma += Math.max(valAv, valRp);
     });
     
-    return soma / principalAvs.length;
+    const bimNumber = parseInt(bimestre[0]);
+    const maxLimit = (bimNumber === 1 || bimNumber === 2) ? 20 : 30;
+    
+    return Math.min(soma, maxLimit);
   };
 
   return (
@@ -157,7 +160,7 @@ export default function RelatorioMedias() {
             <Link to="/turmas" className="bg-[#eef2ff] text-[#0f2851] px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold border border-blue-100 hover:bg-[#e0e7ff] transition-all shadow-sm">
               <ArrowLeft className="w-4 h-4" /> Voltar
             </Link>
-            <h1 className="text-xl font-semibold text-[#0f2851]">Relatório das Médias do Componente</h1>
+            <h1 className="text-xl font-semibold text-[#0f2851]">Relatório de Notas do Componente</h1>
           </div>
           <span className="bg-emerald-100 text-emerald-700 text-[12px] font-bold px-3 py-1 rounded-full border border-emerald-200">Ano: {APP_CONFIG.YEAR}</span>
         </section>
@@ -262,7 +265,7 @@ export default function RelatorioMedias() {
                     ))}
                     <th className="px-4 py-4 border-b border-slate-200 border-l border-slate-100 text-center min-w-[130px] bg-slate-50/50">
                       <div className="flex items-center justify-center gap-1.5">
-                        <span className="text-[12px] text-[#0f2851] font-bold uppercase">Média Final</span>
+                        <span className="text-[12px] text-[#0f2851] font-bold uppercase">Nota Final</span>
                         <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
                       </div>
                     </th>
@@ -277,17 +280,17 @@ export default function RelatorioMedias() {
                     const fasePart = partesTurma.join(' ') || turmaNomeRaw;
 
                     return alunos.filter(a => a.nome.toLowerCase().includes(searchTerm.toLowerCase())).map((aluno, index) => {
-                      const m1 = calcularMediaBimestre(aluno.id, '1. BIMESTRE');
-                      const m2 = calcularMediaBimestre(aluno.id, '2. BIMESTRE');
-                      const m3 = calcularMediaBimestre(aluno.id, '3. BIMESTRE');
-                      const m4 = calcularMediaBimestre(aluno.id, '4. BIMESTRE');
+                      const m1 = calcularSomaBimestre(aluno.id, '1. BIMESTRE');
+                      const m2 = calcularSomaBimestre(aluno.id, '2. BIMESTRE');
+                      const m3 = calcularSomaBimestre(aluno.id, '3. BIMESTRE');
+                      const m4 = calcularSomaBimestre(aluno.id, '4. BIMESTRE');
                       
                       const validMedias = [m1, m2, m3, m4].filter(m => m !== null) as number[];
-                      const mediaFinal = validMedias.length > 0 ? validMedias.reduce((a, b) => a + b, 0) / validMedias.length : null;
+                      const somaFinal = validMedias.length > 0 ? validMedias.reduce((a, b) => a + b, 0) : null;
                       
                       const renderMediaPill = (val: number | null, isFinal = false) => {
                         if (val === null) return <span className="inline-flex min-w-[48px] justify-center text-slate-300 px-2 py-1 text-[13px] font-bold">-</span>;
-                        const isLow = val < 6.0;
+                        const isLow = isFinal ? val < 50 : false;
                         return (
                           <span className={`inline-flex min-w-[52px] justify-center px-2.5 py-1.5 rounded-lg text-[13px] font-black transition-all shadow-sm ${
                             isLow 
@@ -324,7 +327,7 @@ export default function RelatorioMedias() {
                           <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m4)}</td>
                           <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(null)}</td>
                           <td className="px-4 py-4 border-l border-slate-100 text-center bg-slate-50/50 font-black">
-                            {renderMediaPill(mediaFinal, true)}
+                            {renderMediaPill(somaFinal, true)}
                           </td>
                         </tr>
                       );

@@ -157,18 +157,20 @@ export default function RelatorioNotas() {
     return notaRow ? notaRow.valor : null;
   };
 
-  const calcularMedia = (alunoId: string) => {
+  const calcularSomaBimestre = (alunoId: string) => {
     if (principalAvs.length === 0) return null;
     let soma = 0;
-    let counted = 0;
     principalAvs.forEach(av => {
       const rp = avaliacoes.find(a => a.parent_id?.toString() === av.id?.toString());
       const valAv = getNota(alunoId, av.id) ?? 0;
       const valRp = rp ? (getNota(alunoId, rp.id) ?? 0) : 0;
       soma += Math.max(valAv, valRp);
-      counted++;
     });
-    return counted > 0 ? soma / counted : 0;
+    
+    const bimNumber = parseInt(periodo[0]);
+    const maxLimit = (bimNumber === 1 || bimNumber === 2) ? 20 : 30;
+    
+    return Math.min(soma, maxLimit);
   };
 
   return (
@@ -352,7 +354,7 @@ export default function RelatorioNotas() {
                         })}
                         <th className="px-4 py-4 border-b border-slate-200 border-l border-slate-100 text-center min-w-[140px]">
                           <div className="flex flex-col items-center justify-center relative">
-                            <span className="text-[13px] text-[#0f2851] font-bold">MÉDIA PARCIAL</span>
+                            <span className="text-[13px] text-[#0f2851] font-bold">SOMA PARCIAL</span>
                             <div className="absolute right-1 flex flex-col text-[10px] text-slate-300 opacity-60 font-black leading-[6px] gap-[1px]">
                               <span>▲</span><span>▼</span>
                             </div>
@@ -360,7 +362,7 @@ export default function RelatorioNotas() {
                         </th>
                         <th className="px-4 py-4 border-b border-slate-200 border-l border-slate-100 text-center min-w-[140px]">
                           <div className="flex flex-col items-center justify-center relative">
-                            <span className="text-[13px] text-[#0f2851] font-bold">MÉDIA PROCESSADA</span>
+                            <span className="text-[13px] text-[#0f2851] font-bold">SOMA PROCESSADA</span>
                             <div className="absolute right-1 flex flex-col text-[10px] text-slate-300 opacity-60 font-black leading-[6px] gap-[1px]">
                               <span>▲</span><span>▼</span>
                             </div>
@@ -370,8 +372,11 @@ export default function RelatorioNotas() {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {alunos.map((aluno, index) => {
-                        const mediaVal = calcularMedia(aluno.id);
+                        const somaVal = calcularSomaBimestre(aluno.id);
                         const numStr = (index + 1).toString().padStart(2, '0');
+                        
+                        const bimNumber = parseInt(periodo[0]);
+                        const minPass = (bimNumber === 1 || bimNumber === 2) ? 10 : 15;
                         
                         return (
                           <tr key={aluno.id} className="hover:bg-slate-50 transition even:bg-[#fafbff]">
@@ -407,13 +412,13 @@ export default function RelatorioNotas() {
                             })}
                             
                             <td className="px-4 py-4 border-l border-slate-100 text-center">
-                              {mediaVal !== null ? (
+                              {somaVal !== null ? (
                                 <span className={`inline-flex min-w-[50px] justify-center px-3 py-1 rounded-full text-[13px] font-bold shadow-sm text-white transition-colors duration-200 ${
-                                  mediaVal >= 6 
+                                  somaVal >= minPass 
                                     ? 'bg-[#0f2851] shadow-blue-200/50' 
                                     : 'bg-[#c2463e] shadow-red-200/50'
                                 }`}>
-                                  {Number(mediaVal).toFixed(2).replace('.', ',')}
+                                  {Number(somaVal).toFixed(2).replace('.', ',')}
                                 </span>
                               ) : (
                                 <span className="text-slate-300 font-black tracking-wide text-xs">-</span>
