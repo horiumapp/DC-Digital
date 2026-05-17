@@ -31,6 +31,16 @@ const ANOS = ["1º Ano", "2º Ano", "3º Ano", "4º Ano", "5º Ano", "6º Ano", 
 const BIMESTRES = ["1º Bimestre", "2º Bimestre", "3º Bimestre", "4º Bimestre"];
 const DISCIPLINAS = ["Português", "Matemática", "Ciências", "História", "Geografia", "Artes", "Educação Física", "Inglês", "Ensino Religioso"];
 
+const getAnosForModalidade = (modalidade: string) => {
+  if (modalidade === "Fundamental Anos Iniciais (1º ao 5º ANO)") {
+    return ["1º Ano", "2º Ano", "3º Ano", "4º Ano", "5º Ano"];
+  }
+  if (modalidade === "Fundamental Anos Finais (6º ao 9º ANO)") {
+    return ["6º Ano", "7º Ano", "8º Ano", "9º Ano"];
+  }
+  return ANOS;
+};
+
 export default function Curriculo() {
   const { showSuccess, showError, showWarning } = useToast();
   const [loading, setLoading] = useState(false);
@@ -262,7 +272,15 @@ export default function Curriculo() {
                   <label className="block text-xs font-bold text-slate-400 uppercase mb-1 ml-1">Modalidade</label>
                   <select 
                     value={newUnidade.modalidade}
-                    onChange={e => setNewUnidade({...newUnidade, modalidade: e.target.value})}
+                    onChange={e => {
+                      const newMod = e.target.value;
+                      const validAnos = getAnosForModalidade(newMod);
+                      setNewUnidade({
+                        ...newUnidade, 
+                        modalidade: newMod,
+                        ano: validAnos.includes(newUnidade.ano) ? newUnidade.ano : validAnos[0]
+                      });
+                    }}
                     className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 transition-all font-medium"
                   >
                     {MODALIDADES.map(m => <option key={m} value={m}>{m}</option>)}
@@ -275,7 +293,7 @@ export default function Curriculo() {
                     onChange={e => setNewUnidade({...newUnidade, ano: e.target.value})}
                     className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 transition-all font-medium"
                   >
-                    {ANOS.map(a => <option key={a} value={a}>{a}</option>)}
+                    {getAnosForModalidade(newUnidade.modalidade).map(a => <option key={a} value={a}>{a}</option>)}
                   </select>
                 </div>
                 <div>
@@ -416,7 +434,14 @@ export default function Curriculo() {
             </div>
             <select 
               value={filterModalidade} 
-              onChange={e => setFilterModalidade(e.target.value)}
+              onChange={e => {
+                const newMod = e.target.value;
+                setFilterModalidade(newMod);
+                const validAnos = newMod ? getAnosForModalidade(newMod) : ANOS;
+                if (filterAno && !validAnos.includes(filterAno)) {
+                  setFilterAno("");
+                }
+              }}
               className="bg-slate-50 border-none rounded-lg px-3 py-2 text-xs font-bold text-slate-600 focus:ring-0"
             >
               <option value="">Modalidade</option>
@@ -428,7 +453,7 @@ export default function Curriculo() {
               className="bg-slate-50 border-none rounded-lg px-3 py-2 text-xs font-bold text-slate-600 focus:ring-0"
             >
               <option value="">Série/Ano</option>
-              {ANOS.map(a => <option key={a} value={a}>{a}</option>)}
+              {(filterModalidade ? getAnosForModalidade(filterModalidade) : ANOS).map(a => <option key={a} value={a}>{a}</option>)}
             </select>
             <select 
               value={filterDisciplina} 
