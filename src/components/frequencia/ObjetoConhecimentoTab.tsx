@@ -36,6 +36,7 @@ export default function ObjetoConhecimentoTab({
   // Lógica de Currículo Dinâmico (Busca no Banco)
   const [unidadesBD, setUnidadesBD] = useState<any[]>([]);
   const [loadingCurriculo, setLoadingCurriculo] = useState(false);
+  const [curriculoIndisponivel, setCurriculoIndisponivel] = useState(false);
 
   useEffect(() => {
     async function loadCurriculo() {
@@ -58,10 +59,13 @@ export default function ObjetoConhecimentoTab({
           .ilike('disciplina', `%${disciplina}%`);
 
         if (error) throw error;
-        console.log('Unidades encontradas:', data?.length || 0);
+        const found = data?.length || 0;
+        console.log('Unidades encontradas:', found);
         setUnidadesBD(data || []);
+        setCurriculoIndisponivel(found === 0);
       } catch (err) {
         console.error('Erro ao buscar currículo:', err);
+        setCurriculoIndisponivel(true);
       } finally {
         setLoadingCurriculo(false);
       }
