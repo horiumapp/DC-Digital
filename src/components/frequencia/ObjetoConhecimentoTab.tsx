@@ -78,10 +78,12 @@ export default function ObjetoConhecimentoTab({
 
   // Atualiza seleções iniciais quando as unidades mudam
   React.useEffect(() => {
-    if (unidadesDisponiveis.length > 0 && !objetoUnidade) {
+    if (curriculoIndisponivel && !objetoUnidade) {
+      setObjetoUnidade('TEXTO LIVRE');
+    } else if (unidadesDisponiveis.length > 0 && !objetoUnidade) {
       setObjetoUnidade(unidadesDisponiveis[0].nome);
     }
-  }, [unidadesDisponiveis]);
+  }, [unidadesDisponiveis, curriculoIndisponivel]);
 
   const objetosDisponiveis = React.useMemo(() => {
     const unidade = unidadesDisponiveis.find(u => u.nome === objetoUnidade);
@@ -94,10 +96,10 @@ export default function ObjetoConhecimentoTab({
   }, [objetoUnidade, unidadesDisponiveis]);
 
   React.useEffect(() => {
-    if (objetosDisponiveis.length > 0 && !objetoConhecimento) {
+    if (objetosDisponiveis.length > 0 && !objetoConhecimento && objetoUnidade !== 'TEXTO LIVRE') {
       setObjetoConhecimento(objetosDisponiveis[0]);
     }
-  }, [objetosDisponiveis]);
+  }, [objetosDisponiveis, objetoUnidade]);
   
   const [showObjetoTable, setShowObjetoTable] = useState(false);
   const [showNoRecordsObjeto, setShowNoRecordsObjeto] = useState(false);
@@ -116,14 +118,17 @@ export default function ObjetoConhecimentoTab({
             status: 'Ministrado'
           });
           setObjetoConhecimento(dados.objetos[0] || '');
-          setObjetoUnidade(dados.habilidades[0] || '');
+          setObjetoUnidade(dados.habilidades && dados.habilidades.length > 0 ? dados.habilidades[0] : 'TEXTO LIVRE');
           setObjetoObservacao(dados.descricao || '');
         } else {
           setObjetoSalvo(false);
           setObjetoData(null);
           setShowObjetoTable(false);
           // Reset para o padrão sugerido
-          if (unidadesDisponiveis.length > 0) {
+          if (curriculoIndisponivel) {
+            setObjetoUnidade('TEXTO LIVRE');
+            setObjetoConhecimento('');
+          } else if (unidadesDisponiveis.length > 0) {
             setObjetoUnidade(unidadesDisponiveis[0].nome);
             if (unidadesDisponiveis[0].objetos.length > 0) {
               setObjetoConhecimento(unidadesDisponiveis[0].objetos[0]);
@@ -133,7 +138,7 @@ export default function ObjetoConhecimentoTab({
       }
     };
     carregar();
-  }, [selectedDate, tempoAula, turmaAtiva, unidadesDisponiveis]);
+  }, [selectedDate, tempoAula, turmaAtiva, unidadesDisponiveis, curriculoIndisponivel]);
 
   const {
     generatedCaptcha,
@@ -275,6 +280,15 @@ export default function ObjetoConhecimentoTab({
         </>
       ) : (
         <div className="space-y-6">
+          {curriculoIndisponivel && (
+            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg flex items-start gap-3">
+              <span className="text-xl leading-none">⚠️</span>
+              <div>
+                <h4 className="text-sm font-bold">Currículo não cadastrado</h4>
+                <p className="text-xs mt-1">O currículo para a disciplina de <strong>{turmaAtiva?.componente || 'esta turma'}</strong> ainda não foi inserido no sistema. O modo de <strong>Texto Livre</strong> foi ativado automaticamente para que você possa registrar o conteúdo manualmente.</p>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-12 gap-4">
             <div className="col-span-4">
               <label className="block text-sm text-slate-600 mb-1">Unidade didática</label>
