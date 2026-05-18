@@ -202,10 +202,10 @@ export default function NovoProfessorModal({ isOpen, onClose, onSave, professorP
                     value={formData.senha}
                     onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all placeholder-slate-400 font-medium"
-                    placeholder="Mín. 6 caracteres (obrigatório para criar conta de acesso)"
+                    placeholder="Padrão: @prof123 (Mín. 6 caracteres)"
                   />
                   <p className="text-[10px] text-slate-400 font-medium ml-1">
-                    Defina uma senha para que o professor possa acessar o sistema. Se deixar vazio, será cadastrado sem conta de acesso.
+                    Defina uma senha para que o professor possa acessar o sistema. Se deixar vazio, usará a senha padrão @prof123.
                   </p>
                 </div>
               )}
