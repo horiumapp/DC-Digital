@@ -41,7 +41,7 @@ Deno.serve(async (req: Request) => {
 
     if (callerError || !callerUser) {
       return new Response(
-        JSON.stringify({ error: "Não foi possível verificar sua identidade" }),
+        JSON.stringify({ error: "Não foi possível verificar sua identidade", details: callerError }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
