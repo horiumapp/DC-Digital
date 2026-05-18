@@ -10,10 +10,8 @@ import { formatCpfObscured } from '../../utils/formatters';
 
 const DEPARTAMENTOS = ['Geral', 'BIOLÓGICAS', 'HUMANAS', 'EXATAS', 'LINGUAGENS'];
 const DISCIPLINAS = [
-  'ARTES', 'BIOLOGIA', 'EDUCAÇÃO FÍSICA', 'ENFAS CIENTE', 'ENFAS HUMANAS',
-  'ENFAS LINGUAGEM', 'ENFAS MATEMÁTICA', 'FILOSOFIA', 'FÍSICA', 'GEOGRAFIA',
-  'HISTÓRIA', 'INFORMÁTICA', 'INGLÊS', 'JURÍDICO', 'LMAT', 'LPT',
-  'MATEMÁTICA', 'PORTUGUÊS', 'QUÍMICA', 'SOCIOLOGIA'
+  'Português', 'Matemática', 'Ciências', 'História', 'Geografia',
+  'Artes', 'Educação Física', 'Inglês', 'Ensino Religioso'
 ];
 
 import { useToast } from '../../components/common/Toast';

@@ -10,10 +10,8 @@ interface NovoProfessorModalProps {
 
 const DEPARTAMENTOS = ['Geral', 'BIOLÓGICAS', 'HUMANAS', 'EXATAS', 'LINGUAGENS'];
 const DISCIPLINAS = [
-  'ARTES', 'BIOLOGIA', 'EDUCAÇÃO FÍSICA', 'ENFAS CIENTE', 'ENFAS HUMANAS',
-  'ENFAS LINGUAGEM', 'ENFAS MATEMÁTICA', 'FILOSOFIA', 'FÍSICA', 'GEOGRAFIA',
-  'HISTÓRIA', 'INFORMÁTICA', 'INGLÊS', 'JURÍDICO', 'LMAT', 'LPT',
-  'MATEMÁTICA', 'PORTUGUÊS', 'QUÍMICA', 'SOCIOLOGIA'
+  'Português', 'Matemática', 'Ciências', 'História', 'Geografia',
+  'Artes', 'Educação Física', 'Inglês', 'Ensino Religioso'
 ];
 
 export default function NovoProfessorModal({ isOpen, onClose, onSave, professorParaEditar }: NovoProfessorModalProps) {
