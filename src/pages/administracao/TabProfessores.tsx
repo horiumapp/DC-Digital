@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Plus, Edit2, Trash2, MapPin, Building2, User, Mail, Phone, ArrowLeft, GraduationCap, Users, Hash, ChevronRight, Calendar, Clock, LayoutGrid } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, MapPin, Building2, User, Mail, Phone, ArrowLeft, GraduationCap, Users, Hash, ChevronRight, Calendar, Clock, LayoutGrid, X } from 'lucide-react';
 import NovoProfessorModal from '../../components/NovoProfessorModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import GerenciarAlocacoesModal from '../../components/GerenciarAlocacoesModal';
@@ -40,6 +40,20 @@ export default function TabProfessores() {
     departamento: 'Geral',
     disciplinas: [] as string[]
   });
+  
+  const [novaDisciplinaInline, setNovaDisciplinaInline] = useState('');
+  const [showNovaDisciplinaInline, setShowNovaDisciplinaInline] = useState(false);
+
+  const handleAddCustomDisciplinaInline = () => {
+    if (novaDisciplinaInline.trim() && !inlineFormData.disciplinas.includes(novaDisciplinaInline.trim())) {
+      setInlineFormData(prev => ({
+        ...prev,
+        disciplinas: [...prev.disciplinas, novaDisciplinaInline.trim()]
+      }));
+      setNovaDisciplinaInline('');
+      setShowNovaDisciplinaInline(false);
+    }
+  };
 
   useEffect(() => {
     fetchInitialData();
@@ -358,12 +372,13 @@ export default function TabProfessores() {
               {/* Disciplinas */}
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">DISCIPLINAS QUE ESTE PROFESSOR MINISTRA</label>
-                <div className="flex flex-wrap gap-2">
-                  {DISCIPLINAS.slice(0, 15).map(disc => { // Limitando para não ocupar muito espaço
+                <div className="flex flex-wrap gap-2 items-center">
+                  {Array.from(new Set([...DISCIPLINAS, ...inlineFormData.disciplinas])).map(disc => {
                     const isSelected = inlineFormData.disciplinas.includes(disc);
                     return (
                       <button
                         key={disc}
+                        type="button"
                         onClick={() => toggleDisciplinaInline(disc)}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-bold tracking-wider transition-all border ${
                           isSelected 
@@ -376,7 +391,35 @@ export default function TabProfessores() {
                       </button>
                     );
                   })}
-                  <button className="text-[9px] font-bold text-[#0f2851] uppercase hover:underline ml-2">Ver todas...</button>
+                  
+                  {showNovaDisciplinaInline ? (
+                    <div className="flex items-center gap-1">
+                      <input 
+                        type="text" 
+                        value={novaDisciplinaInline}
+                        onChange={(e) => setNovaDisciplinaInline(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomDisciplinaInline(); } }}
+                        placeholder="Nova disciplina..."
+                        className="px-3 py-1.5 w-32 rounded-full text-[10px] font-bold border border-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-600 bg-white"
+                        autoFocus
+                      />
+                      <button onClick={handleAddCustomDisciplinaInline} type="button" className="p-1.5 rounded-full bg-[#0f2851] text-white hover:bg-blue-800 transition-colors">
+                        <Plus className="w-3 h-3" />
+                      </button>
+                      <button onClick={() => { setShowNovaDisciplinaInline(false); setNovaDisciplinaInline(''); }} type="button" className="p-1.5 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowNovaDisciplinaInline(true)}
+                      type="button"
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[9px] font-bold tracking-wider transition-all border border-dashed border-slate-300 text-slate-500 hover:text-[#0f2851] hover:border-[#0f2851]/50 bg-slate-50 hover:bg-blue-50"
+                    >
+                      <Plus className="w-3 h-3" />
+                      ADICIONAR
+                    </button>
+                  )}
                 </div>
               </div>
 

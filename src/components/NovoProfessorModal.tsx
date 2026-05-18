@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Mail, CreditCard, Phone, Activity, Briefcase, GraduationCap, LayoutGrid, KeyRound } from 'lucide-react';
+import { X, User, Mail, CreditCard, Phone, Activity, Briefcase, GraduationCap, LayoutGrid, KeyRound, Plus } from 'lucide-react';
 
 interface NovoProfessorModalProps {
   isOpen: boolean;
@@ -26,6 +26,20 @@ export default function NovoProfessorModal({ isOpen, onClose, onSave, professorP
     departamento: 'Geral',
     disciplinas: [] as string[]
   });
+
+  const [novaDisciplina, setNovaDisciplina] = useState('');
+  const [showNovaDisciplina, setShowNovaDisciplina] = useState(false);
+
+  const handleAddCustomDisciplina = () => {
+    if (novaDisciplina.trim() && !formData.disciplinas.includes(novaDisciplina.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        disciplinas: [...prev.disciplinas, novaDisciplina.trim()]
+      }));
+      setNovaDisciplina('');
+      setShowNovaDisciplina(false);
+    }
+  };
 
   useEffect(() => {
     if (professorParaEditar) {
@@ -269,8 +283,8 @@ export default function NovoProfessorModal({ isOpen, onClose, onSave, professorP
                 <LayoutGrid className="w-4 h-4 text-slate-400" />
                 Disciplinas que este professor ministra
               </label>
-              <div className="flex flex-wrap gap-2">
-                {DISCIPLINAS.map(disc => {
+              <div className="flex flex-wrap gap-2 items-center">
+                {Array.from(new Set([...DISCIPLINAS, ...formData.disciplinas])).map(disc => {
                   const isSelected = formData.disciplinas.includes(disc);
                   return (
                     <button
@@ -287,6 +301,35 @@ export default function NovoProfessorModal({ isOpen, onClose, onSave, professorP
                     </button>
                   );
                 })}
+                
+                {showNovaDisciplina ? (
+                  <div className="flex items-center gap-1 ml-1">
+                    <input 
+                      type="text" 
+                      value={novaDisciplina}
+                      onChange={(e) => setNovaDisciplina(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomDisciplina(); } }}
+                      placeholder="Nova disciplina..."
+                      className="px-3 py-1.5 w-36 rounded-full text-[10px] font-bold border border-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-600 bg-white"
+                      autoFocus
+                    />
+                    <button onClick={handleAddCustomDisciplina} type="button" className="p-1.5 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+                      <Plus className="w-3 h-3" />
+                    </button>
+                    <button onClick={() => { setShowNovaDisciplina(false); setNovaDisciplina(''); }} type="button" className="p-1.5 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowNovaDisciplina(true)}
+                    type="button"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-bold tracking-wider transition-all border border-dashed border-slate-300 text-slate-500 hover:text-blue-600 hover:border-blue-400 bg-slate-50 hover:bg-blue-50"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Adicionar
+                  </button>
+                )}
               </div>
             </div>
           </form>
