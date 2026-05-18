@@ -5,6 +5,7 @@ import TabEscolas from './administracao/TabEscolas';
 import TabAlunos from './administracao/TabAlunos';
 import TabTurmas from './administracao/TabTurmas';
 import TabProfessores from './administracao/TabProfessores';
+import TabUsuarios from './administracao/TabUsuarios';
 
 export default function Administracao() {
   const { user } = useAuth();
@@ -19,7 +20,7 @@ export default function Administracao() {
           <h1 className="text-2xl font-bold text-slate-800">Painel Administrativo</h1>
           <p className="text-sm text-slate-500 mt-1">
             {user?.role === 'ADMIN'
-              ? 'Gerencie escolas, turmas, professores e alunos do sistema.'
+              ? 'Gerencie escolas, turmas, professores, alunos e acessos do sistema.'
               : 'Gerencie turmas, professores e alunos do sistema.'}
           </p>
         </div>
@@ -56,11 +57,21 @@ export default function Administracao() {
             <User className="w-5 h-5" />
             Alunos
           </button>
+          {user?.role === 'ADMIN' && (
+            <button
+              onClick={() => setActiveTab('usuarios')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'usuarios' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
+            >
+              <Users className="w-5 h-5" />
+              Usuários
+            </button>
+          )}
         </div>
 
         {/* Content Area */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           {user?.role === 'ADMIN' && activeTab === 'escolas' && <TabEscolas />}
+          {user?.role === 'ADMIN' && activeTab === 'usuarios' && <TabUsuarios />}
           {activeTab === 'alunos' && <TabAlunos />}
           {activeTab === 'turmas' && <TabTurmas />}
           {activeTab === 'professores' && <TabProfessores />}

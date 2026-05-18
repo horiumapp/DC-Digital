@@ -37,6 +37,8 @@ export default function TabProfessores() {
   // Estado para o formulário inline
   const [inlineFormData, setInlineFormData] = useState({
     nome: '',
+    email: '',
+    senha: '',
     departamento: 'Geral',
     disciplinas: [] as string[]
   });
@@ -191,7 +193,7 @@ export default function TabProfessores() {
         setProfessorParaEditar(null);
         setIsNovoProfessorModalOpen(false);
         // Limpar form inline
-        setInlineFormData({ nome: '', departamento: 'Geral', disciplinas: [] });
+        setInlineFormData({ nome: '', email: '', senha: '', departamento: 'Geral', disciplinas: [] });
       }
     }
   };
@@ -202,11 +204,9 @@ export default function TabProfessores() {
       return;
     }
     
-    // No cadastro rápido, o e-mail fica nulo.
-    // O professor preencherá seu e-mail real ao se cadastrar pelo formulário de acesso.
     handleSaveProfessor({
       ...inlineFormData,
-      email: null,
+      email: inlineFormData.email || null,
       cpf: '',
       telefone: '',
       status: 'Ativo',
@@ -344,25 +344,47 @@ export default function TabProfessores() {
           {/* Form Inline (Image 1 style) */}
           <div className="px-8 -mt-6 relative z-20 mb-6">
             <div className="bg-white p-6 rounded-2xl shadow-xl shadow-blue-900/5 border border-slate-100 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* Nome */}
-                <div className="space-y-2">
+                <div className="space-y-2 lg:col-span-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">NOME DO PROFESSOR</label>
                   <input
                     type="text"
                     value={inlineFormData.nome}
                     onChange={(e) => setInlineFormData({...inlineFormData, nome: e.target.value})}
                     placeholder="Nome Completo"
-                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-base placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851]"
+                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851]"
+                  />
+                </div>
+                {/* E-mail */}
+                <div className="space-y-2 lg:col-span-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-MAIL (OPCIONAL)</label>
+                  <input
+                    type="email"
+                    value={inlineFormData.email}
+                    onChange={(e) => setInlineFormData({...inlineFormData, email: e.target.value})}
+                    placeholder="E-mail de acesso"
+                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851]"
+                  />
+                </div>
+                {/* Senha */}
+                <div className="space-y-2 lg:col-span-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">SENHA (OPCIONAL)</label>
+                  <input
+                    type="password"
+                    value={inlineFormData.senha}
+                    onChange={(e) => setInlineFormData({...inlineFormData, senha: e.target.value})}
+                    placeholder="Mín. 6 caracteres"
+                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851]"
                   />
                 </div>
                 {/* Departamento */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">DEPARTAMENTO / ÁREA</label>
+                <div className="space-y-2 lg:col-span-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">DEPARTAMENTO</label>
                   <select
                     value={inlineFormData.departamento}
                     onChange={(e) => setInlineFormData({...inlineFormData, departamento: e.target.value})}
-                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851] appearance-none"
+                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851] appearance-none"
                   >
                     {DEPARTAMENTOS.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
