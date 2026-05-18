@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Users, BookOpen, Building2, Edit2, Check, Loader2, LogIn } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -82,7 +83,10 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
         .select('*')
         .eq('escola_id', targetEscolaId);
       
-      if (turmasData) setTurmas(turmasData);
+      if (turmasData) {
+        const sortedTurmas = [...turmasData].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { numeric: true }));
+        setTurmas(sortedTurmas);
+      }
       
       // 2. Buscar Disciplinas do Professor (unificando de todos os perfis)
       const { data: profsData } = await supabase
@@ -201,8 +205,8 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl flex flex-col max-h-[95vh] animate-in zoom-in-95 duration-200 overflow-hidden border border-slate-200">
         
         {/* Header */}
@@ -384,6 +388,7 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
           </p>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
