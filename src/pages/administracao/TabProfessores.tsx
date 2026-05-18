@@ -180,7 +180,8 @@ export default function TabProfessores() {
               });
 
               if (authError || authData?.error) {
-                const msg = authData?.error || authError?.message || 'Erro desconhecido';
+                let msg = authData?.error || authError?.message || 'Erro desconhecido';
+                if (authData?.details) msg += ` - Detalhes: ${JSON.stringify(authData.details)}`;
                 showWarning(`Professor cadastrado, mas não foi possível criar a conta de acesso: ${msg}`);
               } else {
                 showSuccess(`Professor ${novoProfessor.nome} cadastrado com acesso! (Senha padrão: ${senhaDeAcesso})`);

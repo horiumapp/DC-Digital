@@ -19,7 +19,7 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response(
       JSON.stringify({ error: "Método não permitido" }),
-      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 
@@ -29,7 +29,7 @@ Deno.serve(async (req: Request) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: "Token de autorização ausente" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -42,7 +42,7 @@ Deno.serve(async (req: Request) => {
     if (callerError || !callerUser) {
       return new Response(
         JSON.stringify({ error: "Não foi possível verificar sua identidade", details: callerError }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -73,7 +73,7 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({
           error: `Seu perfil (${effectiveRole}) não tem permissão para criar contas do tipo ${cargo}`,
         }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -81,14 +81,14 @@ Deno.serve(async (req: Request) => {
     if (!nome || !email || !senha || !cargo || !escola_id) {
       return new Response(
         JSON.stringify({ error: "Campos obrigatórios: nome, email, senha, cargo, escola_id" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (senha.length < 6) {
       return new Response(
         JSON.stringify({ error: "A senha deve ter no mínimo 6 caracteres" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -109,12 +109,12 @@ Deno.serve(async (req: Request) => {
       if (createError.message?.includes("already been registered") || createError.message?.includes("already exists")) {
         return new Response(
           JSON.stringify({ error: "Este e-mail já está cadastrado no sistema" }),
-          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       return new Response(
         JSON.stringify({ error: "Erro ao criar conta: " + createError.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -145,15 +145,15 @@ Deno.serve(async (req: Request) => {
         },
       }),
       {
-        status: 201,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
-  } catch (err) {
+  } catch (err: any) {
     console.error("Erro inesperado:", err);
     return new Response(
-      JSON.stringify({ error: "Erro interno do servidor" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: "Erro interno do servidor", details: err?.message }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
