@@ -1,7 +1,7 @@
 import React from 'react';
 import { Eye, Pencil, Trash2, List, Check, Calendar as CalendarIcon, Plus } from 'lucide-react';
 import { Avaliacao } from '../../../contexts/TurmaContext';
-import { formatarDataParaISO } from '../../../utils/dateUtils';
+import { formatarDataParaISO, formatarDataParaExibicao } from '../../../utils/dateUtils';
 
 interface AvaliacoesListProps {
   avaliacoes: Avaliacao[];
@@ -75,7 +75,7 @@ export default function AvaliacoesList({
                           <td className="px-6 py-4">
                              <div className="flex items-center gap-2 text-slate-600 font-bold uppercase text-xs">
                                <CalendarIcon className="w-3.5 h-3.5 text-slate-400" />
-                               {av.data}
+                               {formatarDataParaExibicao(av.data)}
                              </div>
                            </td>
                            <td className="px-6 py-4">
@@ -150,7 +150,7 @@ export default function AvaliacoesList({
                                 <td className="px-6 py-5">
                                    <div className="flex items-center gap-2 text-slate-600 font-bold uppercase text-xs">
                                      <CalendarIcon className="w-3.5 h-3.5 text-slate-400" />
-                                     {rp.data}
+                                     {formatarDataParaExibicao(rp.data)}
                                    </div>
                                 </td>
                                 <td className="px-6 py-5">
