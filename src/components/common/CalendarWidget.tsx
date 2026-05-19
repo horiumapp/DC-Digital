@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTurma } from '../../contexts/TurmaContext';
 import { APP_CONFIG } from '../../config/appConfig';
+import { formatarDataParaISO } from '../../utils/dateUtils';
 
 interface CalendarWidgetProps {
   year: number;
@@ -146,7 +147,7 @@ export default function CalendarWidget({
             const temConteudo = lancamentosDoDia.some(l => l.tipo === 'conteudo' && temposValidos.includes(l.tempo));
             
             // Buscar avaliações no dia
-            const avaliacoesDoDia = avaliacoes.filter(av => av.data === dayStr && String(av.turmaId).split('||')[0] === activeTurmaId);
+            const avaliacoesDoDia = avaliacoes.filter(av => formatarDataParaISO(av.data) === dayStr && String(av.turmaId).split('||')[0] === activeTurmaId);
             const temAvaliacao = avaliacoesDoDia.length > 0;
             
             // Verificar se as avaliações têm notas para todos (ou maioria) dos alunos
