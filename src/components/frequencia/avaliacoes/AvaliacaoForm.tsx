@@ -12,6 +12,7 @@ interface AvaliacaoFormProps {
   periodoLetivo: string;
   unidadeDidatica: string;
   objetoConhecimento: string;
+  valorMaximo: string;
   unidadesOpcoes: string[];
   objetosOpcoes: string[];
   generatedCaptcha: string;
@@ -31,6 +32,7 @@ interface AvaliacaoFormProps {
   onSetPeriodoLetivo: (val: string) => void;
   onSetUnidadeDidatica: (val: string) => void;
   onSetObjetoConhecimento: (val: string) => void;
+  onSetValorMaximo: (val: string) => void;
   onSetCaptchaInput: (val: string) => void;
   onGenerateNewCaptcha: () => void;
   onSetCalendarMonth: (val: number) => void;
@@ -45,6 +47,7 @@ export default function AvaliacaoForm({
   periodoLetivo,
   unidadeDidatica,
   objetoConhecimento,
+  valorMaximo,
   unidadesOpcoes,
   objetosOpcoes,
   generatedCaptcha,
@@ -64,6 +67,7 @@ export default function AvaliacaoForm({
   onSetPeriodoLetivo,
   onSetUnidadeDidatica,
   onSetObjetoConhecimento,
+  onSetValorMaximo,
   onSetCaptchaInput,
   onGenerateNewCaptcha,
   onSetCalendarMonth,
@@ -135,7 +139,21 @@ export default function AvaliacaoForm({
 
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Valor Máximo</label>
-            <div className="w-full bg-slate-100 rounded-2xl px-5 py-4 text-sm font-black text-slate-400 select-none">10,00</div>
+            <input 
+              type="text" 
+              value={valorMaximo}
+              onChange={(e) => {
+                let val = e.target.value.replace(/[^0-9,]/g, '');
+                onSetValorMaximo(val);
+              }}
+              onBlur={() => {
+                 let val = parseFloat(valorMaximo.replace(',', '.')) || 0;
+                 if (val > 100) val = 100; // Limite arbitrário seguro
+                 onSetValorMaximo(val.toFixed(2).replace('.', ','));
+              }}
+              className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-black text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10"
+              placeholder="0,00"
+            />
           </div>
         </div>
       </div>

@@ -35,7 +35,9 @@ export default function AvaliacaoDetailsView({
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Valor da avaliação</label>
-            <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700">10,00</div>
+            <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700">
+              {selectedAvaliacao.valorMaximo ? Number(selectedAvaliacao.valorMaximo).toFixed(2).replace('.', ',') : '10,00'}
+            </div>
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Instrumento pedagógico</label>

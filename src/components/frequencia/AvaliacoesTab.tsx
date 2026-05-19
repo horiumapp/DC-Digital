@@ -29,6 +29,7 @@ export default function AvaliacoesTab() {
   const [periodoLetivo, setPeriodoLetivo] = useState('');
   const [unidadeDidatica, setUnidadeDidatica] = useState('');
   const [objetoConhecimento, setObjetoConhecimento] = useState('');
+  const [valorMaximo, setValorMaximo] = useState('10,00');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [avaliacaoToDelete, setAvaliacaoToDelete] = useState<any>(null);
   const [localNotas, setLocalNotas] = useState<Record<string, string>>({});
@@ -116,6 +117,7 @@ export default function AvaliacoesTab() {
     setPeriodoLetivo('');
     setUnidadeDidatica('');
     setObjetoConhecimento('');
+    setValorMaximo('10,00');
     generateNewCaptcha();
   };
 
@@ -132,7 +134,7 @@ export default function AvaliacoesTab() {
       instrumento: instrumentoAvaliacao,
       objetos: objetosAvaliacao,
       bimestre: getBimestrePorData(selectedDate),
-      valorMaximo: 10,
+      valorMaximo: parseFloat(valorMaximo.replace(',', '.')) || 10,
       parent_id: selectedAvaliacao?.parent_id
     };
 
@@ -173,7 +175,7 @@ export default function AvaliacoesTab() {
         instrumento: selectedAvaliacao.instrumento,
         objetos: selectedAvaliacao.objetos,
         bimestre: selectedAvaliacao.bimestre,
-        valorMaximo: 10,
+        valorMaximo: selectedAvaliacao.valorMaximo || 10,
         parent_id: selectedAvaliacao.id
       };
 
@@ -221,6 +223,7 @@ export default function AvaliacoesTab() {
             setSelectedDate(av.data); 
             setInstrumentoAvaliacao(av.instrumento || 'AVALIACAO ESCRITA'); 
             setObjetosAvaliacao(av.objetos || []); 
+            setValorMaximo(av.valorMaximo ? av.valorMaximo.toString().replace('.', ',') : '10,00');
             setAvaliacaoViewMode('edit'); 
           }}
           onDelete={(av) => { setAvaliacaoToDelete(av); setShowDeleteModal(true); }}
@@ -232,13 +235,14 @@ export default function AvaliacoesTab() {
               instrumento: av.instrumento,
               objetos: av.objetos,
               bimestre: av.bimestre,
-              valorMaximo: 10,
+              valorMaximo: av.valorMaximo || 10,
               parent_id: av.id
             };
             setSelectedAvaliacao(novoRP);
             setSelectedDate(novoRP.data);
             setInstrumentoAvaliacao(novoRP.instrumento);
             setObjetosAvaliacao(novoRP.objetos);
+            setValorMaximo(novoRP.valorMaximo ? novoRP.valorMaximo.toString().replace('.', ',') : '10,00');
             setAvaliacaoViewMode('edit');
           }}
           onShowGrades={(av) => { setSelectedAvaliacao(av); setAvaliacaoViewMode('grades'); }}
@@ -265,6 +269,7 @@ export default function AvaliacoesTab() {
           periodoLetivo={periodoLetivo}
           unidadeDidatica={unidadeDidatica}
           objetoConhecimento={objetoConhecimento}
+          valorMaximo={valorMaximo}
           unidadesOpcoes={unidadesOpcoes}
           objetosOpcoes={objetosOpcoes}
           generatedCaptcha={generatedCaptcha}
@@ -288,6 +293,7 @@ export default function AvaliacoesTab() {
           onSetPeriodoLetivo={setPeriodoLetivo}
           onSetUnidadeDidatica={setUnidadeDidatica}
           onSetObjetoConhecimento={setObjetoConhecimento}
+          onSetValorMaximo={setValorMaximo}
           onSetCaptchaInput={setCaptchaInput}
           onGenerateNewCaptcha={generateNewCaptcha}
           onSetCalendarMonth={setCalendarMonth}
