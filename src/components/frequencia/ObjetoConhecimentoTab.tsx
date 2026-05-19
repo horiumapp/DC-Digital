@@ -126,13 +126,18 @@ export default function ObjetoConhecimentoTab({
       if (turmaAtiva && selectedDate && tempoAula) {
         const dados = await buscarConteudo(selectedDate, tempoAula);
         if (dados) {
+          // Garantir que o valor de objetos é sempre string (pode vir como objeto do banco)
+          const rawObj = dados.objetos[0];
+          const objStr = typeof rawObj === 'object' && rawObj !== null
+            ? (rawObj.descricao || rawObj.titulo_oc || JSON.stringify(rawObj))
+            : (rawObj || '');
           setObjetoSalvo(true);
           setObjetoData({
-            descricao: dados.objetos[0] || '',
+            descricao: objStr,
             observacao: dados.descricao || '',
             status: 'Ministrado'
           });
-          setObjetoConhecimento(dados.objetos[0] || '');
+          setObjetoConhecimento(objStr);
           setObjetoUnidade(dados.habilidades && dados.habilidades.length > 0 ? dados.habilidades[0] : 'TEXTO LIVRE');
           setObjetoObservacao(dados.descricao || '');
         } else {
@@ -146,7 +151,8 @@ export default function ObjetoConhecimentoTab({
           } else if (unidadesDisponiveis.length > 0) {
             setObjetoUnidade(unidadesDisponiveis[0].nome);
             if (unidadesDisponiveis[0].objetos.length > 0) {
-              setObjetoConhecimento(unidadesDisponiveis[0].objetos[0]);
+              const rawReset = unidadesDisponiveis[0].objetos[0];
+              setObjetoConhecimento(typeof rawReset === 'object' && rawReset !== null ? (rawReset.descricao || '') : (rawReset || ''));
             }
           }
         }
@@ -176,17 +182,32 @@ export default function ObjetoConhecimentoTab({
   };
 
   const handleSave = async () => {
+    // Validação: todos os campos obrigatórios devem estar preenchidos
+    if (!objetoUnidade || objetoUnidade.trim() === '') {
+      alert('Por favor, selecione a Unidade Didática antes de salvar.');
+      return;
+    }
+    if (!objetoConhecimento || (typeof objetoConhecimento === 'string' && objetoConhecimento.trim() === '')) {
+      alert('Por favor, selecione ou preencha o Objeto de Conhecimento antes de salvar.');
+      return;
+    }
+
     if (validateCaptcha()) {
+      // Garantir que objetoConhecimento seja string ao salvar
+      const objParaSalvar = typeof objetoConhecimento === 'object' && objetoConhecimento !== null
+        ? ((objetoConhecimento as any).descricao || (objetoConhecimento as any).titulo_oc || JSON.stringify(objetoConhecimento))
+        : objetoConhecimento;
+
       await salvarConteudo({
         turmaId: turmaAtiva?.id || 0,
         data: selectedDate,
         tempo: tempoAula,
-        objetos: [objetoConhecimento],
+        objetos: [objParaSalvar],
         habilidades: objetoUnidade === 'TEXTO LIVRE' ? [] : [objetoUnidade, ...habilidadesDisponiveis],
         descricao: objetoObservacao
       });
 
-      setObjetoData({ descricao: objetoConhecimento, observacao: objetoObservacao, status: objetoStatus });
+      setObjetoData({ descricao: objParaSalvar, observacao: objetoObservacao, status: objetoStatus });
       setObjetoSalvo(true);
       setShowObjetoTable(false);
       setIsAddingObjeto(false);
