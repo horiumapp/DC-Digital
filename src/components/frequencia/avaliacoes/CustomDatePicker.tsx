@@ -77,7 +77,7 @@ export default function CustomDatePicker({
         {Array.from({ length: primeiroDia }, (_, i) => <div key={`empty-${i}`} />)}
         {Array.from({ length: diasNoMes }, (_, i) => {
           const dia = i + 1;
-          const dateStr = `${String(dia).padStart(2, '0')}/${String(calendarMonth + 1).padStart(2, '0')}/${calendarYear}`;
+          const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
           const isSelected = selectedDate === dateStr;
           const isToday = dia === hoje.getDate() && calendarMonth === hoje.getMonth() && calendarYear === hoje.getFullYear();
           return (

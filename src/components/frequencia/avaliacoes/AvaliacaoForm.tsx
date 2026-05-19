@@ -73,6 +73,8 @@ export default function AvaliacaoForm({
   onSetCalendarMonth,
   onSetCalendarYear
 }: AvaliacaoFormProps) {
+  const displayDate = selectedDate.includes('-') ? selectedDate.split('-').reverse().join('/') : selectedDate;
+
   return (
     <div className="space-y-6">
       <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
@@ -100,7 +102,7 @@ export default function AvaliacaoForm({
             <div className="relative">
               <input 
                 type="text" 
-                value={selectedDate} 
+                value={displayDate} 
                 readOnly 
                 onClick={() => onSetIsDatePickerOpen(!isDatePickerOpen)} 
                 placeholder="DD/MM/AAAA" 
