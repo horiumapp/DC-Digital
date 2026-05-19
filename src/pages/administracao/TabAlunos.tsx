@@ -136,6 +136,16 @@ export default function TabAlunos() {
       if (error) {
         showError("Erro ao editar aluno: " + error.message);
       } else {
+        // Sincronizar escola_id na tabela usuarios (para transferências)
+        if (novoAluno.cpf) {
+          const cpfDigits = getMatriculaLogin(novoAluno.cpf);
+          const pseudoEmail = `${cpfDigits}@${ALUNO_EMAIL_DOMAIN}`;
+          await supabase
+            .from('usuarios')
+            .update({ escola_id: novoAluno.escola_id })
+            .eq('email', pseudoEmail);
+        }
+        
         fetchAlunos();
         fetchEscolas();
         setAlunoParaEditar(null);
