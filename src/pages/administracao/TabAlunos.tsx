@@ -593,11 +593,82 @@ export default function TabAlunos() {
                   </h3>
                   <div className="flex-1 h-px bg-red-100" />
                 </div>
-                {/* Aqui poderia mostrar a tabela diretamente ou outro card */}
-                {/* Por simplicidade, vou manter o padrão de toggle ou mostrar direto */}
                 <div className="bg-white border border-red-100 rounded-2xl overflow-hidden shadow-sm">
-                   {/* ... Tabela similar ... */}
-                   {/* (Vou omitir para brevidade, mas o ideal é repetir o padrão) */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-red-50 bg-red-50/30">
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-16">Nº</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome do Aluno</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Responsável</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Telefone</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {alunosAgrupados['sem-turma'].alunos.map((aluno: any, index: number) => (
+                          <tr key={aluno.id} className="hover:bg-red-50/30 transition-colors group">
+                            <td className="px-6 py-4 text-xs font-black text-slate-300 tabular-nums">
+                              {(index + 1).toString().padStart(2, '0')}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-red-50 text-red-400 rounded-full flex items-center justify-center font-bold text-xs border border-red-100 shrink-0">
+                                  {aluno.nome.charAt(0)}
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                  <span className="font-bold text-slate-700 text-sm truncate max-w-[250px]" title={aluno.nome}>
+                                    {aluno.nome}
+                                  </span>
+                                  <span className="text-[10px] font-bold text-red-400 uppercase tracking-tight">
+                                    ⚠ SEM TURMA ATRIBUÍDA
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="text-xs text-slate-500 font-medium truncate max-w-[150px] block" title={aluno.nome_responsavel}>
+                                {aluno.nome_responsavel || '---'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="text-xs text-slate-500 font-medium tabular-nums">
+                                {aluno.telefone || '---'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${
+                                aluno.status === 'Ativo' 
+                                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
+                                  : 'bg-slate-50 text-slate-400 border border-slate-100'
+                              }`}>
+                                {aluno.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                                <button 
+                                  onClick={() => handleEditAluno(aluno)}
+                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="Editar e atribuir turma"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button 
+                                  onClick={() => setAlunoParaExcluir(aluno)}
+                                  className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Excluir"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
