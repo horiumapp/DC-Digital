@@ -44,13 +44,18 @@ export interface Aluno {
   notas?: Record<string, string>; // ID da avaliação -> valor da nota
 }
 
+export interface ObjetoAvaliacao {
+  objeto: string;
+  unidade: string;
+}
+
 export interface Avaliacao {
   id: string;
   turmaId: string | number;
   tipo: string;
   data: string;
   instrumento: string;
-  objetos: any[];
+  objetos: ObjetoAvaliacao[];
   bimestre?: string;
   valorMaximo?: number;
   parent_id?: string | number;
@@ -61,8 +66,8 @@ export interface Conteudo {
   turmaId: string | number;
   data: string;
   tempo: string;
-  objetos: any[];
-  habilidades: any[];
+  objetos: string[];
+  habilidades: string[];
   descricao: string;
 }
 
@@ -122,7 +127,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
           const baseAlunos = contextAlunos.length > 0 ? contextAlunos : prevAlunos;
           return baseAlunos.map(aluno => {
             const notasAluno: Record<string, string> = {};
-            notasData.filter((n: any) => n.aluno_id.toString() === aluno.id).forEach((n: any) => {
+            notasData.filter(n => n.aluno_id.toString() === aluno.id).forEach(n => {
               notasAluno[n.avaliacao_id.toString()] = parseFloat(n.valor).toFixed(2).replace('.', ',');
             });
             return { ...aluno, notas: notasAluno };
@@ -166,7 +171,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
           setConteudos(conts);
 
           const faltasMap: Record<string, Set<string>> = {};
-          freqs.forEach((f: any) => {
+          freqs.forEach((f: { data: string; aluno_id: string; status: string }) => {
             if (f.status === 'F') {
               const normalizedDate = formatarDataParaISO(f.data);
               if (!faltasMap[normalizedDate]) faltasMap[normalizedDate] = new Set();
@@ -349,7 +354,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     try {
       const rawId = turmaAtiva.id.toString().split('||')[0];
       const resp = await TurmaService.buscarFrequenciaPorDia(rawId, turmaAtiva.componente, data);
-      const idsFaltosos = new Set(resp.filter((f: any) => f.status === 'F').map((f: any) => f.aluno_id.toString()));
+      const idsFaltosos = new Set(resp.filter(f => f.status === 'F').map(f => f.aluno_id.toString()));
       const normalizedDate = formatarDataParaISO(data);
       setFaltasPorData(prev => ({ ...prev, [normalizedDate]: idsFaltosos }));
     } catch (err) {
