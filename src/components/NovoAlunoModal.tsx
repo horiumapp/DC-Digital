@@ -120,8 +120,10 @@ export default function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEdita
       showError('Selecione uma Turma antes de continuar.');
       return;
     }
-    // BUG-01 FIX: validar CPF matematicamente antes de salvar
-    if (formData.cpf && !validarCPF(formData.cpf)) {
+    // Validar CPF apenas se foi alterado (para não bloquear edição de outros campos com CPF legado)
+    const cpfOriginal = alunoParaEditar?.cpf || '';
+    const cpfFoiAlterado = formData.cpf !== cpfOriginal;
+    if (formData.cpf && cpfFoiAlterado && !validarCPF(formData.cpf)) {
       showError('CPF inválido. Verifique os dígitos e tente novamente.');
       return;
     }
