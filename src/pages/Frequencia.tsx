@@ -13,7 +13,7 @@ import AvaliacoesTab from '../components/frequencia/AvaliacoesTab';
 import { getBimestrePorData } from '../utils/dateUtils';
 
 export default function Frequencia() {
-  const { turmaAtiva, horarioTurma } = useTurma();
+  const { turmaAtiva, horarioTurma, lancamentos } = useTurma();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const selectedDateParam = searchParams.get('date') || `${APP_CONFIG.YEAR}-02-06`;

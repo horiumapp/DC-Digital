@@ -193,6 +193,14 @@ export default function ObjetoConhecimentoTab({
       setCaptchaInput('');
       generateNewCaptcha();
       window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      // Auto-advance to the next tempo that doesn't have content yet
+      const nextPendingTempo = disponiveisTempos.find(t => 
+        t !== tempoAula && !lancamentos.some(l => l.data === selectedDate && l.tempo === t && l.tipo === 'conteudo')
+      );
+      if (nextPendingTempo) {
+        setTempoAula(nextPendingTempo);
+      }
     } else {
       alert('Código incorreto!');
     }
