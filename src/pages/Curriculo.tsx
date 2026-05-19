@@ -22,8 +22,8 @@ interface Objeto {
 
 const MODALIDADES = [
   "Educação Infantil", 
-  "Fundamental Anos Iniciais (1º ao 5º ANO)", 
-  "Fundamental Anos Finais (6º ao 9º ANO)", 
+  "Fundamental Anos Iniciais (1° ao 5° ANO)", 
+  "Fundamental Anos Finais (6° ao 9° ANO)", 
   "Médio", 
   "EJA (Educação de Jovens e Adultos)"
 ];
@@ -32,10 +32,10 @@ const BIMESTRES = ["1º Bimestre", "2º Bimestre", "3º Bimestre", "4º Bimestre
 const DISCIPLINAS = ["Português", "Matemática", "Ciências", "História", "Geografia", "Artes", "Educação Física", "Inglês", "Ensino Religioso"];
 
 const getAnosForModalidade = (modalidade: string) => {
-  if (modalidade === "Fundamental Anos Iniciais (1º ao 5º ANO)") {
+  if (modalidade === "Fundamental Anos Iniciais (1° ao 5° ANO)") {
     return ["1º Ano", "2º Ano", "3º Ano", "4º Ano", "5º Ano"];
   }
-  if (modalidade === "Fundamental Anos Finais (6º ao 9º ANO)") {
+  if (modalidade === "Fundamental Anos Finais (6° ao 9° ANO)") {
     return ["6º Ano", "7º Ano", "8º Ano", "9º Ano"];
   }
   return ANOS;
@@ -54,7 +54,7 @@ export default function Curriculo() {
 
   // Form Novo
   const [newUnidade, setNewUnidade] = useState({
-    modalidade: "Fundamental Anos Iniciais (1º ao 5º ANO)",
+    modalidade: "Fundamental Anos Iniciais (1° ao 5° ANO)",
     ano: "1º Ano",
     disciplina: "Português",
     bimestre: "1º Bimestre",

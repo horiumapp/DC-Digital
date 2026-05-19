@@ -157,7 +157,7 @@ export default function Turmas() {
       disciplinasList.forEach(disc => {
         // Lógica para identificar Modalidade e Ano para o Currículo
         const nomeUpper = t.nome.toUpperCase();
-        let ensinoCalculado = "Fundamental Anos Iniciais (1º ao 5º ANO)";
+        let ensinoCalculado = "Fundamental Anos Iniciais (1° ao 5° ANO)";
         let faseCalculada = t.nome;
 
         // Extrair o Ano (ex: "1º Ano" de "1º Ano A")
@@ -166,7 +166,7 @@ export default function Turmas() {
           faseCalculada = matchAno[0];
           const numeroAno = parseInt(matchAno[0]);
           if (numeroAno >= 6) {
-            ensinoCalculado = "Fundamental Anos Finais (6º ao 9º ANO)";
+            ensinoCalculado = "Fundamental Anos Finais (6° ao 9° ANO)";
           }
         } else if (nomeUpper.includes("EJA")) {
           ensinoCalculado = "EJA (Educação de Jovens e Adultos)";
