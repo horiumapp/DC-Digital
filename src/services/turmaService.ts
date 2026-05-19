@@ -26,15 +26,18 @@ const normalizarDataISO = (data: string): string => {
 export const TurmaService = {
   fetchHorario: async (turmaId: string | number, disciplina: string): Promise<Horario[]> => {
     const tid = getTid(turmaId);
-    // Buscar horários que correspondem à disciplina OU que não têm componente definido
-    // (componente vazio = aplica-se a qualquer disciplina)
+    // Buscar todos os horários desta turma
     const { data, error } = await supabase
       .from('professor_horarios')
       .select('dia_semana, tempo_ordem, componente')
-      .eq('turma_id', tid)
-      .or(`componente.eq.${disciplina},componente.eq.,componente.is.null`);
+      .eq('turma_id', tid);
     if (error) throw error;
-    return (data || []).map(d => ({ dia_semana: d.dia_semana, tempo_ordem: d.tempo_ordem }));
+    // Filtrar no cliente: incluir quando componente bate com a disciplina OU está vazio/null
+    const filtered = (data || []).filter(d => {
+      const comp = (d.componente || '').trim();
+      return comp === '' || comp.toLowerCase() === disciplina.toLowerCase();
+    });
+    return filtered.map(d => ({ dia_semana: d.dia_semana, tempo_ordem: d.tempo_ordem }));
   },
 
   fetchLancamentos: async (turmaId: string | number, disciplina: string): Promise<Lancamento[]> => {
