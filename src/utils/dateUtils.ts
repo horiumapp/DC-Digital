@@ -43,3 +43,11 @@ export const formatarDataParaISO = (dataStr: string): string => {
   if (!dia || !mes || !ano) return dataStr;
   return `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
 };
+
+export const formatarDataParaExibicao = (dataStr: string): string => {
+  if (!dataStr) return '';
+  if (dataStr.includes('/')) return dataStr; // Já está no formato brasileiro
+  const [ano, mes, dia] = dataStr.split('-');
+  if (!dia || !mes || !ano) return dataStr;
+  return `${dia.padStart(2, '0')}/${mes.padStart(2, '0')}/${ano}`;
+};
