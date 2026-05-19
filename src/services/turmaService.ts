@@ -238,12 +238,14 @@ export const TurmaService = {
     const tid = getTid(turmaId);
     const { data: freqData, error } = await supabase
       .from('frequencias')
-      .select('data, aluno_id, status')
+      .select('data, aluno_id, status, disciplina')
       .eq('turma_id', tid)
-      .eq('disciplina', disciplina)
       .eq('status', 'F');
     if (error) throw error;
-    return freqData || [];
+    
+    // Client-side filter
+    const filtered = (freqData || []).filter(f => !f.disciplina || !disciplina || f.disciplina.toLowerCase() === disciplina.toLowerCase());
+    return filtered;
   },
 
   buscarFrequenciaPorDia: async (turmaId: string | number, disciplina: string, data: string): Promise<any[]> => {
@@ -252,12 +254,14 @@ export const TurmaService = {
     const dataISO = normalizarDataISO(data);
     const { data: freqData, error } = await supabase
       .from('frequencias')
-      .select('aluno_id, status')
+      .select('aluno_id, status, disciplina')
       .eq('turma_id', tid)
-      .eq('data', dataISO)
-      .eq('disciplina', disciplina);
+      .eq('data', dataISO);
     if (error) throw error;
-    return freqData || [];
+    
+    // Client-side filter
+    const filtered = (freqData || []).filter(f => !f.disciplina || !disciplina || f.disciplina.toLowerCase() === disciplina.toLowerCase());
+    return filtered;
   },
 
   buscarConteudo: async (turmaId: string | number, disciplina: string, data: string, tempo: string): Promise<Conteudo | null> => {
