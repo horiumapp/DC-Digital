@@ -155,12 +155,26 @@ export default function CalendarWidget({
               return notasDessaAv.length > 0; // Se tiver pelo menos uma nota, consideramos "lançada" na legenda visual
             });
 
-            let status: 'none' | 'pending' | 'full' = 'none';
-            if (temFrequencia && temConteudo && (!temAvaliacao || avaliacoesLancadas)) status = 'full';
-            else if (temFrequencia || temConteudo || temAvaliacao) status = 'pending';
+            // Lógica de pendência por quantidade de tempos do dia
+            const totalTempos = temposValidos.length;
+            const frequenciasLancadas = lancamentosDoDia.filter(l => l.tipo === 'frequencia' && temposValidos.includes(l.tempo));
+            const conteudosLancados = lancamentosDoDia.filter(l => l.tipo === 'conteudo' && temposValidos.includes(l.tempo));
+            
+            const uniqueTemposFreq = new Set(frequenciasLancadas.map(l => l.tempo)).size;
+            const uniqueTemposCont = new Set(conteudosLancados.map(l => l.tempo)).size;
 
-            const fColor = temFrequencia ? 'bg-emerald-500' : 'bg-red-500';
-            const cmColor = temConteudo ? 'bg-emerald-500' : 'bg-red-500';
+            const isFrequenciaFull = uniqueTemposFreq === totalTempos;
+            const isFrequenciaPartial = uniqueTemposFreq > 0 && uniqueTemposFreq < totalTempos;
+            
+            const isConteudoFull = uniqueTemposCont === totalTempos;
+            const isConteudoPartial = uniqueTemposCont > 0 && uniqueTemposCont < totalTempos;
+
+            let status: 'none' | 'pending' | 'full' = 'none';
+            if (isFrequenciaFull && isConteudoFull && (!temAvaliacao || avaliacoesLancadas)) status = 'full';
+            else if (uniqueTemposFreq > 0 || uniqueTemposCont > 0 || temAvaliacao) status = 'pending';
+
+            const fColor = isFrequenciaFull ? 'bg-emerald-500' : (isFrequenciaPartial ? 'bg-amber-500' : 'bg-red-500');
+            const cmColor = isConteudoFull ? 'bg-emerald-500' : (isConteudoPartial ? 'bg-amber-500' : 'bg-red-500');
             const aColor = avaliacoesLancadas ? 'bg-emerald-500' : 'bg-red-500';
             
             const bgColor = status === 'none' ? 'bg-red-100/60' : (status === 'pending' ? 'bg-amber-100/60' : 'bg-emerald-100/60');
