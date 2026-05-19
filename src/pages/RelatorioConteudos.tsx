@@ -442,7 +442,7 @@ export default function RelatorioConteudos() {
         <style>{`
           @media print {
             @page { margin: 1cm; size: A4 landscape; }
-            html, body { height: 100%; overflow: hidden; background: white !important; }
+            html, body { height: auto !important; overflow: visible !important; background: white !important; }
             body * { visibility: hidden; }
             #printable-relatorio, #printable-relatorio * { visibility: visible; }
             #printable-relatorio { 
@@ -452,6 +452,7 @@ export default function RelatorioConteudos() {
               top: 0; 
               width: 100%; 
               display: block !important;
+              overflow: visible !important;
             }
             .no-print { display: none !important; }
           }
@@ -465,7 +466,7 @@ export default function RelatorioConteudos() {
           #printable-relatorio .content-table { margin-top: 15px; border: 2px solid black; width: 100%; border-collapse: collapse; }
           #printable-relatorio .content-table th { background: #eee; text-align: center; font-weight: bold; padding: 6px; border: 1px solid black; font-size: 8px; }
           #printable-relatorio .content-table td { border: 1px solid black; padding: 4px; font-size: 8px; }
-          #printable-relatorio .signatures { margin-top: 40px; display: flex; justify-content: space-around; }
+          #printable-relatorio .signatures { margin-top: 40px; display: flex; justify-content: space-around; page-break-inside: avoid; padding-bottom: 20px; }
           #printable-relatorio .sig-line { border-top: 1px solid black; width: 250px; text-align: center; padding-top: 4px; font-size: 8px; font-weight: bold; margin-top: 25px; }
         `}</style>
 
@@ -521,7 +522,7 @@ export default function RelatorioConteudos() {
                 <tr className="h-8">
                   <td colSpan={3} className="border-b-0 border-r-0">
                     <div className="label">Professor:</div>
-                    <div className="value">{user?.user_metadata?.full_name?.toUpperCase() || 'NÃO IDENTIFICADO'}</div>
+                    <div className="value">{user?.name?.toUpperCase() || 'NÃO IDENTIFICADO'}</div>
                   </td>
                 </tr>
               </tbody>
@@ -566,7 +567,7 @@ export default function RelatorioConteudos() {
           <div className="signatures">
             <div>
               <div className="sig-line">ASSINATURA DO PROFESSOR(A)</div>
-              <div className="text-[7px] text-center mt-0.5">{user?.user_metadata?.full_name?.toUpperCase()}</div>
+              <div className="text-[7px] text-center mt-0.5">{user?.name?.toUpperCase()}</div>
             </div>
             <div>
               <div className="sig-line">ASSINATURA DA COORDENAÇÃO PEDAGÓGICA</div>
