@@ -49,6 +49,22 @@ export default function Frequencia() {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
+    
+    if (tab === 'objeto') {
+      const pendingTempo = temposParaMostrar.find(t => 
+        !lancamentos.some(l => l.data === selectedDate && l.tempo === t && l.tipo === 'conteudo')
+      );
+      if (pendingTempo) {
+        setTempoAula(pendingTempo);
+      }
+    } else if (tab === 'frequencia') {
+      const pendingTempo = temposParaMostrar.find(t => 
+        !lancamentos.some(l => l.data === selectedDate && l.tempo === t && l.tipo === 'frequencia')
+      );
+      if (pendingTempo) {
+        setTempoAula(pendingTempo);
+      }
+    }
   };
 
   return (
