@@ -56,8 +56,6 @@ export default function ObjetoConhecimentoTab({
 
         const disciplina = turmaAtiva.componente || "";
         const bimestre = getBimestrePorData(selectedDate) || "";
-        
-        console.log('Filtros Currículo:', { modalidade: modalidadeStr, ano: anoStr, disciplina, bimestre });
 
         const { data, error } = await supabase
           .from('curriculo_unidades')
@@ -69,7 +67,6 @@ export default function ObjetoConhecimentoTab({
 
         if (error) throw error;
         const found = data?.length || 0;
-        console.log('Unidades encontradas:', found);
         setUnidadesBD(data || []);
         setCurriculoIndisponivel(found === 0);
       } catch (err) {
