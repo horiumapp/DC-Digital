@@ -179,13 +179,15 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
 
       const inserts = Object.entries(schedule).map(([key, turma]: [string, any]) => {
         const [dia, tempo] = key.split('-').map(Number);
+        // Garantir que componente nunca fique vazio - usar disciplina selecionada ou fallback para a primeira disciplina do professor
+        const componente = turma.componente_horario || professorDisciplinas[0] || '';
         return {
           professor_id: targetProfId,
           turma_id: turma.id,
           escola_id: targetEscolaId,
           dia_semana: dia,
           tempo_ordem: tempo,
-          componente: turma.componente_horario || ''
+          componente
         };
       });
 
