@@ -78,10 +78,14 @@ export const TurmaService = {
       .select('id, nome, cpf, status')
       .eq('turma_id', turmaId.toString())
       .order('nome');
+      
+    console.log("DEBUG fetchAlunos - turmaId:", turmaId.toString(), "data:", data, "error:", error);
+    
     if (error) throw error;
     
     // Filtra no cliente para considerar status nulo ou variações de "Ativo"
     const alunosAtivos = (data || []).filter(a => !a.status || a.status.toLowerCase() === 'ativo');
+    console.log("DEBUG fetchAlunos - alunosAtivos:", alunosAtivos);
     
     return alunosAtivos.map(a => {
       const cpfClean = a.cpf ? a.cpf.replace(/\D/g, '') : '';
