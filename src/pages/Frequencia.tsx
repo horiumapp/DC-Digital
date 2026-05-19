@@ -67,7 +67,9 @@ export default function Frequencia() {
           </div>
           <div className="flex items-center gap-2">
             <div className="bg-white border border-blue-100 rounded-lg flex items-center overflow-hidden shadow-sm">
-              <span className="px-4 py-1.5 text-sm font-semibold text-[#0f2851]">{selectedDate}</span>
+              <span className="px-4 py-1.5 text-sm font-semibold text-[#0f2851]">
+                {selectedDate.split('-').reverse().join('/')}
+              </span>
               <button className="bg-[#eef2ff] text-[#0f2851] p-2 hover:bg-[#e0e7ff] transition border-l border-blue-100">
                 <CalendarIcon className="w-4 h-4" />
               </button>
