@@ -44,19 +44,19 @@ export const TurmaService = {
     const tid = getTid(turmaId);
     const [freqRes, contRes] = await Promise.all([
       supabase.from('frequencias')
-        .select('data, tempo')
-        .eq('turma_id', tid)
-        .eq('disciplina', disciplina),
+        .select('data, tempo, disciplina')
+        .eq('turma_id', tid),
       supabase.from('conteudos')
-        .select('data, tempo')
+        .select('data, tempo, disciplina')
         .eq('turma_id', tid)
-        .eq('disciplina', disciplina)
     ]);
 
     const novosLancamentos: Lancamento[] = [];
 
     if (freqRes.data) {
-      const uniqueFreqs = new Set(freqRes.data.map(f => `${f.data}|${f.tempo}`));
+      // Client-side filter to avoid HTTP 406 with accented chars
+      const filteredFreqs = freqRes.data.filter(f => !f.disciplina || !disciplina || f.disciplina.toLowerCase() === disciplina.toLowerCase());
+      const uniqueFreqs = new Set(filteredFreqs.map(f => `${f.data}|${f.tempo}`));
       uniqueFreqs.forEach(val => {
         const [data, tempo] = val.split('|');
         novosLancamentos.push({ turmaId: tid, data, tempo, tipo: 'frequencia' });
@@ -64,7 +64,9 @@ export const TurmaService = {
     }
 
     if (contRes.data) {
-      contRes.data.forEach(c => {
+      // Client-side filter to avoid HTTP 406 with accented chars
+      const filteredConts = contRes.data.filter(c => !c.disciplina || !disciplina || c.disciplina.toLowerCase() === disciplina.toLowerCase());
+      filteredConts.forEach(c => {
         novosLancamentos.push({ turmaId: tid, data: c.data, tempo: c.tempo, tipo: 'conteudo' });
       });
     }
