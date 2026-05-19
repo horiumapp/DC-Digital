@@ -3,6 +3,7 @@ import { Search, Check, Trash2, ArrowLeft } from 'lucide-react';
 import Captcha from '../common/Captcha';
 import { useTurma, Aluno } from '../../contexts/TurmaContext';
 import { useCaptcha } from '../../hooks/useCaptcha';
+import { useToast } from '../common/Toast';
 
 
 interface FrequenciaTabProps {
@@ -19,6 +20,7 @@ export default function FrequenciaTab({
   disponiveisTempos,
 }: FrequenciaTabProps) {
   const { turmaAtiva, alunos, registrarLancamento, removerLancamento, salvarFrequencia, buscarFrequencia, removerFrequencia, lancamentos } = useTurma();
+  const { showError: showToastError } = useToast();
   
   const [studentData, setStudentData] = useState<Aluno[]>([]);
   const [isLaunching, setIsLaunching] = useState(false);
@@ -44,7 +46,7 @@ export default function FrequenciaTab({
     if (turmaAtiva && selectedDate && tempoAula) {
       buscarFrequencia(selectedDate, tempoAula);
     }
-  }, [selectedDate, tempoAula, turmaAtiva]);
+  }, [selectedDate, tempoAula, turmaAtiva, buscarFrequencia]);
 
   // Sincronizar o estado local com os alunos do contexto (que agora vêm do banco)
   useEffect(() => {
@@ -74,7 +76,7 @@ export default function FrequenciaTab({
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } else {
-      alert('Código incorreto. Tente novamente.');
+      showToastError('Código incorreto. Tente novamente.');
     }
   };
 

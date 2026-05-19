@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ArrowLeft, BookOpen, Folder } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
@@ -13,33 +13,33 @@ export default function Diario() {
 
   const periodosLetivos = APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE'));
 
-  const hoje = new Date();
-  hoje.setHours(23, 59, 59, 999);
-  
-  let periodosVisiveis = [];
-  for (let i = 0; i < periodosLetivos.length; i++) {
-    const p = periodosLetivos[i];
-    const [ano, mes, dia] = p.dataInicio.split('-').map(Number);
-    const dataInicio = new Date(ano, mes - 1, dia);
-    
-    // Regra 1: O bimestre já começou no calendário anual?
-    if (dataInicio > hoje) break;
-    
-    // Regra 2: Se não for o primeiro bimestre, o anterior precisa estar fechado na Aparata!
-    if (i > 0) {
-      const bimestreAnterior = periodosLetivos[i - 1];
-      const isAnteriorFechado = turmaAtiva ? localStorage.getItem(`aparata_fechada_${turmaAtiva.id}_${bimestreAnterior.id}`) === 'true' : false;
-      
-      // Se o anterior não está fechado, impede a visualização deste e dos próximos
-      if (!isAnteriorFechado) break;
-    }
-    
-    periodosVisiveis.push(p);
-  }
+  const periodosVisiveis = useMemo(() => {
+    const hoje = new Date();
+    hoje.setHours(23, 59, 59, 999);
 
-  if (periodosVisiveis.length === 0) {
-    periodosVisiveis = [periodosLetivos[0]];
-  }
+    const resultado = [];
+    for (let i = 0; i < periodosLetivos.length; i++) {
+      const p = periodosLetivos[i];
+      const [ano, mes, dia] = p.dataInicio.split('-').map(Number);
+      const dataInicio = new Date(ano, mes - 1, dia);
+
+      // Regra 1: O bimestre já começou no calendário anual?
+      if (dataInicio > hoje) break;
+
+      // Regra 2: Se não for o primeiro bimestre, o anterior precisa estar fechado na Aparata!
+      if (i > 0) {
+        const bimestreAnterior = periodosLetivos[i - 1];
+        const isAnteriorFechado = turmaAtiva ? localStorage.getItem(`aparata_fechada_${turmaAtiva.id}_${bimestreAnterior.id}`) === 'true' : false;
+
+        // Se o anterior não está fechado, impede a visualização deste e dos próximos
+        if (!isAnteriorFechado) break;
+      }
+
+      resultado.push(p);
+    }
+
+    return resultado.length > 0 ? resultado : [periodosLetivos[0]];
+  }, [periodosLetivos, turmaAtiva]);
 
   // Define o período inicial como o mais recente/atual (último da lista de visíveis)
   const initialPeriodoId = periodosVisiveis[periodosVisiveis.length - 1]?.id || '1. BIMESTRE';

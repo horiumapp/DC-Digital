@@ -45,7 +45,7 @@ export default function Frequencia() {
     if (!temposParaMostrar.includes(tempoAula)) {
       setTempoAula(temposParaMostrar[0]);
     }
-  }, [selectedDate, temposParaMostrar]);
+  }, [selectedDate, temposParaMostrar, tempoAula, setTempoAula]);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);

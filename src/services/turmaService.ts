@@ -2,7 +2,21 @@ import { supabase } from '../lib/supabase';
 import { getBimestrePorData } from '../utils/dateUtils';
 import { Aluno, Avaliacao, Conteudo, Horario, Lancamento } from '../contexts/TurmaContext';
 
+/** Registro de frequência retornado pelo banco */
+export interface FrequenciaRecord {
+  aluno_id: string;
+  status: string;
+  participacao?: string;
+  data?: string;
+  disciplina?: string;
+}
 
+/** Registro de nota retornado pelo banco */
+export interface NotaRecord {
+  avaliacao_id: string;
+  aluno_id: string;
+  valor: number;
+}
 
 const getTid = (turmaId: string | number): string => turmaId.toString().split('||')[0];
 
@@ -42,21 +56,24 @@ export const TurmaService = {
 
   fetchLancamentos: async (turmaId: string | number, disciplina: string): Promise<Lancamento[]> => {
     const tid = getTid(turmaId);
-    const [freqRes, contRes] = await Promise.all([
-      supabase.from('frequencias')
-        .select('data, tempo, disciplina')
-        .eq('turma_id', tid),
-      supabase.from('conteudos')
-        .select('data, tempo, disciplina')
-        .eq('turma_id', tid)
-    ]);
+
+    // Construir queries com filtro server-side de disciplina
+    let freqQuery = supabase.from('frequencias')
+      .select('data, tempo, disciplina')
+      .eq('turma_id', tid);
+    if (disciplina) freqQuery = freqQuery.ilike('disciplina', disciplina);
+
+    let contQuery = supabase.from('conteudos')
+      .select('data, tempo, disciplina')
+      .eq('turma_id', tid);
+    if (disciplina) contQuery = contQuery.ilike('disciplina', disciplina);
+
+    const [freqRes, contRes] = await Promise.all([freqQuery, contQuery]);
 
     const novosLancamentos: Lancamento[] = [];
 
     if (freqRes.data) {
-      // Client-side filter to avoid HTTP 406 with accented chars
-      const filteredFreqs = freqRes.data.filter(f => !f.disciplina || !disciplina || f.disciplina.toLowerCase() === disciplina.toLowerCase());
-      const uniqueFreqs = new Set(filteredFreqs.map(f => `${f.data}|${f.tempo}`));
+      const uniqueFreqs = new Set(freqRes.data.map(f => `${f.data}|${f.tempo}`));
       uniqueFreqs.forEach(val => {
         const [data, tempo] = val.split('|');
         novosLancamentos.push({ turmaId: tid, data, tempo, tipo: 'frequencia' });
@@ -64,9 +81,7 @@ export const TurmaService = {
     }
 
     if (contRes.data) {
-      // Client-side filter to avoid HTTP 406 with accented chars
-      const filteredConts = contRes.data.filter(c => !c.disciplina || !disciplina || c.disciplina.toLowerCase() === disciplina.toLowerCase());
-      filteredConts.forEach(c => {
+      contRes.data.forEach(c => {
         novosLancamentos.push({ turmaId: tid, data: c.data, tempo: c.tempo, tipo: 'conteudo' });
       });
     }
@@ -103,21 +118,23 @@ export const TurmaService = {
     });
   },
 
-  fetchAvaliacoes: async (turmaId: string | number, disciplina: string): Promise<{ avaliacoes: Avaliacao[], notasData: any[] }> => {
+  fetchAvaliacoes: async (turmaId: string | number, disciplina: string): Promise<{ avaliacoes: Avaliacao[], notasData: NotaRecord[] }> => {
     const tid = getTid(turmaId);
-    const { data: avData, error: avError } = await supabase
+
+    let avQuery = supabase
       .from('avaliacoes')
       .select('*')
       .eq('turma_id', tid)
       .order('data', { ascending: true });
+    if (disciplina) avQuery = avQuery.ilike('disciplina', disciplina);
+
+    const { data: avData, error: avError } = await avQuery;
     
     if (avError) throw avError;
 
-    const filteredAvData = (avData || []).filter(av => !av.disciplina || !disciplina || av.disciplina.toLowerCase() === disciplina.toLowerCase());
+    if (!avData || avData.length === 0) return { avaliacoes: [], notasData: [] };
 
-    if (filteredAvData.length === 0) return { avaliacoes: [], notasData: [] };
-
-    const avaliacoesFormatadas: Avaliacao[] = filteredAvData.map(av => ({
+    const avaliacoesFormatadas: Avaliacao[] = avData.map(av => ({
       id: av.id.toString(),
       turmaId: av.turma_id,
       tipo: av.tipo,
@@ -137,7 +154,7 @@ export const TurmaService = {
 
     if (notasError) throw notasError;
 
-    return { avaliacoes: avaliacoesFormatadas, notasData: notasData || [] };
+    return { avaliacoes: avaliacoesFormatadas, notasData: (notasData || []) as NotaRecord[] };
   },
 
   salvarAvaliacao: async (av: Avaliacao, turmaId: string | number, disciplina: string): Promise<string> => {
@@ -218,7 +235,7 @@ export const TurmaService = {
     if (error) throw error;
   },
 
-  buscarFrequencia: async (turmaId: string | number, disciplina: string, data: string, tempo: string): Promise<any[]> => {
+  buscarFrequencia: async (turmaId: string | number, disciplina: string, data: string, tempo: string): Promise<FrequenciaRecord[]> => {
     const tid = getTid(turmaId);
     const dataISO = normalizarDataISO(data);
     const { data: freqData, error } = await supabase
@@ -229,54 +246,57 @@ export const TurmaService = {
       .eq('tempo', tempo)
       .eq('disciplina', disciplina);
     if (error) throw error;
-    return freqData || [];
+    return (freqData || []) as FrequenciaRecord[];
   },
 
-  fetchAllFrequencias: async (turmaId: string | number, disciplina: string): Promise<any[]> => {
+  fetchAllFrequencias: async (turmaId: string | number, disciplina: string): Promise<FrequenciaRecord[]> => {
     const tid = getTid(turmaId);
-    const { data: freqData, error } = await supabase
+
+    let query = supabase
       .from('frequencias')
       .select('data, aluno_id, status, disciplina')
       .eq('turma_id', tid)
       .eq('status', 'F');
+    if (disciplina) query = query.ilike('disciplina', disciplina);
+
+    const { data: freqData, error } = await query;
     if (error) throw error;
-    
-    // Client-side filter
-    const filtered = (freqData || []).filter(f => !f.disciplina || !disciplina || f.disciplina.toLowerCase() === disciplina.toLowerCase());
-    return filtered;
+    return (freqData || []) as FrequenciaRecord[];
   },
 
-  buscarFrequenciaPorDia: async (turmaId: string | number, disciplina: string, data: string): Promise<any[]> => {
+  buscarFrequenciaPorDia: async (turmaId: string | number, disciplina: string, data: string): Promise<FrequenciaRecord[]> => {
     const tid = getTid(turmaId);
-    // BUG-03 FIX: normalizar data para ISO antes de consultar (igual a buscarFrequencia)
     const dataISO = normalizarDataISO(data);
-    const { data: freqData, error } = await supabase
+
+    let query = supabase
       .from('frequencias')
       .select('aluno_id, status, disciplina')
       .eq('turma_id', tid)
       .eq('data', dataISO);
+    if (disciplina) query = query.ilike('disciplina', disciplina);
+
+    const { data: freqData, error } = await query;
     if (error) throw error;
-    
-    // Client-side filter
-    const filtered = (freqData || []).filter(f => !f.disciplina || !disciplina || f.disciplina.toLowerCase() === disciplina.toLowerCase());
-    return filtered;
+    return (freqData || []) as FrequenciaRecord[];
   },
 
   buscarConteudo: async (turmaId: string | number, disciplina: string, data: string, tempo: string): Promise<Conteudo | null> => {
     const tid = getTid(turmaId);
     const dataISO = normalizarDataISO(data);
-    const { data: contData, error } = await supabase
+
+    let query = supabase
       .from('conteudos')
       .select('*')
       .eq('turma_id', tid)
       .eq('data', dataISO)
       .eq('tempo', tempo);
+    if (disciplina) query = query.ilike('disciplina', disciplina);
+
+    const { data: contData, error } = await query;
 
     if (error) throw error;
     
-    // Client-side filter
-    const filtered = (contData || []).filter(c => !c.disciplina || !disciplina || c.disciplina.toLowerCase() === disciplina.toLowerCase());
-    const matchedCont = filtered.length > 0 ? filtered[0] : null;
+    const matchedCont = contData && contData.length > 0 ? contData[0] : null;
 
     if (matchedCont) {
       return {
@@ -322,18 +342,19 @@ export const TurmaService = {
 
   fetchAllConteudos: async (turmaId: string | number, disciplina: string): Promise<Conteudo[]> => {
     const tid = getTid(turmaId);
-    const { data, error } = await supabase
+
+    let query = supabase
       .from('conteudos')
       .select('*')
       .eq('turma_id', tid)
       .order('data', { ascending: false });
+    if (disciplina) query = query.ilike('disciplina', disciplina);
+
+    const { data, error } = await query;
       
     if (error) throw error;
 
-    // Client-side filter
-    const filtered = (data || []).filter(c => !c.disciplina || !disciplina || c.disciplina.toLowerCase() === disciplina.toLowerCase());
-
-    return filtered.map(c => ({
+    return (data || []).map(c => ({
       id: c.id.toString(),
       turmaId: c.turma_id,
       data: c.data,

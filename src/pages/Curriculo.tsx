@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Save, ChevronRight, BookOpen, Layers, Filter, Check, RotateCcw, Pencil } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/common/Toast';
+import ConfirmActionModal from '../components/ConfirmActionModal';
 
 interface Unidade {
   id: string;
@@ -63,6 +64,8 @@ export default function Curriculo() {
   const [newObjetos, setNewObjetos] = useState<string[]>([""]);
   const [newHabilidades, setNewHabilidades] = useState<string[]>([""]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchUnidades();
@@ -229,8 +232,7 @@ export default function Curriculo() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Tem certeza que deseja excluir esta unidade curricular?')) return;
-
+    setDeleting(true);
     try {
       const { error } = await supabase
         .from('curriculo_unidades')
@@ -243,6 +245,9 @@ export default function Curriculo() {
     } catch (err) {
       console.error(err);
       showError('Erro ao remover');
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   }
 
@@ -545,7 +550,7 @@ export default function Curriculo() {
                         <Pencil className="w-5 h-5" />
                       </button>
                       <button 
-                        onClick={() => handleDelete(unidade.id)}
+                        onClick={() => setDeleteTarget(unidade.id)}
                         className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                         title="Excluir"
                       >
@@ -559,6 +564,14 @@ export default function Curriculo() {
           </div>
         </div>
       </div>
+      <ConfirmActionModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => deleteTarget && handleDelete(deleteTarget)}
+        title="Excluir Unidade Curricular"
+        message="Tem certeza que deseja excluir esta unidade curricular? Esta ação não pode ser desfeita."
+        loading={deleting}
+      />
     </div>
   );
 }
