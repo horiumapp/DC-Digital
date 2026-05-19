@@ -43,18 +43,27 @@ export default function ObjetoConhecimentoTab({
       if (!turmaAtiva) return;
       setLoadingCurriculo(true);
       try {
-        const modalidade = turmaAtiva.ensino || "";
-        const ano = turmaAtiva.fase || "";
+        let modalidadeRaw = turmaAtiva.ensino || "";
+        // Extract prefix before '(' to avoid mismatches between '°' and 'º'
+        const modalidadeStr = modalidadeRaw.split('(')[0].trim();
+        
+        let anoStr = turmaAtiva.fase || "";
+        // Extract leading digit from phase (e.g. "1° ANO A" -> "1º Ano") to match curriculum format
+        const matchAno = anoStr.match(/^(\d+)/);
+        if (matchAno) {
+          anoStr = `${matchAno[1]}º Ano`;
+        }
+
         const disciplina = turmaAtiva.componente || "";
         const bimestre = getBimestrePorData(selectedDate) || "";
         
-        console.log('Filtros Currículo:', { modalidade, ano, disciplina, bimestre });
+        console.log('Filtros Currículo:', { modalidade: modalidadeStr, ano: anoStr, disciplina, bimestre });
 
         const { data, error } = await supabase
           .from('curriculo_unidades')
           .select('*, objetos:curriculo_objetos(*), habilidades:curriculo_habilidades(*)')
-          .eq('modalidade', modalidade)
-          .eq('ano', ano)
+          .ilike('modalidade', `%${modalidadeStr}%`)
+          .eq('ano', anoStr)
           .eq('bimestre', bimestre)
           .ilike('disciplina', `%${disciplina}%`);
 
