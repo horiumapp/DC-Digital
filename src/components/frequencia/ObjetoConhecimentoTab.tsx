@@ -182,7 +182,7 @@ export default function ObjetoConhecimentoTab({
         data: selectedDate,
         tempo: tempoAula,
         objetos: [objetoConhecimento],
-        habilidades: objetoUnidade === 'TEXTO LIVRE' ? [] : habilidadesDisponiveis,
+        habilidades: objetoUnidade === 'TEXTO LIVRE' ? [] : [objetoUnidade, ...habilidadesDisponiveis],
         descricao: objetoObservacao
       });
 
