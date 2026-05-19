@@ -112,14 +112,15 @@ export const TurmaService = {
       .from('avaliacoes')
       .select('*')
       .eq('turma_id', tid)
-      .eq('disciplina', disciplina)
       .order('data', { ascending: true });
     
     if (avError) throw avError;
 
-    if (!avData || avData.length === 0) return { avaliacoes: [], notasData: [] };
+    const filteredAvData = (avData || []).filter(av => !av.disciplina || !disciplina || av.disciplina.toLowerCase() === disciplina.toLowerCase());
 
-    const avaliacoesFormatadas: Avaliacao[] = avData.map(av => ({
+    if (filteredAvData.length === 0) return { avaliacoes: [], notasData: [] };
+
+    const avaliacoesFormatadas: Avaliacao[] = filteredAvData.map(av => ({
       id: av.id.toString(),
       turmaId: av.turma_id,
       tipo: av.tipo,
@@ -272,21 +273,23 @@ export const TurmaService = {
       .select('*')
       .eq('turma_id', tid)
       .eq('data', dataISO)
-      .eq('tempo', tempo)
-      .eq('disciplina', disciplina)
-      .maybeSingle();
+      .eq('tempo', tempo);
 
     if (error) throw error;
+    
+    // Client-side filter
+    const filtered = (contData || []).filter(c => !c.disciplina || !disciplina || c.disciplina.toLowerCase() === disciplina.toLowerCase());
+    const matchedCont = filtered.length > 0 ? filtered[0] : null;
 
-    if (contData) {
+    if (matchedCont) {
       return {
-        id: contData.id.toString(),
-        turmaId: contData.turma_id,
-        data: contData.data,
-        tempo: contData.tempo,
-        objetos: contData.objetos || [],
-        habilidades: contData.habilidades || [],
-        descricao: contData.descricao || ''
+        id: matchedCont.id.toString(),
+        turmaId: matchedCont.turma_id,
+        data: matchedCont.data,
+        tempo: matchedCont.tempo,
+        objetos: matchedCont.objetos || [],
+        habilidades: matchedCont.habilidades || [],
+        descricao: matchedCont.descricao || ''
       };
     }
     return null;
@@ -326,12 +329,14 @@ export const TurmaService = {
       .from('conteudos')
       .select('*')
       .eq('turma_id', tid)
-      .eq('disciplina', disciplina)
       .order('data', { ascending: false });
-    
+      
     if (error) throw error;
-    
-    return (data || []).map(c => ({
+
+    // Client-side filter
+    const filtered = (data || []).filter(c => !c.disciplina || !disciplina || c.disciplina.toLowerCase() === disciplina.toLowerCase());
+
+    return filtered.map(c => ({
       id: c.id.toString(),
       turmaId: c.turma_id,
       data: c.data,
