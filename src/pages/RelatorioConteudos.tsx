@@ -51,7 +51,7 @@ export default function RelatorioConteudos() {
   const [loading, setLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(false);
   const [conteudosRelatorio, setConteudosRelatorio] = useState<ConteudoLinha[]>([]);
-  
+
   const [opcaoFiltro, setOpcaoFiltro] = useState('Período');
   const [periodoSelecionado, setPeriodoSelecionado] = useState('1. BIMESTRE');
 
@@ -111,21 +111,21 @@ export default function RelatorioConteudos() {
               componentes.forEach(comp => {
                 const matchNum = t.nome.match(/(\d+)$/);
                 const numero = matchNum ? matchNum[1] : '01';
-                
-                finalTurmas.push({ 
-                  id: `${t.id}|${comp}`, 
-                  nome: t.nome, 
-                  turno: t.turno, 
+
+                finalTurmas.push({
+                  id: `${t.id}|${comp}`,
+                  nome: t.nome,
+                  turno: t.turno,
                   componente: comp,
-                  ensino: t.ensino || 'Ensino Fundamental', 
-                  fase: t.nome, 
+                  ensino: t.ensino || 'Ensino Fundamental',
+                  fase: t.nome,
                   numero: t.turma_codigo || numero,
                   escolaId: t.escola_id,
                   escolaNome: t.escolas?.nome || 'ESCOLA NÃO IDENTIFICADA'
                 });
               });
             });
-            
+
             setTurmas(finalTurmas);
             if (finalTurmas.length > 0) {
               setSelectedTurmaId(finalTurmas[0].id);
@@ -158,9 +158,9 @@ export default function RelatorioConteudos() {
       const [turmaId, componente] = selectedTurmaId.split('|');
       let dateStart = '';
       let dateEnd = '';
-      
+
       const hojeISO = new Date().toISOString().split('T')[0];
-      
+
       if (opcaoFiltro === 'Período') {
         const period = APP_CONFIG.PERIODOS.find(p => p.label === periodoSelecionado);
         if (period) {
@@ -170,7 +170,7 @@ export default function RelatorioConteudos() {
         }
       } else {
         const mesesMap: Record<string, number> = {
-          'JANEIRO': 1, 'FEVEREIRO': 2, 'MARÇO': 3, 'ABRIL': 4, 'MAIO': 5, 'JUNHO': 6, 
+          'JANEIRO': 1, 'FEVEREIRO': 2, 'MARÇO': 3, 'ABRIL': 4, 'MAIO': 5, 'JUNHO': 6,
           'JULHO': 7, 'AGOSTO': 8, 'SETEMBRO': 9, 'OUTUBRO': 10, 'NOVEMBRO': 11, 'DEZEMBRO': 12
         };
         const mes = mesesMap[periodoSelecionado];
@@ -198,7 +198,7 @@ export default function RelatorioConteudos() {
       const filtered = (rawContents || []).filter(c => {
         const cDateISO = formatarDataParaISO(c.data);
         if (!cDateISO || cDateISO === 'Invalid Date') return false;
-        
+
         const matchDate = cDateISO >= dateStart && cDateISO <= dateEnd;
         const matchComp = String(c.disciplina || '').trim().toUpperCase() === componente.trim().toUpperCase();
         return matchDate && matchComp;
@@ -218,8 +218,8 @@ export default function RelatorioConteudos() {
           .lte('data', dateEnd.split('-').reverse().join('/'));
 
         const fallbackFiltered = (fallbackData || []).filter(c => {
-           const cDateISO = formatarDataParaISO(c.data);
-           return cDateISO >= dateStart && cDateISO <= dateEnd;
+          const cDateISO = formatarDataParaISO(c.data);
+          return cDateISO >= dateStart && cDateISO <= dateEnd;
         });
 
         if (fallbackFiltered.length > 0) {
@@ -242,7 +242,7 @@ export default function RelatorioConteudos() {
 
       const formatted = sorted.map(c => {
         let dataExibicao = '---';
-        
+
         if (c.data && c.data !== 'Invalid Date') {
           // Detectar e converter ISO (YYYY-MM-DD) para BR (DD/MM/YYYY)
           if (/^\d{4}-\d{2}-\d{2}/.test(c.data)) {
@@ -262,7 +262,7 @@ export default function RelatorioConteudos() {
       });
 
       setConteudosRelatorio(formatted);
-      
+
       // Definir o nome do arquivo PDF (via título do documento)
       const oldTitle = document.title;
       const turmaNome = selectedTurmaObj?.nome?.replace(/\s+/g, '_') || 'Turma';
@@ -287,7 +287,7 @@ export default function RelatorioConteudos() {
 
   const selectedTurmaObj = turmas.find(t => t.id === selectedTurmaId);
 
-  const filteredTurmas = turmas.filter(t => 
+  const filteredTurmas = turmas.filter(t =>
     t.nome.toLowerCase().includes(buscaTurma.toLowerCase()) ||
     t.componente.toLowerCase().includes(buscaTurma.toLowerCase())
   );
@@ -309,25 +309,25 @@ export default function RelatorioConteudos() {
 
       <main className="p-8 flex justify-center">
         <div className="w-full max-w-[1400px] space-y-8">
-          
+
           {/* Main Card: Turmas */}
           <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
             <div className="p-6 border-b border-slate-100 bg-white">
               <h2 className="text-lg font-bold text-[#0f2851]">Turmas</h2>
             </div>
-            
+
             <div className="p-6 space-y-6">
               {/* Pesquisa */}
               <div className="relative max-w-full">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Search className="h-5 w-5 text-slate-400" />
                 </div>
-                <input 
-                  type="text" 
-                  placeholder="Pesquisar" 
+                <input
+                  type="text"
+                  placeholder="Pesquisar"
                   value={buscaTurma}
                   onChange={(e) => setBuscaTurma(e.target.value)}
-                  className="block w-full pl-12 pr-4 py-3 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f2851] focus:border-[#0f2851] bg-[#f8f9fa]" 
+                  className="block w-full pl-12 pr-4 py-3 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f2851] focus:border-[#0f2851] bg-[#f8f9fa]"
                 />
               </div>
 
@@ -353,8 +353,8 @@ export default function RelatorioConteudos() {
                       </tr>
                     ) : (
                       filteredTurmas.map((t) => (
-                        <tr 
-                          key={t.id} 
+                        <tr
+                          key={t.id}
                           className={`hover:bg-[#f8faff] transition-colors cursor-pointer ${selectedTurmaId === t.id ? 'bg-[#eef2ff]' : ''}`}
                           onClick={() => setSelectedTurmaId(t.id)}
                         >
@@ -363,9 +363,9 @@ export default function RelatorioConteudos() {
                           <td className="px-6 py-4 border-r border-slate-100 text-slate-600 uppercase font-black text-[12px]">{t.componente}</td>
                           <td className="px-6 py-4 text-center">
                             <div className="flex justify-center">
-                              <input 
-                                type="radio" 
-                                name="turma-select" 
+                              <input
+                                type="radio"
+                                name="turma-select"
                                 checked={selectedTurmaId === t.id}
                                 onChange={() => setSelectedTurmaId(t.id)}
                                 className="w-5 h-5 text-[#0f2851] border-slate-300 focus:ring-[#0f2851]"
@@ -391,7 +391,7 @@ export default function RelatorioConteudos() {
                 <div className="space-y-1.5 w-64">
                   <label className="text-sm font-bold text-slate-600">Selecione opção</label>
                   <div className="relative">
-                    <select 
+                    <select
                       value={opcaoFiltro}
                       onChange={(e) => setOpcaoFiltro(e.target.value)}
                       className="w-full py-3 px-4 bg-white border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] outline-none font-medium"
@@ -406,7 +406,7 @@ export default function RelatorioConteudos() {
                 <div className="space-y-1.5 w-72">
                   <label className="text-sm font-bold text-slate-600">Selecione o Período</label>
                   <div className="relative">
-                    <select 
+                    <select
                       value={periodoSelecionado}
                       onChange={(e) => setPeriodoSelecionado(e.target.value)}
                       className="w-full py-3 px-4 bg-white border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] outline-none font-medium"
@@ -436,7 +436,7 @@ export default function RelatorioConteudos() {
                   </div>
                 </div>
 
-                <button 
+                <button
                   onClick={handleExibir}
                   disabled={dataLoading}
                   className="px-8 py-3 bg-[#0f2851] text-white rounded-xl text-sm font-bold hover:bg-[#0a1b38] transition-all shadow-lg shadow-[#0f2851]/20 active:scale-95 mb-[2px] disabled:opacity-50"
@@ -597,8 +597,8 @@ export default function RelatorioConteudos() {
 
           {/* Bottom Info */}
           <div className="mt-auto pt-6 flex justify-between text-[7px] italic text-slate-400">
-            <div>Sistema DC Digital - Gerado em {new Date().toLocaleString('pt-BR')}</div>
-            <div>Registro Individual de Conteúdo - Modelo SEDUC/AM</div>
+            <div>Sistema DDigital - Gerado em {new Date().toLocaleString('pt-BR')}</div>
+            <div>Registro Individual de Conteúdo - SEMED/LÁBREA</div>
           </div>
         </div>
       </div>
