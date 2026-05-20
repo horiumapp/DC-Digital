@@ -697,9 +697,18 @@ export default function RelatorioNotas() {
         #printable-relatorio .signature-title { font-size: 8px; font-weight: bold; margin: 0; }
         #printable-relatorio .signature-subtitle { font-size: 7px; color: #555; margin: 0; text-transform: uppercase; }
         @media print {
-          body > *:not(#printable-relatorio) { display: none !important; }
-          #printable-relatorio { display: block !important; width: 100%; }
-          html, body { height: auto !important; overflow: visible !important; }
+          body * { visibility: hidden; }
+          #printable-relatorio, #printable-relatorio * { visibility: visible; }
+          #printable-relatorio {
+            visibility: visible;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            display: block !important;
+            overflow: visible !important;
+          }
+          html, body { height: auto !important; overflow: visible !important; background: white !important; }
         }
       `}} />
     </div>
