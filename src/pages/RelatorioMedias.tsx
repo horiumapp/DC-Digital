@@ -11,12 +11,14 @@ import { useToast } from '../components/common/Toast';
 const obterLogoEscola = (nomeEscola: string) => {
   if (!nomeEscola) return '/logo.png';
   const nomeUpper = nomeEscola.toUpperCase();
-  if (nomeUpper.includes('FRANCISCA MENDES')) return '/Francisca Mendes.png';
-  if (nomeUpper.includes('JOSÉ MAIA') || nomeUpper.includes('JOSE MAIA')) return '/Jose Maia.png';
-  if (nomeUpper.includes('SOCORRO BRITO')) return '/Socorro Brito.png';
-  if (nomeUpper.includes('MARTA SOUZA') || nomeUpper.includes('MARTA SOUSA')) return '/Marta Souza.png';
+  if (nomeUpper.includes('FRANCISCA')) return '/Francisca Mendes.png';
+  if (nomeUpper.includes('MAIA') || nomeUpper.includes('JOSE MAIA') || nomeUpper.includes('JOSÉ MAIA')) return '/José Maia.png';
+  if (nomeUpper.includes('PASTOR') || nomeUpper.includes('REIS')) return '/Pastor José Reis.png';
+  if (nomeUpper.includes('VARGAS') || nomeUpper.includes('PRESIDENTE')) return '/Presidente Vargas.png';
+  if (nomeUpper.includes('SOCORRO') || nomeUpper.includes('BRITO')) return '/Socorro Brito.png';
   if (nomeUpper.includes('FILADÉLFIA') || nomeUpper.includes('FILADELFIA')) return '/Filadelfia.png';
   if (nomeUpper.includes('MÔNICA') || nomeUpper.includes('MONICA')) return '/Turma da Monica.png';
+  if (nomeUpper.includes('SÃO FRANCISCO') || nomeUpper.includes('SAO FRANCISCO')) return '/São Francisco.png';
   return '/logo.png';
 };
 
