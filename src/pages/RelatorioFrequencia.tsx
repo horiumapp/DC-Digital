@@ -503,15 +503,13 @@ export default function RelatorioFrequencia() {
             }
           }
           #printable-relatorio .doc-container { padding: 10px; font-family: Arial, sans-serif; color: black; }
-          #printable-relatorio .official-header { display: flex; border: 1px solid black; }
-          #printable-relatorio .logo-box { width: 20%; border-right: 1px solid black; padding: 10px; text-align: center; }
-          #printable-relatorio .school-logo-box { width: 20%; border-left: 1px solid black; padding: 10px; text-align: center; }
-          #printable-relatorio .meta-box { flex: 1; }
-          #printable-relatorio .meta-table { width: 100%; border-collapse: collapse; }
-          #printable-relatorio .meta-table td { border: 1px solid black; padding: 2px 6px; height: 16px; }
-          #printable-relatorio .label { font-size: 6px; text-transform: uppercase; margin-bottom: 1px; color: #333; }
-          #printable-relatorio .value { font-size: 8px; font-weight: bold; text-transform: uppercase; }
-          #printable-relatorio .title-box { border: 1px solid black; border-top: none; padding: 6px; text-align: center; font-weight: bold; font-size: 14px; text-transform: uppercase; }
+          #printable-relatorio table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+          #printable-relatorio th, #printable-relatorio td { border: 1px solid black; padding: 4px; text-align: left; font-size: 8px; font-family: Arial, sans-serif; }
+          #printable-relatorio .header-grid { width: 100%; border: 1px solid black; border-collapse: collapse; }
+          #printable-relatorio .header-grid td { border: 1px solid black; padding: 2px 6px; }
+          #printable-relatorio .label { font-size: 6px; text-transform: uppercase; font-weight: normal; margin-bottom: 1px; color: #333; }
+          #printable-relatorio .value { font-size: 9px; font-weight: bold; text-transform: uppercase; }
+          #printable-relatorio .title-bar { border: 1px solid black; border-top: none; padding: 6px; text-align: center; font-weight: bold; font-size: 14px; text-transform: uppercase; }
           #printable-relatorio .data-table { width: 100%; border-collapse: collapse; margin-top: 15px; border: 1px solid black; }
           #printable-relatorio .data-table th, #printable-relatorio .data-table td { border: 1px solid black; font-size: 7px; text-align: center; padding: 2px; }
           #printable-relatorio .data-table th { background: #eee; font-weight: bold; }
@@ -537,34 +535,73 @@ export default function RelatorioFrequencia() {
         `}</style>
 
         <div className="doc-container">
-          <div className="official-header">
-            <div className="logo-box">
-              <img src="/semed.png" className="w-16 h-16 mx-auto mb-1 object-contain" />
-              <div className="font-bold text-[8px] leading-tight">SECRETARIA MUNICIPAL DE EDUCAÇÃO<br />LÁBREA - AM</div>
+          <div className="flex border border-black overflow-hidden">
+            {/* Logo Box */}
+            <div className="w-[20%] border-r border-black p-4 flex flex-col items-center justify-center text-center">
+              <img src="/semed.png" alt="Logo SEMED" className="w-16 h-16 mb-1 object-contain" />
+              <div className="font-bold text-[8px] leading-tight uppercase">
+                Secretaria Municipal de Educação<br />
+                Lábrea - AM
+              </div>
             </div>
-            <div className="meta-box">
-              <table className="meta-table">
-                <tbody>
-                  <tr><td colSpan={3}><div className="label">Escola:</div><div className="value">{selectedTurmaObj?.escolaNome}</div></td></tr>
-                  <tr>
-                    <td width="60%"><div className="label">Ensino:</div><div className="value">{selectedTurmaObj?.ensino}</div></td>
-                    <td width="20%"><div className="label">Turno:</div><div className="value">{selectedTurmaObj?.turno}</div></td>
-                    <td width="20%"><div className="label">Turma:</div><div className="value">{selectedTurmaObj?.numero}</div></td>
-                  </tr>
-                  <tr>
-                    <td><div className="label">Professor:</div><div className="value">{user?.name || 'NÃO IDENTIFICADO'}</div></td>
-                    <td><div className="label">Fase:</div><div className="value">{selectedTurmaObj?.fase}</div></td>
-                    <td><div className="label">Componente:</div><div className="value">{selectedTurmaObj?.componente}</div></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div className="school-logo-box">
-              <img src={obterLogoEscola(selectedTurmaObj?.escolaNome || '')} className="w-16 h-16 mx-auto mb-1 object-contain" />
-              <div className="font-bold text-[8px] leading-tight uppercase">{selectedTurmaObj?.escolaNome}</div>
+
+            {/* Metadata Grid */}
+            <table className="flex-1 header-grid border-none">
+              <tbody>
+                <tr className="h-8">
+                  <td colSpan={3} className="border-t-0 border-r-0">
+                    <div className="label">Escola:</div>
+                    <div className="value shadow-none">{selectedTurmaObj?.escolaNome}</div>
+                  </td>
+                </tr>
+                <tr className="h-8">
+                  <td width="55%" className="border-r border-black">
+                    <div className="label">Ensino:</div>
+                    <div className="value">{selectedTurmaObj?.ensino}</div>
+                  </td>
+                  <td width="25%" className="border-r border-black">
+                    <div className="label">Turno:</div>
+                    <div className="value">{selectedTurmaObj?.turno}</div>
+                  </td>
+                  <td width="20%" className="border-r-0">
+                    <div className="label">Turma:</div>
+                    <div className="value">{selectedTurmaObj?.numero}</div>
+                  </td>
+                </tr>
+                <tr className="h-8">
+                  <td className="border-r border-black">
+                    <div className="label">Fase:</div>
+                    <div className="value">{selectedTurmaObj?.fase}</div>
+                  </td>
+                  <td className="border-r border-black">
+                    <div className="label">Componente:</div>
+                    <div className="value">{selectedTurmaObj?.componente?.toUpperCase()}</div>
+                  </td>
+                  <td className="border-r-0">
+                    <div className="label">Período Letivo:</div>
+                    <div className="value">{periodoSelecionado}</div>
+                  </td>
+                </tr>
+                <tr className="h-8">
+                  <td colSpan={3} className="border-b-0 border-r-0">
+                    <div className="label">Professor:</div>
+                    <div className="value">{user?.name?.toUpperCase() || 'NÃO IDENTIFICADO'}</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* School Logo Box */}
+            <div className="w-[20%] border-l border-black p-4 flex flex-col items-center justify-center text-center">
+              <img src={obterLogoEscola(selectedTurmaObj?.escolaNome || '')} alt="Logo Escola" className="w-16 h-16 mb-1 object-contain" />
+              <div className="font-bold text-[8px] leading-tight uppercase">
+                {selectedTurmaObj?.escolaNome}
+              </div>
             </div>
           </div>
-          <div className="title-box">Relatório de Frequência da Turma - Período: {periodoSelecionado}</div>
+          <div className="title-bar">
+            RELATÓRIO DE FREQUÊNCIA
+          </div>
 
           <table className="data-table">
             <thead>
