@@ -109,8 +109,17 @@ export default function RelatorioConteudos() {
             const finalTurmas: TurmaRelatorio[] = [];
             turmasAlocadas.forEach(t => {
               componentes.forEach(comp => {
-                const matchNum = t.nome.match(/(\d+)$/);
-                const numero = matchNum ? matchNum[1] : '01';
+                let fase = t.nome;
+                let numero = '01';
+
+                const match = t.nome.match(/(.+)\s+([A-Za-z0-9]+)$/);
+                if (match) {
+                  fase = match[1].trim();
+                  numero = match[2].trim();
+                } else {
+                  const matchNum = t.nome.match(/(\d+)$/);
+                  if (matchNum) numero = matchNum[1];
+                }
 
                 finalTurmas.push({
                   id: `${t.id}|${comp}`,
@@ -118,7 +127,7 @@ export default function RelatorioConteudos() {
                   turno: t.turno,
                   componente: comp,
                   ensino: t.ensino || 'Ensino Fundamental',
-                  fase: t.nome,
+                  fase: fase,
                   numero: t.turma_codigo || numero,
                   escolaId: t.escola_id,
                   escolaNome: t.escolas?.nome || 'ESCOLA NÃO IDENTIFICADA'
