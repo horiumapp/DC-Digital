@@ -44,6 +44,14 @@ export default function Turmas() {
   const [turmasBD, setTurmasBD] = useState<TurmaBD[]>([]);
   const [loading, setLoading] = useState(true);
   const [professorDisciplinas, setProfessorDisciplinas] = useState<string>('');
+  const isMounted = React.useRef(true);
+
+  React.useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   const { showSuccess, showError } = useToast();
 
@@ -58,12 +66,14 @@ export default function Turmas() {
         .order('nome');
 
       if (error) throw error;
-      if (data) {
+      if (data && isMounted.current) {
         setTurmasBD(data);
       }
     } catch (err: any) {
-      console.error('Erro ao carregar turmas:', err);
-      showError('Não foi possível carregar as turmas.');
+      if (isMounted.current) {
+        console.error('Erro ao carregar turmas:', err);
+        showError('Não foi possível carregar as turmas.');
+      }
     }
   }, [alocacaoAtiva, showError]);
 
@@ -72,11 +82,11 @@ export default function Turmas() {
     
     // Usuários administrativos não precisam buscar lotações de professor
     if (['ADMIN', 'GESTOR', 'SECRETARIO'].includes(user.role)) {
-      setLoading(false);
+      if (isMounted.current) setLoading(false);
       return;
     }
 
-    setLoading(true);
+    if (isMounted.current) setLoading(true);
     try {
       const emailLimpo = user.email.trim();
       
@@ -89,7 +99,7 @@ export default function Turmas() {
 
       if (profError) throw profError;
 
-      if (professorDataResult && professorDataResult.length > 0) {
+      if (professorDataResult && professorDataResult.length > 0 && isMounted.current) {
         // Pegar todas as disciplinas de todos os perfis encontrados e unificar (caso um tenha e outro não)
         let allDisciplinas: string[] = [];
         professorDataResult.forEach(p => {
@@ -112,7 +122,7 @@ export default function Turmas() {
 
         if (alocError) throw alocError;
 
-        if (alocData && alocData.length > 0) {
+        if (alocData && alocData.length > 0 && isMounted.current) {
           // Remove duplicadas reais (mesma escola & mesmo turno) se houver
           const uniqueAlocs = alocData.filter((v, i, a) => 
             a.findIndex(t => (t.escola_id === v.escola_id && t.turno === v.turno)) === i
@@ -120,19 +130,23 @@ export default function Turmas() {
           
           setAlocacoes(uniqueAlocs);
           setAlocacaoAtiva(uniqueAlocs[0]); // Seleciona a primeira por padrão
-        } else {
+        } else if (isMounted.current) {
           console.warn("Nenhuma alocacão encontrada para os professores encontrados.");
           showError("Nenhuma alocação (escola/turno) encontrada para seu usuário.");
         }
-      } else {
+      } else if (isMounted.current) {
         console.warn("Nenhum professor encontrado com o e-mail:", emailLimpo);
         showError("Cadastro de professor não encontrado para este e-mail.");
       }
     } catch (err: any) {
-      console.error('Erro ao carregar lotações:', err);
-      showError('Ocorreu um erro ao carregar suas lotações.');
+      if (isMounted.current) {
+        console.error('Erro ao carregar lotações:', err);
+        showError('Ocorreu um erro ao carregar suas lotações.');
+      }
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
   }, [user, showError]);
 
