@@ -130,7 +130,7 @@ export default function RelatorioFrequencia() {
                   nome: t.nome,
                   turno: t.turno,
                   componente: comp,
-                  ensino: t.ensino || 'Ensino Fundamental',
+                  ensino: t.ensino || 'Fundamental Anos Iniciais (1° ao 5° ANO)',
                   fase: fase,
                   numero: t.turma_codigo || numero,
                   escolaId: t.escola_id,
@@ -348,7 +348,7 @@ export default function RelatorioFrequencia() {
                       className="w-full py-2.5 px-4 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-blue-500/10 outline-none font-bold text-[#0f2851]"
                     >
                       {turmas.map(t => (
-                        <option key={t.id} value={t.id}>{t.ensino} - {t.fase} - {t.componente}</option>
+                        <option key={t.id} value={t.id}>{t.ensino} - {t.fase} {t.numero} - {t.componente}</option>
                       ))}
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />

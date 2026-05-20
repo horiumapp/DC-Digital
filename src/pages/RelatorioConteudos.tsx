@@ -126,7 +126,7 @@ export default function RelatorioConteudos() {
                   nome: t.nome,
                   turno: t.turno,
                   componente: comp,
-                  ensino: t.ensino || 'Ensino Fundamental',
+                  ensino: t.ensino || 'Fundamental Anos Iniciais (1° ao 5° ANO)',
                   fase: fase,
                   numero: t.turma_codigo || numero,
                   escolaId: t.escola_id,
@@ -368,7 +368,7 @@ export default function RelatorioConteudos() {
                           onClick={() => setSelectedTurmaId(t.id)}
                         >
                           <td className="px-6 py-4 border-r border-slate-100 text-slate-600">{t.ensino}</td>
-                          <td className="px-6 py-4 border-r border-slate-100 text-slate-600 font-bold">{t.fase}</td>
+                          <td className="px-6 py-4 border-r border-slate-100 text-slate-600 font-bold">{t.fase} {t.numero}</td>
                           <td className="px-6 py-4 border-r border-slate-100 text-slate-600 uppercase font-black text-[12px]">{t.componente}</td>
                           <td className="px-6 py-4 text-center">
                             <div className="flex justify-center">
