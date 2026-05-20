@@ -533,71 +533,109 @@ export default function RelatorioNotas() {
 
       {/* Área de Impressão (invisível na tela, visível apenas na impressão) */}
       {selectedTurmaObj && (
-        <div id="printable-relatorio" className="hidden print:block">
-          <div className="doc-container">
+        <div id="printable-relatorio" className="hidden print:block fixed inset-0 bg-white z-[9999] overflow-y-auto">
+          <style dangerouslySetInnerHTML={{ __html: `
+            @media print {
+              @page { margin: 1cm; size: A4 landscape; }
+              html, body { height: auto !important; overflow: visible !important; background: white !important; }
+              body * { visibility: hidden; }
+              #printable-relatorio, #printable-relatorio * { visibility: visible; }
+              #printable-relatorio { 
+                visibility: visible;
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100%; 
+                display: block !important;
+                overflow: visible !important;
+              }
+              .no-print { display: none !important; }
+            }
+            #printable-relatorio table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+            #printable-relatorio th, #printable-relatorio td { border: 1px solid black; padding: 4px; text-align: left; font-size: 8px; font-family: Arial, sans-serif; }
+            #printable-relatorio .header-grid { width: 100%; border: 1px solid black; border-collapse: collapse; }
+            #printable-relatorio .header-grid td { border: 1px solid black; padding: 2px 6px; }
+            #printable-relatorio .label { font-size: 6px; text-transform: uppercase; font-weight: normal; margin-bottom: 1px; color: #333; }
+            #printable-relatorio .value { font-size: 9px; font-weight: bold; text-transform: uppercase; }
+            #printable-relatorio .title-bar { border: 1px solid black; border-top: none; padding: 6px; text-align: center; font-weight: bold; font-size: 14px; text-transform: uppercase; }
+            #printable-relatorio .content-table { margin-top: 15px; border: 1px solid black; width: 100%; border-collapse: collapse; }
+            #printable-relatorio .content-table th { background: #eee; text-align: center; font-weight: bold; padding: 6px; border: 1px solid black; font-size: 8px; }
+            #printable-relatorio .content-table td { border: 1px solid black; padding: 4px; font-size: 8px; }
+            #printable-relatorio .signatures { margin-top: 40px; display: flex; justify-content: space-around; page-break-inside: avoid; padding-bottom: 20px; }
+            #printable-relatorio .sig-line { border-top: 1px solid black; width: 250px; text-align: center; padding-top: 4px; font-size: 8px; font-weight: bold; margin-top: 25px; }
+          `}} />
+
+          <div className="p-4 bg-white text-black h-auto">
             {/* Cabeçalho Oficial */}
-            <div className="official-header">
+            <div className="flex border border-black overflow-hidden">
               {/* Lado Esquerdo: SEMED */}
-              <div className="logo-box">
-                <img src="/semed.png" alt="SEMED Logo" />
-                <p>SEMED</p>
-                <p style={{ fontSize: '5px', color: '#555' }}>Secretaria de Educação</p>
+              <div className="w-[20%] border-r border-black p-4 flex flex-col items-center justify-center text-center">
+                <img src="/semed.png" alt="Logo SEMED" className="w-16 h-16 mb-1 object-contain" />
+                <div className="font-bold text-[8px] leading-tight uppercase">
+                  Secretaria Municipal de Educação<br />
+                  Lábrea - AM
+                </div>
               </div>
 
-              <div className="header-divider"></div>
-
               {/* Centro: Tabela de Metadados */}
-              <table className="meta-table">
+              <table className="flex-1 header-grid border-none">
                 <tbody>
-                  <tr>
-                    <td colSpan={3} style={{ textTransform: 'uppercase' }}>
-                      ESCOLA: {selectedTurmaObj.escolaNome}
+                  <tr className="h-8">
+                    <td colSpan={3} className="border-t-0 border-r-0">
+                      <div className="label">Escola:</div>
+                      <div className="value shadow-none">{selectedTurmaObj.escolaNome}</div>
                     </td>
                   </tr>
-                  <tr>
-                    <td style={{ width: '50%', textTransform: 'uppercase' }}>
-                      ENSINO: {selectedTurmaObj.ensino}
+                  <tr className="h-8">
+                    <td width="55%" className="border-r border-black">
+                      <div className="label">Ensino:</div>
+                      <div className="value">{selectedTurmaObj.ensino}</div>
                     </td>
-                    <td style={{ width: '25%', textTransform: 'uppercase' }}>
-                      TURNO: {selectedTurmaObj.turno}
+                    <td width="25%" className="border-r border-black">
+                      <div className="label">Turno:</div>
+                      <div className="value">{selectedTurmaObj.turno}</div>
                     </td>
-                    <td style={{ width: '25%', textTransform: 'uppercase' }}>
-                      TURMA: {selectedTurmaObj.numero}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style={{ textTransform: 'uppercase' }}>
-                      FASE: {selectedTurmaObj.fase}
-                    </td>
-                    <td style={{ textTransform: 'uppercase' }}>
-                      COMPONENTE: {selectedTurmaObj.componente?.toUpperCase()}
-                    </td>
-                    <td style={{ textTransform: 'uppercase' }}>
-                      PERÍODO LETIVO: {periodo?.toUpperCase()}
+                    <td width="20%" className="border-r-0">
+                      <div className="label">Turma:</div>
+                      <div className="value">{selectedTurmaObj.numero}</div>
                     </td>
                   </tr>
-                  <tr>
-                    <td colSpan={3} style={{ textTransform: 'uppercase' }}>
-                      PROFESSOR: {user?.name?.toUpperCase() || 'NÃO IDENTIFICADO'}
+                  <tr className="h-8">
+                    <td className="border-r border-black">
+                      <div className="label">Fase:</div>
+                      <div className="value">{selectedTurmaObj.fase}</div>
+                    </td>
+                    <td className="border-r border-black">
+                      <div className="label">Componente:</div>
+                      <div className="value">{selectedTurmaObj.componente?.toUpperCase()}</div>
+                    </td>
+                    <td className="border-r-0">
+                      <div className="label">Período Letivo:</div>
+                      <div className="value">{periodo?.toUpperCase()}</div>
+                    </td>
+                  </tr>
+                  <tr className="h-8">
+                    <td colSpan={3} className="border-b-0 border-r-0">
+                      <div className="label">Professor:</div>
+                      <div className="value">{user?.name?.toUpperCase() || 'NÃO IDENTIFICADO'}</div>
                     </td>
                   </tr>
                 </tbody>
               </table>
 
-              <div className="header-divider"></div>
-
               {/* Lado Direito: Escola */}
-              <div className="logo-box">
+              <div className="w-[20%] border-l border-black p-4 flex flex-col items-center justify-center text-center">
                 <img 
                   src={obterLogoEscola(selectedTurmaObj.escolaNome)} 
                   alt="School Logo"
+                  className="w-16 h-16 mb-1 object-contain"
                   onError={(e) => {
                     e.currentTarget.src = '/logo.png';
                   }}
                 />
-                <p style={{ fontSize: '6px', whiteSpace: 'normal', marginTop: '2px' }}>
+                <div className="font-bold text-[8px] leading-tight uppercase">
                   {selectedTurmaObj.escolaNome}
-                </p>
+                </div>
               </div>
             </div>
 
@@ -610,9 +648,9 @@ export default function RelatorioNotas() {
             <table className="content-table">
               <thead>
                 <tr>
-                  <th style={{ width: '4%' }}>Nº</th>
-                  <th style={{ width: '12%' }}>FASE</th>
-                  <th style={{ width: '6%' }}>TURMA</th>
+                  <th style={{ width: '4%', textAlign: 'center' }}>Nº</th>
+                  <th style={{ width: '12%', textAlign: 'center' }}>FASE</th>
+                  <th style={{ width: '6%', textAlign: 'center' }}>TURMA</th>
                   <th style={{ width: '38%' }}>NOME DO ALUNO</th>
                   {principalAvs.map((av) => (
                     <React.Fragment key={av.id}>
@@ -659,58 +697,19 @@ export default function RelatorioNotas() {
             </table>
 
             {/* Signatures Area */}
-            <div className="signatures-container">
-              <div className="signature-box">
-                <div className="signature-line"></div>
-                <p className="signature-title">{user?.name?.toUpperCase() || 'PROFESSOR(A)'}</p>
-                <p className="signature-subtitle">Professor(a)</p>
+            <div className="signatures">
+              <div className="sig-line">
+                {user?.name?.toUpperCase() || 'NÃO IDENTIFICADO'}<br />
+                <span className="text-[7px] text-gray-500 font-normal uppercase">Professor(a)</span>
               </div>
-              <div className="signature-box">
-                <div className="signature-line"></div>
-                <p className="signature-title">COORDENAÇÃO PEDAGÓGICA</p>
-                <p className="signature-subtitle">Coordenação Pedagógica</p>
+              <div className="sig-line">
+                COORDENAÇÃO PEDAGÓGICA<br />
+                <span className="text-[7px] text-gray-500 font-normal uppercase">Assinatura</span>
               </div>
             </div>
           </div>
         </div>
       )}
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        #printable-relatorio .doc-container { padding: 10px; font-family: Arial, sans-serif; color: black; }
-        #printable-relatorio table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        #printable-relatorio th, #printable-relatorio td { border: 1px solid black; padding: 4px; font-size: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        #printable-relatorio th { font-weight: bold; background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        #printable-relatorio .official-header { display: flex; border: 1px solid black; }
-        #printable-relatorio .logo-box { width: 20%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5px; text-align: center; }
-        #printable-relatorio .logo-box img { max-height: 45px; object-fit: contain; }
-        #printable-relatorio .logo-box p { font-size: 7px; font-weight: bold; margin-top: 3px; line-height: 1; }
-        #printable-relatorio .header-divider { width: 1px; background-color: black; }
-        #printable-relatorio .meta-table { flex: 1; border-collapse: collapse; margin: -1px; }
-        #printable-relatorio .meta-table td { border: 1px solid black; padding: 4px 6px; font-size: 8px; font-weight: bold; height: 20px; box-sizing: border-box; }
-        #printable-relatorio .title-bar { background-color: black !important; color: white !important; text-align: center; font-weight: bold; font-size: 10px; padding: 4px 0; border: 1px solid black; border-top: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        #printable-relatorio .content-table { margin-top: 10px; border: 1px solid black; }
-        #printable-relatorio .content-table th { border: 1px solid black; }
-        #printable-relatorio .content-table td { border: 1px solid black; height: 22px; }
-        #printable-relatorio .signatures-container { margin-top: 30px; display: flex; justify-content: space-around; width: 100%; page-break-inside: avoid; }
-        #printable-relatorio .signature-box { width: 40%; text-align: center; display: flex; flex-direction: column; align-items: center; }
-        #printable-relatorio .signature-line { width: 100%; border-top: 1px solid black; margin-bottom: 4px; }
-        #printable-relatorio .signature-title { font-size: 8px; font-weight: bold; margin: 0; }
-        #printable-relatorio .signature-subtitle { font-size: 7px; color: #555; margin: 0; text-transform: uppercase; }
-        @media print {
-          body * { visibility: hidden; }
-          #printable-relatorio, #printable-relatorio * { visibility: visible; }
-          #printable-relatorio {
-            visibility: visible;
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            display: block !important;
-            overflow: visible !important;
-          }
-          html, body { height: auto !important; overflow: visible !important; background: white !important; }
-        }
-      `}} />
     </div>
   );
 }
