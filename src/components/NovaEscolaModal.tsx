@@ -19,7 +19,7 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
     logo_url: '',
   });
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (escolaParaEditar) {
       setFormData({
@@ -41,6 +41,7 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
       });
     }
   }, [escolaParaEditar, isOpen]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!isOpen) return null;
 
