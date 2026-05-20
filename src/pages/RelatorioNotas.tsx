@@ -245,6 +245,8 @@ export default function RelatorioNotas() {
     return Math.min(soma, maxLimit);
   };
 
+  const selectedTurmaObj = turmas.find(t => t.id === selectedTurma);
+
   return (
     <div className="min-h-screen bg-slate-50 relative">
       <div className="relative z-10">
@@ -528,6 +530,178 @@ export default function RelatorioNotas() {
           </div>
         </div>
       </main>
+
+      {/* Área de Impressão (invisível na tela, visível apenas na impressão) */}
+      {selectedTurmaObj && (
+        <div id="printable-relatorio" className="hidden print:block">
+          <div className="doc-container">
+            {/* Cabeçalho Oficial */}
+            <div className="official-header">
+              {/* Lado Esquerdo: SEMED */}
+              <div className="logo-box">
+                <img src="/semed.png" alt="SEMED Logo" />
+                <p>SEMED</p>
+                <p style={{ fontSize: '5px', color: '#555' }}>Secretaria de Educação</p>
+              </div>
+
+              <div className="header-divider"></div>
+
+              {/* Centro: Tabela de Metadados */}
+              <table className="meta-table">
+                <tbody>
+                  <tr>
+                    <td colSpan={3} style={{ textTransform: 'uppercase' }}>
+                      ESCOLA: {selectedTurmaObj.escolaNome}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ width: '50%', textTransform: 'uppercase' }}>
+                      ENSINO: {selectedTurmaObj.ensino}
+                    </td>
+                    <td style={{ width: '25%', textTransform: 'uppercase' }}>
+                      TURNO: {selectedTurmaObj.turno}
+                    </td>
+                    <td style={{ width: '25%', textTransform: 'uppercase' }}>
+                      TURMA: {selectedTurmaObj.numero}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ textTransform: 'uppercase' }}>
+                      FASE: {selectedTurmaObj.fase}
+                    </td>
+                    <td style={{ textTransform: 'uppercase' }}>
+                      COMPONENTE: {selectedTurmaObj.componente?.toUpperCase()}
+                    </td>
+                    <td style={{ textTransform: 'uppercase' }}>
+                      PERÍODO LETIVO: {periodo?.toUpperCase()}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={3} style={{ textTransform: 'uppercase' }}>
+                      PROFESSOR: {user?.name?.toUpperCase() || 'NÃO IDENTIFICADO'}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div className="header-divider"></div>
+
+              {/* Lado Direito: Escola */}
+              <div className="logo-box">
+                <img 
+                  src={obterLogoEscola(selectedTurmaObj.escolaNome)} 
+                  alt="School Logo"
+                  onError={(e) => {
+                    e.currentTarget.src = '/logo.png';
+                  }}
+                />
+                <p style={{ fontSize: '6px', whiteSpace: 'normal', marginTop: '2px' }}>
+                  {selectedTurmaObj.escolaNome}
+                </p>
+              </div>
+            </div>
+
+            {/* Title Bar */}
+            <div className="title-bar">
+              RELATÓRIO DE NOTAS DA TURMA
+            </div>
+
+            {/* Tabela de Dados */}
+            <table className="content-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '4%' }}>Nº</th>
+                  <th style={{ width: '12%' }}>FASE</th>
+                  <th style={{ width: '6%' }}>TURMA</th>
+                  <th style={{ width: '38%' }}>NOME DO ALUNO</th>
+                  {principalAvs.map((av) => (
+                    <React.Fragment key={av.id}>
+                      <th style={{ textAlign: 'center' }}>{av.nome?.toUpperCase()}</th>
+                      <th style={{ textAlign: 'center' }}>REC. {av.nome?.toUpperCase()}</th>
+                    </React.Fragment>
+                  ))}
+                  <th style={{ width: '10%', textAlign: 'center' }}>NOTA {periodo[0]}º B</th>
+                  <th style={{ width: '8%', textAlign: 'center' }}>STATUS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {alunos.map((aluno, index) => {
+                  const somaVal = calcularSomaBimestre(aluno.id);
+                  return (
+                    <tr key={aluno.id}>
+                      <td style={{ textAlign: 'center' }}>{(index + 1).toString().padStart(2, '0')}</td>
+                      <td style={{ textAlign: 'center' }}>{selectedTurmaObj.fase}</td>
+                      <td style={{ textAlign: 'center' }}>{selectedTurmaObj.numero}</td>
+                      <td style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{aluno.nome}</td>
+                      {principalAvs.map(av => {
+                        const rp = avaliacoes.find(a => a.parent_id?.toString() === av.id?.toString());
+                        const vAv = getNota(aluno.id, av.id);
+                        const vRp = rp ? getNota(aluno.id, rp.id) : null;
+                        return (
+                          <React.Fragment key={av.id}>
+                            <td style={{ textAlign: 'center' }}>
+                              {vAv !== null ? Number(vAv).toFixed(1).replace('.', ',') : '-'}
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              {rp && vRp !== null ? Number(vRp).toFixed(1).replace('.', ',') : '-'}
+                            </td>
+                          </React.Fragment>
+                        );
+                      })}
+                      <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
+                        {somaVal !== null ? Number(somaVal).toFixed(1).replace('.', ',') : '-'}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>ATIVA</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Signatures Area */}
+            <div className="signatures-container">
+              <div className="signature-box">
+                <div className="signature-line"></div>
+                <p className="signature-title">{user?.name?.toUpperCase() || 'PROFESSOR(A)'}</p>
+                <p className="signature-subtitle">Professor(a)</p>
+              </div>
+              <div className="signature-box">
+                <div className="signature-line"></div>
+                <p className="signature-title">COORDENAÇÃO PEDAGÓGICA</p>
+                <p className="signature-subtitle">Coordenação Pedagógica</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        #printable-relatorio .doc-container { padding: 10px; font-family: Arial, sans-serif; color: black; }
+        #printable-relatorio table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        #printable-relatorio th, #printable-relatorio td { border: 1px solid black; padding: 4px; font-size: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #printable-relatorio th { font-weight: bold; background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        #printable-relatorio .official-header { display: flex; border: 1px solid black; }
+        #printable-relatorio .logo-box { width: 20%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5px; text-align: center; }
+        #printable-relatorio .logo-box img { max-height: 45px; object-fit: contain; }
+        #printable-relatorio .logo-box p { font-size: 7px; font-weight: bold; margin-top: 3px; line-height: 1; }
+        #printable-relatorio .header-divider { width: 1px; background-color: black; }
+        #printable-relatorio .meta-table { flex: 1; border-collapse: collapse; margin: -1px; }
+        #printable-relatorio .meta-table td { border: 1px solid black; padding: 4px 6px; font-size: 8px; font-weight: bold; height: 20px; box-sizing: border-box; }
+        #printable-relatorio .title-bar { background-color: black !important; color: white !important; text-align: center; font-weight: bold; font-size: 10px; padding: 4px 0; border: 1px solid black; border-top: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        #printable-relatorio .content-table { margin-top: 10px; border: 1px solid black; }
+        #printable-relatorio .content-table th { border: 1px solid black; }
+        #printable-relatorio .content-table td { border: 1px solid black; height: 22px; }
+        #printable-relatorio .signatures-container { margin-top: 30px; display: flex; justify-content: space-around; width: 100%; page-break-inside: avoid; }
+        #printable-relatorio .signature-box { width: 40%; text-align: center; display: flex; flex-direction: column; align-items: center; }
+        #printable-relatorio .signature-line { width: 100%; border-top: 1px solid black; margin-bottom: 4px; }
+        #printable-relatorio .signature-title { font-size: 8px; font-weight: bold; margin: 0; }
+        #printable-relatorio .signature-subtitle { font-size: 7px; color: #555; margin: 0; text-transform: uppercase; }
+        @media print {
+          body > *:not(#printable-relatorio) { display: none !important; }
+          #printable-relatorio { display: block !important; width: 100%; }
+          html, body { height: auto !important; overflow: visible !important; }
+        }
+      `}} />
     </div>
   );
 }
