@@ -561,7 +561,7 @@ export default function RelatorioConteudos() {
 
           {/* Title Bar */}
           <div className="title-bar">
-            Relatório de Conteúdo Ministrado
+            RELATÓRIO DE CONTEÚDO MINISTRADO
           </div>
 
           {/* Table Area */}
