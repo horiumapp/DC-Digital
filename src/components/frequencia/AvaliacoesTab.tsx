@@ -92,6 +92,7 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
   }, [selectedAvaliacao, alunos]);
 
   // Carregar notas ao entrar em modo editor
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (avaliacaoViewMode === 'grades' && selectedAvaliacao) {
       const notasMap: Record<string, string> = {};
@@ -103,6 +104,7 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
   }, [avaliacaoViewMode, selectedAvaliacao, alunosParaNotas]);
 
   // Atualizar período letivo pela data selecionada
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (selectedDate) {
       const bim = getBimestrePorData(selectedDate);
