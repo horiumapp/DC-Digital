@@ -116,7 +116,7 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
     setLoading(false);
   }, [user?.email, fetchData]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (isOpen) {
       if (professorId && escolaId) {
@@ -126,6 +126,7 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
       }
     }
   }, [isOpen, professorId, escolaId, user, fetchData, fetchProfessorContext]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleTurmaSelect = (diaIndex: number, tempoOrdem: number, turmaId: string) => {
     const key = `${diaIndex + 1}-${tempoOrdem}`;

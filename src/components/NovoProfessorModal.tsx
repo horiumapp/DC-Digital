@@ -41,7 +41,7 @@ export default function NovoProfessorModal({ isOpen, onClose, onSave, professorP
     }
   };
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (professorParaEditar) {
       setFormData({
@@ -69,6 +69,7 @@ export default function NovoProfessorModal({ isOpen, onClose, onSave, professorP
       });
     }
   }, [professorParaEditar, isOpen]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const toggleDisciplina = (disc: string) => {
     setFormData(prev => ({
