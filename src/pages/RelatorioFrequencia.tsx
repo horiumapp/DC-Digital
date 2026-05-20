@@ -493,16 +493,16 @@ export default function RelatorioFrequencia() {
             }
           }
           #printable-relatorio .doc-container { padding: 10px; font-family: Arial, sans-serif; color: black; }
-          #printable-relatorio .official-header { display: flex; border: 2px solid black; }
-          #printable-relatorio .logo-box { width: 20%; border-right: 2px solid black; padding: 10px; text-align: center; }
-          #printable-relatorio .school-logo-box { width: 20%; border-left: 2px solid black; padding: 10px; text-align: center; }
+          #printable-relatorio .official-header { display: flex; border: 1px solid black; }
+          #printable-relatorio .logo-box { width: 20%; border-right: 1px solid black; padding: 10px; text-align: center; }
+          #printable-relatorio .school-logo-box { width: 20%; border-left: 1px solid black; padding: 10px; text-align: center; }
           #printable-relatorio .meta-box { flex: 1; }
           #printable-relatorio .meta-table { width: 100%; border-collapse: collapse; }
           #printable-relatorio .meta-table td { border: 1px solid black; padding: 2px 6px; height: 16px; }
           #printable-relatorio .label { font-size: 6px; text-transform: uppercase; margin-bottom: 1px; color: #333; }
           #printable-relatorio .value { font-size: 8px; font-weight: bold; text-transform: uppercase; }
-          #printable-relatorio .title-box { border: 2px solid black; border-top: none; padding: 6px; text-align: center; font-weight: bold; font-size: 14px; text-transform: uppercase; }
-          #printable-relatorio .data-table { width: 100%; border-collapse: collapse; margin-top: 15px; border: 2px solid black; }
+          #printable-relatorio .title-box { border: 1px solid black; border-top: none; padding: 6px; text-align: center; font-weight: bold; font-size: 14px; text-transform: uppercase; }
+          #printable-relatorio .data-table { width: 100%; border-collapse: collapse; margin-top: 15px; border: 1px solid black; }
           #printable-relatorio .data-table th, #printable-relatorio .data-table td { border: 1px solid black; font-size: 7px; text-align: center; padding: 2px; }
           #printable-relatorio .data-table th { background: #eee; font-weight: bold; }
           #printable-relatorio .data-table .name-col { text-align: left; padding-left: 5px; font-size: 8px; font-weight: bold; }

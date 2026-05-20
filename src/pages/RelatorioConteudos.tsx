@@ -471,12 +471,12 @@ export default function RelatorioConteudos() {
           }
           #printable-relatorio table { width: 100%; border-collapse: collapse; table-layout: fixed; }
           #printable-relatorio th, #printable-relatorio td { border: 1px solid black; padding: 4px; text-align: left; font-size: 8px; font-family: Arial, sans-serif; }
-          #printable-relatorio .header-grid { width: 100%; border: 2px solid black; border-collapse: collapse; }
+          #printable-relatorio .header-grid { width: 100%; border: 1px solid black; border-collapse: collapse; }
           #printable-relatorio .header-grid td { border: 1px solid black; padding: 2px 6px; }
           #printable-relatorio .label { font-size: 6px; text-transform: uppercase; font-weight: normal; margin-bottom: 1px; color: #333; }
           #printable-relatorio .value { font-size: 9px; font-weight: bold; text-transform: uppercase; }
-          #printable-relatorio .title-bar { border: 2px solid black; border-top: none; padding: 6px; text-align: center; font-weight: bold; font-size: 14px; text-transform: uppercase; }
-          #printable-relatorio .content-table { margin-top: 15px; border: 2px solid black; width: 100%; border-collapse: collapse; }
+          #printable-relatorio .title-bar { border: 1px solid black; border-top: none; padding: 6px; text-align: center; font-weight: bold; font-size: 14px; text-transform: uppercase; }
+          #printable-relatorio .content-table { margin-top: 15px; border: 1px solid black; width: 100%; border-collapse: collapse; }
           #printable-relatorio .content-table th { background: #eee; text-align: center; font-weight: bold; padding: 6px; border: 1px solid black; font-size: 8px; }
           #printable-relatorio .content-table td { border: 1px solid black; padding: 4px; font-size: 8px; }
           #printable-relatorio .signatures { margin-top: 40px; display: flex; justify-content: space-around; page-break-inside: avoid; padding-bottom: 20px; }
@@ -485,9 +485,9 @@ export default function RelatorioConteudos() {
 
         <div className="p-4 bg-white text-black h-auto">
           {/* Header Area Oficial */}
-          <div className="flex border-2 border-black overflow-hidden">
+          <div className="flex border border-black overflow-hidden">
             {/* Logo Box */}
-            <div className="w-[20%] border-r-2 border-black p-4 flex flex-col items-center justify-center text-center">
+            <div className="w-[20%] border-r border-black p-4 flex flex-col items-center justify-center text-center">
               <img src="/semed.png" alt="Logo SEMED" className="w-16 h-16 mb-1 object-contain" />
               <div className="font-bold text-[8px] leading-tight uppercase">
                 Secretaria Municipal de Educação<br />
@@ -542,7 +542,7 @@ export default function RelatorioConteudos() {
             </table>
 
             {/* School Logo Box */}
-            <div className="w-[20%] border-l-2 border-black p-4 flex flex-col items-center justify-center text-center">
+            <div className="w-[20%] border-l border-black p-4 flex flex-col items-center justify-center text-center">
               <img src={obterLogoEscola(selectedTurmaObj?.escolaNome || '')} alt="Logo Escola" className="w-16 h-16 mb-1 object-contain" />
               <div className="font-bold text-[8px] leading-tight uppercase">
                 {selectedTurmaObj?.escolaNome}
