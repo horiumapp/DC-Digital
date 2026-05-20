@@ -8,10 +8,34 @@ import { TurmaService } from '../services/turmaService';
 import { Aluno, Avaliacao } from '../contexts/TurmaContext';
 import { useToast } from '../components/common/Toast';
 
+const obterLogoEscola = (nomeEscola: string) => {
+  if (!nomeEscola) return '/logo.png';
+  const nomeUpper = nomeEscola.toUpperCase();
+  if (nomeUpper.includes('FRANCISCA MENDES')) return '/Francisca Mendes.png';
+  if (nomeUpper.includes('JOSÉ MAIA') || nomeUpper.includes('JOSE MAIA')) return '/Jose Maia.png';
+  if (nomeUpper.includes('SOCORRO BRITO')) return '/Socorro Brito.png';
+  if (nomeUpper.includes('MARTA SOUZA') || nomeUpper.includes('MARTA SOUSA')) return '/Marta Souza.png';
+  if (nomeUpper.includes('FILADÉLFIA') || nomeUpper.includes('FILADELFIA')) return '/Filadelfia.png';
+  if (nomeUpper.includes('MÔNICA') || nomeUpper.includes('MONICA')) return '/Turma da Monica.png';
+  return '/logo.png';
+};
+
+interface TurmaRelatorio {
+  id: string;
+  nome: string;
+  turno: string;
+  componente: string;
+  ensino: string;
+  fase: string;
+  numero: string;
+  escolaId: string;
+  escolaNome: string;
+}
+
 export default function RelatorioMedias() {
   const { user } = useAuth();
   const { showError } = useToast();
-  const [turmas, setTurmas] = useState<any[]>([]);
+  const [turmas, setTurmas] = useState<TurmaRelatorio[]>([]);
   const [selectedTurma, setSelectedTurma] = useState('');
   const [loading, setLoading] = useState(true);
   
@@ -36,15 +60,41 @@ export default function RelatorioMedias() {
       if (user.role === 'ADMIN' || user.role === 'GESTOR' || user.role === 'SECRETARIO') {
         const { data: todasTurmas, error } = await supabase
           .from('turmas')
-          .select('id, nome, turno')
+          .select('*, escolas(nome)')
           .order('nome');
         
         if (error) throw error;
         if (todasTurmas) {
-          const finalTurmas = todasTurmas.map(t => ({ ...t, componente: 'GERAL' }));
+          const finalTurmas: TurmaRelatorio[] = [];
+          todasTurmas.forEach(t => {
+            let fase = t.nome;
+            let numero = '01';
+
+            const match = t.nome.match(/(.+)\s+([A-Za-z0-9]+)$/);
+            if (match) {
+              fase = match[1].trim();
+              numero = match[2].trim();
+            } else {
+              const matchNum = t.nome.match(/(\d+)$/);
+              if (matchNum) numero = matchNum[1];
+            }
+
+            finalTurmas.push({
+              id: `${t.id}|GERAL`,
+              nome: t.nome,
+              turno: t.turno,
+              componente: 'GERAL',
+              ensino: t.ensino || 'Fundamental Anos Iniciais (1° ao 5° ANO)',
+              fase: fase,
+              numero: t.turma_codigo || numero,
+              escolaId: t.escola_id,
+              escolaNome: t.escolas?.nome || 'ESCOLA NÃO IDENTIFICADA'
+            });
+          });
+
           setTurmas(finalTurmas);
           if (finalTurmas.length > 0) {
-            setSelectedTurma(`${finalTurmas[0].id}|GERAL`);
+            setSelectedTurma(finalTurmas[0].id);
           }
         }
       } else {
@@ -76,21 +126,43 @@ export default function RelatorioMedias() {
             const orConditions = alocs.map(a => `and(escola_id.eq.${a.escola_id},turno.eq.${a.turno})`).join(',');
             const { data: turmasAlocadas, error: turmasError } = await supabase
               .from('turmas')
-              .select('id, nome, turno')
+              .select('*, escolas(nome)')
               .or(orConditions)
               .order('nome');
 
             if (turmasError) throw turmasError;
             if (turmasAlocadas) {
-              const finalTurmas: any[] = [];
+              const finalTurmas: TurmaRelatorio[] = [];
               turmasAlocadas.forEach(t => {
                 componentes.forEach(comp => {
-                  finalTurmas.push({ ...t, componente: comp });
+                  let fase = t.nome;
+                  let numero = '01';
+
+                  const match = t.nome.match(/(.+)\s+([A-Za-z0-9]+)$/);
+                  if (match) {
+                    fase = match[1].trim();
+                    numero = match[2].trim();
+                  } else {
+                    const matchNum = t.nome.match(/(\d+)$/);
+                    if (matchNum) numero = matchNum[1];
+                  }
+
+                  finalTurmas.push({
+                    id: `${t.id}|${comp}`,
+                    nome: t.nome,
+                    turno: t.turno,
+                    componente: comp,
+                    ensino: t.ensino || 'Fundamental Anos Iniciais (1° ao 5° ANO)',
+                    fase: fase,
+                    numero: t.turma_codigo || numero,
+                    escolaId: t.escola_id,
+                    escolaNome: t.escolas?.nome || 'ESCOLA NÃO IDENTIFICADA'
+                  });
                 });
               });
               setTurmas(finalTurmas);
               if (finalTurmas.length > 0) {
-                setSelectedTurma(`${finalTurmas[0].id}|${finalTurmas[0].componente}`);
+                setSelectedTurma(finalTurmas[0].id);
               }
             }
           }
@@ -172,7 +244,10 @@ export default function RelatorioMedias() {
           <div className="p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-[#0f2851]">Pesquisa</h2>
-              <button className="px-6 py-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 rounded text-base font-semibold hover:bg-[#e0e7ff] transition shadow-sm">
+              <button 
+                onClick={() => window.print()}
+                className="px-6 py-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 rounded text-base font-semibold hover:bg-[#e0e7ff] transition shadow-sm cursor-pointer"
+              >
                 Imprimir
               </button>
             </div>
@@ -194,7 +269,7 @@ export default function RelatorioMedias() {
                     ) : turmas.length > 0 ? (
                       turmas.map(t => (
                         <option key={`${t.id}|${t.componente}`} value={`${t.id}|${t.componente}`}>
-                          {t.nome} - {t.turno} - {t.componente}
+                          {t.ensino} - {t.fase} {t.numero} - {t.componente}
                         </option>
                       ))
                     ) : (
@@ -343,6 +418,174 @@ export default function RelatorioMedias() {
       <footer className="mt-8 pb-12 text-center text-slate-400 text-xs">
         © {APP_CONFIG.YEAR} Diário Digital - Sistema de Gestão Escolar
       </footer>
+
+      {/* Área de Impressão (invisível na tela, visível apenas na impressão) */}
+      {selectedTurmaObj && (
+        <div id="printable-relatorio" className="hidden print:block">
+          <div className="doc-container">
+            {/* Cabeçalho Oficial */}
+            <div className="official-header">
+              {/* Lado Esquerdo: SEMED */}
+              <div className="logo-box">
+                <img src="/semed.png" alt="SEMED Logo" />
+                <p>SEMED</p>
+                <p style={{ fontSize: '5px', color: '#555' }}>Secretaria de Educação</p>
+              </div>
+
+              <div className="header-divider"></div>
+
+              {/* Centro: Tabela de Metadados */}
+              <table className="meta-table">
+                <tbody>
+                  <tr>
+                    <td colSpan={3} style={{ textTransform: 'uppercase' }}>
+                      ESCOLA: {selectedTurmaObj.escolaNome}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ width: '50%', textTransform: 'uppercase' }}>
+                      ENSINO: {selectedTurmaObj.ensino}
+                    </td>
+                    <td style={{ width: '25%', textTransform: 'uppercase' }}>
+                      TURNO: {selectedTurmaObj.turno}
+                    </td>
+                    <td style={{ width: '25%', textTransform: 'uppercase' }}>
+                      TURMA: {selectedTurmaObj.numero}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ textTransform: 'uppercase' }}>
+                      FASE: {selectedTurmaObj.fase}
+                    </td>
+                    <td style={{ textTransform: 'uppercase' }}>
+                      COMPONENTE: {selectedTurmaObj.componente?.toUpperCase()}
+                    </td>
+                    <td style={{ textTransform: 'uppercase' }}>
+                      PERÍODO LETIVO: ANUAL
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={3} style={{ textTransform: 'uppercase' }}>
+                      PROFESSOR: {user?.name?.toUpperCase() || 'NÃO IDENTIFICADO'}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div className="header-divider"></div>
+
+              {/* Lado Direito: Escola */}
+              <div className="logo-box">
+                <img 
+                  src={obterLogoEscola(selectedTurmaObj.escolaNome)} 
+                  alt="School Logo"
+                  onError={(e) => {
+                    e.currentTarget.src = '/logo.png';
+                  }}
+                />
+                <p style={{ fontSize: '6px', whiteSpace: 'normal', marginTop: '2px' }}>
+                  {selectedTurmaObj.escolaNome}
+                </p>
+              </div>
+            </div>
+
+            {/* Title Bar */}
+            <div className="title-bar">
+              RELATÓRIO DE MÉDIAS DO COMPONENTE
+            </div>
+
+            {/* Tabela de Dados */}
+            <table className="content-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '4%' }}>Nº</th>
+                  <th style={{ width: '12%' }}>FASE</th>
+                  <th style={{ width: '6%' }}>TURMA</th>
+                  <th style={{ width: '38%' }}>NOME DO ALUNO</th>
+                  <th style={{ width: '10%' }}>STATUS</th>
+                  <th style={{ width: '6%' }}>1º BIM</th>
+                  <th style={{ width: '6%' }}>2º BIM</th>
+                  <th style={{ width: '6%' }}>3º BIM</th>
+                  <th style={{ width: '6%' }}>4º BIM</th>
+                  <th style={{ width: '6%' }}>RECUP</th>
+                  <th style={{ width: '6%' }}>NOTA FINAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {alunos.filter(a => a.nome.toLowerCase().includes(searchTerm.toLowerCase())).map((aluno, index) => {
+                  const m1 = calcularSomaBimestre(aluno.id, '1. BIMESTRE');
+                  const m2 = calcularSomaBimestre(aluno.id, '2. BIMESTRE');
+                  const m3 = calcularSomaBimestre(aluno.id, '3. BIMESTRE');
+                  const m4 = calcularSomaBimestre(aluno.id, '4. BIMESTRE');
+                  
+                  const validMedias = [m1, m2, m3, m4].filter(m => m !== null) as number[];
+                  const somaFinal = validMedias.length > 0 ? validMedias.reduce((a, b) => a + b, 0) : null;
+                  
+                  return (
+                    <tr key={aluno.id}>
+                      <td style={{ textAlign: 'center' }}>{(index + 1).toString().padStart(2, '0')}</td>
+                      <td style={{ textAlign: 'center' }}>{selectedTurmaObj.fase}</td>
+                      <td style={{ textAlign: 'center' }}>{selectedTurmaObj.numero}</td>
+                      <td style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{aluno.nome}</td>
+                      <td style={{ textAlign: 'center' }}>ATIVA</td>
+                      <td style={{ textAlign: 'center' }}>{m1 !== null ? m1.toFixed(1).replace('.', ',') : '-'}</td>
+                      <td style={{ textAlign: 'center' }}>{m2 !== null ? m2.toFixed(1).replace('.', ',') : '-'}</td>
+                      <td style={{ textAlign: 'center' }}>{m3 !== null ? m3.toFixed(1).replace('.', ',') : '-'}</td>
+                      <td style={{ textAlign: 'center' }}>{m4 !== null ? m4.toFixed(1).replace('.', ',') : '-'}</td>
+                      <td style={{ textAlign: 'center' }}>-</td>
+                      <td style={{ textAlign: 'center', fontWeight: 'black' }}>
+                        {somaFinal !== null ? somaFinal.toFixed(1).replace('.', ',') : '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Signatures Area */}
+            <div className="signatures-container">
+              <div className="signature-box">
+                <div className="signature-line"></div>
+                <p className="signature-title">{user?.name?.toUpperCase() || 'PROFESSOR(A)'}</p>
+                <p className="signature-subtitle">Professor(a)</p>
+              </div>
+              <div className="signature-box">
+                <div className="signature-line"></div>
+                <p className="signature-title">COORDENAÇÃO PEDAGÓGICA</p>
+                <p className="signature-subtitle">Coordenação Pedagógica</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        #printable-relatorio .doc-container { padding: 10px; font-family: Arial, sans-serif; color: black; }
+        #printable-relatorio table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        #printable-relatorio th, #printable-relatorio td { border: 1px solid black; padding: 4px; font-size: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #printable-relatorio th { font-weight: bold; background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        #printable-relatorio .official-header { display: flex; border: 1px solid black; }
+        #printable-relatorio .logo-box { width: 20%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5px; text-align: center; }
+        #printable-relatorio .logo-box img { max-height: 45px; object-fit: contain; }
+        #printable-relatorio .logo-box p { font-size: 7px; font-weight: bold; margin-top: 3px; line-height: 1; }
+        #printable-relatorio .header-divider { width: 1px; background-color: black; }
+        #printable-relatorio .meta-table { flex: 1; border-collapse: collapse; margin: -1px; }
+        #printable-relatorio .meta-table td { border: 1px solid black; padding: 4px 6px; font-size: 8px; font-weight: bold; height: 20px; box-sizing: border-box; }
+        #printable-relatorio .title-bar { background-color: black !important; color: white !important; text-align: center; font-weight: bold; font-size: 10px; padding: 4px 0; border: 1px solid black; border-top: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        #printable-relatorio .content-table { margin-top: 10px; border: 1px solid black; }
+        #printable-relatorio .content-table th { border: 1px solid black; }
+        #printable-relatorio .content-table td { border: 1px solid black; height: 22px; }
+        #printable-relatorio .signatures-container { margin-top: 30px; display: flex; justify-content: space-around; width: 100%; page-break-inside: avoid; }
+        #printable-relatorio .signature-box { width: 40%; text-align: center; display: flex; flex-direction: column; align-items: center; }
+        #printable-relatorio .signature-line { width: 100%; border-top: 1px solid black; margin-bottom: 4px; }
+        #printable-relatorio .signature-title { font-size: 8px; font-weight: bold; margin: 0; }
+        #printable-relatorio .signature-subtitle { font-size: 7px; color: #555; margin: 0; text-transform: uppercase; }
+        @media print {
+          body > *:not(#printable-relatorio) { display: none !important; }
+          #printable-relatorio { display: block !important; width: 100%; }
+          html, body { height: auto !important; overflow: visible !important; }
+        }
+      `}} />
 
       </div>
     </div>

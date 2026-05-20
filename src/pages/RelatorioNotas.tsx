@@ -21,10 +21,34 @@ function formatDiaMes(dateStr: string) {
   return dateStr;
 }
 
+const obterLogoEscola = (nomeEscola: string) => {
+  if (!nomeEscola) return '/logo.png';
+  const nomeUpper = nomeEscola.toUpperCase();
+  if (nomeUpper.includes('FRANCISCA MENDES')) return '/Francisca Mendes.png';
+  if (nomeUpper.includes('JOSÉ MAIA') || nomeUpper.includes('JOSE MAIA')) return '/Jose Maia.png';
+  if (nomeUpper.includes('SOCORRO BRITO')) return '/Socorro Brito.png';
+  if (nomeUpper.includes('MARTA SOUZA') || nomeUpper.includes('MARTA SOUSA')) return '/Marta Souza.png';
+  if (nomeUpper.includes('FILADÉLFIA') || nomeUpper.includes('FILADELFIA')) return '/Filadelfia.png';
+  if (nomeUpper.includes('MÔNICA') || nomeUpper.includes('MONICA')) return '/Turma da Monica.png';
+  return '/logo.png';
+};
+
+interface TurmaRelatorio {
+  id: string;
+  nome: string;
+  turno: string;
+  componente: string;
+  ensino: string;
+  fase: string;
+  numero: string;
+  escolaId: string;
+  escolaNome: string;
+}
+
 export default function RelatorioNotas() {
   const { user } = useAuth();
   const { showError } = useToast();
-  const [turmas, setTurmas] = useState<any[]>([]);
+  const [turmas, setTurmas] = useState<TurmaRelatorio[]>([]);
   const [selectedTurma, setSelectedTurma] = useState('');
   const [loading, setLoading] = useState(true);
   const [periodo, setPeriodo] = useState('1º Bimestre');
@@ -49,16 +73,42 @@ export default function RelatorioNotas() {
       if (user.role === 'ADMIN' || user.role === 'GESTOR' || user.role === 'SECRETARIO') {
         const { data: todasTurmas, error } = await supabase
           .from('turmas')
-          .select('id, nome, turno')
+          .select('*, escolas(nome)')
           .order('nome');
         
         if (error) throw error;
 
         if (todasTurmas) {
-          const finalTurmas = todasTurmas.map(t => ({ ...t, componente: 'GERAL' }));
+          const finalTurmas: TurmaRelatorio[] = [];
+          todasTurmas.forEach(t => {
+            let fase = t.nome;
+            let numero = '01';
+
+            const match = t.nome.match(/(.+)\s+([A-Za-z0-9]+)$/);
+            if (match) {
+              fase = match[1].trim();
+              numero = match[2].trim();
+            } else {
+              const matchNum = t.nome.match(/(\d+)$/);
+              if (matchNum) numero = matchNum[1];
+            }
+
+            finalTurmas.push({
+              id: `${t.id}|GERAL`,
+              nome: t.nome,
+              turno: t.turno,
+              componente: 'GERAL',
+              ensino: t.ensino || 'Fundamental Anos Iniciais (1° ao 5° ANO)',
+              fase: fase,
+              numero: t.turma_codigo || numero,
+              escolaId: t.escola_id,
+              escolaNome: t.escolas?.nome || 'ESCOLA NÃO IDENTIFICADA'
+            });
+          });
+
           setTurmas(finalTurmas);
           if (finalTurmas.length > 0) {
-            setSelectedTurma(`${finalTurmas[0].id}|GERAL`);
+            setSelectedTurma(finalTurmas[0].id);
           }
         }
       } else {
@@ -94,24 +144,46 @@ export default function RelatorioNotas() {
             const orConditions = alocs.map(a => `and(escola_id.eq.${a.escola_id},turno.eq.${a.turno})`).join(',');
             const { data: turmasAlocadas, error: turmasError } = await supabase
               .from('turmas')
-              .select('id, nome, turno')
+              .select('*, escolas(nome)')
               .or(orConditions)
               .order('nome');
 
             if (turmasError) throw turmasError;
 
             if (turmasAlocadas) {
-              const finalTurmas: any[] = [];
+              const finalTurmas: TurmaRelatorio[] = [];
               turmasAlocadas.forEach(t => {
                 // Criar uma entrada para cada disciplina alocada àquela turma
                 componentes.forEach(comp => {
-                  finalTurmas.push({ ...t, componente: comp });
+                  let fase = t.nome;
+                  let numero = '01';
+
+                  const match = t.nome.match(/(.+)\s+([A-Za-z0-9]+)$/);
+                  if (match) {
+                    fase = match[1].trim();
+                    numero = match[2].trim();
+                  } else {
+                    const matchNum = t.nome.match(/(\d+)$/);
+                    if (matchNum) numero = matchNum[1];
+                  }
+
+                  finalTurmas.push({
+                    id: `${t.id}|${comp}`,
+                    nome: t.nome,
+                    turno: t.turno,
+                    componente: comp,
+                    ensino: t.ensino || 'Fundamental Anos Iniciais (1° ao 5° ANO)',
+                    fase: fase,
+                    numero: t.turma_codigo || numero,
+                    escolaId: t.escola_id,
+                    escolaNome: t.escolas?.nome || 'ESCOLA NÃO IDENTIFICADA'
+                  });
                 });
               });
               
               setTurmas(finalTurmas);
               if (finalTurmas.length > 0) {
-                setSelectedTurma(`${finalTurmas[0].id}|${finalTurmas[0].componente}`);
+                setSelectedTurma(finalTurmas[0].id);
               }
             }
           } else {
@@ -194,7 +266,10 @@ export default function RelatorioNotas() {
           {/* Card Header Area */}
           <div className="p-6 pb-0 flex justify-between items-start">
             <h3 className="text-xl font-semibold text-[#0f2851]">Pesquisa</h3>
-            <button className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-base font-semibold hover:bg-[#e0e7ff] transition shadow-sm">
+            <button 
+              onClick={() => window.print()}
+              className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-base font-semibold hover:bg-[#e0e7ff] transition shadow-sm cursor-pointer"
+            >
               Imprimir
             </button>
           </div>
@@ -216,7 +291,7 @@ export default function RelatorioNotas() {
                     ) : turmas.length > 0 ? (
                       turmas.map((t) => (
                         <option key={`${t.id}-${t.componente}`} value={`${t.id}|${t.componente}`}>
-                          {t.nome} - {t.turno} - {t.componente}
+                          {t.ensino} - {t.fase} {t.numero} - {t.componente}
                         </option>
                       ))
                     ) : (
