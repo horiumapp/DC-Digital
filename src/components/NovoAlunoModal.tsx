@@ -32,18 +32,25 @@ export default function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEdita
     status: 'Ativo',
   });
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchEscolas();
-    }
-  }, [isOpen]);
-
-  const fetchEscolas = async () => {
+  const fetchEscolas = React.useCallback(async () => {
     setLoadingEscolas(true);
     const { data } = await supabase.from('escolas').select('id, nome').eq('status', 'Ativa').order('nome');
     if (data) setEscolas(data);
     setLoadingEscolas(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchEscolas();
+    }
+  }, [isOpen, fetchEscolas]);
+
+  const fetchTurmas = React.useCallback(async (escolaId: string) => {
+    setLoadingTurmas(true);
+    const { data } = await supabase.from('turmas').select('id, nome, turno').eq('escola_id', escolaId).order('nome');
+    if (data) setTurmas(data);
+    setLoadingTurmas(false);
+  }, []);
 
   useEffect(() => {
     if (formData.escola_id) {
@@ -51,14 +58,7 @@ export default function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEdita
     } else {
       setTurmas([]);
     }
-  }, [formData.escola_id]);
-
-  const fetchTurmas = async (escolaId: string) => {
-    setLoadingTurmas(true);
-    const { data } = await supabase.from('turmas').select('id, nome, turno').eq('escola_id', escolaId).order('nome');
-    if (data) setTurmas(data);
-    setLoadingTurmas(false);
-  };
+  }, [formData.escola_id, fetchTurmas]);
 
   useEffect(() => {
     if (alunoParaEditar) {

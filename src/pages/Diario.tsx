@@ -8,7 +8,7 @@ import { useTurmaProgress } from '../hooks/useTurmaProgress';
 import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
 
 export default function Diario() {
-  const { turmaAtiva, lancamentos, avaliacoes, alunos, horarioTurma } = useTurma();
+  const { turmaAtiva, lancamentos, avaliacoes, alunos, horarioTurma, fechamentos } = useTurma();
   const year = APP_CONFIG.YEAR;
 
   const periodosLetivos = APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE'));
@@ -29,7 +29,7 @@ export default function Diario() {
       // Regra 2: Se não for o primeiro bimestre, o anterior precisa estar fechado na Aparata!
       if (i > 0) {
         const bimestreAnterior = periodosLetivos[i - 1];
-        const isAnteriorFechado = turmaAtiva ? localStorage.getItem(`aparata_fechada_${turmaAtiva.id}_${bimestreAnterior.id}`) === 'true' : false;
+        const isAnteriorFechado = !!fechamentos[bimestreAnterior.id];
 
         // Se o anterior não está fechado, impede a visualização deste e dos próximos
         if (!isAnteriorFechado) break;
@@ -39,7 +39,7 @@ export default function Diario() {
     }
 
     return resultado.length > 0 ? resultado : [periodosLetivos[0]];
-  }, [periodosLetivos, turmaAtiva]);
+  }, [periodosLetivos, turmaAtiva, fechamentos]);
 
   // Define o período inicial como o mais recente/atual (último da lista de visíveis)
   const initialPeriodoId = periodosVisiveis[periodosVisiveis.length - 1]?.id || '1. BIMESTRE';
@@ -54,7 +54,7 @@ export default function Diario() {
     return (actualMonth >= minM && actualMonth <= maxM) ? actualMonth : minM;
   });
 
-  const isAparataFechada = turmaAtiva ? localStorage.getItem(`aparata_fechada_${turmaAtiva.id}_${periodoSelecionadoId}`) === 'true' : false;
+  const isAparataFechada = !!fechamentos[periodoSelecionadoId];
 
   const { pFreq, pObj, pAvaliacoes, pNotas, barColor } = useTurmaProgress(
     turmaAtiva, 

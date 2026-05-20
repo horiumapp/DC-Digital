@@ -7,7 +7,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { TurmaProvider } from './contexts/TurmaContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ToastProvider } from './components/common/Toast';
-import { ADMIN_ROLES } from './constants/authConstants';
+import { ADMIN_ROLES, STAFF_ROLES } from './constants/authConstants';
 
 // Lazy loading das páginas principais para dividir o peso do javascript
 const Login = React.lazy(() => import('./pages/Login'));
@@ -55,7 +55,7 @@ export default function App() {
                 </Route>
 
                 {/* Rotas Privadas (Servidores - qualquer logado exceto ALUNO) */}
-                <Route element={<ProtectedRoute />}>
+                <Route element={<ProtectedRoute allowedRoles={STAFF_ROLES} />}>
                   <Route element={<Layout />}>
                     <Route path="/turmas" element={<Turmas />} />
                     <Route path="/diario" element={<Diario />} />

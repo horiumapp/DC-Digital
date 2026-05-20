@@ -18,19 +18,13 @@ export default function GerenciarAlocacoesModal({ isOpen, onClose, professor, on
     turno: 'Manhã',
   });
 
-  useEffect(() => {
-    if (isOpen && professor) {
-      fetchEscolas();
-      fetchAlocacoes();
-    }
-  }, [isOpen, professor]);
-
-  const fetchEscolas = async () => {
+  const fetchEscolas = React.useCallback(async () => {
     const { data } = await supabase.from('escolas').select('id, nome').eq('status', 'Ativa').order('nome');
     if (data) setEscolas(data);
-  };
+  }, []);
 
-  const fetchAlocacoes = async () => {
+  const fetchAlocacoes = React.useCallback(async () => {
+    if (!professor?.id) return;
     setLoading(true);
     const { data, error } = await supabase
       .from('professor_alocacoes')
@@ -44,7 +38,14 @@ export default function GerenciarAlocacoesModal({ isOpen, onClose, professor, on
       setAlocacoes(data);
     }
     setLoading(false);
-  };
+  }, [professor?.id]);
+
+  useEffect(() => {
+    if (isOpen && professor) {
+      fetchEscolas();
+      fetchAlocacoes();
+    }
+  }, [isOpen, professor, fetchEscolas, fetchAlocacoes]);
 
   const handleAddAlocacao = async (e: React.FormEvent) => {
     e.preventDefault();

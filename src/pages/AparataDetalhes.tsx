@@ -8,7 +8,7 @@ import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
 import { APP_CONFIG, getBimestreAtual } from '../config/appConfig';
 
 export default function AparataDetalhes() {
-  const { turmaAtiva, alunos, avaliacoes, lancamentos } = useTurma();
+  const { turmaAtiva, alunos, avaliacoes, lancamentos, fechamentos, salvarFechamento } = useTurma();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -128,18 +128,18 @@ export default function AparataDetalhes() {
   const periodo = bimestreInfo.nome;
   const meses = `${new Date(bimestreInfo.dataInicio).toLocaleDateString('pt-BR', { month: 'long' })} - ${new Date(bimestreInfo.dataFim).toLocaleDateString('pt-BR', { month: 'long' })}`;
 
-  const isAparataFechada = localStorage.getItem(`aparata_fechada_${turmaAtiva.id}_${bimestreInfo.id}`) === 'true';
+  const isAparataFechada = !!fechamentos[bimestreInfo.id];
 
-  const handleFecharAparata = () => {
+  const handleFecharAparata = async () => {
     if (window.confirm(`Tem certeza que deseja FECHAR a aparata do ${periodo}? Não será mais possível fazer lançamentos de frequência, conteúdos e notas neste período.`)) {
-      localStorage.setItem(`aparata_fechada_${turmaAtiva.id}_${bimestreInfo.id}`, 'true');
+      await salvarFechamento(bimestreInfo.id, 'FECHADO');
       navigate('/diario');
     }
   };
 
-  const handleReabrirAparata = () => {
+  const handleReabrirAparata = async () => {
     if (window.confirm(`Tem certeza que deseja REABRIR a aparata do ${periodo}? O professor voltará a ter acesso para fazer lançamentos.`)) {
-      localStorage.removeItem(`aparata_fechada_${turmaAtiva.id}_${bimestreInfo.id}`);
+      await salvarFechamento(bimestreInfo.id, 'ABERTO');
       navigate('/diario');
     }
   };

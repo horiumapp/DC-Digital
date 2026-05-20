@@ -21,14 +21,7 @@ export default function NovaTurmaModal({ isOpen, onClose, onSave, turmaParaEdita
     ano_letivo: new Date().getFullYear().toString(),
   });
 
-  // Busca as escolas ativas assim que o Modal abre para popular o Dropdown
-  useEffect(() => {
-    if (isOpen) {
-      fetchEscolas();
-    }
-  }, [isOpen]);
-
-  const fetchEscolas = async () => {
+  const fetchEscolas = React.useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('escolas')
@@ -40,7 +33,14 @@ export default function NovaTurmaModal({ isOpen, onClose, onSave, turmaParaEdita
       setEscolas(data);
     }
     setLoading(false);
-  };
+  }, []);
+
+  // Busca as escolas ativas assim que o Modal abre para popular o Dropdown
+  useEffect(() => {
+    if (isOpen) {
+      fetchEscolas();
+    }
+  }, [isOpen, fetchEscolas]);
 
   useEffect(() => {
     if (turmaParaEditar) {

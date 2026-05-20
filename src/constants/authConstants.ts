@@ -10,3 +10,8 @@ export const ADMIN_ROLES: UserRole[] = ['ADMIN', 'GESTOR', 'SECRETARIO'];
  * Roles com acesso de leitura a relatórios administrativos.
  */
 export const REPORT_ROLES: UserRole[] = ['ADMIN', 'GESTOR', 'SECRETARIO', 'PROFESSOR'];
+
+/**
+ * Roles com acesso ao painel de servidores (qualquer role exceto ALUNO).
+ */
+export const STAFF_ROLES: UserRole[] = ['ADMIN', 'GESTOR', 'SECRETARIO', 'PROFESSOR'];

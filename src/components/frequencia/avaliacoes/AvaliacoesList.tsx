@@ -14,6 +14,7 @@ interface AvaliacoesListProps {
   onShowGrades: (av: Avaliacao) => void;
   onSecondCall: (av: Avaliacao) => void;
   onAddAvaliacao: () => void;
+  disabled?: boolean;
 }
 
 export default function AvaliacoesList({
@@ -26,20 +27,23 @@ export default function AvaliacoesList({
   onAddRP,
   onShowGrades,
   onSecondCall,
-  onAddAvaliacao
+  onAddAvaliacao,
+  disabled
 }: AvaliacoesListProps) {
   const BIMESTRES = ['1º Bimestre', '2º Bimestre', '3º Bimestre', '4º Bimestre'];
 
   return (
     <div className="space-y-4">
-      <div className="flex items-end shadow-sm mb-2">
-        <button
-          onClick={onAddAvaliacao}
-          className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded-lg text-sm font-bold hover:bg-[#e0e7ff] transition flex items-center gap-2 shadow-sm active:scale-95"
-        >
-          <Plus className="w-4 h-4" /> Adicionar Avaliação
-        </button>
-      </div>
+      {!disabled && (
+        <div className="flex items-end shadow-sm mb-2">
+          <button
+            onClick={onAddAvaliacao}
+            className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded-lg text-sm font-bold hover:bg-[#e0e7ff] transition flex items-center gap-2 shadow-sm active:scale-95"
+          >
+            <Plus className="w-4 h-4" /> Adicionar Avaliação
+          </button>
+        </div>
+      )}
 
       {avaliacoes.length > 0 && (
         <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white">
@@ -81,33 +85,37 @@ export default function AvaliacoesList({
                            <td className="px-6 py-4">
                              <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-wider">{av.instrumento}</span>
                            </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center justify-center gap-2">
+                           <td className="px-6 py-4">
+                             <div className="flex items-center justify-center gap-2">
                               <button onClick={() => onViewDetails(av)}
                                 className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#0f2851] hover:bg-[#e0e7ff] rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
                                 <Eye className="w-3.5 h-3.5" /> Detalhes
                               </button>
                               
-                              <button onClick={() => onEdit(av)}
-                                className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-lg font-bold text-[10px] uppercase transition-all">
-                                <Pencil className="w-3.5 h-3.5 text-slate-500" /> Alterar
-                              </button>
+                              {!disabled && (
+                                <>
+                                  <button onClick={() => onEdit(av)}
+                                    className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-lg font-bold text-[10px] uppercase transition-all">
+                                    <Pencil className="w-3.5 h-3.5 text-slate-500" /> Alterar
+                                  </button>
 
-                              <button onClick={() => onDelete(av)}
-                                className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-red-100">
-                                <Trash2 className="w-3.5 h-3.5" /> Remover
-                              </button>
+                                  <button onClick={() => onDelete(av)}
+                                    className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-red-100">
+                                    <Trash2 className="w-3.5 h-3.5" /> Remover
+                                  </button>
 
-                              {alunos.some(aluno => {
-                                const nota = parseFloat((aluno.notas?.[av.id] || '').replace(',', '.'));
-                                return !isNaN(nota) && nota < 6.0;
-                              }) && !avaliacoes.some(rp => String(rp.parent_id) === String(av.id)) && (
-                                <button 
-                                  onClick={() => onAddRP(av)}
-                                  className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-white text-[#0f2851] border border-blue-100 hover:bg-[#eef2ff] rounded-lg font-bold text-[10px] uppercase transition-all"
-                                >
-                                  <Plus className="w-3.5 h-3.5 text-[#0f2851]" /> ADICIONAR RP
-                                </button>
+                                  {alunos.some(aluno => {
+                                    const nota = parseFloat((aluno.notas?.[av.id] || '').replace(',', '.'));
+                                    return !isNaN(nota) && nota < 6.0;
+                                  }) && !avaliacoes.some(rp => String(rp.parent_id) === String(av.id)) && (
+                                    <button 
+                                      onClick={() => onAddRP(av)}
+                                      className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-white text-[#0f2851] border border-blue-100 hover:bg-[#eef2ff] rounded-lg font-bold text-[10px] uppercase transition-all"
+                                    >
+                                      <Plus className="w-3.5 h-3.5 text-[#0f2851]" /> ADICIONAR RP
+                                    </button>
+                                  )}
+                                </>
                               )}
 
                               <button onClick={() => onShowGrades(av)}
@@ -115,7 +123,7 @@ export default function AvaliacoesList({
                                 <List className="w-3.5 h-3.5" /> Notas
                               </button>
                               
-                              {(() => {
+                              {!disabled && (() => {
                                 const hasGrades = alunos.some(a => a.notas?.[av.id]);
                                 const hasAbsences = (faltasPorData[formatarDataParaISO(av.data)] || new Set()).size > 0;
                                 const alreadyHasSecondCall = avaliacoes.some(rp => String(rp.parent_id) === String(av.id) && rp.tipo.includes('2CH'));
@@ -163,15 +171,19 @@ export default function AvaliacoesList({
                                       <Eye className="w-3.5 h-3.5" /> Detalhes
                                     </button>
                                     
-                                    <button onClick={() => onEdit(rp)}
-                                      className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-lg font-bold text-[10px] uppercase transition-all">
-                                      <Pencil className="w-3.5 h-3.5 text-slate-500" /> Alterar
-                                    </button>
-                                    
-                                    <button onClick={() => onDelete(rp)}
-                                      className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-red-100">
-                                      <Trash2 className="w-3.5 h-3.5" /> Remover
-                                    </button>
+                                    {!disabled && (
+                                      <>
+                                        <button onClick={() => onEdit(rp)}
+                                          className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-lg font-bold text-[10px] uppercase transition-all">
+                                          <Pencil className="w-3.5 h-3.5 text-slate-500" /> Alterar
+                                        </button>
+                                        
+                                        <button onClick={() => onDelete(rp)}
+                                          className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-bold text-[10px] uppercase transition-all border border-red-100">
+                                          <Trash2 className="w-3.5 h-3.5" /> Remover
+                                        </button>
+                                      </>
+                                    )}
 
                                     <button onClick={() => onShowGrades(rp)}
                                       className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#0f2851] hover:bg-[#e0e7ff] rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">

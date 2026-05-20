@@ -13,7 +13,11 @@ import NotasEditor from './avaliacoes/NotasEditor';
 import SegundaChamadaEditor from './avaliacoes/SegundaChamadaEditor';
 import DeleteAvaliacaoModal from './avaliacoes/DeleteAvaliacaoModal';
 
-export default function AvaliacoesTab() {
+interface AvaliacoesTabProps {
+  disabled?: boolean;
+}
+
+export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
   const { 
     turmaAtiva, alunos, avaliacoes, conteudos, loading, 
     salvarAvaliacao, removerAvaliacao, salvarNotas, 
@@ -257,6 +261,7 @@ export default function AvaliacoesTab() {
             generateNewCaptcha();
           }}
           onAddAvaliacao={() => { resetForm(); setAvaliacaoViewMode('edit'); }}
+          disabled={disabled}
         />
       )}
 
@@ -322,6 +327,7 @@ export default function AvaliacoesTab() {
           onCancel={() => { setAvaliacaoViewMode('list'); resetForm(); }}
           onSetCaptchaInput={setCaptchaInput}
           onGenerateNewCaptcha={generateNewCaptcha}
+          disabled={disabled}
         />
       )}
 

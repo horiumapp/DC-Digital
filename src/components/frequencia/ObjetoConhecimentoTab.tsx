@@ -12,6 +12,7 @@ interface ObjetoConhecimentoTabProps {
   tempoAula: string;
   setTempoAula: (v: string) => void;
   disponiveisTempos: string[];
+  disabled?: boolean;
 }
 
 export default function ObjetoConhecimentoTab({
@@ -20,6 +21,7 @@ export default function ObjetoConhecimentoTab({
   tempoAula,
   setTempoAula,
   disponiveisTempos,
+  disabled,
 }: ObjetoConhecimentoTabProps) {
   const { registrarLancamento, removerLancamento, salvarConteudo, buscarConteudo, removerConteudo, lancamentos } = useTurma();
 
@@ -258,16 +260,18 @@ export default function ObjetoConhecimentoTab({
              >
                Exibir
              </button>
-             <button
-               onClick={() => {
-                 setShowObjetoTable(false);
-                 setShowNoRecordsObjeto(false);
-                 setIsAddingObjeto(true);
-               }}
-               className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] flex items-center gap-2 shadow-sm active:scale-95"
-             >
-               <span className="text-lg leading-none">+</span> Adicionar Objeto de Conhecimento
-             </button>
+              {!disabled && (
+                <button
+                  onClick={() => {
+                    setShowObjetoTable(false);
+                    setShowNoRecordsObjeto(false);
+                    setIsAddingObjeto(true);
+                  }}
+                  className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] flex items-center gap-2 shadow-sm active:scale-95"
+                >
+                  <span className="text-lg leading-none">+</span> Adicionar Objeto de Conhecimento
+                </button>
+              )}
           </div>
 
           {showNoRecordsObjeto && !showObjetoTable && (
@@ -298,21 +302,27 @@ export default function ObjetoConhecimentoTab({
                        <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full border border-emerald-200 uppercase">{objetoData.status}</span>
                      </td>
                      <td className="px-4 py-3">
-                       <div className="flex items-center justify-center gap-2">
-                         <button
-                           onClick={() => { setShowObjetoTable(false); setIsAddingObjeto(true); }}
-                           className="flex items-center gap-1 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-3 py-1.5 rounded text-xs font-bold hover:bg-[#e0e7ff] transition"
-                         >
-                           <Pencil className="w-3 h-3" /> Alterar
-                         </button>
-                        <button
-                          onClick={() => setShowDeleteObjetoModal(true)}
-                          className="flex items-center gap-1 bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-red-700 transition"
-                        >
-                          <Trash2 className="w-3 h-3" /> Excluir
-                        </button>
-                      </div>
-                    </td>
+                        <div className="flex items-center justify-center gap-2">
+                          {!disabled ? (
+                            <>
+                              <button
+                                onClick={() => { setShowObjetoTable(false); setIsAddingObjeto(true); }}
+                                className="flex items-center gap-1 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-3 py-1.5 rounded text-xs font-bold hover:bg-[#e0e7ff] transition"
+                              >
+                                <Pencil className="w-3 h-3" /> Alterar
+                              </button>
+                              <button
+                                onClick={() => setShowDeleteObjetoModal(true)}
+                                className="flex items-center gap-1 bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-red-700 transition"
+                              >
+                                <Trash2 className="w-3 h-3" /> Excluir
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">—</span>
+                          )}
+                        </div>
+                      </td>
                   </tr>
                 </tbody>
               </table>

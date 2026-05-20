@@ -17,6 +17,7 @@ interface NotasEditorProps {
   onCancel: () => void;
   onSetCaptchaInput: (val: string) => void;
   onGenerateNewCaptcha: () => void;
+  disabled?: boolean;
 }
 
 export default function NotasEditor({
@@ -31,7 +32,8 @@ export default function NotasEditor({
   onConfirm,
   onCancel,
   onSetCaptchaInput,
-  onGenerateNewCaptcha
+  onGenerateNewCaptcha,
+  disabled
 }: NotasEditorProps) {
   if (!selectedAvaliacao) return null;
 
@@ -85,7 +87,8 @@ export default function NotasEditor({
                         placeholder="0,00" 
                         value={localNotas[aluno.id] || ''} 
                         onChange={(e) => onNotaChange(aluno.id, e.target.value)} 
-                        className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-center text-lg font-bold text-[#0f2851] focus:ring-2 focus:ring-[#0f2851]/20 transition-all group-hover:bg-white placeholder:text-slate-200" 
+                        disabled={disabled}
+                        className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-center text-lg font-bold text-[#0f2851] focus:ring-2 focus:ring-[#0f2851]/20 transition-all group-hover:bg-white placeholder:text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed" 
                       />
                     )}
                   </div>
@@ -97,26 +100,30 @@ export default function NotasEditor({
       </div>
 
       <div className="bg-white border border-slate-200 rounded-[32px] p-8 shadow-sm">
-        <Captcha 
-          generatedCaptcha={generatedCaptcha} 
-          captchaInput={captchaInput} 
-          setCaptchaInput={onSetCaptchaInput} 
-          captchaError={captchaError} 
-          generateNewCaptcha={onGenerateNewCaptcha} 
-          className="mb-8" 
-        />
+        {!disabled && (
+          <Captcha 
+            generatedCaptcha={generatedCaptcha} 
+            captchaInput={captchaInput} 
+            setCaptchaInput={onSetCaptchaInput} 
+            captchaError={captchaError} 
+            generateNewCaptcha={onGenerateNewCaptcha} 
+            className="mb-8" 
+          />
+        )}
         <div className="flex gap-4">
-          <button 
-            onClick={onConfirm} 
-            className="flex-1 bg-[#0f2851] text-white py-5 rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-[#1a3a6d] transition shadow-xl shadow-[#0f2851]/30 flex items-center justify-center gap-3 active:scale-95"
-          >
-            <Check className="w-6 h-6 text-emerald-400" /> Confirmar Notas
-          </button>
+          {!disabled && (
+            <button 
+              onClick={onConfirm} 
+              className="flex-1 bg-[#0f2851] text-white py-5 rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-[#1a3a6d] transition shadow-xl shadow-[#0f2851]/30 flex items-center justify-center gap-3 active:scale-95"
+            >
+              <Check className="w-6 h-6 text-emerald-400" /> Confirmar Notas
+            </button>
+          )}
           <button 
             onClick={onCancel} 
-            className="px-12 bg-slate-100 text-slate-500 py-5 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-slate-200 transition"
+            className={`px-12 bg-slate-100 text-slate-500 py-5 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-slate-200 transition ${disabled ? 'flex-1' : ''}`}
           >
-            Voltar
+            {disabled ? 'Voltar' : 'Voltar'}
           </button>
         </div>
       </div>

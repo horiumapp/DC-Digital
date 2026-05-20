@@ -13,7 +13,7 @@ const PERIODOS = [
 ];
 
 export default function Aparata() {
-  const { turmaAtiva } = useTurma();
+  const { turmaAtiva, fechamentos } = useTurma();
   const [periodoSelecionado, setPeriodoSelecionado] = useState('1. BIMESTRE');
   const [showDados, setShowDados] = useState(false);
   const [searchMovimentacao, setSearchMovimentacao] = useState('');
@@ -170,7 +170,7 @@ export default function Aparata() {
                             <td className="px-4 py-3 text-slate-700 font-medium">{periodoSelecionado}</td>
                             <td className="px-4 py-3">
                               {(() => {
-                                const isFechado = localStorage.getItem(`aparata_fechada_${turmaAtiva.id}_${periodoSelecionado}`) === 'true';
+                                const isFechado = !!fechamentos[periodoSelecionado];
                                 return (
                                   <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest border ${isFechado ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
                                     {isFechado ? 'FECHADO' : 'ABERTO'}

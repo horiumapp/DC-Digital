@@ -25,50 +25,7 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
 
   const canEdit = ['ADMIN', 'GESTOR', 'SECRETARIO'].includes(user?.role || '');
 
-  useEffect(() => {
-    if (isOpen) {
-      if (professorId && escolaId) {
-        fetchData(professorId, escolaId);
-      } else if (user?.role === 'PROFESSOR') {
-        fetchProfessorContext();
-      }
-    }
-  }, [isOpen, professorId, escolaId, user]);
-
-  const fetchProfessorContext = async () => {
-    if (!user?.email) return;
-    setLoading(true);
-    try {
-      const emailLimpo = user.email.trim();
-      
-      // 1. Achar todos os IDs de professor vinculados a este e-mail
-      const { data: profs } = await supabase
-        .from('professores')
-        .select('id')
-        .ilike('email', `%${emailLimpo}%`);
-
-      if (profs && profs.length > 0) {
-        const profIds = profs.map(p => p.id);
-        
-        // 2. Achar a primeira escola alocada para QUALQUER um desses perfis
-        const { data: alocData } = await supabase
-          .from('professor_alocacoes')
-          .select('escola_id')
-          .in('professor_id', profIds)
-          .limit(1);
-
-        if (alocData && alocData.length > 0) {
-          // Passamos a lista de IDs para o fetchData
-          fetchData(profIds, alocData[0].escola_id);
-        }
-      }
-    } catch (err) {
-      console.error('Erro ao buscar contexto do professor:', err);
-    }
-    setLoading(false);
-  };
-
-  const fetchData = async (pIds?: string | string[], eId?: string) => {
+  const fetchData = React.useCallback(async (pIds?: string | string[], eId?: string) => {
     // Garantir que pIds seja um array
     const targetProfIds = Array.isArray(pIds) ? pIds : (pIds ? [pIds] : (professorId ? [professorId] : []));
     const targetEscolaId = eId || escolaId;
@@ -123,7 +80,50 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
       console.error('Erro ao buscar dados do horário:', err);
     }
     setLoading(false);
-  };
+  }, [professorId, escolaId]);
+
+  const fetchProfessorContext = React.useCallback(async () => {
+    if (!user?.email) return;
+    setLoading(true);
+    try {
+      const emailLimpo = user.email.trim();
+      
+      // 1. Achar todos os IDs de professor vinculados a este e-mail
+      const { data: profs } = await supabase
+        .from('professores')
+        .select('id')
+        .ilike('email', `%${emailLimpo}%`);
+
+      if (profs && profs.length > 0) {
+        const profIds = profs.map(p => p.id);
+        
+        // 2. Achar a primeira escola alocada para QUALQUER um desses perfis
+        const { data: alocData } = await supabase
+          .from('professor_alocacoes')
+          .select('escola_id')
+          .in('professor_id', profIds)
+          .limit(1);
+
+        if (alocData && alocData.length > 0) {
+          // Passamos a lista de IDs para o fetchData
+          fetchData(profIds, alocData[0].escola_id);
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao buscar contexto do professor:', err);
+    }
+    setLoading(false);
+  }, [user?.email, fetchData]);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (professorId && escolaId) {
+        fetchData(professorId, escolaId);
+      } else if (user?.role === 'PROFESSOR') {
+        fetchProfessorContext();
+      }
+    }
+  }, [isOpen, professorId, escolaId, user, fetchData, fetchProfessorContext]);
 
   const handleTurmaSelect = (diaIndex: number, tempoOrdem: number, turmaId: string) => {
     const key = `${diaIndex + 1}-${tempoOrdem}`;

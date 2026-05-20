@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { getBimestrePorData, formatarDataParaISO } from '../utils/dateUtils';
 import { TurmaService } from '../services/turmaService';
 import { useToast } from '../components/common/Toast';
+import { useAuth } from './AuthContext';
 
 export interface TurmaMetricas {
   frequencia: number;
@@ -98,11 +99,15 @@ interface TurmaContextType {
   removerConteudo: (data: string, tempo: string) => Promise<void>;
   carregarFaltasDaData: (data: string) => Promise<void>;
   faltasPorData: Record<string, Set<string>>;
+  fechamentos: Record<string, boolean>;
+  salvarFechamento: (bimestre: string, status: 'ABERTO' | 'FECHADO') => Promise<void>;
+  verificarPeriodoFechado: (dateOrBimestreId: string) => boolean;
 }
 
 const TurmaContext = createContext<TurmaContextType | undefined>(undefined);
 
 export function TurmaProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [turmaAtiva, setTurmaAtiva] = useState<Turma | null>(null);
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
@@ -111,8 +116,18 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const [horarioTurma, setHorarioTurma] = useState<Horario[]>([]);
   const [loading, setLoading] = useState(false);
   const [faltasPorData, setFaltasPorData] = useState<Record<string, Set<string>>>({});
+  const [fechamentos, setFechamentos] = useState<Record<string, boolean>>({});
   
   const { showError, showSuccess } = useToast();
+
+  const verificarPeriodoFechado = useCallback((dateOrBimestreId: string): boolean => {
+    if (!dateOrBimestreId) return false;
+    let bimestreId = dateOrBimestreId;
+    if (dateOrBimestreId.includes('-') || dateOrBimestreId.includes('/')) {
+      bimestreId = getBimestrePorData(dateOrBimestreId);
+    }
+    return !!fechamentos[bimestreId];
+  }, [fechamentos]);
 
   const fetchAvaliacoesInterno = useCallback(async (turmaId: string | number, disciplina: string, contextAlunos: Aluno[], signal?: AbortSignal) => {
     try {
@@ -152,15 +167,17 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
         setLancamentos([]);
         setHorarioTurma([]);
         setConteudos([]);
+        setFechamentos({});
 
         try {
           const rawId = turmaAtiva.id.toString().split('||')[0];
-          const [ls, hs, alumnosData, conts, freqs] = await Promise.all([
+          const [ls, hs, alumnosData, conts, freqs, fechamentosData] = await Promise.all([
             TurmaService.fetchLancamentos(rawId, turmaAtiva.componente),
             TurmaService.fetchHorario(rawId, turmaAtiva.componente),
             TurmaService.fetchAlunos(rawId),
             TurmaService.fetchAllConteudos(rawId, turmaAtiva.componente),
-            TurmaService.fetchAllFrequencias(rawId, turmaAtiva.componente)
+            TurmaService.fetchAllFrequencias(rawId, turmaAtiva.componente),
+            TurmaService.fetchFechamentos(rawId, turmaAtiva.componente)
           ]);
           
           if (signal.aborted) return;
@@ -169,6 +186,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
           setHorarioTurma(hs);
           setAlunos(alumnosData);
           setConteudos(conts);
+          setFechamentos(fechamentosData);
 
           const faltasMap: Record<string, Set<string>> = {};
           freqs.forEach((f: { data: string; aluno_id: string; status: string }) => {
@@ -219,8 +237,25 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     ));
   };
 
+  const salvarFechamento = async (bimestre: string, status: 'ABERTO' | 'FECHADO') => {
+    if (!turmaAtiva || !user) return;
+    const rawId = turmaAtiva.id.toString().split('||')[0];
+    try {
+      await TurmaService.salvarFechamento(rawId, turmaAtiva.componente, bimestre, status, user.id);
+      setFechamentos(prev => ({ ...prev, [bimestre]: status === 'FECHADO' }));
+      showSuccess(`Aparata ${status === 'FECHADO' ? 'fechada' : 'reaberta'} com sucesso!`);
+    } catch (err) {
+      console.error('Erro ao salvar fechamento:', err);
+      showError(`Não foi possível ${status === 'FECHADO' ? 'fechar' : 'reabrir'} a aparata.`);
+    }
+  };
+
   const salvarAvaliacao = async (av: Avaliacao): Promise<string> => {
     if (!turmaAtiva) return '';
+    if (verificarPeriodoFechado(av.bimestre || av.data)) {
+      showError('Operação bloqueada: O período selecionado está fechado.');
+      return '';
+    }
     const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
       const createdId = await TurmaService.salvarAvaliacao(av, rawId, turmaAtiva.componente);
@@ -235,6 +270,11 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   };
 
   const removerAvaliacao = async (id: string) => {
+    const av = avaliacoes.find(a => a.id === id);
+    if (av && verificarPeriodoFechado(av.bimestre || av.data)) {
+      showError('Operação bloqueada: O período correspondente a esta avaliação está fechado.');
+      return;
+    }
     try {
       await TurmaService.removerAvaliacao(id);
       setAvaliacoes(prev => prev.filter(a => a.id !== id));
@@ -247,6 +287,11 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const salvarNotas = async (avaliacaoId: string, notas: { alunoId: string, valor: string }[]) => {
     if (!turmaAtiva) return;
+    const av = avaliacoes.find(a => a.id === avaliacaoId);
+    if (av && verificarPeriodoFechado(av.bimestre || av.data)) {
+      showError('Operação bloqueada: O período correspondente a esta avaliação está fechado.');
+      return;
+    }
     const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
       await TurmaService.salvarNotas(avaliacaoId, notas);
@@ -260,6 +305,10 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const salvarFrequencia = async (data: string, tempo: string, alunosFreq: Aluno[]) => {
     if (!turmaAtiva) return;
+    if (verificarPeriodoFechado(data)) {
+      showError('Operação bloqueada: O período correspondente a esta data está fechado.');
+      return;
+    }
     const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
       await TurmaService.salvarFrequencia(rawId, turmaAtiva.componente, data, tempo, alunosFreq);
@@ -281,6 +330,10 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const salvarConteudo = async (cont: Conteudo) => {
     if (!turmaAtiva) return;
+    if (verificarPeriodoFechado(cont.data)) {
+      showError('Operação bloqueada: O período correspondente a esta data está fechado.');
+      return;
+    }
     const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
       await TurmaService.salvarConteudo(rawId, turmaAtiva.componente, cont);
@@ -323,6 +376,10 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const removerFrequencia = async (data: string, tempo: string) => {
     if (!turmaAtiva) return;
+    if (verificarPeriodoFechado(data)) {
+      showError('Operação bloqueada: O período correspondente a esta data está fechado.');
+      return;
+    }
     const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
       await TurmaService.removerFrequencia(rawId, turmaAtiva.componente, data, tempo);
@@ -337,6 +394,10 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const removerConteudo = async (data: string, tempo: string) => {
     if (!turmaAtiva) return;
+    if (verificarPeriodoFechado(data)) {
+      showError('Operação bloqueada: O período correspondente a esta data está fechado.');
+      return;
+    }
     const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
       await TurmaService.removerConteudo(rawId, turmaAtiva.componente, data, tempo);
@@ -369,7 +430,8 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       alunos, avaliacoes, conteudos, horarioTurma, loading, 
       salvarAvaliacao, removerAvaliacao, salvarNotas,
       salvarFrequencia, salvarConteudo, buscarFrequencia, buscarConteudo,
-      removerFrequencia, removerConteudo, carregarFaltasDaData, faltasPorData
+      removerFrequencia, removerConteudo, carregarFaltasDaData, faltasPorData,
+      fechamentos, salvarFechamento, verificarPeriodoFechado
     }}>
       {children}
     </TurmaContext.Provider>

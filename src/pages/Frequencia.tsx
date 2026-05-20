@@ -13,7 +13,7 @@ import AvaliacoesTab from '../components/frequencia/AvaliacoesTab';
 import { getBimestrePorData } from '../utils/dateUtils';
 
 export default function Frequencia() {
-  const { turmaAtiva, horarioTurma, lancamentos } = useTurma();
+  const { turmaAtiva, horarioTurma, lancamentos, verificarPeriodoFechado } = useTurma();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const selectedDateParam = searchParams.get('date') || `${APP_CONFIG.YEAR}-02-06`;
@@ -21,6 +21,10 @@ export default function Frequencia() {
   // ── Shared state ──
   const [activeTab, setActiveTab] = useState('frequencia');
   const [selectedDate, setSelectedDate] = useState(selectedDateParam);
+  
+  const isPeriodoFechado = React.useMemo(() => {
+    return verificarPeriodoFechado(selectedDate);
+  }, [selectedDate, verificarPeriodoFechado]);
   
   // Obter tempos válidos para o dia selecionado
   const dow = getDayOfWeek(selectedDate);
@@ -70,6 +74,19 @@ export default function Frequencia() {
   return (
     <div className="min-h-screen bg-slate-50 relative pb-20">
       <div className="relative z-10">
+        {/* Banner de Período Fechado */}
+        {isPeriodoFechado && (
+          <div className="bg-amber-500 text-white px-8 py-3 flex items-center justify-between shadow-md">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">⚠️</span>
+              <div>
+                <p className="font-bold text-sm">Bimestre Fechado</p>
+                <p className="text-xs text-white/90 font-medium">Este bimestre encontra-se fechado para lançamentos. As informações abaixo estão em modo de apenas leitura.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* SubHeader */}
         <div className="bg-blue-50/10 px-8 py-3 flex items-center justify-between border-b border-blue-100/50">
           <div className="flex items-center gap-4">
@@ -169,6 +186,7 @@ export default function Frequencia() {
                   tempoAula={tempoAula}
                   setTempoAula={setTempoAula}
                   disponiveisTempos={temposParaMostrar}
+                  disabled={isPeriodoFechado}
                 />
               )}
               {activeTab === 'objeto' && (
@@ -178,6 +196,7 @@ export default function Frequencia() {
                   tempoAula={tempoAula}
                   setTempoAula={setTempoAula}
                   disponiveisTempos={temposParaMostrar}
+                  disabled={isPeriodoFechado}
                 />
               )}
               {activeTab === 'anotacoes' && (
@@ -186,10 +205,11 @@ export default function Frequencia() {
                   tempoAula={tempoAula}
                   setTempoAula={setTempoAula}
                   disponiveisTempos={temposParaMostrar}
+                  disabled={isPeriodoFechado}
                 />
               )}
               {activeTab === 'avaliacoes' && (
-                <AvaliacoesTab />
+                <AvaliacoesTab disabled={isPeriodoFechado} />
               )}
             </div>
           </div>

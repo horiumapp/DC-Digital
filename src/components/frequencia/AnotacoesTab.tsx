@@ -8,6 +8,7 @@ interface AnotacoesTabProps {
   tempoAula: string;
   setTempoAula: (v: string) => void;
   disponiveisTempos: string[];
+  disabled?: boolean;
 }
 
 export default function AnotacoesTab({
@@ -15,6 +16,7 @@ export default function AnotacoesTab({
   tempoAula,
   setTempoAula,
   disponiveisTempos,
+  disabled,
 }: AnotacoesTabProps) {
   const [isAddingAnotacao, setIsAddingAnotacao] = useState(false);
   const [showNoRecordsAnotacao, setShowNoRecordsAnotacao] = useState(false);
@@ -77,12 +79,14 @@ export default function AnotacoesTab({
             >
               Exibir
             </button>
-            <button
-              onClick={() => setIsAddingAnotacao(true)}
-              className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] flex items-center gap-2 shadow-sm active:scale-95"
-            >
-              <span className="text-lg leading-none">+</span> Adicionar anotação
-            </button>
+            {!disabled && (
+              <button
+                onClick={() => setIsAddingAnotacao(true)}
+                className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] flex items-center gap-2 shadow-sm active:scale-95"
+              >
+                <span className="text-lg leading-none">+</span> Adicionar anotação
+              </button>
+            )}
           </div>
 
           {showNoRecordsAnotacao && anotacoes.length === 0 && (

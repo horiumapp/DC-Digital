@@ -363,5 +363,53 @@ export const TurmaService = {
       habilidades: c.habilidades || [],
       descricao: c.descricao || ''
     }));
+  },
+
+  fetchFechamentos: async (turmaId: string | number, disciplina: string): Promise<Record<string, boolean>> => {
+    const tid = getTid(turmaId);
+    const { data, error } = await supabase
+      .from('fechamentos_bimestres')
+      .select('bimestre, status')
+      .eq('turma_id', tid)
+      .eq('disciplina', disciplina);
+
+    if (error) throw error;
+
+    const map: Record<string, boolean> = {};
+    data?.forEach(f => {
+      map[f.bimestre] = f.status === 'FECHADO';
+    });
+    return map;
+  },
+
+  salvarFechamento: async (
+    turmaId: string | number,
+    disciplina: string,
+    bimestre: string,
+    status: 'ABERTO' | 'FECHADO',
+    userId: string
+  ): Promise<void> => {
+    const tid = getTid(turmaId);
+    if (status === 'ABERTO') {
+      const { error } = await supabase
+        .from('fechamentos_bimestres')
+        .delete()
+        .eq('turma_id', tid)
+        .eq('disciplina', disciplina)
+        .eq('bimestre', bimestre);
+      if (error) throw error;
+    } else {
+      const payload = {
+        turma_id: tid,
+        disciplina,
+        bimestre,
+        status,
+        usuario_fechamento_id: userId
+      };
+      const { error } = await supabase
+        .from('fechamentos_bimestres')
+        .upsert(payload, { onConflict: 'turma_id,disciplina,bimestre' });
+      if (error) throw error;
+    }
   }
 };

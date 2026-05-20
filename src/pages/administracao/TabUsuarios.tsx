@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Search, Shield, User, GraduationCap, Briefcase, Key, Users, Building2, Mail } from 'lucide-react';
@@ -16,11 +16,7 @@ export default function TabUsuarios() {
   
   const CARGOS = ['TODOS', 'ADMIN', 'GESTOR', 'SECRETARIO', 'PROFESSOR', 'ALUNO'];
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-  
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const { data: escData } = await supabase.from('escolas').select('id, nome');
@@ -40,7 +36,12 @@ export default function TabUsuarios() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [showError]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchData();
+  }, [fetchData]);
   
   const usuariosFiltrados = usuarios.filter(u => {
     const searchString = `${u.nome_completo || ''} ${u.email || ''}`.toLowerCase();
