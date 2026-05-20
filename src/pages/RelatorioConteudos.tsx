@@ -598,7 +598,7 @@ export default function RelatorioConteudos() {
           {/* Bottom Info */}
           <div className="mt-auto pt-6 flex justify-between text-[7px] italic text-slate-400">
             <div>Sistema DDigital - Gerado em {new Date().toLocaleString('pt-BR')}</div>
-            <div>Registro Individual de Conteúdo - SEMED/LÁBREA</div>
+            <div>Registro Individual de Conteúdo - SEMED - Lábrea/AM</div>
           </div>
         </div>
       </div>
