@@ -51,6 +51,7 @@ export default function FrequenciaTab({
   }, [selectedDate, tempoAula, turmaAtiva, buscarFrequencia]);
 
   // Sincronizar o estado local com os alunos do contexto (que agora vêm do banco)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     setStudentData(alunos.map(a => ({ ...a })));
   }, [alunos]);

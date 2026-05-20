@@ -195,6 +195,7 @@ export default function RelatorioNotas() {
     }
   }, [user, showError]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (user?.email) {
       fetchTurmasProfessor();

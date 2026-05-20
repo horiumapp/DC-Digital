@@ -136,10 +136,12 @@ export default function Turmas() {
     }
   }, [user, showError]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   React.useEffect(() => {
     fetchAlocacoes();
   }, [user?.id, fetchAlocacoes]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   React.useEffect(() => {
     if (alocacaoAtiva) {
       fetchTurmasBD();

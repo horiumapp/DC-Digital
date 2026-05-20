@@ -61,6 +61,7 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
     setLoading(false);
   }, [escola.id, showError]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     fetchUsuarios();
   }, [fetchUsuarios]);

@@ -42,9 +42,11 @@ export default function Frequencia() {
   const [tempoAula, setTempoAula] = useState(temposParaMostrar[0]);
 
   // Sincronizar data da URL
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   React.useEffect(() => { setSelectedDate(selectedDateParam); }, [selectedDateParam]);
 
   // Resetar o tempo quando a data mudar (se o tempo atual não for válido para o novo dia)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   React.useEffect(() => {
     if (!temposParaMostrar.includes(tempoAula)) {
       setTempoAula(temposParaMostrar[0]);
