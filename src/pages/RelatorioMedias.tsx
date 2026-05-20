@@ -223,6 +223,8 @@ export default function RelatorioMedias() {
     return Math.min(soma, maxLimit);
   };
 
+  const selectedTurmaObj = turmas.find(t => t.id === selectedTurma);
+
   return (
     <div className="min-h-screen bg-slate-50 relative">
       <div className="relative z-10">
