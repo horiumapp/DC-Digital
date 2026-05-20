@@ -39,12 +39,13 @@ export default function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEdita
     setLoadingEscolas(false);
   }, []);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (isOpen) {
       fetchEscolas();
     }
   }, [isOpen, fetchEscolas]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const fetchTurmas = React.useCallback(async (escolaId: string) => {
     setLoadingTurmas(true);
@@ -53,7 +54,7 @@ export default function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEdita
     setLoadingTurmas(false);
   }, []);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (formData.escola_id) {
       fetchTurmas(formData.escola_id);
@@ -61,8 +62,9 @@ export default function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEdita
       setTurmas([]);
     }
   }, [formData.escola_id, fetchTurmas]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (alunoParaEditar) {
       setFormData({
@@ -92,6 +94,7 @@ export default function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEdita
       });
     }
   }, [alunoParaEditar, isOpen, escolas, fixedEscolaId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const formatCPF = (value: string) => {
     return value

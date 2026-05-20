@@ -36,14 +36,15 @@ export default function NovaTurmaModal({ isOpen, onClose, onSave, turmaParaEdita
   }, []);
 
   // Busca as escolas ativas assim que o Modal abre para popular o Dropdown
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (isOpen) {
       fetchEscolas();
     }
   }, [isOpen, fetchEscolas]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (turmaParaEditar) {
       setFormData({
@@ -61,6 +62,7 @@ export default function NovaTurmaModal({ isOpen, onClose, onSave, turmaParaEdita
       });
     }
   }, [turmaParaEditar, isOpen, escolas]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!isOpen) return null;
 
