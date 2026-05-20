@@ -145,7 +145,7 @@ export default function AvaliacaoForm({
               type="text" 
               value={valorMaximo}
               onChange={(e) => {
-                let val = e.target.value.replace(/[^0-9,]/g, '');
+                const val = e.target.value.replace(/[^0-9,]/g, '');
                 onSetValorMaximo(val);
               }}
               onBlur={() => {

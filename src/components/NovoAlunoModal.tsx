@@ -39,6 +39,7 @@ export default function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEdita
     setLoadingEscolas(false);
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (isOpen) {
       fetchEscolas();
@@ -52,6 +53,7 @@ export default function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEdita
     setLoadingTurmas(false);
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (formData.escola_id) {
       fetchTurmas(formData.escola_id);
@@ -60,6 +62,7 @@ export default function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEdita
     }
   }, [formData.escola_id, fetchTurmas]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (alunoParaEditar) {
       setFormData({

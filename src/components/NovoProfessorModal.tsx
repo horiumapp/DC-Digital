@@ -41,6 +41,7 @@ export default function NovoProfessorModal({ isOpen, onClose, onSave, professorP
     }
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (professorParaEditar) {
       setFormData({

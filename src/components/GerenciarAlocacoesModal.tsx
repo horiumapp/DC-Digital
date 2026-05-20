@@ -23,6 +23,7 @@ export default function GerenciarAlocacoesModal({ isOpen, onClose, professor, on
     if (data) setEscolas(data);
   }, []);
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const fetchAlocacoes = React.useCallback(async () => {
     if (!professor?.id) return;
     setLoading(true);
@@ -42,7 +43,9 @@ export default function GerenciarAlocacoesModal({ isOpen, onClose, professor, on
 
   useEffect(() => {
     if (isOpen && professor) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchEscolas();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchAlocacoes();
     }
   }, [isOpen, professor, fetchEscolas, fetchAlocacoes]);

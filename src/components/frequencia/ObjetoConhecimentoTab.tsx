@@ -45,7 +45,7 @@ export default function ObjetoConhecimentoTab({
       if (!turmaAtiva) return;
       setLoadingCurriculo(true);
       try {
-        let modalidadeRaw = turmaAtiva.ensino || "";
+        const modalidadeRaw = turmaAtiva.ensino || "";
         // Extract prefix before '(' to avoid mismatches between '°' and 'º'
         const modalidadeStr = modalidadeRaw.split('(')[0].trim();
         

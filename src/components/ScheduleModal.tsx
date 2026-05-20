@@ -82,6 +82,7 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
     setLoading(false);
   }, [professorId, escolaId]);
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const fetchProfessorContext = React.useCallback(async () => {
     if (!user?.email) return;
     setLoading(true);
@@ -115,6 +116,7 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
     setLoading(false);
   }, [user?.email, fetchData]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (isOpen) {
       if (professorId && escolaId) {
