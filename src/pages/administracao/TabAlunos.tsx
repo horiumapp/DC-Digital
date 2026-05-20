@@ -47,7 +47,7 @@ export default function TabAlunos() {
   }
 
   // Auto-selecionar escola se for Gestor
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (user?.role === 'GESTOR' && user.escola_id && escolas.length > 0 && !selectedEscola) {
       const minhaEscola = escolas.find(e => e.id === user.escola_id);
@@ -56,6 +56,7 @@ export default function TabAlunos() {
       }
     }
   }, [user, escolas, selectedEscola]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function fetchInitialData() {
     setLoading(true);

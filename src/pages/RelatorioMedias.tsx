@@ -172,12 +172,13 @@ export default function RelatorioMedias() {
     }
   }, [user, showError]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (user?.email) {
       fetchTurmasProfessor();
     }
   }, [user, fetchTurmasProfessor]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleExibir = async () => {
     if (!selectedTurma) return;

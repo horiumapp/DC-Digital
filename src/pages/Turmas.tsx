@@ -136,17 +136,19 @@ export default function Turmas() {
     }
   }, [user, showError]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  /* eslint-disable react-hooks/set-state-in-effect */
   React.useEffect(() => {
     fetchAlocacoes();
   }, [user?.id, fetchAlocacoes]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  /* eslint-disable react-hooks/set-state-in-effect */
   React.useEffect(() => {
     if (alocacaoAtiva) {
       fetchTurmasBD();
     }
   }, [alocacaoAtiva, fetchTurmasBD]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const filteredTurmas: Turma[] = useMemo(() => {
     const rawFiltered = turmasBD.filter(t => t.nome.toLowerCase().includes(searchTerm.toLowerCase()));
