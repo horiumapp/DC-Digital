@@ -29,6 +29,19 @@ interface ConteudoLinha {
   descricao: string;
 }
 
+const obterLogoEscola = (nomeEscola: string) => {
+  if (!nomeEscola) return '/logo.png';
+  const nomeUpper = nomeEscola.toUpperCase();
+  if (nomeUpper.includes('FRANCISCA')) return '/Francisca Mendes.png';
+  if (nomeUpper.includes('MAIA') || nomeUpper.includes('JOSE MAIA')) return '/José Maia.png';
+  if (nomeUpper.includes('PASTOR') || nomeUpper.includes('REIS')) return '/Pastor José Reis.png';
+  if (nomeUpper.includes('VARGAS') || nomeUpper.includes('PRESIDENTE')) return '/Presidente Vargas.png';
+  if (nomeUpper.includes('SOCORRO') || nomeUpper.includes('BRITO')) return '/Socorro Brito.png';
+  if (nomeUpper.includes('FILADÉLFIA') || nomeUpper.includes('FILADELFIA')) return '/Filadelfia.png';
+  if (nomeUpper.includes('MÔNICA') || nomeUpper.includes('MONICA')) return '/Turma da Monica.png';
+  return '/logo.png';
+};
+
 export default function RelatorioConteudos() {
   const { user } = useAuth();
   const { showError, showWarning } = useToast();
@@ -474,9 +487,9 @@ export default function RelatorioConteudos() {
           {/* Header Area Oficial */}
           <div className="flex border-2 border-black overflow-hidden">
             {/* Logo Box */}
-            <div className="w-[30%] border-r-2 border-black p-4 flex flex-col items-center justify-center text-center">
-              <img src="/semed.png" alt="Logo SEMED" className="w-20 h-20 mb-1 object-contain" />
-              <div className="font-bold text-[9px] leading-tight uppercase">
+            <div className="w-[20%] border-r-2 border-black p-4 flex flex-col items-center justify-center text-center">
+              <img src="/semed.png" alt="Logo SEMED" className="w-16 h-16 mb-1 object-contain" />
+              <div className="font-bold text-[8px] leading-tight uppercase">
                 Secretaria Municipal de Educação<br />
                 Lábrea - AM
               </div>
@@ -492,11 +505,11 @@ export default function RelatorioConteudos() {
                   </td>
                 </tr>
                 <tr className="h-8">
-                  <td width="55%" className="border-r-2 border-black">
+                  <td width="55%" className="border-r border-black">
                     <div className="label">Ensino:</div>
                     <div className="value">{selectedTurmaObj?.ensino}</div>
                   </td>
-                  <td width="25%" className="border-r-2 border-black">
+                  <td width="25%" className="border-r border-black">
                     <div className="label">Turno:</div>
                     <div className="value">{selectedTurmaObj?.turno}</div>
                   </td>
@@ -506,11 +519,11 @@ export default function RelatorioConteudos() {
                   </td>
                 </tr>
                 <tr className="h-8">
-                  <td className="border-r-2 border-black">
+                  <td className="border-r border-black">
                     <div className="label">Fase:</div>
                     <div className="value">{selectedTurmaObj?.fase}</div>
                   </td>
-                  <td className="border-r-2 border-black">
+                  <td className="border-r border-black">
                     <div className="label">Componente:</div>
                     <div className="value">{selectedTurmaObj?.componente?.toUpperCase()}</div>
                   </td>
@@ -527,6 +540,14 @@ export default function RelatorioConteudos() {
                 </tr>
               </tbody>
             </table>
+
+            {/* School Logo Box */}
+            <div className="w-[20%] border-l-2 border-black p-4 flex flex-col items-center justify-center text-center">
+              <img src={obterLogoEscola(selectedTurmaObj?.escolaNome || '')} alt="Logo Escola" className="w-16 h-16 mb-1 object-contain" />
+              <div className="font-bold text-[8px] leading-tight uppercase">
+                {selectedTurmaObj?.escolaNome}
+              </div>
+            </div>
           </div>
 
           {/* Title Bar */}

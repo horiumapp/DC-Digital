@@ -33,6 +33,19 @@ interface AlunoFrequencia {
   porcentagemFrequencia: number;
 }
 
+const obterLogoEscola = (nomeEscola: string) => {
+  if (!nomeEscola) return '/logo.png';
+  const nomeUpper = nomeEscola.toUpperCase();
+  if (nomeUpper.includes('FRANCISCA')) return '/Francisca Mendes.png';
+  if (nomeUpper.includes('MAIA') || nomeUpper.includes('JOSE MAIA')) return '/José Maia.png';
+  if (nomeUpper.includes('PASTOR') || nomeUpper.includes('REIS')) return '/Pastor José Reis.png';
+  if (nomeUpper.includes('VARGAS') || nomeUpper.includes('PRESIDENTE')) return '/Presidente Vargas.png';
+  if (nomeUpper.includes('SOCORRO') || nomeUpper.includes('BRITO')) return '/Socorro Brito.png';
+  if (nomeUpper.includes('FILADÉLFIA') || nomeUpper.includes('FILADELFIA')) return '/Filadelfia.png';
+  if (nomeUpper.includes('MÔNICA') || nomeUpper.includes('MONICA')) return '/Turma da Monica.png';
+  return '/logo.png';
+};
+
 export default function RelatorioFrequencia() {
   const { user } = useAuth();
   const { showError, showWarning } = useToast();
@@ -466,7 +479,7 @@ export default function RelatorioFrequencia() {
         <style>{`
           @media print {
             @page { margin: 1cm; size: A4 landscape; }
-            html, body { height: 100%; overflow: hidden; background: white !important; }
+            html, body { height: auto !important; overflow: visible !important; background: white !important; }
             body * { visibility: hidden; }
             #printable-relatorio, #printable-relatorio * { visibility: visible; }
             #printable-relatorio { 
@@ -476,11 +489,13 @@ export default function RelatorioFrequencia() {
               top: 0; 
               width: 100%; 
               display: block !important;
+              overflow: visible !important;
             }
           }
           #printable-relatorio .doc-container { padding: 10px; font-family: Arial, sans-serif; color: black; }
           #printable-relatorio .official-header { display: flex; border: 2px solid black; }
-          #printable-relatorio .logo-box { width: 25%; border-right: 2px solid black; padding: 10px; text-align: center; }
+          #printable-relatorio .logo-box { width: 20%; border-right: 2px solid black; padding: 10px; text-align: center; }
+          #printable-relatorio .school-logo-box { width: 20%; border-left: 2px solid black; padding: 10px; text-align: center; }
           #printable-relatorio .meta-box { flex: 1; }
           #printable-relatorio .meta-table { width: 100%; border-collapse: collapse; }
           #printable-relatorio .meta-table td { border: 1px solid black; padding: 2px 6px; height: 16px; }
@@ -494,7 +509,7 @@ export default function RelatorioFrequencia() {
           #printable-relatorio .status-circle { width: 12px; height: 12px; border: 1px solid #777; border-radius: 50%; margin: 0 auto; line-height: 11px; font-size: 7px; font-weight: bold; }
           #printable-relatorio .status-P { background: #e6fffa; color: #234e52; border-color: #38b2ac; }
           #printable-relatorio .status-F { background: #fff5f5; color: #742a2a; border-color: #e53e3e; }
-          #printable-relatorio .signatures { margin-top: 40px; display: flex; justify-content: space-around; }
+          #printable-relatorio .signatures { margin-top: 40px; display: flex; justify-content: space-around; page-break-inside: avoid; padding-bottom: 20px; }
           #printable-relatorio .sig-line { border-top: 1px solid black; width: 250px; text-align: center; padding-top: 4px; font-size: 8px; font-weight: bold; margin-top: 25px; }
           #printable-relatorio .print-footer { 
             position: fixed; 
@@ -514,7 +529,7 @@ export default function RelatorioFrequencia() {
         <div className="doc-container">
           <div className="official-header">
              <div className="logo-box">
-                <img src="/semed.png" className="w-16 h-16 mx-auto mb-1" />
+                <img src="/semed.png" className="w-16 h-16 mx-auto mb-1 object-contain" />
                 <div className="font-bold text-[8px] leading-tight">SECRETARIA MUNICIPAL DE EDUCAÇÃO<br/>LÁBREA - AM</div>
              </div>
              <div className="meta-box">
@@ -533,6 +548,10 @@ export default function RelatorioFrequencia() {
                     </tr>
                   </tbody>
                 </table>
+             </div>
+             <div className="school-logo-box">
+                <img src={obterLogoEscola(selectedTurmaObj?.escolaNome || '')} className="w-16 h-16 mx-auto mb-1 object-contain" />
+                <div className="font-bold text-[8px] leading-tight uppercase">{selectedTurmaObj?.escolaNome}</div>
              </div>
           </div>
           <div className="title-box">Relatório de Frequência da Turma - Período: {periodoSelecionado}</div>
