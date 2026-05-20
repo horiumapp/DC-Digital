@@ -48,13 +48,7 @@ export default function RelatorioMedias() {
   const [notas, setNotas] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    if (user?.email) {
-      fetchTurmasProfessor();
-    }
-  }, [user]);
-
-  const fetchTurmasProfessor = async () => {
+  const fetchTurmasProfessor = React.useCallback(async () => {
     setLoading(true);
     try {
       if (!user) return;
@@ -176,7 +170,13 @@ export default function RelatorioMedias() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, showError]);
+
+  useEffect(() => {
+    if (user?.email) {
+      fetchTurmasProfessor();
+    }
+  }, [user, fetchTurmasProfessor]);
 
   const handleExibir = async () => {
     if (!selectedTurma) return;

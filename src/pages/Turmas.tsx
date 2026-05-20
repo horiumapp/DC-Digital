@@ -47,17 +47,7 @@ export default function Turmas() {
 
   const { showSuccess, showError } = useToast();
 
-  React.useEffect(() => {
-    fetchAlocacoes();
-  }, [user?.id]);
-
-  React.useEffect(() => {
-    if (alocacaoAtiva) {
-      fetchTurmasBD();
-    }
-  }, [alocacaoAtiva]);
-
-  const fetchTurmasBD = async () => {
+  const fetchTurmasBD = React.useCallback(async () => {
     if (!alocacaoAtiva) return;
     try {
       const { data, error } = await supabase
@@ -75,9 +65,9 @@ export default function Turmas() {
       console.error('Erro ao carregar turmas:', err);
       showError('Não foi possível carregar as turmas.');
     }
-  };
+  }, [alocacaoAtiva, showError]);
 
-  const fetchAlocacoes = async () => {
+  const fetchAlocacoes = React.useCallback(async () => {
     if (!user || !user.email) return;
     
     // Usuários administrativos não precisam buscar lotações de professor
@@ -144,7 +134,17 @@ export default function Turmas() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, showError]);
+
+  React.useEffect(() => {
+    fetchAlocacoes();
+  }, [user?.id, fetchAlocacoes]);
+
+  React.useEffect(() => {
+    if (alocacaoAtiva) {
+      fetchTurmasBD();
+    }
+  }, [alocacaoAtiva, fetchTurmasBD]);
 
   const filteredTurmas: Turma[] = useMemo(() => {
     const rawFiltered = turmasBD.filter(t => t.nome.toLowerCase().includes(searchTerm.toLowerCase()));

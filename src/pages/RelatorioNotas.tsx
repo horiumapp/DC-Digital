@@ -61,13 +61,7 @@ export default function RelatorioNotas() {
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
   const [notas, setNotas] = useState<any[]>([]);
 
-  useEffect(() => {
-    if (user?.email) {
-      fetchTurmasProfessor();
-    }
-  }, [user]);
-
-  const fetchTurmasProfessor = async () => {
+  const fetchTurmasProfessor = React.useCallback(async () => {
     setLoading(true);
     try {
       if (!user) return;
@@ -199,7 +193,13 @@ export default function RelatorioNotas() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, showError]);
+
+  useEffect(() => {
+    if (user?.email) {
+      fetchTurmasProfessor();
+    }
+  }, [user, fetchTurmasProfessor]);
 
   const handleExibir = async () => {
     if (!selectedTurma) return;
