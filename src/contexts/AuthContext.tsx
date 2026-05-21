@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // a menos que seja um login novo ou mudança explícita
       // Usa userRef (sempre atualizado) para evitar closure stale
       if (userRef.current && session?.user?.id === userRef.current.id) {
-        if (event !== 'SIGNED_OUT' && event !== 'PASSWORD_RECOVERY') {
+        if (event !== 'PASSWORD_RECOVERY') {
           return;
         }
       }

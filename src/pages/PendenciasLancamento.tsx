@@ -10,7 +10,7 @@ export default function PendenciasLancamento() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [distrito, setDistrito] = useState('');
-  const [_distritos, setDistritos] = useState<string[]>([]);
+  const [distritos, setDistritos] = useState<string[]>([]);
   const [escolaId, setEscolaId] = useState('');
   const [escolas, setEscolas] = useState<any[]>([]);
   const [docentes, setDocentes] = useState<any[]>([]);

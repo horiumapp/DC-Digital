@@ -12,7 +12,7 @@ interface AnotacoesTabProps {
 }
 
 export default function AnotacoesTab({
-  _turmaAtiva,
+  turmaAtiva: _turmaAtiva,
   tempoAula,
   setTempoAula,
   disponiveisTempos,

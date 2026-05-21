@@ -17,7 +17,7 @@ export default function TabTurmas() {
   const [turmas, setTurmas] = useState<any[]>([]);
   const [escolas, setEscolas] = useState<any[]>([]);
   const [selectedEscola, setSelectedEscola] = useState<any>(null);
-  const [_loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchInitialData();

@@ -12,7 +12,7 @@ export default function Layout() {
   const { user, logout } = useAuth();
 
   // If no user, mock a fallback slightly just to not break layout in weird state
-  const hasAdminAccess = ADMIN_ROLES.includes(user?.role as string);
+  const hasAdminAccess = user ? ADMIN_ROLES.includes(user.role) : false;
   const nameDisplay = user?.name || 'Visitante';
   const titleDisplay = user?.title || 'Convidado';
 
