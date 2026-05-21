@@ -327,17 +327,14 @@ export default function RelatorioMedias() {
                     <th className="px-4 py-4 border-b border-slate-200 w-16 text-center">
                       <span className="text-[12px] text-[#0f2851] font-bold uppercase">Nº</span>
                     </th>
-                    <th className="px-4 py-4 border-b border-slate-200 border-l border-slate-100 text-center">
-                      <span className="text-[12px] text-[#0f2851] font-bold uppercase">Fase</span>
-                    </th>
-                    <th className="px-3 py-4 border-b border-slate-200 border-l border-slate-100 text-center">
-                      <span className="text-[12px] text-[#0f2851] font-bold uppercase">Turma</span>
-                    </th>
                     <th className="px-6 py-4 border-b border-slate-200 border-l border-slate-100 min-w-[300px]">
                       <span className="text-[12px] text-[#0f2851] font-bold uppercase">Nome do Aluno</span>
                     </th>
                     <th className="px-4 py-4 border-b border-slate-200 border-l border-slate-100 text-center">
-                      <span className="text-[12px] text-[#0f2851] font-bold uppercase">Status/Saída</span>
+                      <span className="text-[12px] text-[#0f2851] font-bold uppercase">Motivo Saída</span>
+                    </th>
+                    <th className="px-4 py-4 border-b border-slate-200 border-l border-slate-100 text-center">
+                      <span className="text-[12px] text-[#0f2851] font-bold uppercase">Data Saída</span>
                     </th>
                     {['1º BIM', '2º BIM', '3º BIM', '4º BIM', 'RECUP'].map(label => (
                       <th key={label} className="px-2 py-4 border-b border-slate-200 border-l border-slate-100 text-center min-w-[90px]">
@@ -388,19 +385,16 @@ export default function RelatorioMedias() {
                           <td className="px-4 py-4 text-[#64748b] font-bold text-center text-[12px] tracking-tight">
                             {(index + 1).toString().padStart(2, '0')}
                           </td>
-                          <td className="px-4 py-4 text-slate-500 font-bold text-center text-[11px] border-l border-slate-50 uppercase tracking-tighter">
-                            {fasePart}
-                          </td>
-                          <td className="px-3 py-4 text-[#0f2851] font-black text-center text-[14px] border-l border-slate-50 uppercase">
-                            {turmaPart}
-                          </td>
                           <td className="px-6 py-4 border-l border-slate-50">
                             <span className="text-[#0f2851] font-bold uppercase text-[13px] group-hover:text-blue-700 transition-colors tracking-tight">
                               {aluno.nome}
                             </span>
                           </td>
                           <td className="px-4 py-4 border-l border-slate-50 text-center">
-                            <span className="text-[11px] text-slate-300 font-bold">ATIVA</span>
+                            <span className="text-[11px] text-slate-300 font-bold">-</span>
+                          </td>
+                          <td className="px-4 py-4 border-l border-slate-50 text-center">
+                            <span className="text-[11px] text-slate-300 font-bold">-</span>
                           </td>
                           <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m1)}</td>
                           <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m2)}</td>
@@ -543,10 +537,9 @@ export default function RelatorioMedias() {
               <thead>
                 <tr>
                   <th style={{ width: '4%', textAlign: 'center' }}>Nº</th>
-                  <th style={{ width: '12%', textAlign: 'center' }}>FASE</th>
-                  <th style={{ width: '6%', textAlign: 'center' }}>TURMA</th>
                   <th style={{ width: '38%' }}>NOME DO ALUNO</th>
-                  <th style={{ width: '10%', textAlign: 'center' }}>STATUS</th>
+                  <th style={{ width: '14%', textAlign: 'center' }}>MOTIVO SAÍDA</th>
+                  <th style={{ width: '14%', textAlign: 'center' }}>DATA SAÍDA</th>
                   <th style={{ width: '6%', textAlign: 'center' }}>1º BIM</th>
                   <th style={{ width: '6%', textAlign: 'center' }}>2º BIM</th>
                   <th style={{ width: '6%', textAlign: 'center' }}>3º BIM</th>
@@ -568,10 +561,9 @@ export default function RelatorioMedias() {
                   return (
                     <tr key={aluno.id}>
                       <td style={{ textAlign: 'center' }}>{(index + 1).toString().padStart(2, '0')}</td>
-                      <td style={{ textAlign: 'center' }}>{selectedTurmaObj.fase}</td>
-                      <td style={{ textAlign: 'center' }}>{selectedTurmaObj.numero}</td>
                       <td style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{aluno.nome}</td>
-                      <td style={{ textAlign: 'center' }}>ATIVA</td>
+                      <td style={{ textAlign: 'center' }}>-</td>
+                      <td style={{ textAlign: 'center' }}>-</td>
                       <td style={{ textAlign: 'center' }}>{m1 !== null ? m1.toFixed(1).replace('.', ',') : '-'}</td>
                       <td style={{ textAlign: 'center' }}>{m2 !== null ? m2.toFixed(1).replace('.', ',') : '-'}</td>
                       <td style={{ textAlign: 'center' }}>{m3 !== null ? m3.toFixed(1).replace('.', ',') : '-'}</td>
