@@ -208,7 +208,8 @@ export default function RelatorioMedias() {
   };
 
   const calcularSomaBimestre = (alunoId: string, bimestre: string) => {
-    const avsBimestre = avaliacoes.filter(a => a.bimestre === bimestre);
+    const prefix = bimestre[0];
+    const avsBimestre = avaliacoes.filter(a => a.bimestre && a.bimestre[0] === prefix);
     const principalAvs = avsBimestre.filter(a => a.tipo.startsWith('AV') && !a.tipo.startsWith('RP'));
     
     if (principalAvs.length === 0) return null;
