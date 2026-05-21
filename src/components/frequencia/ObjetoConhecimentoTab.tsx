@@ -94,7 +94,7 @@ export default function ObjetoConhecimentoTab({
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setObjetoUnidade('TEXTO LIVRE');
     } else if (unidadesDisponiveis.length > 0 && !objetoUnidade) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setObjetoUnidade(unidadesDisponiveis[0].nome);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

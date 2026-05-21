@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Plus, Edit2, Trash2, Building2, MapPin, User, Hash, ChevronRight, GraduationCap, Users, Clock, ArrowLeft } from 'lucide-react';
+import { Search, Edit2, Trash2, Building2, ChevronRight, GraduationCap, Users, ArrowLeft } from 'lucide-react';
 import NovaTurmaModal from '../../components/NovaTurmaModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 
@@ -17,7 +17,7 @@ export default function TabTurmas() {
   const [turmas, setTurmas] = useState<any[]>([]);
   const [escolas, setEscolas] = useState<any[]>([]);
   const [selectedEscola, setSelectedEscola] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchInitialData();

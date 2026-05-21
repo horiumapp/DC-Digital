@@ -67,7 +67,7 @@ export default function Curriculo() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   useEffect(() => {
     fetchUnidades();
   }, [filterModalidade, filterAno, filterDisciplina, filterBimestre]);

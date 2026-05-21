@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Plus, Edit2, Trash2, Building2, MapPin, User, Hash, ChevronRight } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Building2, MapPin, User } from 'lucide-react';
 import NovaEscolaModal from '../../components/NovaEscolaModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import EscolaDetalhes from './EscolaDetalhes';
@@ -9,7 +9,7 @@ import EscolaDetalhes from './EscolaDetalhes';
 import { useToast } from '../../components/common/Toast';
 
 export default function TabEscolas() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const { showError } = useToast();
   const [buscaEscola, setBuscaEscola] = useState('');
   const [isNovaEscolaModalOpen, setIsNovaEscolaModalOpen] = useState(false);
@@ -18,7 +18,7 @@ export default function TabEscolas() {
   const [escolaSelecionada, setEscolaSelecionada] = useState<any>(null);
 
   const [escolas, setEscolas] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchEscolas();
@@ -112,7 +112,7 @@ export default function TabEscolas() {
     (e.diretor && e.diretor.toLowerCase().includes(buscaEscola.toLowerCase()))
   );
 
-  if (user?.role !== 'ADMIN') return null;
+  if (_user?.role !== 'ADMIN') return null;
 
   // Se uma escola está selecionada, mostrar os detalhes dela
   if (escolaSelecionada) {

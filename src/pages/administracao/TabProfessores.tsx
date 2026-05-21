@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Plus, Edit2, Trash2, MapPin, Building2, User, Mail, Phone, ArrowLeft, GraduationCap, Users, Hash, ChevronRight, Calendar, Clock, LayoutGrid, X } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Building2, User, ArrowLeft, Users, ChevronRight, Calendar, Clock, X } from 'lucide-react';
 import NovoProfessorModal from '../../components/NovoProfessorModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import GerenciarAlocacoesModal from '../../components/GerenciarAlocacoesModal';
 import ScheduleModal from '../../components/ScheduleModal';
-import { formatCpfObscured } from '../../utils/formatters';
+
 
 const DEPARTAMENTOS = ['Geral', 'BIOLÓGICAS', 'HUMANAS', 'EXATAS', 'LINGUAGENS'];
 const DISCIPLINAS = [
@@ -15,7 +15,7 @@ const DISCIPLINAS = [
 ];
 
 import { useToast } from '../../components/common/Toast';
-import { ADMIN_ROLES } from '../../constants/authConstants';
+
 
 export default function TabProfessores() {
   const { user } = useAuth();
@@ -32,7 +32,7 @@ export default function TabProfessores() {
   const [professores, setProfessores] = useState<any[]>([]);
   const [escolas, setEscolas] = useState<any[]>([]);
   const [selectedEscola, setSelectedEscola] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
 
   // Estado para o formulário inline
   const [inlineFormData, setInlineFormData] = useState({
@@ -188,8 +188,9 @@ export default function TabProfessores() {
               } else {
                 showSuccess(`Professor ${novoProfessor.nome} cadastrado com acesso! (Senha padrão: ${senhaDeAcesso})`);
               }
-            } catch (err: any) {
-              showWarning(`Professor cadastrado, mas erro ao criar conta: ${err.message}`);
+            } catch (err: unknown) {
+              const msg = err instanceof Error ? err.message : String(err);
+              showWarning(`Professor cadastrado, mas erro ao criar conta: ${msg}`);
             }
           } else {
             showWarning('Professor cadastrado, mas a senha deve ter no mínimo 6 caracteres para criar conta de acesso.');

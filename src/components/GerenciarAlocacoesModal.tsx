@@ -45,7 +45,7 @@ export default function GerenciarAlocacoesModal({ isOpen, onClose, professor, on
     if (isOpen && professor) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchEscolas();
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       fetchAlocacoes();
     }
   }, [isOpen, professor, fetchEscolas, fetchAlocacoes]);

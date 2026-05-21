@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Plus, Edit2, Trash2, Building2, MapPin, Phone, User, Users, GraduationCap, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Search, Edit2, Trash2, Building2, Users, GraduationCap, ChevronRight, ArrowLeft } from 'lucide-react';
 import NovoAlunoModal from '../../components/NovoAlunoModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
-import { formatMatricula, getMatriculaLogin, formatCpfObscured } from '../../utils/formatters';
+import { formatMatricula, getMatriculaLogin } from '../../utils/formatters';
 
 import { useToast } from '../../components/common/Toast';
 
@@ -37,7 +37,7 @@ export default function TabAlunos() {
   }, [selectedEscola]);
 
   async function fetchTodasTurmas(escolaId: string) {
-    const { data, error } = await supabase
+    const { data, error: _error } = await supabase
       .from('turmas')
       .select('*')
       .eq('escola_id', escolaId)
@@ -187,8 +187,9 @@ export default function TabAlunos() {
             } else {
               showSuccess(`Aluno ${novoAluno.nome} cadastrado! Matrícula (CPF): ${formatMatricula(newAluno.id, novoAluno.cpf)} | Senha: ${ALUNO_SENHA_PADRAO}`);
             }
-          } catch (err: any) {
-            showWarning(`Aluno cadastrado, mas erro ao criar conta: ${err.message}`);
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            showWarning(`Aluno cadastrado, mas erro ao criar conta: ${msg}`);
           }
         } else if (newAluno) {
           showSuccess(`Aluno ${novoAluno.nome} cadastrado! CPF não informado — a conta de acesso será criada quando o CPF for adicionado.`);
@@ -254,7 +255,7 @@ export default function TabAlunos() {
     return acc;
   }, {});
 
-  const turmasComAlunos = Object.values(alunosAgrupados).sort((a: any, b: any) => {
+  const _turmasComAlunos = Object.values(alunosAgrupados).sort((a: any, b: any) => {
     if (a.id === 'sem-turma') return 1;
     if (b.id === 'sem-turma') return -1;
     return a.nome.localeCompare(b.nome);

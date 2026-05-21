@@ -5,7 +5,7 @@ import { Search, Shield, User, GraduationCap, Briefcase, Key, Users, Building2, 
 import { useToast } from '../../components/common/Toast';
 
 export default function TabUsuarios() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const { showError } = useToast();
   
   const [usuarios, setUsuarios] = useState<any[]>([]);
@@ -30,7 +30,7 @@ export default function TabUsuarios() {
       if (usuError) throw usuError;
       
       if (usuData) setUsuarios(usuData);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       showError('Erro ao carregar usuários.');
     } finally {
