@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+
 import { getBimestrePorData, formatarDataParaISO } from '../utils/dateUtils';
 import { TurmaService } from '../services/turmaService';
 import { useToast } from '../components/common/Toast';

@@ -3,7 +3,7 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Background from '../components/Background';
 import { supabase } from '../lib/supabase';
-import type { UserRole } from '../contexts/AuthContext';
+import type { UserRole as _UserRole } from '../contexts/AuthContext';
 import { translateSupabaseError } from '../utils/supabaseErrors';
 import { validarCPF, formatarCPF } from '../utils/cpfUtils';
 
@@ -54,7 +54,7 @@ export default function Cadastro() {
     const email = (formData.get('email') as string).trim();
     const password = formData.get('password') as string;
     const name = formData.get('name') as string;
-    const role: UserRole = 'PROFESSOR'; // Segurança: role fixo. Promoção via painel admin.
+    const _role = 'PROFESSOR'; // Segurança: role fixo. Promoção via painel admin.
     
     // Pegando dados adicionais do docente
     const cpf = cpfValue || null;
@@ -84,7 +84,7 @@ export default function Cadastro() {
     }
 
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -110,8 +110,9 @@ export default function Cadastro() {
         } 
       });
 
-    } catch (err: any) {
-      setError(translateSupabaseError(err.message));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(translateSupabaseError(message));
     } finally {
       setLoading(false);
     }

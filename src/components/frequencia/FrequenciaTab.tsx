@@ -21,7 +21,7 @@ export default function FrequenciaTab({
   disponiveisTempos,
   disabled,
 }: FrequenciaTabProps) {
-  const { turmaAtiva, alunos, registrarLancamento, removerLancamento, salvarFrequencia, buscarFrequencia, removerFrequencia, lancamentos } = useTurma();
+  const { turmaAtiva, alunos, registrarLancamento: _registrarLancamento, removerLancamento: _removerLancamento, salvarFrequencia, buscarFrequencia, removerFrequencia, lancamentos } = useTurma();
   const { showError: showToastError } = useToast();
   
   const [studentData, setStudentData] = useState<Aluno[]>([]);

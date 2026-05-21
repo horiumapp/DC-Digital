@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, GraduationCap, Building2, Clock, BookOpen, Search, Info, Eye } from 'lucide-react';
+import { ArrowLeft, GraduationCap, Building2, Clock, BookOpen, Search, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
 import { APP_CONFIG } from '../config/appConfig';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, ChevronRight, BookOpen, Layers, Filter, Check, RotateCcw, Pencil } from 'lucide-react';
+import { Plus, Trash2, Save, BookOpen, Filter, Check, RotateCcw, Pencil } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/common/Toast';
 import ConfirmActionModal from '../components/ConfirmActionModal';
@@ -67,6 +67,7 @@ export default function Curriculo() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchUnidades();
   }, [filterModalidade, filterAno, filterDisciplina, filterBimestre]);
@@ -200,9 +201,10 @@ export default function Curriculo() {
       setNewObjetos([""]);
       setNewHabilidades([""]);
       await fetchUnidades();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido';
       console.error('Erro detalhado:', err);
-      showError(`Erro ao salvar: ${err.message || 'Erro desconhecido'}`);
+      showError(`Erro ao salvar: ${message}`);
     } finally {
       setLoading(false);
     }

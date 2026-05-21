@@ -1,5 +1,5 @@
 import React from 'react';
-import { Printer, Download, MapPin, Phone, User, Calendar, Hash, School } from 'lucide-react';
+import { Printer } from 'lucide-react';
 import { getBimestrePorData } from '../../utils/dateUtils';
 
 interface AlunoData {
@@ -192,7 +192,7 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
               </tr>
             </thead>
             <tbody>
-              {disciplinasPadded.map((disc, idx) => {
+              {disciplinasPadded.map((disc, _idx) => {
                 const isEmpty = disc.startsWith('EMPTY_');
                 const notasDisc = isEmpty ? [] : notas.filter(n => n.disciplina === disc);
                 const freqDisc = isEmpty ? [] : frequencias.filter(f => f.disciplina === disc);

@@ -11,7 +11,7 @@ import { ADMIN_ROLES, STAFF_ROLES } from './constants/authConstants';
 
 // Lazy loading das páginas principais para dividir o peso do javascript
 const Login = React.lazy(() => import('./pages/Login'));
-const Cadastro = React.lazy(() => import('./pages/Cadastro'));
+const _Cadastro = React.lazy(() => import('./pages/Cadastro'));
 const RecuperarSenha = React.lazy(() => import('./pages/RecuperarSenha'));
 const RedefinirSenha = React.lazy(() => import('./pages/RedefinirSenha'));
 

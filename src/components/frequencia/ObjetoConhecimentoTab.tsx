@@ -23,9 +23,9 @@ export default function ObjetoConhecimentoTab({
   disponiveisTempos,
   disabled,
 }: ObjetoConhecimentoTabProps) {
-  const { registrarLancamento, removerLancamento, salvarConteudo, buscarConteudo, removerConteudo, lancamentos } = useTurma();
+  const { registrarLancamento: _registrarLancamento, removerLancamento: _removerLancamento, salvarConteudo, buscarConteudo, removerConteudo, lancamentos } = useTurma();
 
-  const isLancado = lancamentos.some(l => 
+  const _isLancado = lancamentos.some(l => 
     l.data === selectedDate && 
     l.tempo === tempoAula && 
     l.tipo === 'conteudo'
@@ -37,7 +37,7 @@ export default function ObjetoConhecimentoTab({
   
   // Lógica de Currículo Dinâmico (Busca no Banco)
   const [unidadesBD, setUnidadesBD] = useState<any[]>([]);
-  const [loadingCurriculo, setLoadingCurriculo] = useState(false);
+  const [_loadingCurriculo, setLoadingCurriculo] = useState(false);
   const [curriculoIndisponivel, setCurriculoIndisponivel] = useState(false);
 
   useEffect(() => {
@@ -161,7 +161,7 @@ export default function ObjetoConhecimentoTab({
       }
     };
     carregar();
-  }, [selectedDate, tempoAula, turmaAtiva, unidadesDisponiveis, curriculoIndisponivel]);
+  }, [selectedDate, tempoAula, turmaAtiva, buscarConteudo, unidadesDisponiveis, curriculoIndisponivel]);
 
   const {
     generatedCaptcha,

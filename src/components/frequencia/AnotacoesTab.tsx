@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RefreshCw, Save } from 'lucide-react';
+import { Save } from 'lucide-react';
 import Captcha from '../common/Captcha';
 import { useCaptcha } from '../../hooks/useCaptcha';
 
@@ -12,7 +12,7 @@ interface AnotacoesTabProps {
 }
 
 export default function AnotacoesTab({
-  turmaAtiva,
+  _turmaAtiva,
   tempoAula,
   setTempoAula,
   disponiveisTempos,

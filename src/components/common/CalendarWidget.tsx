@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useTurma } from '../../contexts/TurmaContext';
+
 import { APP_CONFIG } from '../../config/appConfig';
 import { formatarDataParaISO } from '../../utils/dateUtils';
 
@@ -143,8 +143,8 @@ export default function CalendarWidget({
             // Filtramos apenas os tempos que realmente existem no horário para este dia
             const temposValidos = horarioTurma?.filter(h => Number(h.dia_semana) === dayOfWeek).map(h => `${h.tempo_ordem}º TEMPO`) || [];
             
-            const temFrequencia = lancamentosDoDia.some(l => l.tipo === 'frequencia' && temposValidos.includes(l.tempo));
-            const temConteudo = lancamentosDoDia.some(l => l.tipo === 'conteudo' && temposValidos.includes(l.tempo));
+            const _temFrequencia = lancamentosDoDia.some(l => l.tipo === 'frequencia' && temposValidos.includes(l.tempo));
+            const _temConteudo = lancamentosDoDia.some(l => l.tipo === 'conteudo' && temposValidos.includes(l.tempo));
             
             // Buscar avaliações no dia
             const avaliacoesDoDia = avaliacoes.filter(av => formatarDataParaISO(av.data) === dayStr && String(av.turmaId).split('||')[0] === activeTurmaId);

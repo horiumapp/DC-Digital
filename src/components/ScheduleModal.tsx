@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Users, BookOpen, Building2, Edit2, Check, Loader2, LogIn } from 'lucide-react';
+import { X, BookOpen, Building2, Edit2, Check, Loader2, LogIn } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';

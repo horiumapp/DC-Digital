@@ -39,7 +39,7 @@ export default function Diario() {
     }
 
     return resultado.length > 0 ? resultado : [periodosLetivos[0]];
-  }, [periodosLetivos, turmaAtiva, fechamentos]);
+  }, [periodosLetivos, fechamentos]);
 
   // Define o período inicial como o mais recente/atual (último da lista de visíveis)
   const initialPeriodoId = periodosVisiveis[periodosVisiveis.length - 1]?.id || '1. BIMESTRE';

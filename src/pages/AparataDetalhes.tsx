@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, GraduationCap, Building2, Clock, BookOpen, Printer, Search } from 'lucide-react';
+import { ArrowLeft, Printer, Search } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,7 +9,7 @@ import { APP_CONFIG, getBimestreAtual } from '../config/appConfig';
 
 export default function AparataDetalhes() {
   const { turmaAtiva, alunos, avaliacoes, lancamentos, fechamentos, salvarFechamento } = useTurma();
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const periodoQuery = searchParams.get('periodo');
@@ -144,7 +144,7 @@ export default function AparataDetalhes() {
     }
   };
 
-  const canReabrir = user?.role === 'GESTOR' || user?.role === 'SECRETARIO' || user?.role === 'ADMIN';
+  const canReabrir = _user?.role === 'GESTOR' || _user?.role === 'SECRETARIO' || _user?.role === 'ADMIN';
 
   return (
     <div className="min-h-screen bg-slate-50 relative">

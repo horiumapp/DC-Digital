@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar as CalendarIcon, Save, Loader2 } from 'lucide-react';
+import { X, Save, Loader2 } from 'lucide-react';
 import Captcha from '../../common/Captcha';
 
 interface SegundaChamadaEditorProps {

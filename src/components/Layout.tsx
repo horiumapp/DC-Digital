@@ -12,11 +12,11 @@ export default function Layout() {
   const { user, logout } = useAuth();
 
   // If no user, mock a fallback slightly just to not break layout in weird state
-  const hasAdminAccess = ADMIN_ROLES.includes(user?.role as any);
+  const hasAdminAccess = ADMIN_ROLES.includes(user?.role as string);
   const nameDisplay = user?.name || 'Visitante';
   const titleDisplay = user?.title || 'Convidado';
 
-  const isDiario = location.pathname === '/diario';
+  const _isDiario = location.pathname === '/diario';
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [isRelatoriosOpen, setIsRelatoriosOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);

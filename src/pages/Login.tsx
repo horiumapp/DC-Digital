@@ -13,7 +13,7 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const successMessage = location.state?.successMessage;
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);

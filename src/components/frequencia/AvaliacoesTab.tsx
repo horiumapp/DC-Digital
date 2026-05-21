@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Check, X } from 'lucide-react';
-import { useTurma, Avaliacao, Aluno } from '../../contexts/TurmaContext';
+import { Loader2 } from 'lucide-react';
+import { useTurma, Avaliacao } from '../../contexts/TurmaContext';
 import { APP_CONFIG } from '../../config/appConfig';
 import { useCaptcha } from '../../hooks/useCaptcha';
 import { getBimestrePorData, formatarDataParaISO } from '../../utils/dateUtils';
@@ -21,7 +21,7 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
   const { 
     turmaAtiva, alunos, avaliacoes, conteudos, loading, 
     salvarAvaliacao, removerAvaliacao, salvarNotas, 
-    carregarFaltasDaData, faltasPorData 
+    carregarFaltasDaData: _carregarFaltasDaData, faltasPorData 
   } = useTurma();
 
   const [avaliacaoViewMode, setAvaliacaoViewMode] = useState<'list' | 'details' | 'edit' | 'grades' | 'second_call'>('list');

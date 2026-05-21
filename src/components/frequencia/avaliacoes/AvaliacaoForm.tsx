@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pencil, Calendar as CalendarIcon, X, List, Plus, Save, Trash2, Check } from 'lucide-react';
+import { Pencil, Calendar as CalendarIcon, X, List, Plus, Trash2, Check } from 'lucide-react';
 import Captcha from '../../common/Captcha';
 import { getBimestrePorData } from '../../../utils/dateUtils';
 import CustomDatePicker from './CustomDatePicker';
