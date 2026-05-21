@@ -387,7 +387,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       setAlunos(prev => prev.map(a => ({ ...a, freq: '', part: 'Presencial' })));
       await carregarFaltasDaData(data);
       showSuccess('Lançamento de frequência removido.');
-    } catch (err) {
+    } catch (_err) {
       showError('Não foi possível remover a frequência.');
     }
   };
@@ -405,7 +405,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       const conts = await TurmaService.fetchAllConteudos(rawId, turmaAtiva.componente);
       setConteudos(conts);
       showSuccess('Conteúdo removido.');
-    } catch (err) {
+    } catch (_err) {
       showError('Não foi possível remover o conteúdo.');
     }
   };

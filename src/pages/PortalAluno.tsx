@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { GraduationCap, BookOpen, CalendarCheck, BarChart3, Loader2, LogOut, User, ChevronRight, Calendar } from 'lucide-react';
 import { APP_CONFIG } from '../config/appConfig';
 import { formatMatriculaCpf } from '../utils/formatters';
-import { getBimestrePorData } from '../utils/dateUtils';
+
 import BoletimTab from '../components/portal/BoletimTab';
 
 interface AlunoData {
@@ -421,7 +421,7 @@ export default function PortalAluno() {
                 {mesesOrdenados.length > 0 ? (
                   <div className="space-y-3">
                     {mesesOrdenados.map((mesKey) => {
-                      const [ano, mesIdx] = mesKey.split('-').map(Number);
+                      const [_ano, mesIdx] = mesKey.split('-').map(Number);
                       const mesNome = NOMES_MESES[mesIdx];
                       const freqsDoMes = frequenciasPorMes[mesKey];
                       const isExpanded = expandedMonths.has(mesKey);

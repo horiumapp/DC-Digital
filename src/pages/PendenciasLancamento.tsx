@@ -10,7 +10,7 @@ export default function PendenciasLancamento() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [distrito, setDistrito] = useState('');
-  const [distritos, setDistritos] = useState<string[]>([]);
+  const [_distritos, setDistritos] = useState<string[]>([]);
   const [escolaId, setEscolaId] = useState('');
   const [escolas, setEscolas] = useState<any[]>([]);
   const [docentes, setDocentes] = useState<any[]>([]);
@@ -94,7 +94,7 @@ export default function PendenciasLancamento() {
     fetchDocentes(escolaId, 1);
   };
 
-  const escolasPorDistrito = (!distrito || distrito === 'TODOS') ? escolas : escolas.filter(e => e.distrito === distrito);
+  const _escolasPorDistrito = (!distrito || distrito === 'TODOS') ? escolas : escolas.filter(e => e.distrito === distrito);
 
   const docentesFiltrados = docentes.filter(d => {
     const searchLower = buscaDocente.toLowerCase();

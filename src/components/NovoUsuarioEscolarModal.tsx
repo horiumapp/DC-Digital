@@ -32,7 +32,7 @@ export default function NovoUsuarioEscolarModal({
 
   const cargoLabel = cargo === 'GESTOR' ? 'Gestor(a)' : 'Secretário(a)';
   const CargoIcon = cargo === 'GESTOR' ? Crown : Shield;
-  const cargoColor = cargo === 'GESTOR' ? 'amber' : 'blue';
+  const _cargoColor = cargo === 'GESTOR' ? 'amber' : 'blue';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

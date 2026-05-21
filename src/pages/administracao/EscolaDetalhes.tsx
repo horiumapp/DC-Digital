@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
-  ArrowLeft, Building2, User, Shield, ClipboardList,
-  Plus, Edit2, Trash2, Mail, MapPin, Hash, Activity,
-  Loader2, Crown, KeyRound
+  ArrowLeft, Building2, ClipboardList,
+  Plus, Edit2, Trash2, Mail,
+  Loader2, Crown
 } from 'lucide-react';
 import NovoUsuarioEscolarModal from '../../components/NovoUsuarioEscolarModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
@@ -33,7 +33,7 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
   // Modal de novo usuário
   const [isUsuarioModalOpen, setIsUsuarioModalOpen] = useState(false);
   const [cargoParaCadastrar, setCargoParaCadastrar] = useState<'GESTOR' | 'SECRETARIO'>('GESTOR');
-  const [usuarioParaEditar, setUsuarioParaEditar] = useState<UsuarioEscolar | null>(null);
+  const [_usuarioParaEditar, setUsuarioParaEditar] = useState<UsuarioEscolar | null>(null);
 
   // Modal de confirmação de exclusão
   const [usuarioParaExcluir, setUsuarioParaExcluir] = useState<UsuarioEscolar | null>(null);

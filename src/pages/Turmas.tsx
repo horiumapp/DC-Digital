@@ -53,7 +53,7 @@ export default function Turmas() {
     };
   }, []);
 
-  const { showSuccess, showError } = useToast();
+  const { showSuccess: _showSuccess, showError } = useToast();
 
   const fetchTurmasBD = React.useCallback(async () => {
     if (!alocacaoAtiva) return;

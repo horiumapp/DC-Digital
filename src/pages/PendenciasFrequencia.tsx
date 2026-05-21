@@ -8,9 +8,9 @@ import { APP_CONFIG } from '../config/appConfig';
 
 export default function PendenciasFrequencia() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const [distrito, setDistrito] = useState('');
-  const [distritos, setDistritos] = useState<string[]>([]);
+  const [_distritos, setDistritos] = useState<string[]>([]);
   const [escolaId, setEscolaId] = useState('');
   const [escolas, setEscolas] = useState<any[]>([]);
   const [ensino, setEnsino] = useState('ENSINO FUNDAMENTAL - 1º CICLO');
@@ -98,7 +98,7 @@ export default function PendenciasFrequencia() {
     fetchDocentes(escolaId, 1);
   };
 
-  const escolasPorDistrito = (!distrito || distrito === 'TODOS') ? escolas : escolas.filter(e => e.distrito === distrito);
+  const _escolasPorDistrito = (!distrito || distrito === 'TODOS') ? escolas : escolas.filter(e => e.distrito === distrito);
 
   const docentesFiltrados = docentes.filter(d => {
     const matchesSearch = d.professor.toLowerCase().includes(buscaDocente.toLowerCase()) ||
