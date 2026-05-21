@@ -86,7 +86,6 @@ export default function Turmas() {
       return;
     }
 
-    if (isMounted.current) setLoading(true);
     try {
       const emailLimpo = user.email.trim();
       
@@ -148,7 +147,7 @@ export default function Turmas() {
         setLoading(false);
       }
     }
-  }, [user, showError]);
+  }, [user?.id, user?.email, user?.role, showError]);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   React.useEffect(() => {

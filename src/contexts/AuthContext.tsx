@@ -94,8 +94,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Se for apenas uma atualização de foco/token e já temos o usuário, evitar reprocessar tudo
       // a menos que seja um login novo ou mudança explícita
       // Usa userRef (sempre atualizado) para evitar closure stale
-      if ((event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') && userRef.current && session?.user?.id === userRef.current.id) {
-        return;
+      if (userRef.current && session?.user?.id === userRef.current.id) {
+        if (event !== 'SIGNED_OUT' && event !== 'PASSWORD_RECOVERY') {
+          return;
+        }
       }
 
       // Recuperação de senha — não redirecionar, manter sessão parcial
