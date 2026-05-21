@@ -59,6 +59,7 @@ export default function TabProfessores() {
 
   useEffect(() => {
     fetchInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fase 2: Se o usuário é GESTOR, auto-selecionar a escola dele

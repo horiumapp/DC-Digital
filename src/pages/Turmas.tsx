@@ -147,7 +147,7 @@ export default function Turmas() {
         setLoading(false);
       }
     }
-  }, [user?.id, user?.email, user?.role, showError]);
+  }, [user, showError]);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   React.useEffect(() => {

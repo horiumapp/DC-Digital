@@ -27,6 +27,7 @@ export default function TabAlunos() {
 
   useEffect(() => {
     fetchInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Carregar turmas da escola selecionada

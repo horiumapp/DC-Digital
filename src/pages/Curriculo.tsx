@@ -68,11 +68,7 @@ export default function Curriculo() {
   const [deleting, setDeleting] = useState(false);
 
    
-  useEffect(() => {
-    fetchUnidades();
-  }, [filterModalidade, filterAno, filterDisciplina, filterBimestre]);
-
-  async function fetchUnidades() {
+  const fetchUnidades = React.useCallback(async () => {
     setLoading(true);
     try {
       let query = supabase
@@ -94,7 +90,11 @@ export default function Curriculo() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [filterModalidade, filterAno, filterDisciplina, filterBimestre, showError]);
+
+  useEffect(() => {
+    fetchUnidades();
+  }, [fetchUnidades]);
 
   async function handleSave() {
     if (!newUnidade.nome.trim()) {

@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const fetchUserData = async (session: any) => {
       // Se não há sessão e já não temos usuário, apenas paramos o loading inicial
       if (!session?.user) {
-        if (user) setUser(null);
+        if (userRef.current) setUser(null);
         setLoading(false);
         return;
       }

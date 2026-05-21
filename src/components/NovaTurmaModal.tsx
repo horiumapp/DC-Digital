@@ -61,7 +61,7 @@ export default function NovaTurmaModal({ isOpen, onClose, onSave, turmaParaEdita
         ano_letivo: new Date().getFullYear().toString(),
       });
     }
-  }, [turmaParaEditar, isOpen, escolas]);
+  }, [turmaParaEditar, isOpen, escolas, fixedEscolaId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!isOpen) return null;

@@ -21,6 +21,7 @@ export default function TabTurmas() {
 
   useEffect(() => {
     fetchInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchInitialData() {

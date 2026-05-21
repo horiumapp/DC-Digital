@@ -37,7 +37,9 @@ export default function Frequencia() {
   }, [horarioTurma, dow, turmaAtiva]);
 
   // Se não houver aula no dia, mostramos pelo menos o 1º tempo como fallback para não quebrar a UI
-  const temposParaMostrar = temposValidosDoDia.length > 0 ? temposValidosDoDia : ['1º TEMPO'];
+  const temposParaMostrar = React.useMemo(() => {
+    return temposValidosDoDia.length > 0 ? temposValidosDoDia : ['1º TEMPO'];
+  }, [temposValidosDoDia]);
 
   const [tempoAula, setTempoAula] = useState(temposParaMostrar[0]);
 
