@@ -355,8 +355,8 @@ export default function RelatorioMedias() {
                     const turmaObj = turmas.find(t => `${t.id}|${t.componente}` === selectedTurma);
                     const turmaNomeRaw = turmaObj?.nome || 'N/D';
                     const partesTurma = turmaNomeRaw.split(' ');
-                    const turmaPart = partesTurma.length > 1 ? partesTurma.pop() : '';
-                    const fasePart = partesTurma.join(' ') || turmaNomeRaw;
+                    const _turmaPart = partesTurma.length > 1 ? partesTurma.pop() : '';
+                    const _fasePart = partesTurma.join(' ') || turmaNomeRaw;
 
                     return alunos.filter(a => a.nome.toLowerCase().includes(searchTerm.toLowerCase())).map((aluno, index) => {
                       const m1 = calcularSomaBimestre(aluno.id, '1. BIMESTRE');

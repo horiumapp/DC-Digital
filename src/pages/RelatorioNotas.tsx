@@ -718,7 +718,7 @@ export default function RelatorioNotas() {
   );
 }
 
-function SearchIcon(props: React.SVGProps<SVGSVGElement>) {
+function _SearchIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}
