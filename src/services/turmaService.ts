@@ -254,9 +254,8 @@ export const TurmaService = {
 
     let query = supabase
       .from('frequencias')
-      .select('data, aluno_id, status, disciplina')
-      .eq('turma_id', tid)
-      .eq('status', 'F');
+      .select('data, tempo, aluno_id, status, participacao, disciplina')
+      .eq('turma_id', tid);
     if (disciplina) query = query.ilike('disciplina', disciplina);
 
     const { data: freqData, error } = await query;

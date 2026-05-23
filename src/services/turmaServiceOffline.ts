@@ -190,7 +190,7 @@ export async function fetchAllFrequencias(turmaId: string | number, disciplina: 
       turma_id: tid,
       aluno_id: f.aluno_id,
       data: f.data || '',
-      tempo: '',
+      tempo: f.tempo || '',
       status: f.status,
       participacao: f.participacao || 'Presencial',
       disciplina: f.disciplina || disciplina,
@@ -198,14 +198,14 @@ export async function fetchAllFrequencias(turmaId: string | number, disciplina: 
     return result;
   } catch {
     const local = await OfflineStorage.getAllFrequenciasLocal(tid, disciplina);
-    return local
-      .filter(f => f.status === 'F')
-      .map(f => ({
-        aluno_id: f.aluno_id,
-        status: f.status,
-        data: f.data,
-        disciplina: f.disciplina,
-      }));
+    return local.map(f => ({
+      aluno_id: f.aluno_id,
+      status: f.status,
+      data: f.data,
+      tempo: f.tempo,
+      participacao: f.participacao,
+      disciplina: f.disciplina,
+    }));
   }
 }
 
