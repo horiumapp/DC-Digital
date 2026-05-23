@@ -451,10 +451,20 @@ export async function cacheNotas(records: Omit<LocalNota, 'localId' | 'syncStatu
 // Horários (cache somente leitura)
 // ============================================================
 
-export async function cacheHorarios(turmaId: string, records: Omit<LocalHorario, 'localId' | 'syncStatus' | 'updatedAt'>[]): Promise<void> {
-  // Limpa horários existentes da turma e recria
+export async function cacheHorarios(
+  turmaId: string,
+  records: Omit<LocalHorario, 'localId' | 'syncStatus' | 'updatedAt'>[],
+  disciplina?: string
+): Promise<void> {
+  // Limpa horários existentes da turma para a disciplina específica para evitar apagar de outras disciplinas
+  const comp = disciplina || (records.length > 0 ? records[0].componente : null);
+
   const existing = await db.horarios.where('turma_id').equals(turmaId).toArray();
-  const ids = existing.map(h => h.localId).filter((id): id is number => id !== undefined);
+  const toDelete = comp 
+    ? existing.filter(h => (h.componente || '').trim().toLowerCase() === comp.trim().toLowerCase()) 
+    : existing;
+
+  const ids = toDelete.map(h => h.localId).filter((id): id is number => id !== undefined);
   if (ids.length > 0) await db.horarios.bulkDelete(ids);
 
   const timestamp = now();

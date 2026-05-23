@@ -53,12 +53,17 @@ export async function fetchHorario(turmaId: string | number, disciplina: string)
       dia_semana: h.dia_semana,
       tempo_ordem: h.tempo_ordem,
       componente: disciplina,
-    })));
+    })), disciplina);
     return result;
   } catch {
     // Fallback local
     const local = await OfflineStorage.getHorariosLocal(tid);
-    return local.map(h => ({ dia_semana: h.dia_semana, tempo_ordem: h.tempo_ordem }));
+    // Filtra no cliente local: incluir quando o componente bate com a disciplina OU está vazio/null
+    const filtered = local.filter(h => {
+      const comp = (h.componente || '').trim();
+      return comp === '' || comp.toLowerCase() === disciplina.toLowerCase();
+    });
+    return filtered.map(h => ({ dia_semana: h.dia_semana, tempo_ordem: h.tempo_ordem }));
   }
 }
 
