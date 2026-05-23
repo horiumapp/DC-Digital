@@ -3,6 +3,7 @@ import { X, BookOpen, Building2, Edit2, Check, Loader2, LogIn } from 'lucide-rea
 import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { db } from '../lib/db';
 
 interface ScheduleModalProps {
   isOpen: boolean;
@@ -34,6 +35,8 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
 
     setLoading(true);
     try {
+      if (!navigator.onLine) throw new Error('Offline');
+
       // 1. Buscar Turmas desta escola
       const { data: turmasData } = await supabase
         .from('turmas')
@@ -77,7 +80,44 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
       }
       setSchedule(mappedSchedule);
     } catch (err) {
-      console.error('Erro ao buscar dados do horário:', err);
+      console.warn('[ScheduleModal] Usando fallback local para horários:', err);
+      
+      // Fallback local do IndexedDB
+      try {
+        // 1. Buscar Turmas do IndexedDB
+        const localTurmas = await db.turmas.where('escola_id').equals(targetEscolaId).toArray();
+        const sortedLocalTurmas = [...localTurmas].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { numeric: true }));
+        setTurmas(sortedLocalTurmas);
+        
+        // 2. Buscar Horários locais
+        const localHorarios = await db.horarios.toArray(); 
+        // Filtrar localmente os horários que pertencem às turmas da escola alvo
+        const schoolTurmaIds = new Set(localTurmas.map(t => t.id));
+        const filteredHorarios = localHorarios.filter(h => schoolTurmaIds.has(h.turma_id));
+        
+        // 3. Mapear horários
+        const mappedSchedule: Record<string, any> = {};
+        filteredHorarios.forEach(item => {
+          const key = `${item.dia_semana}-${item.tempo_ordem}`;
+          const matchingTurma = localTurmas.find(t => t.id === item.turma_id);
+          if (matchingTurma) {
+            mappedSchedule[key] = {
+              id: matchingTurma.id,
+              nome: matchingTurma.nome,
+              turno: matchingTurma.turno,
+              componente_horario: item.componente
+            };
+          }
+        });
+        setSchedule(mappedSchedule);
+        
+        // 4. Disciplinas do professor com base nos horários carregados
+        const uniqueComps = [...new Set(filteredHorarios.map(h => h.componente).filter(Boolean))];
+        setProfessorDisciplinas(uniqueComps);
+        
+      } catch (localErr) {
+        console.error('[ScheduleModal] Falha crítica no fallback offline de horários:', localErr);
+      }
     }
     setLoading(false);
   }, [professorId, escolaId]);
@@ -87,6 +127,7 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
     if (!user?.email) return;
     setLoading(true);
     try {
+      if (!navigator.onLine) throw new Error('Offline');
       const emailLimpo = user.email.trim();
       
       // 1. Achar todos os IDs de professor vinculados a este e-mail
@@ -111,7 +152,21 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
         }
       }
     } catch (err) {
-      console.error('Erro ao buscar contexto do professor:', err);
+      console.warn('[ScheduleModal] Falha ao obter contexto online do professor, tentando local:', err);
+      // Quando offline, podemos simplesmente obter a escola_id e turmas_id do cache local de turmas
+      try {
+        const localTurmas = await db.turmas.toArray();
+        if (localTurmas.length > 0) {
+          // Usa a escola_id da primeira turma disponível no cache local
+          const escolaId = localTurmas[0].escola_id;
+          if (escolaId) {
+            // Simulamos um array de profIds vazio ou fake, já que o fallback do fetchData buscará direto pelas turmas
+            fetchData(['offline_prof_id'], escolaId);
+          }
+        }
+      } catch (localErr) {
+        console.error('[ScheduleModal] Falha crítica no fallback do contexto do professor:', localErr);
+      }
     }
     setLoading(false);
   }, [user?.email, fetchData]);
