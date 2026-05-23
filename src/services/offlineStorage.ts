@@ -6,6 +6,8 @@
  */
 import Dexie from 'dexie';
 import { db, now, type SyncStatus } from '../lib/db';
+import { supabase } from '../lib/supabase';
+import { encryptFields, decryptFields, getOrCreateKey } from '../lib/crypto';
 import type {
   LocalFrequencia,
   LocalConteudo,
@@ -49,17 +51,41 @@ export async function getCachedTurmas(escolaId?: string): Promise<LocalTurma[]> 
 // Alunos (cache somente leitura)
 // ============================================================
 
+async function getCryptoKey(): Promise<CryptoKey | null> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) return null;
+    return await getOrCreateKey(userId);
+  } catch (err) {
+    console.error('[offlineStorage] Failed to get encryption key:', err);
+    return null;
+  }
+}
+
 export async function cacheAlunos(alunos: Omit<LocalAluno, 'syncStatus' | 'updatedAt'>[]): Promise<void> {
-  const records = alunos.map(a => ({
-    ...a,
-    syncStatus: 'synced' as SyncStatus,
-    updatedAt: now(),
+  const key = await getCryptoKey();
+  const records = await Promise.all(alunos.map(async a => {
+    let record = {
+      ...a,
+      syncStatus: 'synced' as SyncStatus,
+      updatedAt: now(),
+    };
+    if (key) {
+      record = await encryptFields(record as any, ['nome', 'cpf'], key);
+    }
+    return record;
   }));
-  await db.alunos.bulkPut(records);
+  await db.alunos.bulkPut(records as unknown as LocalAluno[]);
 }
 
 export async function getCachedAlunos(turmaId: string): Promise<LocalAluno[]> {
-  return db.alunos.where('turma_id').equals(turmaId).toArray();
+  const key = await getCryptoKey();
+  const local = await db.alunos.where('turma_id').equals(turmaId).toArray();
+  if (!key) return local;
+  return await Promise.all(local.map(async a => {
+    return await decryptFields(a as any, ['nome', 'cpf'], key);
+  }));
 }
 
 // ============================================================
