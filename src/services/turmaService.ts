@@ -9,6 +9,7 @@ export interface FrequenciaRecord {
   participacao?: string;
   data?: string;
   disciplina?: string;
+  tempo?: string;
 }
 
 /** Registro de nota retornado pelo banco */
