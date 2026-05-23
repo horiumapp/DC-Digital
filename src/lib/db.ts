@@ -165,6 +165,8 @@ export interface CachedUser {
   title: string;
   escola_id?: string;
   cachedAt: string;
+  alocacoes?: any[];
+  professorDisciplinas?: string;
 }
 
 /** Arquivo offline */

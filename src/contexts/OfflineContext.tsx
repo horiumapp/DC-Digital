@@ -9,6 +9,7 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useSyncStatus, type ConnectionState } from '../hooks/useSyncStatus';
 import * as SyncEngine from '../services/syncEngine';
 import { clearAllLocalData, clearOldSyncedData, getStorageEstimate } from '../services/offlineStorage';
+import { setOnlineStatus } from '../services/turmaServiceOffline';
 
 // ============================================================
 // Tipos
@@ -51,6 +52,11 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   } = useSyncStatus(isOnline);
 
   const wasOffline = useRef(false);
+
+  // Propaga status online para turmaServiceOffline
+  useEffect(() => {
+    setOnlineStatus(isOnline);
+  }, [isOnline]);
 
   // Auto-sync quando volta a ficar online
   useEffect(() => {

@@ -6,6 +6,7 @@ import { useTurma, Turma } from '../contexts/TurmaContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/common/Toast';
+import { getCachedUser, cacheUser, cacheTurmas, getCachedTurmas } from '../services/offlineStorage';
 
 interface EscolaAlocacao {
   id: string;
@@ -58,6 +59,24 @@ export default function Turmas() {
   const fetchTurmasBD = React.useCallback(async () => {
     if (!alocacaoAtiva) return;
     try {
+      // Se offline, busca do cache local
+      if (!navigator.onLine) {
+        const cachedT = await getCachedTurmas(alocacaoAtiva.escola_id);
+        const filteredT = cachedT.filter(t => t.turno === alocacaoAtiva.turno);
+        if (isMounted.current) {
+          setTurmasBD(filteredT.map(t => ({
+            id: t.id,
+            nome: t.nome,
+            turno: t.turno,
+            ensino: t.ensino || '',
+            escola_id: t.escola_id || '',
+            escolas: { nome: alocacaoAtiva?.escolas?.nome || '' }
+          })));
+        }
+        return;
+      }
+
+      // Se online, faz fetch no Supabase
       const { data, error } = await supabase
         .from('turmas')
         .select('*, escolas(nome)')
@@ -68,10 +87,37 @@ export default function Turmas() {
       if (error) throw error;
       if (data && isMounted.current) {
         setTurmasBD(data);
+        
+        // Cachear as turmas localmente
+        await cacheTurmas(data.map(t => ({
+          id: t.id.toString(),
+          nome: t.nome,
+          turno: t.turno,
+          ensino: t.ensino || '',
+          escola_id: t.escola_id
+        })));
       }
     } catch (err: any) {
       if (isMounted.current) {
         console.error('Erro ao carregar turmas:', err);
+        // Tenta recuperar do cache local em caso de erro
+        try {
+          const cachedT = await getCachedTurmas(alocacaoAtiva.escola_id);
+          const filteredT = cachedT.filter(t => t.turno === alocacaoAtiva.turno);
+          if (filteredT.length > 0) {
+            setTurmasBD(filteredT.map(t => ({
+              id: t.id,
+              nome: t.nome,
+              turno: t.turno,
+              ensino: t.ensino || '',
+              escola_id: t.escola_id || '',
+              escolas: { nome: alocacaoAtiva?.escolas?.nome || '' }
+            })));
+            return;
+          }
+        } catch (cacheErr) {
+          console.error('Erro ao buscar turmas no cache:', cacheErr);
+        }
         showError('Não foi possível carregar as turmas.');
       }
     }
@@ -89,6 +135,19 @@ export default function Turmas() {
     try {
       const emailLimpo = user.email.trim();
       
+      // Se offline, tenta recuperar do cache local do usuário
+      if (!navigator.onLine) {
+        const cached = await getCachedUser();
+        if (cached && cached.id === user.id && cached.alocacoes && cached.alocacoes.length > 0) {
+          if (isMounted.current) {
+            setProfessorDisciplinas(cached.professorDisciplinas || 'POLIVALENTE');
+            setAlocacoes(cached.alocacoes);
+            setAlocacaoAtiva(cached.alocacoes[0]);
+          }
+          return;
+        }
+      }
+
       // 1. Encontrar o(s) registro(s) do professor vinculado ao usuário logado
       // Usamos eq com correspondência exata para evitar falsos positivos
       const { data: professorDataResult, error: profError } = await supabase
@@ -108,7 +167,8 @@ export default function Turmas() {
         });
         // Remover duplicatas
         allDisciplinas = [...new Set(allDisciplinas)];
-        setProfessorDisciplinas(allDisciplinas.length > 0 ? allDisciplinas.join(', ') : 'POLIVALENTE');
+        const disciplinasStr = allDisciplinas.length > 0 ? allDisciplinas.join(', ') : 'POLIVALENTE';
+        setProfessorDisciplinas(disciplinasStr);
 
         // Pegar array com os IDs de todos os cadastros possíveis desse professor
         const profIds = professorDataResult.map(p => p.id);
@@ -127,8 +187,30 @@ export default function Turmas() {
             a.findIndex(t => (t.escola_id === v.escola_id && t.turno === v.turno)) === i
           );
           
-          setAlocacoes(uniqueAlocs);
-          setAlocacaoAtiva(uniqueAlocs[0]); // Seleciona a primeira por padrão
+          const mappedAlocs: EscolaAlocacao[] = uniqueAlocs.map((item: any) => {
+            const escolaObj = Array.isArray(item.escolas)
+              ? item.escolas[0]
+              : item.escolas;
+            return {
+              id: item.id,
+              escola_id: item.escola_id,
+              turno: item.turno,
+              escolas: escolaObj ? { nome: escolaObj.nome } : undefined
+            };
+          });
+
+          setAlocacoes(mappedAlocs);
+          setAlocacaoAtiva(mappedAlocs[0]); // Seleciona a primeira por padrão
+
+          // Atualizar o cache local do usuário com as alocações e disciplinas obtidas
+          const cached = await getCachedUser();
+          if (cached && cached.id === user.id) {
+            await cacheUser({
+              ...cached,
+              alocacoes: mappedAlocs,
+              professorDisciplinas: disciplinasStr,
+            });
+          }
         } else if (isMounted.current) {
           console.warn("Nenhuma alocacão encontrada para os professores encontrados.");
           showError("Nenhuma alocação (escola/turno) encontrada para seu usuário.");
@@ -140,6 +222,18 @@ export default function Turmas() {
     } catch (err: any) {
       if (isMounted.current) {
         console.error('Erro ao carregar lotações:', err);
+        // Tenta recuperar do cache local do usuário em caso de erro/falha de rede
+        try {
+          const cached = await getCachedUser();
+          if (cached && cached.id === user.id && cached.alocacoes && cached.alocacoes.length > 0) {
+            setProfessorDisciplinas(cached.professorDisciplinas || 'POLIVALENTE');
+            setAlocacoes(cached.alocacoes);
+            setAlocacaoAtiva(cached.alocacoes[0]);
+            return;
+          }
+        } catch (cacheErr) {
+          console.error('Erro ao buscar alocações no cache:', cacheErr);
+        }
         showError('Ocorreu um erro ao carregar suas lotações.');
       }
     } finally {

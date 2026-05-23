@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import LoadingFallback from '../components/common/LoadingFallback';
+import { cacheUser, getCachedUser } from '../services/offlineStorage';
 
 export type UserRole = 'ADMIN' | 'GESTOR' | 'SECRETARIO' | 'PROFESSOR' | 'ALUNO';
 
@@ -11,6 +12,8 @@ export interface User {
   role: UserRole;
   title: string;
   escola_id?: string; // ID da escola vinculada (para GESTOR/SECRETARIO)
+  alocacoes?: any[];
+  professorDisciplinas?: string;
 }
 
 interface AuthContextType {
@@ -43,37 +46,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Segurança: Prioriza app_metadata (não alterável pelo cliente)
       let role: UserRole = (authUser.app_metadata?.role as UserRole);
-
-      // Sempre buscar dados complementares da tabela usuarios (escola_id, cargo fallback)
       let escolaId: string | undefined;
+      let name = metadata?.full_name || authUser.email?.split('@')[0] || 'Usuário';
+
+      // 1. Tentar ler do cache local primeiro para ter respostas rápidas/offline
       try {
-        const { data: userData, error } = await supabase
-          .from('usuarios')
-          .select('cargo, escola_id')
-          .eq('id', authUser.id)
-          .maybeSingle();
-        
-        if (!error && userData) {
-          if (!role) {
-            role = (userData.cargo as UserRole) || 'PROFESSOR';
-          }
-          escolaId = userData.escola_id || undefined;
-        } else if (!role) {
-          role = 'PROFESSOR';
+        const cached = await getCachedUser();
+        if (cached && cached.id === authUser.id) {
+          if (!role) role = cached.role as UserRole;
+          escolaId = cached.escola_id;
+          name = cached.name;
         }
-      } catch (err: unknown) {
-        console.error('[AuthContext] Falha ao buscar dados complementares do usuário no DB:', err);
-        if (!role) role = 'PROFESSOR';
+      } catch (err) {
+        console.error('[AuthContext] Erro ao carregar usuário cacheado:', err);
       }
 
-      setUser({
+      // 2. Se estiver online, buscar dados atualizados do Supabase
+      if (navigator.onLine) {
+        try {
+          const { data: userData, error } = await supabase
+            .from('usuarios')
+            .select('cargo, escola_id')
+            .eq('id', authUser.id)
+            .maybeSingle();
+          
+          if (!error && userData) {
+            role = (userData.cargo as UserRole) || role || 'PROFESSOR';
+            escolaId = userData.escola_id || escolaId || undefined;
+          }
+        } catch (err: unknown) {
+          console.error('[AuthContext] Falha ao buscar dados complementares do usuário no DB:', err);
+        }
+      }
+
+      if (!role) {
+        role = 'PROFESSOR';
+      }
+
+      const userObj: User = {
         id: authUser.id,
-        name: metadata?.full_name || authUser.email?.split('@')[0] || 'Usuário',
+        name: name,
         email: authUser.email || '',
         role: role,
         title: role,
         escola_id: escolaId,
-      });
+      };
+
+      setUser(userObj);
+
+      // 3. Salvar/Atualizar no cache
+      try {
+        const cached = await getCachedUser();
+        const alocacoes = (cached && cached.id === authUser.id) ? cached.alocacoes : undefined;
+        const professorDisciplinas = (cached && cached.id === authUser.id) ? cached.professorDisciplinas : undefined;
+
+        await cacheUser({
+          id: userObj.id,
+          name: userObj.name,
+          email: userObj.email,
+          role: userObj.role,
+          title: userObj.title,
+          escola_id: userObj.escola_id,
+          cachedAt: new Date().toISOString(),
+          alocacoes,
+          professorDisciplinas,
+        });
+      } catch (err) {
+        console.error('[AuthContext] Erro ao salvar usuário no cache:', err);
+      }
+
       setLoading(false);
     };
 
