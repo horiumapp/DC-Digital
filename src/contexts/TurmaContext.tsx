@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 
 import { getBimestrePorData, formatarDataParaISO } from '../utils/dateUtils';
-import { TurmaService } from '../services/turmaService';
+import * as OfflineTurmaService from '../services/turmaServiceOffline';
+import { setOnlineStatus } from '../services/turmaServiceOffline';
 import { useToast } from '../components/common/Toast';
 import { useAuth } from './AuthContext';
 
@@ -131,7 +132,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const fetchAvaliacoesInterno = useCallback(async (turmaId: string | number, disciplina: string, contextAlunos: Aluno[], signal?: AbortSignal) => {
     try {
-      const { avaliacoes: avsFormatadas, notasData } = await TurmaService.fetchAvaliacoes(turmaId, disciplina);
+      const { avaliacoes: avsFormatadas, notasData } = await OfflineTurmaService.fetchAvaliacoes(turmaId, disciplina);
       
       if (signal?.aborted) return;
 
@@ -172,12 +173,12 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
         try {
           const rawId = turmaAtiva.id.toString().split('||')[0];
           const [ls, hs, alumnosData, conts, freqs, fechamentosData] = await Promise.all([
-            TurmaService.fetchLancamentos(rawId, turmaAtiva.componente),
-            TurmaService.fetchHorario(rawId, turmaAtiva.componente),
-            TurmaService.fetchAlunos(rawId),
-            TurmaService.fetchAllConteudos(rawId, turmaAtiva.componente),
-            TurmaService.fetchAllFrequencias(rawId, turmaAtiva.componente),
-            TurmaService.fetchFechamentos(rawId, turmaAtiva.componente)
+            OfflineTurmaService.fetchLancamentos(rawId, turmaAtiva.componente),
+            OfflineTurmaService.fetchHorario(rawId, turmaAtiva.componente),
+            OfflineTurmaService.fetchAlunos(rawId),
+            OfflineTurmaService.fetchAllConteudos(rawId, turmaAtiva.componente),
+            OfflineTurmaService.fetchAllFrequencias(rawId, turmaAtiva.componente),
+            OfflineTurmaService.fetchFechamentos(rawId, turmaAtiva.componente)
           ]);
           
           if (signal.aborted) return;
@@ -241,7 +242,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     if (!turmaAtiva || !user) return;
     const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
-      await TurmaService.salvarFechamento(rawId, turmaAtiva.componente, bimestre, status, user.id);
+      await OfflineTurmaService.salvarFechamento(rawId, turmaAtiva.componente, bimestre, status, user.id);
       setFechamentos(prev => ({ ...prev, [bimestre]: status === 'FECHADO' }));
       showSuccess(`Aparata ${status === 'FECHADO' ? 'fechada' : 'reaberta'} com sucesso!`);
     } catch (err) {
@@ -258,7 +259,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     }
     const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
-      const createdId = await TurmaService.salvarAvaliacao(av, rawId, turmaAtiva.componente);
+      const createdId = await OfflineTurmaService.salvarAvaliacao(av, rawId, turmaAtiva.componente);
       await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunos);
       showSuccess('Avaliação salva com sucesso!');
       return createdId;
@@ -276,7 +277,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
-      await TurmaService.removerAvaliacao(id);
+      await OfflineTurmaService.removerAvaliacao(id);
       setAvaliacoes(prev => prev.filter(a => a.id !== id));
       showSuccess('Avaliação removida.');
     } catch (err) {
@@ -294,7 +295,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     }
     const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
-      await TurmaService.salvarNotas(avaliacaoId, notas);
+      await OfflineTurmaService.salvarNotas(avaliacaoId, notas);
       await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunos);
       showSuccess('Notas salvas com sucesso!');
     } catch (err) {
@@ -311,7 +312,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     }
     const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
-      await TurmaService.salvarFrequencia(rawId, turmaAtiva.componente, data, tempo, alunosFreq);
+      await OfflineTurmaService.salvarFrequencia(rawId, turmaAtiva.componente, data, tempo, alunosFreq);
       
       registrarLancamento({
         turmaId: turmaAtiva.id,
@@ -336,9 +337,9 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     }
     const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
-      await TurmaService.salvarConteudo(rawId, turmaAtiva.componente, cont);
+      await OfflineTurmaService.salvarConteudo(rawId, turmaAtiva.componente, cont);
       registrarLancamento({ turmaId: rawId, data: cont.data, tipo: 'conteudo', tempo: cont.tempo });
-      const conts = await TurmaService.fetchAllConteudos(rawId, turmaAtiva.componente);
+      const conts = await OfflineTurmaService.fetchAllConteudos(rawId, turmaAtiva.componente);
       setConteudos(conts);
       showSuccess('Conteúdo salvo!');
     } catch (err) {
@@ -350,7 +351,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const buscarFrequencia = async (data: string, tempo: string) => {
     if (!turmaAtiva) return;
     const rawId = turmaAtiva.id.toString().split('||')[0];
-    const freqData = await TurmaService.buscarFrequencia(rawId, turmaAtiva.componente, data, tempo);
+    const freqData = await OfflineTurmaService.buscarFrequencia(rawId, turmaAtiva.componente, data, tempo);
 
     if (freqData.length > 0) {
       setAlunos(prev => prev.map(aluno => {
@@ -367,7 +368,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const buscarConteudo = async (data: string, tempo: string): Promise<Conteudo | null> => {
     if (!turmaAtiva) return null;
     const rawId = turmaAtiva.id.toString().split('||')[0];
-    const contData = await TurmaService.buscarConteudo(rawId, turmaAtiva.componente, data, tempo);
+    const contData = await OfflineTurmaService.buscarConteudo(rawId, turmaAtiva.componente, data, tempo);
     if (contData) {
       registrarLancamento({ turmaId: rawId, data: contData.data, tipo: 'conteudo', tempo: contData.tempo });
     }
@@ -382,7 +383,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     }
     const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
-      await TurmaService.removerFrequencia(rawId, turmaAtiva.componente, data, tempo);
+      await OfflineTurmaService.removerFrequencia(rawId, turmaAtiva.componente, data, tempo);
       removerLancamento({ turmaId: rawId, data, tipo: 'frequencia', tempo });
       setAlunos(prev => prev.map(a => ({ ...a, freq: '', part: 'Presencial' })));
       await carregarFaltasDaData(data);
@@ -400,9 +401,9 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     }
     const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
-      await TurmaService.removerConteudo(rawId, turmaAtiva.componente, data, tempo);
+      await OfflineTurmaService.removerConteudo(rawId, turmaAtiva.componente, data, tempo);
       removerLancamento({ turmaId: rawId, data, tipo: 'conteudo', tempo });
-      const conts = await TurmaService.fetchAllConteudos(rawId, turmaAtiva.componente);
+      const conts = await OfflineTurmaService.fetchAllConteudos(rawId, turmaAtiva.componente);
       setConteudos(conts);
       showSuccess('Conteúdo removido.');
     } catch {
@@ -414,7 +415,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     if (!turmaAtiva) return;
     try {
       const rawId = turmaAtiva.id.toString().split('||')[0];
-      const resp = await TurmaService.buscarFrequenciaPorDia(rawId, turmaAtiva.componente, data);
+      const resp = await OfflineTurmaService.buscarFrequenciaPorDia(rawId, turmaAtiva.componente, data);
       const idsFaltosos = new Set(resp.filter(f => f.status === 'F').map(f => f.aluno_id.toString()));
       const normalizedDate = formatarDataParaISO(data);
       setFaltasPorData(prev => ({ ...prev, [normalizedDate]: idsFaltosos }));

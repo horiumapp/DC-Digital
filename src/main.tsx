@@ -1,10 +1,62 @@
-import {StrictMode} from 'react';
+import {StrictMode, useState, useCallback} from 'react';
 import {createRoot} from 'react-dom/client';
+import {useRegisterSW} from 'virtual:pwa-register/react';
 import App from './App.tsx';
 import './index.css';
+import {OfflineProvider} from './contexts/OfflineContext';
+import SWUpdatePrompt from './components/common/SWUpdatePrompt';
+import InstallPrompt from './components/common/InstallPrompt';
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+function Root() {
+  const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
+
+  const {
+    updateServiceWorker,
+  } = useRegisterSW({
+    onRegisteredSW(swUrl, registration) {
+      console.log('[SW] Registrado:', swUrl);
+      // Verificar atualizações a cada 60 minutos
+      if (registration) {
+        setInterval(() => {
+          registration.update();
+        }, 60 * 60 * 1000);
+      }
+    },
+    onRegisterError(error) {
+      console.error('[SW] Erro no registro:', error);
+    },
+    onNeedRefresh() {
+      console.log('[SW] Nova versão disponível');
+      setShowUpdatePrompt(true);
+    },
+    onOfflineReady() {
+      console.log('[SW] App pronto para uso offline');
+    },
+  });
+
+  const handleUpdate = useCallback(() => {
+    setShowUpdatePrompt(false);
+    updateServiceWorker(true); // true = reload
+  }, [updateServiceWorker]);
+
+  const handleDismissUpdate = useCallback(() => {
+    setShowUpdatePrompt(false);
+  }, []);
+
+  return (
+    <StrictMode>
+      <OfflineProvider>
+        <App />
+        <InstallPrompt />
+        {showUpdatePrompt && (
+          <SWUpdatePrompt
+            onUpdate={handleUpdate}
+            onDismiss={handleDismissUpdate}
+          />
+        )}
+      </OfflineProvider>
+    </StrictMode>
+  );
+}
+
+createRoot(document.getElementById('root')!).render(<Root />);

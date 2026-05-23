@@ -3,13 +3,17 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { User, Home, LogOut, ChevronDown, Menu, X } from 'lucide-react';
 import ScheduleModal from './ScheduleModal';
 import Background from './Background';
+import ConnectionStatus from './common/ConnectionStatus';
 import { useAuth } from '../contexts/AuthContext';
+import { useOffline } from '../contexts/OfflineContext';
 import { ADMIN_ROLES } from '../constants/authConstants';
+import { clearKeyCache } from '../lib/crypto';
 
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { clearLocalData } = useOffline();
 
   // If no user, mock a fallback slightly just to not break layout in weird state
   const hasAdminAccess = user ? ADMIN_ROLES.includes(user.role) : false;
@@ -183,7 +187,7 @@ export default function Layout() {
             <span className="hidden md:inline">Início</span>
           </Link>
           <button
-            onClick={async () => { await logout(); navigate('/'); }}
+            onClick={async () => { clearKeyCache(); await clearLocalData(); await logout(); navigate('/'); }}
             className="flex items-center space-x-2 bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-all shadow-md hover:shadow-lg active:scale-95"
           >
             <span className="hidden md:inline">Sair</span>
@@ -191,6 +195,8 @@ export default function Layout() {
           </button>
         </div>
       </header>
+
+      <ConnectionStatus />
 
       <main>
         <Outlet />
