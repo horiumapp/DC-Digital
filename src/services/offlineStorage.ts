@@ -4,6 +4,7 @@
  * Todas as operações CRUD do app passam por aqui.
  * Escreve localmente com syncStatus='pending' e enfileira para sincronização.
  */
+import Dexie from 'dexie';
 import { db, now, type SyncStatus } from '../lib/db';
 import type {
   LocalFrequencia,
@@ -645,5 +646,4 @@ export async function getStorageEstimate(): Promise<{ usage: number; quota: numb
   return { usage: 0, quota: 0, percentUsed: 0 };
 }
 
-// Re-export Dexie para uso no offlineQueue
-export { Dexie };
+
