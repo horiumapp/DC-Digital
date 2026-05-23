@@ -6,7 +6,7 @@
  * de conflitos via last-write-wins.
  */
 import { supabase } from '../lib/supabase';
-import { db, now, type SyncLogEntry } from '../lib/db';
+import { db, now, type SyncLogEntry, type SyncQueueItem } from '../lib/db';
 import * as Queue from './offlineQueue';
 
 // ============================================================
@@ -160,7 +160,7 @@ export async function syncAll(): Promise<SyncResult> {
 // Processamento de itens individuais
 // ============================================================
 
-async function processItem(item: Queue extends never ? never : Awaited<ReturnType<typeof Queue.peek>>): Promise<void> {
+async function processItem(item: SyncQueueItem): Promise<void> {
   if (!item) throw new Error('Item nulo');
 
   const payload = JSON.parse(item.payload);
