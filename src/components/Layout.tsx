@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { User, Home, LogOut, ChevronDown, Menu, X } from 'lucide-react';
+import { User, Home, LogOut, ChevronDown, Menu, X, Shield } from 'lucide-react';
 import ScheduleModal from './ScheduleModal';
 import Background from './Background';
 import ConnectionStatus from './common/ConnectionStatus';
+import PrivacyLinksFooter from './PrivacyLinksFooter';
 import { useAuth } from '../contexts/AuthContext';
 import { useOffline } from '../contexts/OfflineContext';
 import { ADMIN_ROLES } from '../constants/authConstants';
@@ -48,7 +49,7 @@ export default function Layout() {
   
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-200 relative">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-200 relative flex flex-col justify-between">
       <Background />
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center justify-between sticky top-0 z-50 shadow-sm transition-colors duration-200">
         {/* Logo e Toggle - Esquerda */}
@@ -182,13 +183,17 @@ export default function Layout() {
               </span>
             </div>
           </div>
+          <Link to="/minha-privacidade" className="flex items-center space-x-2 bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-white px-4 py-3 rounded-xl text-sm font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-all shadow-md active:scale-95" title="Centro de Privacidade">
+            <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span className="hidden md:inline">Privacidade</span>
+          </Link>
           <Link to="/turmas" className="flex items-center space-x-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-3 rounded-xl text-sm font-bold hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95">
             <Home className="w-4 h-4" />
             <span className="hidden md:inline">Início</span>
           </Link>
           <button
             onClick={async () => { clearKeyCache(); await clearLocalData(); await logout(); navigate('/'); }}
-            className="flex items-center space-x-2 bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-all shadow-md hover:shadow-lg active:scale-95"
+            className="flex items-center space-x-2 bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-all shadow-md hover:shadow-lg active:scale-95 cursor-pointer"
           >
             <span className="hidden md:inline">Sair</span>
             <LogOut className="w-4 h-4 text-red-500" />
@@ -198,9 +203,11 @@ export default function Layout() {
 
       <ConnectionStatus />
 
-      <main>
+      <main className="flex-1">
         <Outlet />
       </main>
+
+      <PrivacyLinksFooter />
 
       {/* Navegação Móvel Overlay */}
       {isMobileMenuOpen && (
@@ -211,6 +218,10 @@ export default function Layout() {
                 Administração
               </Link>
             )}
+            <Link to="/minha-privacidade" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold flex items-center gap-2">
+              <Shield className="w-4 h-4 text-blue-600" />
+              Privacidade
+            </Link>
             <Link to="/estatisticas" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold">
               Estatísticas
             </Link>

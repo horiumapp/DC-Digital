@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Building2, Users, User, GraduationCap } from 'lucide-react';
+import { Building2, Users, User, GraduationCap, ShieldAlert } from 'lucide-react';
 import TabEscolas from './administracao/TabEscolas';
 import TabAlunos from './administracao/TabAlunos';
 import TabTurmas from './administracao/TabTurmas';
 import TabProfessores from './administracao/TabProfessores';
 import TabUsuarios from './administracao/TabUsuarios';
+import TabLgpd from './administracao/TabLgpd';
 
 export default function Administracao() {
   const { user } = useAuth();
@@ -66,12 +67,22 @@ export default function Administracao() {
               Usuários
             </button>
           )}
+          {user?.role === 'ADMIN' && (
+            <button
+              onClick={() => setActiveTab('lgpd')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'lgpd' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
+            >
+              <ShieldAlert className="w-5 h-5" />
+              LGPD
+            </button>
+          )}
         </div>
 
         {/* Content Area */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           {user?.role === 'ADMIN' && activeTab === 'escolas' && <TabEscolas />}
           {user?.role === 'ADMIN' && activeTab === 'usuarios' && <TabUsuarios />}
+          {user?.role === 'ADMIN' && activeTab === 'lgpd' && <TabLgpd />}
           {activeTab === 'alunos' && <TabAlunos />}
           {activeTab === 'turmas' && <TabTurmas />}
           {activeTab === 'professores' && <TabProfessores />}

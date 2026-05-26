@@ -6,6 +6,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { APP_CONFIG } from '../config/appConfig';
 import { supabase } from '../lib/supabase';
 import { translateSupabaseError } from '../utils/supabaseErrors';
+import PrivacyLinksFooter from '../components/PrivacyLinksFooter';
+import { logSecurityEvent } from '../services/securityLogService';
 
 const ALUNO_EMAIL_DOMAIN = 'aluno.dcdigital.local';
 
@@ -66,18 +68,34 @@ export default function Login() {
     }
 
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (signInError) throw signInError;
       
+      if (signInData?.user) {
+        await logSecurityEvent({
+          userId: signInData.user.id,
+          userEmail: email,
+          action: 'LOGIN',
+          metadata: { tipo_login: loginMode },
+        });
+      }
+
       // Redirecionar baseado no tipo de login
       navigate(loginMode === 'aluno' ? '/portal-aluno' : '/turmas');
 
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
+      
+      await logSecurityEvent({
+        userEmail: email,
+        action: 'LOGIN_FAILED',
+        metadata: { tipo_login: loginMode, erro: errMsg },
+      });
+
       failedAttempts.current += 1;
       if (failedAttempts.current >= 5 && !lockoutTimer.current) {
         startLockout();
@@ -217,10 +235,7 @@ export default function Login() {
 
 
         </section>
-
-        <footer className="mt-6 text-center text-slate-400 text-xs">
-          © {APP_CONFIG.YEAR} Diário Digital. Todos os direitos reservados.
-        </footer>
+        <PrivacyLinksFooter className="mt-6" />
       </main>
     </div>
   );

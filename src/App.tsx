@@ -31,6 +31,14 @@ const AparataDetalhes = React.lazy(() => import('./pages/AparataDetalhes'));
 const PortalAluno = React.lazy(() => import('./pages/PortalAluno'));
 const Curriculo = React.lazy(() => import('./pages/Curriculo'));
 
+// Novas páginas LGPD
+const PoliticaPrivacidade = React.lazy(() => import('./pages/PoliticaPrivacidade'));
+const TermosUso = React.lazy(() => import('./pages/TermosUso'));
+const SolicitacaoLgpd = React.lazy(() => import('./pages/SolicitacaoLgpd'));
+const MinhaPrivacidade = React.lazy(() => import('./pages/MinhaPrivacidade'));
+
+import CookieBanner from './components/CookieBanner';
+
 export default function App() {
   return (
     <ToastProvider>
@@ -49,6 +57,16 @@ export default function App() {
                   <Route path="/redefinir-senha" element={<RedefinirSenha />} />
                 </Route>
                 
+                {/* Rotas Legais Públicas (Acessíveis a qualquer visitante) */}
+                <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
+                <Route path="/termos-de-uso" element={<TermosUso />} />
+                <Route path="/solicitacao-lgpd" element={<SolicitacaoLgpd />} />
+
+                {/* Rota Privada de Privacidade (Acessível a qualquer usuário logado) */}
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/minha-privacidade" element={<MinhaPrivacidade />} />
+                </Route>
+
                 {/* Rota exclusiva do Portal do Aluno (sem Layout/sidebar) */}
                 <Route element={<ProtectedRoute allowedRoles={['ALUNO']} />}>
                   <Route path="/portal-aluno" element={<PortalAluno />} />
@@ -92,6 +110,7 @@ export default function App() {
                   </div>
                 } />
               </Routes>
+              <CookieBanner />
             </Suspense>
           </Router>
         </TurmaProvider>

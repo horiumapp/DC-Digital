@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { GraduationCap, BookOpen, CalendarCheck, BarChart3, Loader2, LogOut, User, ChevronRight, Calendar } from 'lucide-react';
+import { GraduationCap, BookOpen, CalendarCheck, BarChart3, Loader2, LogOut, User, ChevronRight, Calendar, Shield } from 'lucide-react';
+import PrivacyLinksFooter from '../components/PrivacyLinksFooter';
 import { APP_CONFIG } from '../config/appConfig';
 import { formatMatriculaCpf } from '../utils/formatters';
 
@@ -251,9 +253,16 @@ export default function PortalAluno() {
                 Matrícula: {alunoData?.matricula || '---'}
               </p>
             </div>
+            <Link
+              to="/minha-privacidade"
+              className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/10 flex items-center justify-center text-white"
+              title="Minha Privacidade"
+            >
+              <Shield className="w-5 h-5" />
+            </Link>
             <button
               onClick={logout}
-              className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/10"
+              className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/10 cursor-pointer"
               title="Sair"
             >
               <LogOut className="w-5 h-5" />
@@ -529,9 +538,7 @@ export default function PortalAluno() {
         )}
       </main>
 
-      <footer className="text-center py-6 text-slate-400 text-xs">
-        © {APP_CONFIG.YEAR} Diário Digital. Todos os direitos reservados.
-      </footer>
+      <PrivacyLinksFooter className="py-6" />
     </div>
   );
 }
