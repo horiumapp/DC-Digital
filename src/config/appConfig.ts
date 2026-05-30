@@ -33,7 +33,7 @@ export const APP_CONFIG = {
 };
 
 export const getPeriodoPorData = (date: Date | string = new Date()) => {
-  const dataRef = typeof date === 'string' ? new Date(date) : date;
+  const dataRef = typeof date === 'string' ? isoParaDataLocal(date) : date;
   return APP_CONFIG.PERIODOS.find(p => {
     // BUG-04 FIX: usar isoParaDataLocal para evitar deslocamento de timezone
     const start = isoParaDataLocal(p.dataInicio);

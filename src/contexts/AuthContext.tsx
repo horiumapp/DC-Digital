@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import LoadingFallback from '../components/common/LoadingFallback';
-import { cacheUser, getCachedUser, clearAllLocalData } from '../services/offlineStorage';
+import { cacheUser, getCachedUser, clearAllLocalData, getPendingCount } from '../services/offlineStorage';
 import { clearKeyCache } from '../lib/crypto';
 
 export type UserRole = 'ADMIN' | 'GESTOR' | 'SECRETARIO' | 'PROFESSOR' | 'ALUNO';
@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .maybeSingle();
           
           if (!error && userData) {
-            role = (userData.cargo as UserRole) || role;
+            role = role || (userData.cargo as UserRole);
             escolaId = userData.escola_id || escolaId || undefined;
           }
         } catch (err: unknown) {
@@ -163,7 +163,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // LOGOUT — Revoga sessão no servidor ANTES de limpar o state da UI
   const logout = async () => {
     try {
+      const pending = await getPendingCount();
+      if (pending > 0) {
+        const confirmLogout = window.confirm(
+          `Você tem ${pending} alteração(ões) pendente(s) de sincronização. Se você sair agora, esses dados serão perdidos permanentemente. Deseja sair mesmo assim?`
+        );
+        if (!confirmLogout) return;
+      }
       await supabase.auth.signOut();
+    } catch (err) {
+      console.error('[AuthContext] Erro ao deslogar:', err);
     } finally {
       // Limpa dados locais e cache de chaves
       clearKeyCache();

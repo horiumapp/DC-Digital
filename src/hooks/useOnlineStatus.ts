@@ -21,24 +21,21 @@ const PING_INTERVAL_ONLINE = 30_000;   // 30s quando online
 const PING_INTERVAL_OFFLINE = 10_000;  // 10s quando offline (tenta reconectar mais rápido)
 const PING_TIMEOUT = 5_000;            // 5s timeout
 
-/**
- * Faz um ping leve para verificar se realmente tem internet.
- * Usa HEAD request ao Supabase para não consumir dados.
- */
 async function pingInternet(): Promise<boolean> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), PING_TIMEOUT);
     
-    // Ping ao próprio domínio (ou favicon) — funciona mesmo com CORS
-    const response = await fetch('/logo.png', {
+    // Pinging an uncached API endpoint to bypass the Service Worker's offline cache.
+    // Even if it returns a 404, receiving a response status proves we are online.
+    const response = await fetch('/api/ping', {
       method: 'HEAD',
       cache: 'no-store',
       signal: controller.signal,
     });
     
     clearTimeout(timeoutId);
-    return response.ok;
+    return response.status >= 200 && response.status < 500;
   } catch {
     return false;
   }

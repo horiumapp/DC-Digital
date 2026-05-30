@@ -160,6 +160,7 @@ export interface SyncLogEntry {
 export interface LocalUserSalt {
   userId: string;
   salt: string;
+  cryptoKey?: CryptoKey;
 }
 
 /** Usuário cacheado (para acesso offline) */

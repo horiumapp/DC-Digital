@@ -3,7 +3,6 @@ import {createRoot} from 'react-dom/client';
 import {useRegisterSW} from 'virtual:pwa-register/react';
 import App from './App.tsx';
 import './index.css';
-import {OfflineProvider} from './contexts/OfflineContext';
 import SWUpdatePrompt from './components/common/SWUpdatePrompt';
 import InstallPrompt from './components/common/InstallPrompt';
 
@@ -45,16 +44,14 @@ function Root() {
 
   return (
     <StrictMode>
-      <OfflineProvider>
-        <App />
-        <InstallPrompt />
-        {showUpdatePrompt && (
-          <SWUpdatePrompt
-            onUpdate={handleUpdate}
-            onDismiss={handleDismissUpdate}
-          />
-        )}
-      </OfflineProvider>
+      <App />
+      <InstallPrompt />
+      {showUpdatePrompt && (
+        <SWUpdatePrompt
+          onUpdate={handleUpdate}
+          onDismiss={handleDismissUpdate}
+        />
+      )}
     </StrictMode>
   );
 }

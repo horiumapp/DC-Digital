@@ -16,7 +16,14 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const successMessage = location.state?.successMessage;
-  const { user: _user } = useAuth();
+  const { user } = useAuth();
+
+  // Redireciona automaticamente se o usuário já estiver logado
+  useEffect(() => {
+    if (user) {
+      navigate(user.role === 'ALUNO' ? '/portal-aluno' : '/turmas', { replace: true });
+    }
+  }, [user, navigate]);
   
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -123,8 +130,15 @@ export default function Login() {
       sessionStorage.setItem('failed_attempts', '0');
       sessionStorage.removeItem('lockout_until');
 
-      // Redirecionar baseado no tipo de login
-      navigate(loginMode === 'aluno' ? '/portal-aluno' : '/turmas');
+      // Redirecionar baseado na role real do usuário, ou fallback para o loginMode
+      const role = signInData?.user?.app_metadata?.role;
+      if (role === 'ALUNO') {
+        navigate('/portal-aluno');
+      } else if (role) {
+        navigate('/turmas');
+      } else {
+        navigate(loginMode === 'aluno' ? '/portal-aluno' : '/turmas');
+      }
 
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);

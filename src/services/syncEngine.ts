@@ -157,6 +157,82 @@ export async function syncAll(): Promise<SyncResult> {
 }
 
 // ============================================================
+// Sanitização e Validação de Payloads (Segurança / Integridade)
+// ============================================================
+
+function sanitizeFrequencia(payload: any): Record<string, unknown> {
+  return {
+    turma_id: String(payload.turma_id),
+    aluno_id: String(payload.aluno_id),
+    data: String(payload.data),
+    tempo: String(payload.tempo),
+    status: String(payload.status || 'P'),
+    participacao: String(payload.participacao || 'Presencial'),
+    disciplina: String(payload.disciplina),
+  };
+}
+
+function sanitizeConteudo(payload: any): Record<string, unknown> {
+  return {
+    turma_id: String(payload.turma_id),
+    data: String(payload.data),
+    tempo: String(payload.tempo),
+    objetos: Array.isArray(payload.objetos) ? payload.objetos.map(String) : [],
+    habilidades: Array.isArray(payload.habilidades) ? payload.habilidades.map(String) : [],
+    descricao: String(payload.descricao || ''),
+    disciplina: String(payload.disciplina),
+  };
+}
+
+function sanitizeAvaliacao(payload: any): Record<string, unknown> {
+  const sanitized: Record<string, unknown> = {
+    turma_id: String(payload.turma_id),
+    tipo: String(payload.tipo),
+    data: String(payload.data),
+    instrumento: String(payload.instrumento || ''),
+    objetos: Array.isArray(payload.objetos)
+      ? payload.objetos.map((obj: any) => ({
+          objeto: String(obj?.objeto || ''),
+          unidade: String(obj?.unidade || ''),
+        }))
+      : [],
+    bimestre: String(payload.bimestre),
+    valor_maximo: Number(payload.valor_maximo || 10),
+    disciplina: String(payload.disciplina),
+  };
+
+  if (payload.id && !String(payload.id).startsWith('temp_')) {
+    sanitized.id = String(payload.id);
+  }
+  if (payload.parent_id) {
+    sanitized.parent_id = String(payload.parent_id);
+  }
+
+  return sanitized;
+}
+
+function sanitizeNota(payload: any): Record<string, unknown> {
+  return {
+    avaliacao_id: String(payload.avaliacao_id),
+    aluno_id: String(payload.aluno_id),
+    valor: Number(payload.valor),
+  };
+}
+
+function sanitizeFechamento(payload: any): Record<string, unknown> {
+  const sanitized: Record<string, unknown> = {
+    turma_id: String(payload.turma_id),
+    disciplina: String(payload.disciplina),
+    bimestre: String(payload.bimestre),
+    status: String(payload.status || 'FECHADO'),
+  };
+  if (payload.usuario_fechamento_id) {
+    sanitized.usuario_fechamento_id = String(payload.usuario_fechamento_id);
+  }
+  return sanitized;
+}
+
+// ============================================================
 // Processamento de itens individuais
 // ============================================================
 
@@ -203,29 +279,33 @@ async function syncFrequencia(operation: string, payload: Record<string, unknown
     return;
   }
 
-  // UPSERT — mesma lógica do turmaService.salvarFrequencia
+  // UPSERT — Suporta tanto lote (batch) quanto registro individual legado
+  const records = Array.isArray(payload.records) ? payload.records : [payload];
+  const sanitizedRecords = records.map(sanitizeFrequencia);
+
   const { error } = await supabase
     .from('frequencias')
-    .upsert(payload, { onConflict: 'turma_id,aluno_id,data,tempo,disciplina' });
+    .upsert(sanitizedRecords, { onConflict: 'turma_id,aluno_id,data,tempo,disciplina' });
   if (error) throw error;
 }
 
 async function syncConteudo(operation: string, payload: Record<string, unknown>): Promise<void> {
+  const sanitized = sanitizeConteudo(payload);
   if (operation === 'DELETE') {
     const { error } = await supabase
       .from('conteudos')
       .delete()
-      .eq('turma_id', payload.turma_id)
-      .eq('data', payload.data)
-      .eq('tempo', payload.tempo)
-      .eq('disciplina', payload.disciplina);
+      .eq('turma_id', sanitized.turma_id)
+      .eq('data', sanitized.data)
+      .eq('tempo', sanitized.tempo)
+      .eq('disciplina', sanitized.disciplina);
     if (error) throw error;
     return;
   }
 
   const { error } = await supabase
     .from('conteudos')
-    .upsert(payload, { onConflict: 'turma_id,data,tempo,disciplina' });
+    .upsert(sanitized, { onConflict: 'turma_id,data,tempo,disciplina' });
   if (error) throw error;
 }
 
@@ -236,47 +316,50 @@ async function syncAvaliacao(operation: string, payload: Record<string, unknown>
     return;
   }
 
+  const sanitized = sanitizeAvaliacao(payload);
+
   // Se tem ID do server, é update
-  if (payload.id && !String(payload.id).startsWith('temp_')) {
+  if (sanitized.id) {
     const { error } = await supabase
       .from('avaliacoes')
-      .update(payload)
-      .eq('id', payload.id);
+      .update(sanitized)
+      .eq('id', sanitized.id);
     if (error) throw error;
   } else {
-    // Insert — remover id temporário
-    const { id: _id, ...insertPayload } = payload;
+    // Insert
     const { error } = await supabase
       .from('avaliacoes')
-      .insert([insertPayload]);
+      .insert([sanitized]);
     if (error) throw error;
   }
 }
 
 async function syncNotas(operation: string, payload: Record<string, unknown>): Promise<void> {
-  // Notas sempre são upsert em batch
+  // Notas sempre são upsert em batch ou individual
   const records = Array.isArray(payload.records) ? payload.records : [payload];
+  const sanitizedRecords = records.map(sanitizeNota);
   const { error } = await supabase
     .from('notas')
-    .upsert(records, { onConflict: 'avaliacao_id,aluno_id' });
+    .upsert(sanitizedRecords, { onConflict: 'avaliacao_id,aluno_id' });
   if (error) throw error;
 }
 
 async function syncFechamento(operation: string, payload: Record<string, unknown>): Promise<void> {
-  if (operation === 'DELETE' || payload.status === 'ABERTO') {
+  const sanitized = sanitizeFechamento(payload);
+  if (operation === 'DELETE' || sanitized.status === 'ABERTO') {
     const { error } = await supabase
       .from('fechamentos_bimestres')
       .delete()
-      .eq('turma_id', payload.turma_id)
-      .eq('disciplina', payload.disciplina)
-      .eq('bimestre', payload.bimestre);
+      .eq('turma_id', sanitized.turma_id)
+      .eq('disciplina', sanitized.disciplina)
+      .eq('bimestre', sanitized.bimestre);
     if (error) throw error;
     return;
   }
 
   const { error } = await supabase
     .from('fechamentos_bimestres')
-    .upsert(payload, { onConflict: 'turma_id,disciplina,bimestre' });
+    .upsert(sanitized, { onConflict: 'turma_id,disciplina,bimestre' });
   if (error) throw error;
 }
 
@@ -297,8 +380,8 @@ async function markLocalRecordSynced(item: { table: string; localId?: number }):
         syncStatus: 'synced',
         updatedAt: timestamp,
       });
-    } catch {
-      // Registro pode já ter sido removido
+    } catch (err) {
+      console.warn(`[SyncEngine] Falha ao marcar registro local ${item.table}/${item.localId} como sincronizado:`, err);
     }
   }
 }
@@ -314,8 +397,8 @@ async function logSync(table: string, operation: string, status: 'success' | 'er
       details,
     };
     await db.syncLogs.add(entry);
-  } catch {
-    // Log não é crítico
+  } catch (err) {
+    console.warn(`[SyncEngine] Falha ao registrar log de sincronização para ${table}/${operation}:`, err);
   }
 }
 

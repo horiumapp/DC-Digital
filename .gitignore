@@ -11,6 +11,11 @@ coverage/
 eslint-report.json
 eslint-report-new.json
 eslint-current.json
+eslint-summary*.json
+eslint-stylish.txt
+eslint-report*.txt
+lint_output.txt
+diario-eslint.json
 .eslintcache
 
 # Debug and temp files
@@ -21,4 +26,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+parse-eslint.cjs
+test_alunos.cjs
 

@@ -338,7 +338,7 @@ export async function salvarFrequencia(
 
   await OfflineStorage.saveFrequenciasBulk(records);
 
-  // 2. Enfileirar para sync (um item por batch)
+  // 2. Enfileirar para sync (batch como um único item)
   const upserts = records.map(r => ({
     turma_id: r.turma_id,
     aluno_id: r.aluno_id,
@@ -349,9 +349,7 @@ export async function salvarFrequencia(
     disciplina: r.disciplina,
   }));
 
-  for (const upsert of upserts) {
-    await Queue.enqueue('frequencias', 'UPSERT', upsert);
-  }
+  await Queue.enqueue('frequencias', 'UPSERT', { records: upserts });
 
   // 3. Se online, tentar sincronizar imediatamente
   if (_isOnline) {
