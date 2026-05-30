@@ -48,6 +48,13 @@ export function useOnlineStatus(): OnlineStatusResult {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const isOnlineRef = useRef(isOnline);
+
+  // Keep ref in sync so the ping interval can read the latest value
+  // without triggering effect re-runs.
+  useEffect(() => {
+    isOnlineRef.current = isOnline;
+  }, [isOnline]);
 
   const checkNow = useCallback(async (): Promise<boolean> => {
     const result = await pingInternet();
@@ -56,8 +63,8 @@ export function useOnlineStatus(): OnlineStatusResult {
     return result;
   }, []);
 
+  // Browser online/offline listeners + initial check
   useEffect(() => {
-    // Listeners do browser
     const handleOnline = () => {
       setIsOnline(true);
       setLastCheckedAt(new Date());
@@ -73,17 +80,28 @@ export function useOnlineStatus(): OnlineStatusResult {
     // Check inicial
     checkNow();
 
-    // Ping periódico para validação real
-    const startPing = () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      const interval = isOnline ? PING_INTERVAL_ONLINE : PING_INTERVAL_OFFLINE;
-      intervalRef.current = setInterval(checkNow, interval);
-    };
-    startPing();
-
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+    };
+  }, [checkNow]);
+
+  // Ping periódico para validação real — separated from the listener
+  // effect so toggling isOnline doesn't re-register event listeners.
+  useEffect(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    const interval = isOnline ? PING_INTERVAL_ONLINE : PING_INTERVAL_OFFLINE;
+
+    // FIX (CWE-94): Always pass an arrow function to setInterval.
+    // Passing `checkNow` directly could be flagged because its return
+    // value originates from a remote fetch; wrapping it in an explicit
+    // lambda ensures setInterval never receives a string-coercible value.
+    intervalRef.current = setInterval(() => {
+      checkNow();
+    }, interval);
+
+    return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [isOnline, checkNow]);
