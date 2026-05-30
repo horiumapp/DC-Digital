@@ -1,14 +1,57 @@
-/**
- * crypto.ts — Criptografia de dados sensíveis no IndexedDB
- * 
- * Usa a Web Crypto API (SubtleCrypto) nativa do browser.
- * Criptografa dados de alunos (CPF, nomes) armazenados localmente.
- * Chave derivada do userId via PBKDF2.
- */
+import { db } from './db';
 
-const SALT = 'dc-digital-offline-salt-2026';
+const LEGACY_SALT = 'dc-digital-offline-salt-2026';
 const ITERATIONS = 100_000;
 const KEY_LENGTH = 256;
+
+// Cache do key material legado para evitar rederivar desnecessariamente
+let _legacyKey: CryptoKey | null = null;
+let _legacyKeyUserId: string | null = null;
+
+async function getLegacyKey(userId: string): Promise<CryptoKey> {
+  if (_legacyKey && _legacyKeyUserId === userId) {
+    return _legacyKey;
+  }
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(userId),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
+  _legacyKey = await crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: encoder.encode(LEGACY_SALT),
+      iterations: ITERATIONS,
+      hash: 'SHA-256',
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: KEY_LENGTH },
+    false,
+    ['encrypt', 'decrypt']
+  );
+  _legacyKeyUserId = userId;
+  return _legacyKey;
+}
+
+async function getOrCreateUserSalt(userId: string): Promise<string> {
+  try {
+    const record = await db.userSalts.get(userId);
+    if (record) {
+      return record.salt;
+    }
+    // Gerar um novo salt aleatório
+    const randomBytes = crypto.getRandomValues(new Uint8Array(16));
+    const newSalt = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    await db.userSalts.put({ userId, salt: newSalt });
+    return newSalt;
+  } catch (err) {
+    console.warn('Erro ao acessar userSalts no IndexedDB. Usando salt legado como fallback:', err);
+    return LEGACY_SALT;
+  }
+}
 
 // ============================================================
 // Derivação de chave
@@ -28,10 +71,12 @@ export async function deriveKey(userId: string): Promise<CryptoKey> {
     ['deriveKey']
   );
 
+  const saltStr = await getOrCreateUserSalt(userId);
+
   return crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
-      salt: encoder.encode(SALT),
+      salt: encoder.encode(saltStr),
       iterations: ITERATIONS,
       hash: 'SHA-256',
     },
@@ -78,13 +123,30 @@ export async function decrypt(encryptedBase64: string, key: CryptoKey): Promise<
   const iv = combined.slice(0, 12);
   const ciphertext = combined.slice(12);
 
-  const plaintext = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv },
-    key,
-    ciphertext
-  );
-
-  return decoder.decode(plaintext);
+  try {
+    const plaintext = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      ciphertext
+    );
+    return decoder.decode(plaintext);
+  } catch (decryptError) {
+    // Se falhar e tivermos o _cachedUserId em memória, tentamos com a chave legado
+    if (_cachedUserId) {
+      try {
+        const legacyKey = await getLegacyKey(_cachedUserId);
+        const plaintext = await crypto.subtle.decrypt(
+          { name: 'AES-GCM', iv },
+          legacyKey,
+          ciphertext
+        );
+        return decoder.decode(plaintext);
+      } catch (legacyError) {
+        throw decryptError; // se falhar as duas, lança o erro original
+      }
+    }
+    throw decryptError;
+  }
 }
 
 // ============================================================
@@ -164,4 +226,6 @@ export async function getOrCreateKey(userId: string): Promise<CryptoKey> {
 export function clearKeyCache(): void {
   _cachedKey = null;
   _cachedUserId = null;
+  _legacyKey = null;
+  _legacyKeyUserId = null;
 }

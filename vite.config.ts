@@ -76,28 +76,9 @@ export default defineConfig(() => {
                 },
               },
             },
-            // Supabase API GET — NetworkFirst com fallback
-            {
-              urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/,
-              handler: 'NetworkFirst',
-              options: {
-                cacheName: 'api-cache-v1',
-                networkTimeoutSeconds: 5,
-                expiration: {
-                  maxEntries: 200,
-                  maxAgeSeconds: 24 * 60 * 60, // 24h
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
           ],
           // Limpar caches antigos automaticamente
           cleanupOutdatedCaches: true,
-          // Skip waiting para ativar novo SW imediatamente quando o usuário aceita
-          skipWaiting: false,
-          clientsClaim: true,
         },
       }),
     ],
@@ -106,7 +87,7 @@ export default defineConfig(() => {
     define: {},
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(__dirname, './src'),
       },
     },
     server: {

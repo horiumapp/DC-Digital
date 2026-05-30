@@ -1,5 +1,6 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Loader2, GraduationCap, Briefcase } from 'lucide-react';
+import { useCaptcha } from '../hooks/useCaptcha';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Background from '../components/Background';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,32 +22,65 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [loginMode, setLoginMode] = useState<'servidor' | 'aluno'>('servidor');
 
-  // Rate limiting client-side: bloquear após 5 tentativas falhas em 60 segundos
-  const failedAttempts = useRef(0);
-  const [lockoutSeconds, setLockoutSeconds] = useState(0);
-  const lockoutTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Rate limiting client-side: bloquear após 5 tentativas falhas em 60 segundos (persistido no sessionStorage)
+  const [failedAttempts, setFailedAttempts] = useState(() => {
+    const stored = sessionStorage.getItem('failed_attempts');
+    return stored ? parseInt(stored, 10) : 0;
+  });
+  
+  const [lockoutSeconds, setLockoutSeconds] = useState(() => {
+    const until = sessionStorage.getItem('lockout_until');
+    if (until) {
+      const remaining = Math.ceil((parseInt(until, 10) - Date.now()) / 1000);
+      return remaining > 0 ? remaining : 0;
+    }
+    return 0;
+  });
 
-  const startLockout = useCallback(() => {
-    const LOCKOUT_DURATION = 60;
-    setLockoutSeconds(LOCKOUT_DURATION);
-    lockoutTimer.current = setInterval(() => {
-      setLockoutSeconds(prev => {
-        if (prev <= 1) {
-          clearInterval(lockoutTimer.current!);
-          lockoutTimer.current = null;
-          failedAttempts.current = 0;
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+  const lockoutTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const captcha = useCaptcha();
+  const showCaptcha = failedAttempts >= 3;
+
+  const startLockout = useCallback((duration = 60) => {
+    const until = Date.now() + duration * 1000;
+    sessionStorage.setItem('lockout_until', until.toString());
+    setLockoutSeconds(duration);
   }, []);
+
+  useEffect(() => {
+    if (lockoutSeconds > 0) {
+      lockoutTimer.current = setInterval(() => {
+        setLockoutSeconds(prev => {
+          if (prev <= 1) {
+            clearInterval(lockoutTimer.current!);
+            lockoutTimer.current = null;
+            sessionStorage.removeItem('lockout_until');
+            setFailedAttempts(0);
+            sessionStorage.setItem('failed_attempts', '0');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (lockoutTimer.current) clearInterval(lockoutTimer.current);
+    };
+  }, [lockoutSeconds]);
 
   const handleRealLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     // Bloquear se em lockout
     if (lockoutSeconds > 0) return;
+
+    if (showCaptcha) {
+      if (!captcha.validateCaptcha()) {
+        setError('Código de verificação (Captcha) incorreto.');
+        captcha.generateNewCaptcha();
+        return;
+      }
+    }
 
     setError(null);
     setIsLoading(true);
@@ -84,6 +118,11 @@ export default function Login() {
         });
       }
 
+      // Se login bem sucedido, limpa tentativas falhas
+      setFailedAttempts(0);
+      sessionStorage.setItem('failed_attempts', '0');
+      sessionStorage.removeItem('lockout_until');
+
       // Redirecionar baseado no tipo de login
       navigate(loginMode === 'aluno' ? '/portal-aluno' : '/turmas');
 
@@ -96,14 +135,22 @@ export default function Login() {
         metadata: { tipo_login: loginMode, erro: errMsg },
       });
 
-      failedAttempts.current += 1;
-      if (failedAttempts.current >= 5 && !lockoutTimer.current) {
-        startLockout();
+      const nextAttempts = failedAttempts + 1;
+      setFailedAttempts(nextAttempts);
+      sessionStorage.setItem('failed_attempts', nextAttempts.toString());
+
+      if (nextAttempts >= 5) {
+        startLockout(60);
         setError('Muitas tentativas falhas. Aguarde 60 segundos antes de tentar novamente.');
-      } else if (loginMode === 'aluno' && errMsg.includes('Invalid login')) {
-        setError('Matrícula ou senha incorreta. Verifique seus dados.');
       } else {
-        setError(translateSupabaseError(errMsg));
+        if (nextAttempts >= 3) {
+          captcha.generateNewCaptcha();
+        }
+        if (loginMode === 'aluno' && errMsg.includes('Invalid login')) {
+          setError('Matrícula ou senha incorreta. Verifique seus dados.');
+        } else {
+          setError(translateSupabaseError(errMsg));
+        }
       }
     } finally {
       setIsLoading(false);
@@ -213,6 +260,37 @@ export default function Login() {
                     Esqueceu a senha?
                   </Link>
                 </div>
+              </div>
+            )}
+
+            {showCaptcha && (
+              <div className="space-y-2 border border-slate-100 p-4 rounded-xl bg-slate-50/50">
+                <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">
+                  Código de Verificação
+                </label>
+                <div className="flex gap-3 items-center">
+                  <div 
+                    onClick={captcha.generateNewCaptcha}
+                    className="cursor-pointer select-none bg-slate-200 text-slate-700 px-4 py-2.5 rounded-lg font-mono font-bold tracking-widest text-lg border border-slate-300 shadow-inner hover:bg-slate-300 transition-all flex items-center justify-center min-w-[80px]"
+                    title="Clique para gerar outro código"
+                  >
+                    {captcha.generatedCaptcha}
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Digite o código"
+                    value={captcha.captchaInput}
+                    onChange={(e) => captcha.setCaptchaInput(e.target.value)}
+                    className="flex-1 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-white"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 font-medium">
+                  Clique no código cinza se precisar recarregá-lo.
+                </p>
+                {captcha.captchaError && (
+                  <p className="text-xs text-red-600 font-bold mt-1">Código incorreto. Tente novamente.</p>
+                )}
               </div>
             )}
 

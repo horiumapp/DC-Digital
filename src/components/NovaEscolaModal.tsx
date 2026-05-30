@@ -55,6 +55,7 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
       inep: '',
       gestor: '',
       ativo: true,
+      logo_url: '',
     });
     onClose();
   };

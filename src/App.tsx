@@ -8,10 +8,10 @@ import { TurmaProvider } from './contexts/TurmaContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ToastProvider } from './components/common/Toast';
 import { ADMIN_ROLES, STAFF_ROLES } from './constants/authConstants';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 // Lazy loading das páginas principais para dividir o peso do javascript
 const Login = React.lazy(() => import('./pages/Login'));
-const _Cadastro = React.lazy(() => import('./pages/Cadastro'));
 const RecuperarSenha = React.lazy(() => import('./pages/RecuperarSenha'));
 const RedefinirSenha = React.lazy(() => import('./pages/RedefinirSenha'));
 
@@ -41,80 +41,80 @@ import CookieBanner from './components/CookieBanner';
 
 export default function App() {
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <TurmaProvider>
-          <Router>
-            {/* Suspense isola e exibe a tela de carregamento para as páginas fatiadas serem importadas */}
-            <Suspense fallback={<LoadingFallback />}>
-              <Routes>
-                {/* Rotas Públicas Apenas (Visitantes) */}
-                <Route element={<ProtectedRoute publicOnly />}>
-                  <Route path="/" element={<Login />} />
-                  {/* Cadastro público desativado — contas são criadas exclusivamente pelo Admin */}
-                  {/* <Route path="/cadastro" element={<Cadastro />} /> */}
-                  <Route path="/recuperar-senha" element={<RecuperarSenha />} />
-                  <Route path="/redefinir-senha" element={<RedefinirSenha />} />
-                </Route>
-                
-                {/* Rotas Legais Públicas (Acessíveis a qualquer visitante) */}
-                <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
-                <Route path="/termos-de-uso" element={<TermosUso />} />
-                <Route path="/solicitacao-lgpd" element={<SolicitacaoLgpd />} />
+    <ErrorBoundary>
+      <ToastProvider>
+        <AuthProvider>
+          <TurmaProvider>
+            <Router>
+              {/* Suspense isola e exibe a tela de carregamento para as páginas fatiadas serem importadas */}
+              <Suspense fallback={<LoadingFallback />}>
+                <Routes>
+                  {/* Rotas Públicas Apenas (Visitantes) */}
+                  <Route element={<ProtectedRoute publicOnly />}>
+                    <Route path="/" element={<Login />} />
+                    <Route path="/recuperar-senha" element={<RecuperarSenha />} />
+                    <Route path="/redefinir-senha" element={<RedefinirSenha />} />
+                  </Route>
+                  
+                  {/* Rotas Legais Públicas (Acessíveis a qualquer visitante) */}
+                  <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
+                  <Route path="/termos-de-uso" element={<TermosUso />} />
+                  <Route path="/solicitacao-lgpd" element={<SolicitacaoLgpd />} />
 
-                {/* Rota Privada de Privacidade (Acessível a qualquer usuário logado) */}
-                <Route element={<ProtectedRoute />}>
-                  <Route path="/minha-privacidade" element={<MinhaPrivacidade />} />
-                </Route>
+                  {/* Rota Privada de Privacidade (Acessível a qualquer usuário logado) */}
+                  <Route element={<ProtectedRoute />}>
+                    <Route path="/minha-privacidade" element={<MinhaPrivacidade />} />
+                  </Route>
 
-                {/* Rota exclusiva do Portal do Aluno (sem Layout/sidebar) */}
-                <Route element={<ProtectedRoute allowedRoles={['ALUNO']} />}>
-                  <Route path="/portal-aluno" element={<PortalAluno />} />
-                </Route>
+                  {/* Rota exclusiva do Portal do Aluno (sem Layout/sidebar) */}
+                  <Route element={<ProtectedRoute allowedRoles={['ALUNO']} />}>
+                    <Route path="/portal-aluno" element={<PortalAluno />} />
+                  </Route>
 
-                {/* Rotas Privadas (Servidores - qualquer logado exceto ALUNO) */}
-                <Route element={<ProtectedRoute allowedRoles={STAFF_ROLES} />}>
-                  <Route element={<Layout />}>
-                    <Route path="/turmas" element={<Turmas />} />
-                    <Route path="/diario" element={<Diario />} />
-                    <Route path="/relatorio-notas" element={<RelatorioNotas />} />
-                    <Route path="/relatorio-medias" element={<RelatorioMedias />} />
-                    <Route path="/relatorio-conteudos" element={<RelatorioConteudos />} />
-                    <Route path="/relatorio-frequencia" element={<RelatorioFrequencia />} />
-                    <Route path="/frequencia" element={<Frequencia />} />
-                    <Route path="/estatisticas" element={<Estatisticas />} />
-                    <Route path="/pendencias-lancamento" element={<PendenciasLancamento />} />
-                    <Route path="/pendencias-frequencia" element={<PendenciasFrequencia />} />
-                    <Route path="/aparata" element={<Aparata />} />
-                    <Route path="/aparata-detalhes" element={<AparataDetalhes />} />
-                    
-                    {/* Rotas Restritas (Apenas Administrativo) */}
-                    <Route element={<ProtectedRoute allowedRoles={ADMIN_ROLES} />}>
-                      <Route path="/administracao" element={<Administracao />} />
-                      <Route path="/curriculo" element={<Curriculo />} />
+                  {/* Rotas Privadas (Servidores - qualquer logado exceto ALUNO) */}
+                  <Route element={<ProtectedRoute allowedRoles={STAFF_ROLES} />}>
+                    <Route element={<Layout />}>
+                      <Route path="/turmas" element={<Turmas />} />
+                      <Route path="/diario" element={<Diario />} />
+                      <Route path="/relatorio-notas" element={<RelatorioNotas />} />
+                      <Route path="/relatorio-medias" element={<RelatorioMedias />} />
+                      <Route path="/relatorio-conteudos" element={<RelatorioConteudos />} />
+                      <Route path="/relatorio-frequencia" element={<RelatorioFrequencia />} />
+                      <Route path="/frequencia" element={<Frequencia />} />
+                      <Route path="/estatisticas" element={<Estatisticas />} />
+                      <Route path="/pendencias-lancamento" element={<PendenciasLancamento />} />
+                      <Route path="/pendencias-frequencia" element={<PendenciasFrequencia />} />
+                      <Route path="/aparata" element={<Aparata />} />
+                      <Route path="/aparata-detalhes" element={<AparataDetalhes />} />
+                      
+                      {/* Rotas Restritas (Apenas Administrativo) */}
+                      <Route element={<ProtectedRoute allowedRoles={ADMIN_ROLES} />}>
+                        <Route path="/administracao" element={<Administracao />} />
+                        <Route path="/curriculo" element={<Curriculo />} />
+                      </Route>
                     </Route>
                   </Route>
-                </Route>
 
-                {/* Rota 404 — Página não encontrada */}
-                <Route path="*" element={
-                  <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-                    <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-200 text-center max-w-md w-full">
-                      <div className="text-6xl font-black text-slate-200 mb-4">404</div>
-                      <h2 className="text-xl font-bold text-slate-800 mb-2">Página não encontrada</h2>
-                      <p className="text-slate-500 mb-6">A página que você procura não existe ou foi movida.</p>
-                      <a href="/turmas" className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#0f2851] text-white font-bold rounded-xl hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20">
-                        Voltar ao Início
-                      </a>
+                  {/* Rota 404 — Página não encontrada */}
+                  <Route path="*" element={
+                    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+                      <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-200 text-center max-w-md w-full">
+                        <div className="text-6xl font-black text-slate-200 mb-4">404</div>
+                        <h2 className="text-xl font-bold text-slate-800 mb-2">Página não encontrada</h2>
+                        <p className="text-slate-500 mb-6">A página que você procura não existe ou foi movida.</p>
+                        <a href="/turmas" className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#0f2851] text-white font-bold rounded-xl hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20">
+                          Voltar ao Início
+                        </a>
+                      </div>
                     </div>
-                  </div>
-                } />
-              </Routes>
-              <CookieBanner />
-            </Suspense>
-          </Router>
-        </TurmaProvider>
-      </AuthProvider>
-    </ToastProvider>
+                  } />
+                </Routes>
+                <CookieBanner />
+              </Suspense>
+            </Router>
+          </TurmaProvider>
+        </AuthProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }

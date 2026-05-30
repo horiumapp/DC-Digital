@@ -6,7 +6,7 @@ export interface SecurityLogInput {
   action: 'LOGIN' | 'LOGIN_FAILED' | 'PERSONAL_DATA_CHANGE' | 'DATA_EXPORT' | 'DATA_DELETION' | 'PERMISSION_CHANGE' | 'ADMIN_ACCESS';
   entity?: string;
   entityId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**

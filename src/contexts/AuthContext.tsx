@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import LoadingFallback from '../components/common/LoadingFallback';
-import { cacheUser, getCachedUser } from '../services/offlineStorage';
+import { cacheUser, getCachedUser, clearAllLocalData } from '../services/offlineStorage';
+import { clearKeyCache } from '../lib/crypto';
 
 export type UserRole = 'ADMIN' | 'GESTOR' | 'SECRETARIO' | 'PROFESSOR' | 'ALUNO';
 
@@ -71,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .maybeSingle();
           
           if (!error && userData) {
-            role = (userData.cargo as UserRole) || role || 'PROFESSOR';
+            role = (userData.cargo as UserRole) || role;
             escolaId = userData.escola_id || escolaId || undefined;
           }
         } catch (err: unknown) {
@@ -80,7 +81,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!role) {
-        role = 'PROFESSOR';
+        console.error('[AuthContext] Acesso não autorizado: Nível de acesso (role) não definido para este usuário.');
+        await supabase.auth.signOut();
+        setUser(null);
+        setLoading(false);
+        alert('Acesso não autorizado: Nível de acesso não definido. Entre em contato com o suporte.');
+        return;
       }
 
       const userObj: User = {
@@ -159,6 +165,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await supabase.auth.signOut();
     } finally {
+      // Limpa dados locais e cache de chaves
+      clearKeyCache();
+      await clearAllLocalData(true);
       setUser(null);
     }
   };

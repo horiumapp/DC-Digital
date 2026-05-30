@@ -22,7 +22,7 @@ export async function enqueue(
   payload: Record<string, unknown>,
   localId?: number
 ): Promise<number> {
-  const hash = hashOperation(table, operation, payload);
+  const hash = await hashOperation(table, operation, payload);
   const timestamp = now();
 
   // Deduplicação: substituir se já existe com mesmo hash e status pending
@@ -209,17 +209,17 @@ export async function clearQueue(): Promise<void> {
  * Retorna contagem por status.
  */
 export async function getQueueStats(): Promise<Record<QueueStatus, number>> {
-  const all = await db.syncQueue.toArray();
-  const stats: Record<QueueStatus, number> = {
-    pending: 0,
-    processing: 0,
-    done: 0,
-    error: 0,
+  const [pending, processing, done, error] = await Promise.all([
+    db.syncQueue.where('status').equals('pending').count(),
+    db.syncQueue.where('status').equals('processing').count(),
+    db.syncQueue.where('status').equals('done').count(),
+    db.syncQueue.where('status').equals('error').count(),
+  ]);
+
+  return {
+    pending,
+    processing,
+    done,
+    error,
   };
-
-  for (const item of all) {
-    stats[item.status] = (stats[item.status] || 0) + 1;
-  }
-
-  return stats;
 }

@@ -658,8 +658,8 @@ export default function RelatorioNotas() {
                   <th style={{ width: '38%' }}>NOME DO ALUNO</th>
                   {principalAvs.map((av) => (
                     <React.Fragment key={av.id}>
-                      <th style={{ textAlign: 'center' }}>{av.nome?.toUpperCase()}</th>
-                      <th style={{ textAlign: 'center' }}>REC. {av.nome?.toUpperCase()}</th>
+                      <th style={{ textAlign: 'center' }}>{av.tipo?.toUpperCase()}</th>
+                      <th style={{ textAlign: 'center' }}>REC. {av.tipo?.toUpperCase()}</th>
                     </React.Fragment>
                   ))}
                   <th style={{ width: '10%', textAlign: 'center' }}>NOTA {periodo[0]}º B</th>

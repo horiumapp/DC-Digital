@@ -162,13 +162,12 @@ export default function PendenciasFrequencia() {
             </div>
             <div>
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Endereço</label>
-               <select 
-                 value={distrito}
-                 readOnly
-                 className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-500 dark:text-slate-400 focus:outline-none cursor-not-allowed shadow-sm appearance-none"
-               >
-                 <option value={distrito}>{distrito || 'Endereço não disponível'}</option>
-               </select>
+                <input 
+                  type="text"
+                  value={distrito || 'Endereço não disponível'}
+                  readOnly
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-500 dark:text-slate-400 focus:outline-none cursor-not-allowed shadow-sm"
+                />
             </div>
           </div>
 

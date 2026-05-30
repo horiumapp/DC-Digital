@@ -569,11 +569,11 @@ export default function RelatorioConteudos() {
           <table className="content-table">
             <thead>
               <tr>
-                <th width="10%">DATA</th>
-                <th width="12%">TEMPO DE AULA</th>
-                <th width="48%">CONTEÚDO</th>
-                <th width="15%">OBSERVAÇÃO</th>
-                <th width="15%">CONTEÚDO MÍNIMO</th>
+                <th style={{ width: '10%' }}>DATA</th>
+                <th style={{ width: '12%' }}>TEMPO DE AULA</th>
+                <th style={{ width: '48%' }}>CONTEÚDO</th>
+                <th style={{ width: '15%' }}>OBSERVAÇÃO</th>
+                <th style={{ width: '15%' }}>CONTEÚDO MÍNIMO</th>
               </tr>
             </thead>
             <tbody>

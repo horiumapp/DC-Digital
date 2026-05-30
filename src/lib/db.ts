@@ -156,6 +156,12 @@ export interface SyncLogEntry {
   serverId?: string;
 }
 
+/** Salt de criptografia por usuário */
+export interface LocalUserSalt {
+  userId: string;
+  salt: string;
+}
+
 /** Usuário cacheado (para acesso offline) */
 export interface CachedUser {
   id: string;
@@ -199,6 +205,7 @@ export class DCDigitalDB extends Dexie {
   syncLogs!: EntityTable<SyncLogEntry, 'id'>;
   cachedUsers!: EntityTable<CachedUser, 'id'>;
   files!: EntityTable<LocalFile, 'localId'>;
+  userSalts!: EntityTable<LocalUserSalt, 'userId'>;
 
   constructor() {
     super('DCDigitalDB');
@@ -210,7 +217,7 @@ export class DCDigitalDB extends Dexie {
       frequencias: '++localId, [turma_id+aluno_id+data+tempo+disciplina], turma_id, syncStatus',
       conteudos:   '++localId, [turma_id+data+tempo+disciplina], turma_id, syncStatus',
       avaliacoes:  '++localId, turma_id, disciplina, syncStatus, id',
-      notas:       '++localId, [avaliacao_id+aluno_id], syncStatus',
+      notas:       '++localId, avaliacao_id, [avaliacao_id+aluno_id], syncStatus',
       horarios:    '++localId, turma_id',
       fechamentos: '++localId, [turma_id+disciplina+bimestre], syncStatus',
 
@@ -219,6 +226,25 @@ export class DCDigitalDB extends Dexie {
       syncLogs:    '++id, timestamp, table, status',
       cachedUsers: 'id',
       files:       '++localId, syncStatus, relatedTable, relatedId',
+    });
+
+    this.version(2).stores({
+      // Dados operacionais
+      turmas:      'id, escola_id',
+      alunos:      'id, turma_id, syncStatus',
+      frequencias: '++localId, [turma_id+aluno_id+data+tempo+disciplina], turma_id, syncStatus',
+      conteudos:   '++localId, [turma_id+data+tempo+disciplina], turma_id, syncStatus',
+      avaliacoes:  '++localId, turma_id, disciplina, syncStatus, id',
+      notas:       '++localId, avaliacao_id, [avaliacao_id+aluno_id], syncStatus',
+      horarios:    '++localId, turma_id',
+      fechamentos: '++localId, [turma_id+disciplina+bimestre], syncStatus',
+
+      // Sistema
+      syncQueue:   '++id, table, status, createdAt, hash',
+      syncLogs:    '++id, timestamp, table, status',
+      cachedUsers: 'id',
+      files:       '++localId, syncStatus, relatedTable, relatedId',
+      userSalts:   'userId',
     });
   }
 }
@@ -233,8 +259,8 @@ export const db = new DCDigitalDB();
 /** Gera timestamp ISO atual */
 export const now = (): string => new Date().toISOString();
 
-/** Gera um hash simples para deduplicação de operações na fila */
-export function hashOperation(table: string, operation: QueueOperation, payload: Record<string, unknown>): string {
+/** Gera um hash SHA-256 truncado para deduplicação de operações na fila */
+export async function hashOperation(table: string, operation: QueueOperation, payload: Record<string, unknown>): Promise<string> {
   // Usa as chaves mais relevantes para cada tabela
   const keyFields: Record<string, string[]> = {
     frequencias: ['turma_id', 'aluno_id', 'data', 'tempo', 'disciplina'],
@@ -247,12 +273,24 @@ export function hashOperation(table: string, operation: QueueOperation, payload:
   const fields = keyFields[table] || Object.keys(payload);
   const key = `${table}:${operation}:${fields.map(f => payload[f] ?? '').join('|')}`;
   
-  // Simple hash
+  try {
+    if (typeof crypto !== 'undefined' && crypto.subtle && crypto.subtle.digest) {
+      const msgUint8 = new TextEncoder().encode(key);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex.slice(0, 16);
+    }
+  } catch (err) {
+    console.warn('SubtleCrypto error, falling back to DJB2:', err);
+  }
+
+  // Fallback síncrono
   let hash = 0;
   for (let i = 0; i < key.length; i++) {
     const char = key.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
     hash |= 0; // Convert to 32-bit integer
   }
-  return hash.toString(36);
+  return 'fb_' + Math.abs(hash).toString(36);
 }

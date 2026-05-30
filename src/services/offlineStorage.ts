@@ -25,7 +25,7 @@ import type {
 // Tipos genéricos
 // ============================================================
 
-type TableName = 'turmas' | 'alunos' | 'frequencias' | 'conteudos' | 'avaliacoes' | 'notas' | 'horarios' | 'fechamentos';
+
 
 // ============================================================
 // Turmas (cache somente leitura)
@@ -123,14 +123,27 @@ export async function saveFrequenciaLocal(data: Omit<LocalFrequencia, 'localId' 
 export async function saveFrequenciasBulk(
   records: Omit<LocalFrequencia, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]
 ): Promise<void> {
+  if (records.length === 0) return;
   const timestamp = now();
+
+  // Como as frequências em lote geralmente pertencem à mesma turma, data, tempo e disciplina,
+  // podemos otimizar buscando todas elas de uma vez para fazer a comparação em memória.
+  const first = records[0];
+  const existingRecords = await db.frequencias
+    .where('turma_id')
+    .equals(first.turma_id)
+    .filter(f => f.data === first.data && f.tempo === first.tempo && f.disciplina === first.disciplina)
+    .toArray();
+
+  const existingMap = new Map<string, LocalFrequencia>();
+  for (const r of existingRecords) {
+    const key = `${r.aluno_id}`;
+    existingMap.set(key, r);
+  }
 
   await db.transaction('rw', db.frequencias, async () => {
     for (const data of records) {
-      const existing = await db.frequencias
-        .where('[turma_id+aluno_id+data+tempo+disciplina]')
-        .equals([data.turma_id, data.aluno_id, data.data, data.tempo, data.disciplina])
-        .first();
+      const existing = existingMap.get(data.aluno_id);
 
       if (existing && existing.localId) {
         await db.frequencias.update(existing.localId, {
@@ -160,7 +173,7 @@ export async function getFrequenciasLocal(turmaId: string, disciplina: string, d
 }
 
 export async function getAllFrequenciasLocal(turmaId: string, disciplina?: string): Promise<LocalFrequencia[]> {
-  let query = db.frequencias.where('turma_id').equals(turmaId);
+  const query = db.frequencias.where('turma_id').equals(turmaId);
   if (disciplina) {
     return query.filter(f => f.disciplina.toLowerCase() === disciplina.toLowerCase()).toArray();
   }
@@ -255,7 +268,7 @@ export async function getConteudoLocal(turmaId: string, disciplina: string, data
 }
 
 export async function getAllConteudosLocal(turmaId: string, disciplina?: string): Promise<LocalConteudo[]> {
-  let query = db.conteudos.where('turma_id').equals(turmaId);
+  const query = db.conteudos.where('turma_id').equals(turmaId);
   if (disciplina) {
     return query.filter(c => c.disciplina.toLowerCase() === disciplina.toLowerCase()).toArray();
   }
@@ -335,7 +348,7 @@ export async function saveAvaliacaoLocal(data: Omit<LocalAvaliacao, 'localId' | 
 }
 
 export async function getAvaliacoesLocal(turmaId: string, disciplina?: string): Promise<LocalAvaliacao[]> {
-  let query = db.avaliacoes.where('turma_id').equals(turmaId);
+  const query = db.avaliacoes.where('turma_id').equals(turmaId);
   if (disciplina) {
     return query.filter(a => a.disciplina.toLowerCase() === disciplina.toLowerCase()).toArray();
   }
@@ -412,7 +425,8 @@ export async function saveNotasLocal(records: Omit<LocalNota, 'localId' | 'syncS
 export async function getNotasLocal(avaliacaoIds: string[]): Promise<LocalNota[]> {
   if (avaliacaoIds.length === 0) return [];
   return db.notas
-    .filter(n => avaliacaoIds.includes(n.avaliacao_id))
+    .where('avaliacao_id')
+    .anyOf(avaliacaoIds)
     .toArray();
 }
 
@@ -650,8 +664,8 @@ export async function clearOldSyncedData(maxAgeDays: number = 60): Promise<numbe
 }
 
 /** Limpa TODOS os dados locais (para logout) */
-export async function clearAllLocalData(): Promise<void> {
-  await Promise.all([
+export async function clearAllLocalData(clearQueue = false): Promise<void> {
+  const promises: Promise<any>[] = [
     db.turmas.clear(),
     db.alunos.clear(),
     db.frequencias.clear(),
@@ -663,8 +677,12 @@ export async function clearAllLocalData(): Promise<void> {
     db.syncLogs.clear(),
     db.cachedUsers.clear(),
     db.files.clear(),
-    // NÃO limpa syncQueue — precisa sincronizar antes
-  ]);
+    db.userSalts.clear(),
+  ];
+  if (clearQueue) {
+    promises.push(db.syncQueue.clear());
+  }
+  await Promise.all(promises);
 }
 
 /** Verifica uso de armazenamento */

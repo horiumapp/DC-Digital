@@ -50,7 +50,7 @@ export async function saveUserConsent(input: UserConsentInput) {
 
     if (error) throw error;
     return { data, error: null };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[LGPD Service] Erro ao salvar consentimento no banco:', error);
     return { data: null, error };
   }
@@ -77,7 +77,7 @@ export async function submitLgpdRequest(input: LgpdRequestInput) {
 
     if (error) throw error;
     return { data, error: null };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[LGPD Service] Erro ao enviar solicitação LGPD:', error);
     return { data: null, error };
   }
@@ -100,7 +100,7 @@ export async function listLgpdRequests(emailFilter?: string) {
     const { data, error } = await query;
     if (error) throw error;
     return { data: (data as LgpdRequest[]) || [], error: null };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[LGPD Service] Erro ao listar solicitações LGPD:', error);
     return { data: [], error };
   }
@@ -128,7 +128,7 @@ export async function updateLgpdRequest(
 
     if (error) throw error;
     return { data, error: null };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[LGPD Service] Erro ao atualizar solicitação LGPD:', error);
     return { data: null, error };
   }

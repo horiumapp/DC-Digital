@@ -607,11 +607,11 @@ export default function RelatorioFrequencia() {
           <table className="data-table">
             <thead>
               <tr>
-                <th width="3%">Nº</th>
-                <th width="20%">ALUNO</th>
-                {colunasDatas.map(col => <th key={col} className="w-[2%] text-[6px]">{col.split('|')[0].substring(0, 5)}<br />{col.split('|')[1].charAt(0)}T</th>)}
-                <th width="6%">FALTAS</th>
-                <th width="6%">FREQ. %</th>
+                <th style={{ width: '3%' }}>Nº</th>
+                <th style={{ width: '20%' }}>ALUNO</th>
+                {colunasDatas.map(col => <th key={col} className="text-[6px]" style={{ width: '2%' }}>{col.split('|')[0].substring(0, 5)}<br />{col.split('|')[1].charAt(0)}T</th>)}
+                <th style={{ width: '6%' }}>FALTAS</th>
+                <th style={{ width: '6%' }}>FREQ. %</th>
               </tr>
             </thead>
             <tbody>

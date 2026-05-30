@@ -131,7 +131,7 @@ export default function ObjetoConhecimentoTab({
           // Garantir que o valor de objetos é sempre string (pode vir como objeto do banco)
           const rawObj = dados.objetos[0];
           const objStr = typeof rawObj === 'object' && rawObj !== null
-            ? (rawObj.descricao || rawObj.titulo_oc || JSON.stringify(rawObj))
+            ? ((rawObj as any).descricao || (rawObj as any).titulo_oc || JSON.stringify(rawObj))
             : (rawObj || '');
           setObjetoSalvo(true);
           setObjetoData({

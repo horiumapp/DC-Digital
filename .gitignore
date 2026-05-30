@@ -6,3 +6,19 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# ESLint reports and logs
+eslint-report.json
+eslint-report-new.json
+eslint-current.json
+.eslintcache
+
+# Debug and temp files
+.gemini/
+metadata.json
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+

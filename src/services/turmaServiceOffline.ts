@@ -17,17 +17,7 @@ import * as OfflineStorage from './offlineStorage';
 import * as Queue from './offlineQueue';
 import * as SyncEngine from './syncEngine';
 
-const getTid = (turmaId: string | number): string => turmaId.toString().split('||')[0];
-
-const normalizarDataISO = (data: string): string => {
-  if (!data) return data;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(data)) return data;
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(data)) {
-    const [d, m, y] = data.split('/');
-    return `${y}-${m}-${d}`;
-  }
-  return data;
-};
+import { getTid, normalizarDataISO } from '../utils/turmaUtils';
 
 // ============================================================
 // Flag de conectividade (atualizada externamente pelo OfflineContext)
