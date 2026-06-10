@@ -53,8 +53,20 @@ export async function getCachedTurmas(escolaId?: string): Promise<LocalTurma[]> 
 
 async function getCryptoKey(): Promise<CryptoKey | null> {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
+    let userId: string | undefined;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      userId = session?.user?.id;
+    } catch {
+      // Ignora erro de rede/sessão
+    }
+
+    if (!userId) {
+      const cached = await getCachedUser();
+      userId = cached?.id;
+    }
+
     if (!userId) return null;
     return await getOrCreateKey(userId);
   } catch (err) {
@@ -65,15 +77,16 @@ async function getCryptoKey(): Promise<CryptoKey | null> {
 
 export async function cacheAlunos(alunos: Omit<LocalAluno, 'syncStatus' | 'updatedAt'>[]): Promise<void> {
   const key = await getCryptoKey();
+  if (!key) {
+    throw new Error('Chave de criptografia não disponível. Operação cancelada por segurança de dados (LGPD).');
+  }
   const records = await Promise.all(alunos.map(async a => {
     let record = {
       ...a,
       syncStatus: 'synced' as SyncStatus,
       updatedAt: now(),
     };
-    if (key) {
-      record = await encryptFields(record as any, ['nome', 'cpf'], key);
-    }
+    record = await encryptFields(record as any, ['nome', 'cpf'], key);
     return record;
   }));
   await db.alunos.bulkPut(records as unknown as LocalAluno[]);

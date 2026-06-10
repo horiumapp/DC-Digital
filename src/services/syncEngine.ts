@@ -6,7 +6,7 @@
  * de conflitos via last-write-wins.
  */
 import { supabase } from '../lib/supabase';
-import { db, now, type SyncLogEntry, type SyncQueueItem } from '../lib/db';
+import { db, now, hashOperation, type SyncLogEntry, type SyncQueueItem } from '../lib/db';
 import * as Queue from './offlineQueue';
 
 // ============================================================
@@ -99,11 +99,16 @@ export async function syncAll(): Promise<SyncResult> {
     while (item?.id) {
       try {
         await Queue.markProcessing(item.id);
-        await processItem(item);
+        const serverId = await processItem(item);
         await Queue.markDone(item.id);
         
-        // Atualizar syncStatus do registro local
-        await markLocalRecordSynced(item);
+        // Se processItem retornou um novo ID (no caso de inserção de avaliação com ID temporário)
+        if (item.table === 'avaliacoes' && serverId && item.localId) {
+          await updateTempAvaliacaoId(item.localId, serverId);
+        } else {
+          // Atualizar syncStatus do registro local
+          await markLocalRecordSynced(item);
+        }
 
         await logSync(item.table, item.operation, 'success');
         result.synced++;
@@ -118,11 +123,8 @@ export async function syncAll(): Promise<SyncResult> {
         result.errors.push(`${item.table}/${item.operation}: ${errorMsg}`);
         emit('itemFailed', { table: item.table, error: errorMsg });
 
-        // Se ficou offline durante o sync, parar
-        if (!navigator.onLine) {
-          result.errors.push('Conexão perdida durante sincronização');
-          break;
-        }
+        // Para manter a integridade FIFO rígida, interrompe o loop em qualquer falha
+        break;
       }
 
       // Próximo item
@@ -224,7 +226,7 @@ function sanitizeFechamento(payload: any): Record<string, unknown> {
 // Processamento de itens individuais
 // ============================================================
 
-async function processItem(item: SyncQueueItem): Promise<void> {
+async function processItem(item: SyncQueueItem): Promise<string | null> {
   if (!item) throw new Error('Item nulo');
 
   const payload = JSON.parse(item.payload);
@@ -232,19 +234,18 @@ async function processItem(item: SyncQueueItem): Promise<void> {
   switch (item.table) {
     case 'frequencias':
       await syncFrequencia(item.operation, payload);
-      break;
+      return null;
     case 'conteudos':
       await syncConteudo(item.operation, payload);
-      break;
+      return null;
     case 'avaliacoes':
-      await syncAvaliacao(item.operation, payload);
-      break;
+      return await syncAvaliacao(item.operation, payload);
     case 'notas':
       await syncNotas(item.operation, payload);
-      break;
+      return null;
     case 'fechamentos':
       await syncFechamento(item.operation, payload);
-      break;
+      return null;
     default:
       throw new Error(`Tabela desconhecida: ${item.table}`);
   }
@@ -297,11 +298,11 @@ async function syncConteudo(operation: string, payload: Record<string, unknown>)
   if (error) throw error;
 }
 
-async function syncAvaliacao(operation: string, payload: Record<string, unknown>): Promise<void> {
+async function syncAvaliacao(operation: string, payload: Record<string, unknown>): Promise<string | null> {
   if (operation === 'DELETE') {
     const { error } = await supabase.from('avaliacoes').delete().eq('id', payload.id);
     if (error) throw error;
-    return;
+    return null;
   }
 
   const sanitized = sanitizeAvaliacao(payload);
@@ -313,12 +314,16 @@ async function syncAvaliacao(operation: string, payload: Record<string, unknown>
       .update(sanitized)
       .eq('id', sanitized.id);
     if (error) throw error;
+    return String(sanitized.id);
   } else {
     // Insert
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('avaliacoes')
-      .insert([sanitized]);
+      .insert([sanitized])
+      .select('id')
+      .single();
     if (error) throw error;
+    return data ? String(data.id) : null;
   }
 }
 
@@ -354,6 +359,78 @@ async function syncFechamento(operation: string, payload: Record<string, unknown
 // ============================================================
 // Helpers
 // ============================================================
+
+/** Atualiza as referências locais e da fila de um ID temporário de avaliação para o UUID final */
+async function updateTempAvaliacaoId(localId: number, serverId: string): Promise<void> {
+  const timestamp = now();
+  const tempIdString = `temp_${localId}`;
+
+  await db.transaction('rw', [db.avaliacoes, db.notas, db.syncQueue], async () => {
+    // 1. Atualizar registro local da avaliação
+    await db.avaliacoes.update(localId, {
+      id: serverId,
+      syncStatus: 'synced',
+      updatedAt: timestamp,
+    });
+
+    // 2. Atualizar notas locais associadas
+    const notasAfetadas = await db.notas.where('avaliacao_id').equals(tempIdString).toArray();
+    for (const nota of notasAfetadas) {
+      if (nota.localId) {
+        await db.notas.update(nota.localId, {
+          avaliacao_id: serverId,
+          updatedAt: timestamp,
+        });
+      }
+    }
+
+    // 3. Atualizar payloads das operações pendentes de notas e avaliações na fila (syncQueue)
+    const queueItems = await db.syncQueue.where('status').equals('pending').toArray();
+    for (const item of queueItems) {
+      let payloadChanged = false;
+      const payloadObj = JSON.parse(item.payload);
+
+      // Se for a tabela notas
+      if (item.table === 'notas') {
+        if (payloadObj.avaliacao_id === tempIdString) {
+          payloadObj.avaliacao_id = serverId;
+          payloadChanged = true;
+        }
+        if (Array.isArray(payloadObj.records)) {
+          payloadObj.records = payloadObj.records.map((r: any) => {
+            if (r.avaliacao_id === tempIdString) {
+              r.avaliacao_id = serverId;
+              payloadChanged = true;
+            }
+            return r;
+          });
+        }
+      }
+
+      // Se for tabela avaliacoes (ex: um UPDATE ou DELETE posterior)
+      if (item.table === 'avaliacoes') {
+        if (payloadObj.id === tempIdString) {
+          payloadObj.id = serverId;
+          payloadChanged = true;
+        }
+        if (payloadObj.parent_id === tempIdString) {
+          payloadObj.parent_id = serverId;
+          payloadChanged = true;
+        }
+      }
+
+      if (payloadChanged && item.id) {
+        // Recalcular hash para consistência com o novo payload
+        const newHash = await hashOperation(item.table, item.operation, payloadObj);
+        await db.syncQueue.update(item.id, {
+          payload: JSON.stringify(payloadObj),
+          hash: newHash,
+          updatedAt: timestamp,
+        });
+      }
+    }
+  });
+}
 
 /** Atualiza o syncStatus do registro local para 'synced' */
 async function markLocalRecordSynced(item: { table: string; localId?: number }): Promise<void> {
