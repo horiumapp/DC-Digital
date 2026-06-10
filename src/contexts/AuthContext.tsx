@@ -177,6 +177,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Limpa dados locais e cache de chaves
       clearKeyCache();
       await clearAllLocalData(true);
+      sessionStorage.removeItem('activeEscolaId');
+      sessionStorage.removeItem('activeTurno');
       setUser(null);
     }
   };

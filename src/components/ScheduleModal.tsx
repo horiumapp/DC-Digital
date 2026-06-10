@@ -139,29 +139,40 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
       if (profs && profs.length > 0) {
         const profIds = profs.map(p => p.id);
         
-        // 2. Achar a primeira escola alocada para QUALQUER um desses perfis
-        const { data: alocData } = await supabase
-          .from('professor_alocacoes')
-          .select('escola_id')
-          .in('professor_id', profIds)
-          .limit(1);
+        // Verificar se há uma escola ativa no sessionStorage
+        const activeEscolaId = sessionStorage.getItem('activeEscolaId');
+        if (activeEscolaId) {
+          fetchData(profIds, activeEscolaId);
+        } else {
+          // 2. Achar a primeira escola alocada para QUALQUER um desses perfis
+          const { data: alocData } = await supabase
+            .from('professor_alocacoes')
+            .select('escola_id')
+            .in('professor_id', profIds)
+            .limit(1);
 
-        if (alocData && alocData.length > 0) {
-          // Passamos a lista de IDs para o fetchData
-          fetchData(profIds, alocData[0].escola_id);
+          if (alocData && alocData.length > 0) {
+            // Passamos a lista de IDs para o fetchData
+            fetchData(profIds, alocData[0].escola_id);
+          }
         }
       }
     } catch (err) {
       console.warn('[ScheduleModal] Falha ao obter contexto online do professor, tentando local:', err);
       // Quando offline, podemos simplesmente obter a escola_id e turmas_id do cache local de turmas
       try {
-        const localTurmas = await db.turmas.toArray();
-        if (localTurmas.length > 0) {
-          // Usa a escola_id da primeira turma disponível no cache local
-          const escolaId = localTurmas[0].escola_id;
-          if (escolaId) {
-            // Simulamos um array de profIds vazio ou fake, já que o fallback do fetchData buscará direto pelas turmas
-            fetchData(['offline_prof_id'], escolaId);
+        const activeEscolaId = sessionStorage.getItem('activeEscolaId');
+        if (activeEscolaId) {
+          fetchData(['offline_prof_id'], activeEscolaId);
+        } else {
+          const localTurmas = await db.turmas.toArray();
+          if (localTurmas.length > 0) {
+            // Usa a escola_id da primeira turma disponível no cache local
+            const escolaId = localTurmas[0].escola_id;
+            if (escolaId) {
+              // Simulamos um array de profIds vazio ou fake, já que o fallback do fetchData buscará direto pelas turmas
+              fetchData(['offline_prof_id'], escolaId);
+            }
           }
         }
       } catch (localErr) {

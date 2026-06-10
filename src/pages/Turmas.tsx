@@ -144,7 +144,13 @@ export default function Turmas() {
           if (isMounted.current) {
             setProfessorDisciplinas(cached.professorDisciplinas || 'POLIVALENTE');
             setAlocacoes(cached.alocacoes);
-            setAlocacaoAtiva(cached.alocacoes[0]);
+            const savedEscolaId = sessionStorage.getItem('activeEscolaId');
+            const savedTurno = sessionStorage.getItem('activeTurno');
+            const restoredAloc = cached.alocacoes.find(a => a.escola_id === savedEscolaId && a.turno === savedTurno);
+            const initialAloc = restoredAloc || cached.alocacoes[0];
+            setAlocacaoAtiva(initialAloc);
+            sessionStorage.setItem('activeEscolaId', initialAloc.escola_id);
+            sessionStorage.setItem('activeTurno', initialAloc.turno);
           }
           return;
         }
@@ -202,7 +208,13 @@ export default function Turmas() {
           });
 
           setAlocacoes(mappedAlocs);
-          setAlocacaoAtiva(mappedAlocs[0]); // Seleciona a primeira por padrão
+          const savedEscolaId = sessionStorage.getItem('activeEscolaId');
+          const savedTurno = sessionStorage.getItem('activeTurno');
+          const restoredAloc = mappedAlocs.find(a => a.escola_id === savedEscolaId && a.turno === savedTurno);
+          const initialAloc = restoredAloc || mappedAlocs[0];
+          setAlocacaoAtiva(initialAloc);
+          sessionStorage.setItem('activeEscolaId', initialAloc.escola_id);
+          sessionStorage.setItem('activeTurno', initialAloc.turno);
 
           // Atualizar o cache local do usuário com as alocações e disciplinas obtidas
           const cached = await getCachedUser();
@@ -230,7 +242,13 @@ export default function Turmas() {
           if (cached && cached.id === user.id && cached.alocacoes && cached.alocacoes.length > 0) {
             setProfessorDisciplinas(cached.professorDisciplinas || 'POLIVALENTE');
             setAlocacoes(cached.alocacoes);
-            setAlocacaoAtiva(cached.alocacoes[0]);
+            const savedEscolaId = sessionStorage.getItem('activeEscolaId');
+            const savedTurno = sessionStorage.getItem('activeTurno');
+            const restoredAloc = cached.alocacoes.find(a => a.escola_id === savedEscolaId && a.turno === savedTurno);
+            const initialAloc = restoredAloc || cached.alocacoes[0];
+            setAlocacaoAtiva(initialAloc);
+            sessionStorage.setItem('activeEscolaId', initialAloc.escola_id);
+            sessionStorage.setItem('activeTurno', initialAloc.turno);
             return;
           }
         } catch (cacheErr) {
@@ -502,7 +520,11 @@ export default function Turmas() {
         onClose={() => setIsLotacaoModalOpen(false)}
         alocacoes={alocacoes}
         alocacaoAtiva={alocacaoAtiva}
-        onSelect={(aloc) => setAlocacaoAtiva(aloc)}
+        onSelect={(aloc) => {
+          setAlocacaoAtiva(aloc);
+          sessionStorage.setItem('activeEscolaId', aloc.escola_id);
+          sessionStorage.setItem('activeTurno', aloc.turno);
+        }}
       />
     </div>
   );
