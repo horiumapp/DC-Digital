@@ -497,6 +497,13 @@ export default function Turmas() {
           </div>
         </main>
       </div>
+      <SelecionarLotacaoModal
+        isOpen={isLotacaoModalOpen}
+        onClose={() => setIsLotacaoModalOpen(false)}
+        alocacoes={alocacoes}
+        alocacaoAtiva={alocacaoAtiva}
+        onSelect={(aloc) => setAlocacaoAtiva(aloc)}
+      />
     </div>
   );
 }
