@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, ChevronDown, GraduationCap, Building2, Clock, Calendar, AlertCircle } from 'lucide-react';
+import { Search, ChevronDown, GraduationCap, Building2, Clock, Calendar, AlertCircle, Pencil } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { APP_CONFIG } from '../config/appConfig';
 import { useTurma, Turma } from '../contexts/TurmaContext';
@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/common/Toast';
 import { getCachedUser, cacheUser, cacheTurmas, getCachedTurmas } from '../services/offlineStorage';
+import SelecionarLotacaoModal from '../components/SelecionarLotacaoModal';
 
 interface EscolaAlocacao {
   id: string;
@@ -42,6 +43,7 @@ export default function Turmas() {
   
   const [alocacoes, setAlocacoes] = useState<EscolaAlocacao[]>([]);
   const [alocacaoAtiva, setAlocacaoAtiva] = useState<EscolaAlocacao | null>(null);
+  const [isLotacaoModalOpen, setIsLotacaoModalOpen] = useState(false);
   const [turmasBD, setTurmasBD] = useState<TurmaBD[]>([]);
   const [loading, setLoading] = useState(true);
   const [professorDisciplinas, setProfessorDisciplinas] = useState<string>('');
@@ -361,21 +363,13 @@ export default function Turmas() {
             <span className="bg-emerald-100 text-emerald-700 text-[12px] font-bold px-3 py-1 rounded-full border border-emerald-200">Ano: {APP_CONFIG.YEAR}</span>
           </div>
           {alocacoes.length > 1 && (
-            <div className="flex gap-2">
-              {alocacoes.map(a => (
-                <button
-                  key={a.id}
-                  onClick={() => setAlocacaoAtiva(a)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
-                    alocacaoAtiva?.id === a.id 
-                    ? 'bg-[#0f2851] text-white shadow-lg shadow-[#0f2851]/20' 
-                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  {a.turno}
-                </button>
-              ))}
-            </div>
+            <button
+              onClick={() => setIsLotacaoModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-blue-600/10 active:scale-95 cursor-pointer"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              <span>Alterar lotação</span>
+            </button>
           )}
         </div>
 
