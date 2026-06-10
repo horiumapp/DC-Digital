@@ -17,7 +17,7 @@ export default function Layout() {
   const { clearLocalData } = useOffline();
 
   // If no user, mock a fallback slightly just to not break layout in weird state
-  const hasAdminAccess = user ? ADMIN_ROLES.includes(user.role) : false;
+  const hasAdminAccess = user ? user.role === 'ADMIN' : false;
   const nameDisplay = user?.name || 'Visitante';
   const titleDisplay = user?.title || 'Convidado';
 
