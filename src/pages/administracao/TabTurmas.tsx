@@ -24,6 +24,16 @@ export default function TabTurmas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Auto-selecionar escola se for Gestor ou Secretário
+  useEffect(() => {
+    if ((user?.role === 'GESTOR' || user?.role === 'SECRETARIO') && user.escola_id && escolas.length > 0 && !selectedEscola) {
+      const minhaEscola = escolas.find(e => e.id === user.escola_id);
+      if (minhaEscola) {
+        setSelectedEscola(minhaEscola);
+      }
+    }
+  }, [user, escolas, selectedEscola]);
+
   async function fetchInitialData() {
     setLoading(true);
     await Promise.all([
@@ -200,12 +210,14 @@ export default function TabTurmas() {
             
             <div className="relative z-10 flex items-center justify-between">
               <div className="flex items-center gap-5">
-                <button 
-                  onClick={() => setSelectedEscola(null)}
-                  className="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all border border-white/10"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
+                {!(user?.role === 'GESTOR' || user?.role === 'SECRETARIO') && (
+                  <button 
+                    onClick={() => setSelectedEscola(null)}
+                    className="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all border border-white/10"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                )}
                 <div>
                   <div className="flex items-center gap-3">
                     <Users className="w-6 h-6 text-white/80" />
@@ -260,7 +272,7 @@ export default function TabTurmas() {
                 </div>
               </div>
               
-              {user?.role === 'ADMIN' && (
+              {(user?.role === 'ADMIN' || user?.role === 'GESTOR' || user?.role === 'SECRETARIO') && (
                 <button 
                   onClick={() => {
                     setTurmaParaEditar(null);

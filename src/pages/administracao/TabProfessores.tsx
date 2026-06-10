@@ -62,17 +62,15 @@ export default function TabProfessores() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fase 2: Se o usuário é GESTOR, auto-selecionar a escola dele
-  /* eslint-disable react-hooks/set-state-in-effect */
+  // Fase 2: Se o usuário é GESTOR ou SECRETARIO, auto-selecionar a escola dele
   useEffect(() => {
-    if (user?.role === 'GESTOR' && user.escola_id && escolas.length > 0 && !selectedEscola) {
+    if ((user?.role === 'GESTOR' || user?.role === 'SECRETARIO') && user.escola_id && escolas.length > 0 && !selectedEscola) {
       const minhaEscola = escolas.find(e => e.id === user.escola_id);
       if (minhaEscola) {
         setSelectedEscola(minhaEscola);
       }
     }
   }, [user, escolas, selectedEscola]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function fetchInitialData() {
     setLoading(true);
@@ -313,7 +311,9 @@ export default function TabProfessores() {
                     setSelectedEscola(null);
                     setBuscaProfessor('');
                   }}
-                  className={`p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all border border-white/10 ${user?.role === 'GESTOR' ? 'hidden' : ''}`}
+                  className={`p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all border border-white/10 ${
+                    (user?.role === 'GESTOR' || user?.role === 'SECRETARIO') ? 'hidden' : ''
+                  }`}
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </button>
