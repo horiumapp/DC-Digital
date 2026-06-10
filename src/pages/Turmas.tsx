@@ -365,7 +365,7 @@ export default function Turmas() {
           {alocacoes.length > 1 && (
             <button
               onClick={() => setIsLotacaoModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-blue-600/10 active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0f2851] hover:bg-[#1a3a6d] text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-[#0f2851]/10 active:scale-95 cursor-pointer"
             >
               <Pencil className="w-3.5 h-3.5" />
               <span>Alterar lotação</span>
