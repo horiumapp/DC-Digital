@@ -34,12 +34,6 @@ let _debounceTimer: ReturnType<typeof setTimeout> | null = null;
 const _listeners: Set<SyncListener> = new Set();
 
 const DEBOUNCE_MS = 2000;
-const MIN_BACKOFF_MS = 1000;
-const MAX_BACKOFF_MS = 30000;
-
-function getBackoffMs(retryCount: number): number {
-  return Math.min(MIN_BACKOFF_MS * Math.pow(2, retryCount), MAX_BACKOFF_MS);
-}
 
 function setState(newState: SyncState) {
   if (_state !== newState) {
@@ -117,18 +111,12 @@ export async function syncAll(): Promise<SyncResult> {
 
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
-        const willRetry = await Queue.retry(item.id, errorMsg);
+        await Queue.retry(item.id, errorMsg);
         
         await logSync(item.table, item.operation, 'error', errorMsg);
         result.failed++;
         result.errors.push(`${item.table}/${item.operation}: ${errorMsg}`);
         emit('itemFailed', { table: item.table, error: errorMsg });
-
-        if (willRetry) {
-          // Esperar com backoff antes do próximo retry
-          const backoff = getBackoffMs(item.retryCount || 0);
-          await sleep(backoff);
-        }
 
         // Se ficou offline durante o sync, parar
         if (!navigator.onLine) {
@@ -400,10 +388,6 @@ async function logSync(table: string, operation: string, status: 'success' | 'er
   } catch (err) {
     console.warn(`[SyncEngine] Falha ao registrar log de sincronização para ${table}/${operation}:`, err);
   }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /** Retorna logs recentes de sincronização */

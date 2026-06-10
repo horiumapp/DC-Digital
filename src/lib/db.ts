@@ -142,6 +142,7 @@ export interface SyncQueueItem {
   lastError?: string;
   localId?: number; // referência ao registro local
   hash: string; // hash para deduplicação
+  retryAfter?: string; // timestamp ISO de quando o item pode ser retentado
 }
 
 /** Log de sincronização */

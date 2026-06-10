@@ -25,10 +25,10 @@ export async function enqueue(
   const hash = await hashOperation(table, operation, payload);
   const timestamp = now();
 
-  // Deduplicação: substituir se já existe com mesmo hash e status pending
+  // Deduplicação: substituir se já existe com mesmo hash e status pending (evita mexer em itens 'processing')
   const existing = await db.syncQueue
     .where('hash').equals(hash)
-    .filter(item => item.status === 'pending' || item.status === 'processing')
+    .filter(item => item.status === 'pending')
     .first();
 
   if (existing?.id) {
@@ -64,8 +64,10 @@ export async function dequeue(id: number): Promise<void> {
  * Retorna o próximo item pendente na fila (FIFO).
  */
 export async function peek(): Promise<SyncQueueItem | undefined> {
+  const nowISO = new Date().toISOString();
   return db.syncQueue
     .where('status').equals('pending')
+    .filter(item => !item.retryAfter || item.retryAfter <= nowISO)
     .first();
 }
 
@@ -117,6 +119,10 @@ export async function retry(id: number, error: string): Promise<boolean> {
   if (!item) return false;
 
   const newCount = (item.retryCount || 0) + 1;
+  const MIN_BACKOFF_MS = 1000;
+  const MAX_BACKOFF_MS = 30000;
+  const backoffMs = Math.min(MIN_BACKOFF_MS * Math.pow(2, newCount), MAX_BACKOFF_MS);
+  const retryAfter = new Date(Date.now() + backoffMs).toISOString();
 
   if (newCount >= MAX_RETRIES) {
     await db.syncQueue.update(id, {
@@ -133,6 +139,7 @@ export async function retry(id: number, error: string): Promise<boolean> {
     retryCount: newCount,
     lastError: error,
     updatedAt: now(),
+    retryAfter,
   });
   return true; // Vai tentar novamente
 }
@@ -163,6 +170,7 @@ export async function retryAllErrors(): Promise<number> {
         retryCount: 0,
         lastError: undefined,
         updatedAt: timestamp,
+        retryAfter: undefined,
       });
       count++;
     }
@@ -190,6 +198,7 @@ export async function resetStuckItems(): Promise<number> {
       await db.syncQueue.update(item.id, {
         status: 'pending' as QueueStatus,
         updatedAt: timestamp,
+        retryAfter: undefined,
       });
       count++;
     }

@@ -118,18 +118,19 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 6. Atualizar a tabela public.usuarios com cargo e escola_id
+    // 6. Atualizar ou Inserir na tabela public.usuarios com cargo e escola_id
     const { error: updateError } = await supabaseAdmin
       .from("usuarios")
-      .update({
+      .upsert({
+        id: newUser.user.id,
+        email: email,
+        nome_completo: nome,
         cargo: cargo,
         escola_id: escola_id,
-        nome_completo: nome,
-      })
-      .eq("id", newUser.user.id);
+      }, { onConflict: 'id' });
 
     if (updateError) {
-      console.error("Erro ao atualizar usuarios:", updateError);
+      console.error("Erro ao fazer upsert em usuarios:", updateError);
     }
 
     // 7. Retornar sucesso
