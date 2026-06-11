@@ -116,15 +116,26 @@ export async function syncAll(): Promise<SyncResult> {
 
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
-        await Queue.retry(item.id, errorMsg);
         
-        await logSync(item.table, item.operation, 'error', errorMsg);
-        result.failed++;
-        result.errors.push(`${item.table}/${item.operation}: ${errorMsg}`);
-        emit('itemFailed', { table: item.table, error: errorMsg });
-
-        // Para manter a integridade FIFO rígida, interrompe o loop em qualquer falha
-        break;
+        // FIX #8: Diferenciar erros recuperáveis de não-recuperáveis.
+        // Erros fatais (RLS, duplicate, FK) são movidos para dead letter
+        // em vez de bloquear toda a fila.
+        if (isNonRecoverableError(errorMsg)) {
+          await Queue.fail(item.id, `[DEAD_LETTER] ${errorMsg}`);
+          await logSync(item.table, item.operation, 'error', `[DEAD_LETTER] ${errorMsg}`);
+          result.failed++;
+          result.errors.push(`${item.table}/${item.operation}: [DEAD_LETTER] ${errorMsg}`);
+          emit('itemFailed', { table: item.table, error: errorMsg, deadLetter: true });
+          // Continua para o próximo item em vez de parar
+        } else {
+          // Erro recuperável — retry com backoff e parar o loop
+          await Queue.retry(item.id, errorMsg);
+          await logSync(item.table, item.operation, 'error', errorMsg);
+          result.failed++;
+          result.errors.push(`${item.table}/${item.operation}: ${errorMsg}`);
+          emit('itemFailed', { table: item.table, error: errorMsg });
+          break; // Parar apenas para erros recuperáveis (rede, timeout)
+        }
       }
 
       // Próximo item
@@ -144,6 +155,29 @@ export async function syncAll(): Promise<SyncResult> {
   }
 
   return result;
+}
+
+// ============================================================
+// Detecção de erros não-recuperáveis (FIX #8)
+// ============================================================
+
+/**
+ * Verifica se o erro é não-recuperável (retries não vão resolver).
+ * Esses itens são movidos para dead letter para não bloquear a fila.
+ */
+function isNonRecoverableError(errorMsg: string): boolean {
+  const msg = errorMsg.toLowerCase();
+  return (
+    msg.includes('row-level security') ||
+    msg.includes('new row violates') ||
+    msg.includes('violates foreign key') ||
+    msg.includes('duplicate key') ||
+    msg.includes('unique constraint') ||
+    msg.includes('not found') ||
+    msg.includes('permission denied') ||
+    msg.includes('violates check constraint') ||
+    msg.includes('invalid input syntax')
+  );
 }
 
 // ============================================================
@@ -202,10 +236,15 @@ function sanitizeAvaliacao(payload: any): Record<string, unknown> {
 }
 
 function sanitizeNota(payload: any): Record<string, unknown> {
+  // FIX #14: Validar valor numérico para evitar NaN no banco
+  const valor = Number(payload.valor);
+  if (isNaN(valor) || valor < 0 || valor > 1000) {
+    throw new Error(`Valor de nota inválido: ${payload.valor} (deve ser numérico entre 0 e 1000)`);
+  }
   return {
     avaliacao_id: String(payload.avaliacao_id),
     aluno_id: String(payload.aluno_id),
-    valor: Number(payload.valor),
+    valor,
   };
 }
 

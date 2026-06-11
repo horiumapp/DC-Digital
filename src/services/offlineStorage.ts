@@ -210,13 +210,25 @@ export async function deleteFrequenciasLocal(turmaId: string, disciplina: string
 
 /** Cache frequências vindas do servidor (marca como synced) */
 export async function cacheFrequencias(turmaId: string, records: Omit<LocalFrequencia, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
+  if (records.length === 0) return;
   const timestamp = now();
+
+  // FIX #19: Buscar todos os registros existentes da turma de uma vez
+  // em vez de fazer N queries .where().first() dentro do loop (padrão N+1).
+  const existingRecords = await db.frequencias
+    .where('turma_id').equals(turmaId)
+    .toArray();
+
+  const existingMap = new Map<string, LocalFrequencia>();
+  for (const r of existingRecords) {
+    const key = `${r.aluno_id}|${r.data}|${r.tempo}|${r.disciplina}`;
+    existingMap.set(key, r);
+  }
+
   await db.transaction('rw', db.frequencias, async () => {
     for (const data of records) {
-      const existing = await db.frequencias
-        .where('[turma_id+aluno_id+data+tempo+disciplina]')
-        .equals([turmaId, data.aluno_id, data.data, data.tempo, data.disciplina])
-        .first();
+      const key = `${data.aluno_id}|${data.data}|${data.tempo}|${data.disciplina}`;
+      const existing = existingMap.get(key);
 
       if (existing && existing.localId) {
         // Só sobrescreve se não tem alteração local pendente

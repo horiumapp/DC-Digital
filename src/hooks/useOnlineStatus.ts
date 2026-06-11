@@ -26,9 +26,10 @@ async function pingInternet(): Promise<boolean> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), PING_TIMEOUT);
     
-    // Pinging an uncached API endpoint to bypass the Service Worker's offline cache.
-    // Even if it returns a 404, receiving a response status proves we are online.
-    const response = await fetch('/api/ping', {
+    // FIX #9: Usar /ping.txt (arquivo estático real em public/) em vez de /api/ping
+    // que era reescrito para index.html pelo SPA router, causando falsos positivos
+    // e consumo desnecessário de banda.
+    const response = await fetch('/ping.txt', {
       method: 'HEAD',
       cache: 'no-store',
       signal: controller.signal,

@@ -6,6 +6,14 @@ import { clearKeyCache } from '../lib/crypto';
 
 export type UserRole = 'ADMIN' | 'GESTOR' | 'SECRETARIO' | 'PROFESSOR' | 'ALUNO';
 
+// FIX #10: Interface tipada para alocações (substituindo any[])
+export interface Alocacao {
+  turma_id: string;
+  disciplina: string;
+  escola_id?: string;
+  escola_nome?: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -13,7 +21,7 @@ export interface User {
   role: UserRole;
   title: string;
   escola_id?: string; // ID da escola vinculada (para GESTOR/SECRETARIO)
-  alocacoes?: any[];
+  alocacoes?: Alocacao[];
   professorDisciplinas?: string;
 }
 

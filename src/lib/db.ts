@@ -5,6 +5,7 @@
  * Cada tabela operacional inclui campos de controle: syncStatus, updatedAt, version.
  */
 import Dexie, { type EntityTable } from 'dexie';
+import type { Alocacao } from '../contexts/AuthContext';
 
 // ============================================================
 // Tipos das entidades locais
@@ -173,7 +174,7 @@ export interface CachedUser {
   title: string;
   escola_id?: string;
   cachedAt: string;
-  alocacoes?: any[];
+  alocacoes?: Alocacao[];
   professorDisciplinas?: string;
 }
 

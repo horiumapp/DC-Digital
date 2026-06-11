@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 
 import { getBimestrePorData, formatarDataParaISO } from '../utils/dateUtils';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
-import { setOnlineStatus } from '../services/turmaServiceOffline';
 import { useToast } from '../components/common/Toast';
 import { useAuth } from './AuthContext';
 
