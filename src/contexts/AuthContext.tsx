@@ -8,10 +8,14 @@ export type UserRole = 'ADMIN' | 'GESTOR' | 'SECRETARIO' | 'PROFESSOR' | 'ALUNO'
 
 // FIX #10: Interface tipada para alocações (substituindo any[])
 export interface Alocacao {
-  turma_id: string;
-  disciplina: string;
-  escola_id?: string;
-  escola_nome?: string;
+  id: string;
+  escola_id: string;
+  turno: string;
+  escolas?: {
+    nome: string;
+  };
+  turma_id?: string;
+  disciplina?: string;
 }
 
 export interface User {

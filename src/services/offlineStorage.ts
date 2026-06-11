@@ -25,6 +25,31 @@ import type {
 // Tipos genéricos
 // ============================================================
 
+// FIX #16: Helper para tratamento de QuotaExceededError no IndexedDB.
+// Quando o armazenamento ficar cheio, faz limpeza emergencial e retenta.
+async function withQuotaRecovery<T>(operation: () => Promise<T>): Promise<T> {
+  try {
+    return await operation();
+  } catch (err: unknown) {
+    const isQuotaError = err instanceof DOMException && (
+      err.name === 'QuotaExceededError' ||
+      err.code === 22  // Safari
+    );
+    if (isQuotaError) {
+      console.warn('[offlineStorage] QuotaExceeded — executando limpeza emergencial...');
+      try {
+        const deleted = await clearOldSyncedData(30); // Limpa registros >30 dias
+        console.log(`[offlineStorage] Limpeza emergencial: ${deleted} registros removidos`);
+        return await operation(); // Retenta após limpeza
+      } catch (retryErr) {
+        console.error('[offlineStorage] Falha mesmo após limpeza emergencial:', retryErr);
+        throw retryErr;
+      }
+    }
+    throw err;
+  }
+}
+
 
 
 // ============================================================
@@ -106,30 +131,32 @@ export async function getCachedAlunos(turmaId: string): Promise<LocalAluno[]> {
 // ============================================================
 
 export async function saveFrequenciaLocal(data: Omit<LocalFrequencia, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>): Promise<number> {
-  // Tenta encontrar registro existente pela chave composta
-  const existing = await db.frequencias
-    .where('[turma_id+aluno_id+data+tempo+disciplina]')
-    .equals([data.turma_id, data.aluno_id, data.data, data.tempo, data.disciplina])
-    .first();
+  return withQuotaRecovery(async () => {
+    // Tenta encontrar registro existente pela chave composta
+    const existing = await db.frequencias
+      .where('[turma_id+aluno_id+data+tempo+disciplina]')
+      .equals([data.turma_id, data.aluno_id, data.data, data.tempo, data.disciplina])
+      .first();
 
-  const timestamp = now();
+    const timestamp = now();
 
-  if (existing && existing.localId) {
-    await db.frequencias.update(existing.localId, {
+    if (existing && existing.localId) {
+      await db.frequencias.update(existing.localId, {
+        ...data,
+        syncStatus: 'pending',
+        updatedAt: timestamp,
+        version: (existing.version || 0) + 1,
+      });
+      return existing.localId;
+    }
+
+    return await db.frequencias.add({
       ...data,
       syncStatus: 'pending',
+      createdAt: timestamp,
       updatedAt: timestamp,
-      version: (existing.version || 0) + 1,
+      version: 1,
     });
-    return existing.localId;
-  }
-
-  return await db.frequencias.add({
-    ...data,
-    syncStatus: 'pending',
-    createdAt: timestamp,
-    updatedAt: timestamp,
-    version: 1,
   });
 }
 
