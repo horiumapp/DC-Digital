@@ -63,6 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // 2. Se estiver online, buscar dados atualizados do Supabase
+      // FIX #7: O servidor é SEMPRE fonte de verdade para a role quando online.
+      // Isso impede que um cache obsoleto conceda acesso indevido após revogação.
       if (navigator.onLine) {
         try {
           const { data: userData, error } = await supabase
@@ -72,8 +74,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .maybeSingle();
           
           if (!error && userData) {
-            role = role || (userData.cargo as UserRole);
-            escolaId = userData.escola_id || escolaId || undefined;
+            // Servidor sobrescreve cache/app_metadata quando disponível
+            if (userData.cargo) {
+              role = userData.cargo as UserRole;
+            }
+            if (userData.escola_id) {
+              escolaId = userData.escola_id;
+            }
           }
         } catch (err: unknown) {
           console.error('[AuthContext] Falha ao buscar dados complementares do usuário no DB:', err);

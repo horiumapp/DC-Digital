@@ -677,7 +677,7 @@ export async function clearOldSyncedData(maxAgeDays: number = 60): Promise<numbe
 }
 
 /** Limpa TODOS os dados locais (para logout) */
-export async function clearAllLocalData(clearQueue = false): Promise<void> {
+export async function clearAllLocalData(clearQueue = false, clearCrypto = false): Promise<void> {
   const promises: Promise<any>[] = [
     db.turmas.clear(),
     db.alunos.clear(),
@@ -690,8 +690,13 @@ export async function clearAllLocalData(clearQueue = false): Promise<void> {
     db.syncLogs.clear(),
     db.cachedUsers.clear(),
     db.files.clear(),
-    db.userSalts.clear(),
   ];
+  // FIX #11: userSalts contém chaves CryptoKey não-exportáveis.
+  // Apagar no logout impediria descriptografar dados cacheados após re-login.
+  // Só apagar em exclusão total de dados (LGPD) ou reset completo.
+  if (clearCrypto) {
+    promises.push(db.userSalts.clear());
+  }
   if (clearQueue) {
     promises.push(db.syncQueue.clear());
   }

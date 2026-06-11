@@ -21,11 +21,17 @@
       ]
     },
     {
+      "source": "/ping.txt",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    },
+    {
       "source": "/(.*)",
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none';"
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none';"
         },
         {
           "key": "X-Frame-Options",
@@ -51,6 +57,10 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/ping.txt",
+      "destination": "/ping.txt"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
