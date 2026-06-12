@@ -3,20 +3,14 @@ import { Search, ChevronDown, GraduationCap, Building2, Clock, Calendar, AlertCi
 import { useNavigate, Link } from 'react-router-dom';
 import { APP_CONFIG } from '../config/appConfig';
 import { useTurma, Turma } from '../contexts/TurmaContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, type Alocacao } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/common/Toast';
 import { getCachedUser, cacheUser, cacheTurmas, getCachedTurmas } from '../services/offlineStorage';
 import SelecionarLotacaoModal from '../components/SelecionarLotacaoModal';
 
-interface EscolaAlocacao {
-  id: string;
-  escola_id: string;
-  turno: string;
-  escolas?: {
-    nome: string;
-  };
-}
+// FIX #10: Reutilizar Alocacao do AuthContext em vez de definição local duplicada
+type EscolaAlocacao = Alocacao;
 
 interface TurmaBD {
   id: string | number;

@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 // Importamos o Fallback e os Providers de forma direta, pois são a base
 import LoadingFallback from './components/common/LoadingFallback';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { OfflineProvider } from './contexts/OfflineContext';
 import { TurmaProvider } from './contexts/TurmaContext';
 import ProtectedRoute from './components/ProtectedRoute';
