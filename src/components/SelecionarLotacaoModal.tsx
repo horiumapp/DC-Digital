@@ -1,14 +1,9 @@
 import React from 'react';
 import { X, Building2, Clock, Check } from 'lucide-react';
+import type { Alocacao } from '../contexts/AuthContext';
 
-interface EscolaAlocacao {
-  id: string;
-  escola_id: string;
-  turno: string;
-  escolas?: {
-    nome: string;
-  };
-}
+// FIX #10: Reutilizar Alocacao do AuthContext
+type EscolaAlocacao = Alocacao;
 
 interface SelecionarLotacaoModalProps {
   isOpen: boolean;
