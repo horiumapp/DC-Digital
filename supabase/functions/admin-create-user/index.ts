@@ -9,8 +9,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:5173",
-  // Adicione aqui o domínio de produção, ex:
-  // "https://dc-digital.vercel.app",
+  "https://dc-digital.vercel.app",
 ];
 
 function getCorsHeaders(req: Request): Record<string, string> | null {

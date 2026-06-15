@@ -4,9 +4,7 @@ const LEGACY_SALT = 'dc-digital-offline-salt-2026';
 const ITERATIONS = 100_000;
 const KEY_LENGTH = 256;
 
-// Cache do key material legado para evitar rederivar desnecessariamente
-let _legacyKey: CryptoKey | null = null;
-let _legacyKeyUserId: string | null = null;
+
 
 // Safe base64 conversion to prevent stack overflows with large payloads
 function uint8ArrayToBase64(arr: Uint8Array): string {
@@ -28,80 +26,7 @@ function base64ToUint8Array(base64: string): Uint8Array {
   return bytes;
 }
 
-async function getLegacyKey(userId: string): Promise<CryptoKey> {
-  if (_legacyKey && _legacyKeyUserId === userId) {
-    return _legacyKey;
-  }
-  const encoder = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(userId),
-    'PBKDF2',
-    false,
-    ['deriveKey']
-  );
-  _legacyKey = await crypto.subtle.deriveKey(
-    {
-      name: 'PBKDF2',
-      salt: encoder.encode(LEGACY_SALT),
-      iterations: ITERATIONS,
-      hash: 'SHA-256',
-    },
-    keyMaterial,
-    { name: 'AES-GCM', length: KEY_LENGTH },
-    false,
-    ['encrypt', 'decrypt']
-  );
-  _legacyKeyUserId = userId;
-  return _legacyKey;
-}
 
-async function getOrCreateUserSalt(userId: string): Promise<string> {
-  try {
-    const record = await db.userSalts.get(userId);
-    if (record) {
-      return record.salt;
-    }
-    // Gerar um novo salt aleatório
-    const randomBytes = crypto.getRandomValues(new Uint8Array(16));
-    const newSalt = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-    await db.userSalts.put({ userId, salt: newSalt });
-    return newSalt;
-  } catch (err) {
-    console.warn('Erro ao acessar userSalts no IndexedDB. Usando salt legado como fallback:', err);
-    return LEGACY_SALT;
-  }
-}
-
-/**
- * Deriva uma chave AES-GCM baseada em PBKDF2 a partir do userId (V2).
- * Mantida apenas para retrocompatibilidade em decodificações de dados legados.
- */
-async function getDerivedV2Key(userId: string): Promise<CryptoKey> {
-  const encoder = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(userId),
-    'PBKDF2',
-    false,
-    ['deriveKey']
-  );
-
-  const saltStr = await getOrCreateUserSalt(userId);
-
-  return crypto.subtle.deriveKey(
-    {
-      name: 'PBKDF2',
-      salt: encoder.encode(saltStr),
-      iterations: ITERATIONS,
-      hash: 'SHA-256',
-    },
-    keyMaterial,
-    { name: 'AES-GCM', length: KEY_LENGTH },
-    false,
-    ['encrypt', 'decrypt']
-  );
-}
 
 /**
  * Obtém ou gera uma chave AES-GCM não-exportável armazenada com segurança no IndexedDB.
@@ -160,7 +85,6 @@ export async function encrypt(plaintext: string, key: CryptoKey): Promise<string
 
 /**
  * Descriptografa um texto criptografado com encrypt().
- * Possui fallback automático para chaves PBKDF2 antigas (V2 e V1).
  */
 export async function decrypt(encryptedBase64: string, key: CryptoKey): Promise<string> {
   const decoder = new TextDecoder();
@@ -168,40 +92,12 @@ export async function decrypt(encryptedBase64: string, key: CryptoKey): Promise<
   const iv = combined.slice(0, 12);
   const ciphertext = combined.slice(12);
 
-  try {
-    const plaintext = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv },
-      key,
-      ciphertext
-    );
-    return decoder.decode(plaintext);
-  } catch (decryptError) {
-    // Se falhar a descriptografia, tentamos as chaves anteriores se houver o ID do usuário cacheado
-    if (_cachedUserId) {
-      try {
-        const v2Key = await getDerivedV2Key(_cachedUserId);
-        const plaintext = await crypto.subtle.decrypt(
-          { name: 'AES-GCM', iv },
-          v2Key,
-          ciphertext
-        );
-        return decoder.decode(plaintext);
-      } catch {
-        try {
-          const legacyKey = await getLegacyKey(_cachedUserId);
-          const plaintext = await crypto.subtle.decrypt(
-            { name: 'AES-GCM', iv },
-            legacyKey,
-            ciphertext
-          );
-          return decoder.decode(plaintext);
-        } catch {
-          throw decryptError; // se falhar todas, lança o erro original
-        }
-      }
-    }
-    throw decryptError;
-  }
+  const plaintext = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    ciphertext
+  );
+  return decoder.decode(plaintext);
 }
 
 // ============================================================
@@ -281,6 +177,4 @@ export async function getOrCreateKey(userId: string): Promise<CryptoKey> {
 export function clearKeyCache(): void {
   _cachedKey = null;
   _cachedUserId = null;
-  _legacyKey = null;
-  _legacyKeyUserId = null;
 }

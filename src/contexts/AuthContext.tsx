@@ -203,9 +203,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Limpa dados locais e cache de chaves
       clearKeyCache();
       await clearAllLocalData(true);
-      // Limpar chaves cripto do usuário atual para evitar herança em dispositivos compartilhados
+      // Limpar chaves cripto de outros usuários para evitar herança/acúmulo em dispositivos compartilhados
       if (currentUserId) {
-        try { await db.userSalts.delete(currentUserId); } catch { /* ignora */ }
+        try {
+          await db.userSalts.where('userId').notEqual(currentUserId).delete();
+        } catch (err) {
+          console.warn('[AuthContext] Erro ao limpar salts de outros usuários:', err);
+        }
       }
       sessionStorage.removeItem('activeEscolaId');
       sessionStorage.removeItem('activeTurno');
