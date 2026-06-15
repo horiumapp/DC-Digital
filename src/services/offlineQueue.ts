@@ -50,7 +50,7 @@ export async function enqueue(
     retryCount: 0,
     hash,
     localId,
-  });
+  }) as number;
 }
 
 /**
