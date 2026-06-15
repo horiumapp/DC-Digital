@@ -1,4 +1,4 @@
-import {StrictMode, useState, useCallback} from 'react';
+import {StrictMode, useState, useCallback, useEffect, useRef} from 'react';
 import {createRoot} from 'react-dom/client';
 import {useRegisterSW} from 'virtual:pwa-register/react';
 import App from './App.tsx';
@@ -8,6 +8,7 @@ import InstallPrompt from './components/common/InstallPrompt';
 
 function Root() {
   const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
+  const swIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const {
     updateServiceWorker,
@@ -16,7 +17,8 @@ function Root() {
       console.log('[SW] Registrado:', swUrl);
       // Verificar atualizações a cada 60 minutos
       if (registration) {
-        setInterval(() => {
+        // FIX: Armazenar ref do interval para cleanup
+        swIntervalRef.current = setInterval(() => {
           registration.update();
         }, 60 * 60 * 1000);
       }
@@ -32,6 +34,15 @@ function Root() {
       console.log('[SW] App pronto para uso offline');
     },
   });
+
+  // Limpar interval do SW check ao desmontar
+  useEffect(() => {
+    return () => {
+      if (swIntervalRef.current) {
+        clearInterval(swIntervalRef.current);
+      }
+    };
+  }, []);
 
   const handleUpdate = useCallback(() => {
     setShowUpdatePrompt(false);
