@@ -156,7 +156,7 @@ export async function saveFrequenciaLocal(data: Omit<LocalFrequencia, 'localId' 
       createdAt: timestamp,
       updatedAt: timestamp,
       version: 1,
-    });
+    }) as number;
   });
 }
 
@@ -309,7 +309,7 @@ export async function saveConteudoLocal(data: Omit<LocalConteudo, 'localId' | 's
     createdAt: timestamp,
     updatedAt: timestamp,
     version: 1,
-  });
+  }) as number;
 }
 
 export async function getConteudoLocal(turmaId: string, disciplina: string, data: string, tempo: string): Promise<LocalConteudo | undefined> {
@@ -408,7 +408,7 @@ export async function saveAvaliacaoLocal(data: Omit<LocalAvaliacao, 'localId' | 
     createdAt: timestamp,
     updatedAt: timestamp,
     version: 1,
-  });
+  }) as number;
 }
 
 export async function getAvaliacoesLocal(turmaId: string, disciplina?: string): Promise<LocalAvaliacao[]> {
@@ -587,7 +587,7 @@ export async function saveFechamentoLocal(data: Omit<LocalFechamento, 'localId' 
     createdAt: timestamp,
     updatedAt: timestamp,
     version: 1,
-  });
+  }) as number;
 }
 
 export async function getFechamentosLocal(turmaId: string, disciplina: string): Promise<LocalFechamento[]> {
@@ -661,7 +661,7 @@ export async function saveFileLocal(blob: Blob, filename: string, mimeType: stri
     relatedId,
     syncStatus: 'pending',
     createdAt: now(),
-  });
+  }) as number;
 }
 
 export async function getFileLocal(localId: number): Promise<LocalFile | undefined> {

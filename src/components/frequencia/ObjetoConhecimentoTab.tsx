@@ -6,6 +6,18 @@ import { useCaptcha } from '../../hooks/useCaptcha';
 import { supabase } from '../../lib/supabase';
 import { getBimestrePorData } from '../../utils/dateUtils';
 
+interface CurriculoObjeto {
+  descricao: string;
+}
+interface CurriculoHabilidade {
+  codigo: string;
+}
+interface CurriculoUnidade {
+  nome: string;
+  objetos: CurriculoObjeto[];
+  habilidades: CurriculoHabilidade[];
+}
+
 interface ObjetoConhecimentoTabProps {
   turmaAtiva: any;
   selectedDate: string;
@@ -36,7 +48,7 @@ export default function ObjetoConhecimentoTab({
   const [objetoData, setObjetoData] = useState<{ descricao: string; observacao: string; status: string } | null>(null);
   
   // Lógica de Currículo Dinâmico (Busca no Banco)
-  const [unidadesBD, setUnidadesBD] = useState<any[]>([]);
+  const [unidadesBD, setUnidadesBD] = useState<CurriculoUnidade[]>([]);
   const [_loadingCurriculo, setLoadingCurriculo] = useState(false);
   const [curriculoIndisponivel, setCurriculoIndisponivel] = useState(false);
 
@@ -102,12 +114,12 @@ export default function ObjetoConhecimentoTab({
 
   const objetosDisponiveis = React.useMemo(() => {
     const unidade = unidadesDisponiveis.find(u => u.nome === objetoUnidade);
-    return unidade ? unidade.objetos.map((o: any) => o.descricao) : [];
+    return unidade ? unidade.objetos.map((o: { descricao: string }) => o.descricao) : [];
   }, [objetoUnidade, unidadesDisponiveis]);
 
   const habilidadesDisponiveis = React.useMemo(() => {
     const unidade = unidadesDisponiveis.find(u => u.nome === objetoUnidade);
-    return unidade ? unidade.habilidades.map((h: any) => h.codigo) : [];
+    return unidade ? unidade.habilidades.map((h: { codigo: string }) => h.codigo) : [];
   }, [objetoUnidade, unidadesDisponiveis]);
 
   React.useEffect(() => {
