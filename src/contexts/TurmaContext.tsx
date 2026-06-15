@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from 'react';
 
 import { getBimestrePorData, formatarDataParaISO } from '../utils/dateUtils';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
@@ -120,6 +120,12 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   
   const { showError, showSuccess } = useToast();
 
+  // FIX: Usar refs para as funções de toast para evitar re-renders no useEffect
+  const showErrorRef = useRef(showError);
+  const showSuccessRef = useRef(showSuccess);
+  useEffect(() => { showErrorRef.current = showError; }, [showError]);
+  useEffect(() => { showSuccessRef.current = showSuccess; }, [showSuccess]);
+
   const verificarPeriodoFechado = useCallback((dateOrBimestreId: string): boolean => {
     if (!dateOrBimestreId) return false;
     let bimestreId = dateOrBimestreId;
@@ -201,7 +207,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
           await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alumnosData, signal);
         } catch (err) {
           console.error('Erro ao carregar dados da turma:', err);
-          showError('Não foi possível carregar todos os dados desta turma. Verifique sua conexão.');
+          showErrorRef.current('Não foi possível carregar todos os dados desta turma. Verifique sua conexão.');
         } finally {
           if (!signal.aborted) setLoading(false);
         }
@@ -209,7 +215,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     };
     carregarDados();
     return () => { abortController.abort(); };
-  }, [turmaAtiva, fetchAvaliacoesInterno, showError]);
+  }, [turmaAtiva, fetchAvaliacoesInterno]);
 
   const selecionarTurma = (turma: Turma) => {
     setTurmaAtiva(turma);

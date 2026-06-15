@@ -16,7 +16,6 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@google/genai": "^1.45.0",
     "@supabase/supabase-js": "^2.100.1",
     "dexie": "^4.4.2",
     "dexie-react-hooks": "^1.1.7",
