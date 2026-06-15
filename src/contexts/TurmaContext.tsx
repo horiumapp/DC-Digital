@@ -195,9 +195,9 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
           setFechamentos(fechamentosData);
 
           const faltasMap: Record<string, Set<string>> = {};
-          freqs.forEach((f: { data: string; aluno_id: string; status: string }) => {
+          freqs.forEach((f) => {
             if (f.status === 'F') {
-              const normalizedDate = formatarDataParaISO(f.data);
+              const normalizedDate = formatarDataParaISO(f.data || '');
               if (!faltasMap[normalizedDate]) faltasMap[normalizedDate] = new Set();
               faltasMap[normalizedDate].add(f.aluno_id.toString());
             }
@@ -361,7 +361,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     if (freqData.length > 0) {
       setAlunos(prev => prev.map(aluno => {
         const f = freqData.find(fd => fd.aluno_id === aluno.id);
-        if (f) return { ...aluno, freq: f.status, part: f.participacao };
+        if (f) return { ...aluno, freq: f.status, part: f.participacao || 'Presencial' };
         return aluno;
       }));
       registrarLancamento({ turmaId: rawId, data, tipo: 'frequencia', tempo });
