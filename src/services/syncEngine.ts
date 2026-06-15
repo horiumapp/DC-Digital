@@ -181,10 +181,40 @@ function isNonRecoverableError(errorMsg: string): boolean {
 }
 
 // ============================================================
+// Tipos de Payloads para sanitização (evita 'any')
+// ============================================================
+
+interface FrequenciaPayload {
+  turma_id: string; aluno_id: string; data: string;
+  tempo: string; status?: string; participacao?: string; disciplina: string;
+}
+
+interface ConteudoPayload {
+  turma_id: string; data: string; tempo: string;
+  objetos?: unknown[]; habilidades?: unknown[]; descricao?: string; disciplina: string;
+}
+
+interface AvaliacaoPayload {
+  turma_id: string; tipo: string; data: string; instrumento?: string;
+  objetos?: Array<{ objeto?: string; unidade?: string }>;
+  bimestre: string; valor_maximo?: number; disciplina: string;
+  id?: string | number; parent_id?: string | number;
+}
+
+interface NotaPayload {
+  avaliacao_id: string; aluno_id: string; valor: unknown;
+}
+
+interface FechamentoPayload {
+  turma_id: string; disciplina: string; bimestre: string;
+  status?: string; usuario_fechamento_id?: string;
+}
+
+// ============================================================
 // Sanitização e Validação de Payloads (Segurança / Integridade)
 // ============================================================
 
-function sanitizeFrequencia(payload: any): Record<string, unknown> {
+function sanitizeFrequencia(payload: FrequenciaPayload): Record<string, unknown> {
   return {
     turma_id: String(payload.turma_id),
     aluno_id: String(payload.aluno_id),
@@ -196,7 +226,7 @@ function sanitizeFrequencia(payload: any): Record<string, unknown> {
   };
 }
 
-function sanitizeConteudo(payload: any): Record<string, unknown> {
+function sanitizeConteudo(payload: ConteudoPayload): Record<string, unknown> {
   return {
     turma_id: String(payload.turma_id),
     data: String(payload.data),
@@ -208,14 +238,14 @@ function sanitizeConteudo(payload: any): Record<string, unknown> {
   };
 }
 
-function sanitizeAvaliacao(payload: any): Record<string, unknown> {
+function sanitizeAvaliacao(payload: AvaliacaoPayload): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {
     turma_id: String(payload.turma_id),
     tipo: String(payload.tipo),
     data: String(payload.data),
     instrumento: String(payload.instrumento || ''),
     objetos: Array.isArray(payload.objetos)
-      ? payload.objetos.map((obj: any) => ({
+      ? payload.objetos.map((obj) => ({
           objeto: String(obj?.objeto || ''),
           unidade: String(obj?.unidade || ''),
         }))
@@ -235,8 +265,7 @@ function sanitizeAvaliacao(payload: any): Record<string, unknown> {
   return sanitized;
 }
 
-function sanitizeNota(payload: any): Record<string, unknown> {
-  // FIX #14: Validar valor numérico para evitar NaN no banco
+function sanitizeNota(payload: NotaPayload): Record<string, unknown> {
   const valor = Number(payload.valor);
   if (isNaN(valor) || valor < 0 || valor > 1000) {
     throw new Error(`Valor de nota inválido: ${payload.valor} (deve ser numérico entre 0 e 1000)`);
@@ -248,7 +277,7 @@ function sanitizeNota(payload: any): Record<string, unknown> {
   };
 }
 
-function sanitizeFechamento(payload: any): Record<string, unknown> {
+function sanitizeFechamento(payload: FechamentoPayload): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {
     turma_id: String(payload.turma_id),
     disciplina: String(payload.disciplina),
@@ -268,7 +297,13 @@ function sanitizeFechamento(payload: any): Record<string, unknown> {
 async function processItem(item: SyncQueueItem): Promise<string | null> {
   if (!item) throw new Error('Item nulo');
 
-  const payload = JSON.parse(item.payload);
+  // FIX: Proteger contra payloads corrompidos no IndexedDB
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(item.payload);
+  } catch (parseErr) {
+    throw new Error(`[DEAD_LETTER] Payload JSON corrompido na fila (table=${item.table}, id=${item.id}): ${parseErr}`);
+  }
 
   switch (item.table) {
     case 'frequencias':
@@ -286,7 +321,7 @@ async function processItem(item: SyncQueueItem): Promise<string | null> {
       await syncFechamento(item.operation, payload);
       return null;
     default:
-      throw new Error(`Tabela desconhecida: ${item.table}`);
+      throw new Error(`[DEAD_LETTER] Tabela desconhecida: ${item.table}`);
   }
 }
 

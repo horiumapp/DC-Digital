@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase';
 import LoadingFallback from '../components/common/LoadingFallback';
 import { cacheUser, getCachedUser, clearAllLocalData, getPendingCount } from '../services/offlineStorage';
 import { clearKeyCache } from '../lib/crypto';
+import { useToast } from '../components/common/Toast';
+import { db } from '../lib/db';
 
 export type UserRole = 'ADMIN' | 'GESTOR' | 'SECRETARIO' | 'PROFESSOR' | 'ALUNO';
 
@@ -40,9 +42,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const { showError: showToastError } = useToast();
   // Ref para evitar closure stale no callback onAuthStateChange
   const userRef = useRef<User | null>(null);
   useEffect(() => { userRef.current = user; }, [user]);
+  // Ref para Toast (evita dependência reativa no useEffect)
+  const showToastErrorRef = useRef(showToastError);
+  useEffect(() => { showToastErrorRef.current = showToastError; }, [showToastError]);
 
   // Monitora a sessão real do Supabase
   useEffect(() => {
@@ -63,8 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let name = metadata?.full_name || authUser.email?.split('@')[0] || 'Usuário';
 
       // 1. Tentar ler do cache local primeiro para ter respostas rápidas/offline
+      let cached: Awaited<ReturnType<typeof getCachedUser>> | undefined;
       try {
-        const cached = await getCachedUser();
+        cached = await getCachedUser();
         if (cached && cached.id === authUser.id) {
           if (!role) role = cached.role as UserRole;
           escolaId = cached.escola_id;
@@ -104,7 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await supabase.auth.signOut();
         setUser(null);
         setLoading(false);
-        alert('Acesso não autorizado: Nível de acesso não definido. Entre em contato com o suporte.');
+        showToastErrorRef.current('Acesso não autorizado: Nível de acesso não definido. Entre em contato com o suporte.');
         return;
       }
 
@@ -119,9 +126,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setUser(userObj);
 
-      // 3. Salvar/Atualizar no cache
+      // 3. Salvar/Atualizar no cache (reutiliza resultado do passo 1)
       try {
-        const cached = await getCachedUser();
         const alocacoes = (cached && cached.id === authUser.id) ? cached.alocacoes : undefined;
         const professorDisciplinas = (cached && cached.id === authUser.id) ? cached.professorDisciplinas : undefined;
 
@@ -181,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // LOGOUT — Revoga sessão no servidor ANTES de limpar o state da UI
   const logout = async () => {
+    const currentUserId = userRef.current?.id;
     try {
       const pending = await getPendingCount();
       if (pending > 0) {
@@ -196,6 +203,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Limpa dados locais e cache de chaves
       clearKeyCache();
       await clearAllLocalData(true);
+      // Limpar chaves cripto do usuário atual para evitar herança em dispositivos compartilhados
+      if (currentUserId) {
+        try { await db.userSalts.delete(currentUserId); } catch { /* ignora */ }
+      }
       sessionStorage.removeItem('activeEscolaId');
       sessionStorage.removeItem('activeTurno');
       setUser(null);

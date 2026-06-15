@@ -127,8 +127,8 @@ async function getOrCreateSecureKey(userId: string): Promise<CryptoKey> {
     await db.userSalts.put({ userId, salt: existingSalt, cryptoKey: newKey });
     return newKey;
   } catch (err) {
-    console.warn('Erro ao obter/criar chave segura no IndexedDB. Usando derivação como fallback:', err);
-    return getDerivedV2Key(userId);
+    console.error('[crypto] Erro crítico ao obter/criar chave segura no IndexedDB:', err);
+    throw new Error('Não foi possível obter a chave de criptografia. O armazenamento seguro pode estar indisponível.');
   }
 }
 

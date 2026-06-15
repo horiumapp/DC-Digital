@@ -338,13 +338,25 @@ export async function deleteConteudoLocal(turmaId: string, disciplina: string, d
 }
 
 export async function cacheConteudos(turmaId: string, records: Omit<LocalConteudo, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
+  if (records.length === 0) return;
   const timestamp = now();
+
+  // FIX: Buscar todos os registros existentes da turma de uma vez
+  // em vez de N queries .where().first() dentro do loop (padrão N+1).
+  const existingRecords = await db.conteudos
+    .where('turma_id').equals(turmaId)
+    .toArray();
+
+  const existingMap = new Map<string, LocalConteudo>();
+  for (const r of existingRecords) {
+    const key = `${r.data}|${r.tempo}|${r.disciplina}`;
+    existingMap.set(key, r);
+  }
+
   await db.transaction('rw', db.conteudos, async () => {
     for (const data of records) {
-      const existing = await db.conteudos
-        .where('[turma_id+data+tempo+disciplina]')
-        .equals([turmaId, data.data, data.tempo, data.disciplina])
-        .first();
+      const key = `${data.data}|${data.tempo}|${data.disciplina}`;
+      const existing = existingMap.get(key);
 
       if (existing && existing.localId) {
         if (existing.syncStatus !== 'pending') {
