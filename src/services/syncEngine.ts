@@ -353,7 +353,7 @@ async function syncFrequencia(operation: string, payload: Record<string, unknown
 }
 
 async function syncConteudo(operation: string, payload: Record<string, unknown>): Promise<void> {
-  const sanitized = sanitizeConteudo(payload);
+  const sanitized = sanitizeConteudo(payload as unknown as ConteudoPayload);
   if (operation === 'DELETE') {
     const { error } = await supabase
       .from('conteudos')
@@ -379,7 +379,7 @@ async function syncAvaliacao(operation: string, payload: Record<string, unknown>
     return null;
   }
 
-  const sanitized = sanitizeAvaliacao(payload);
+  const sanitized = sanitizeAvaliacao(payload as unknown as AvaliacaoPayload);
 
   // Se tem ID do server, é update
   if (sanitized.id) {
@@ -404,7 +404,7 @@ async function syncAvaliacao(operation: string, payload: Record<string, unknown>
 async function syncNotas(operation: string, payload: Record<string, unknown>): Promise<void> {
   // Notas sempre são upsert em batch ou individual
   const records = Array.isArray(payload.records) ? payload.records : [payload];
-  const sanitizedRecords = records.map(sanitizeNota);
+  const sanitizedRecords = records.map(r => sanitizeNota(r as unknown as NotaPayload));
   const { error } = await supabase
     .from('notas')
     .upsert(sanitizedRecords, { onConflict: 'avaliacao_id,aluno_id' });
@@ -412,7 +412,7 @@ async function syncNotas(operation: string, payload: Record<string, unknown>): P
 }
 
 async function syncFechamento(operation: string, payload: Record<string, unknown>): Promise<void> {
-  const sanitized = sanitizeFechamento(payload);
+  const sanitized = sanitizeFechamento(payload as unknown as FechamentoPayload);
   if (operation === 'DELETE' || sanitized.status === 'ABERTO') {
     const { error } = await supabase
       .from('fechamentos_bimestres')
