@@ -7,4 +7,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('As variáveis de ambiente do Supabase estão ausentes. Verifique seu arquivo .env');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// FIX #22: Configuração explícita de autenticação para maior segurança
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce', // PKCE é mais seguro que implicit para SPAs
+  },
+});

@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 import { translateSupabaseError } from '../utils/supabaseErrors';
 import PrivacyLinksFooter from '../components/PrivacyLinksFooter';
 import { logSecurityEvent } from '../services/securityLogService';
+import { validarCPF } from '../utils/cpfUtils';
 
 const ALUNO_EMAIL_DOMAIN = 'aluno.dcdigital.local';
 
@@ -100,6 +101,12 @@ export default function Login() {
       const matricula = (formData.get('matricula') as string).trim().replace(/\D/g, '');
       if (!matricula || matricula.length !== 11) {
         setError('Informe o CPF completo (11 dígitos).');
+        setIsLoading(false);
+        return;
+      }
+      // FIX #8: Validar CPF matematicamente antes de enviar ao servidor
+      if (!validarCPF(matricula)) {
+        setError('CPF inválido. Verifique os dígitos informados.');
         setIsLoading(false);
         return;
       }

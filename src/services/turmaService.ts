@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { getBimestrePorData } from '../utils/dateUtils';
 import { Aluno, Avaliacao, Conteudo, Horario, Lancamento } from '../contexts/TurmaContext';
+import { isAlunoAtivo } from '../constants/authConstants';
 
 /** Registro de frequência retornado pelo banco */
 export interface FrequenciaRecord {
@@ -82,8 +83,8 @@ export const TurmaService = {
       
     if (error) throw error;
     
-    // Filtra no cliente para considerar status nulo ou variações de "Ativo"
-    const alunosAtivos = (data || []).filter(a => !a.status || a.status.toLowerCase() === 'ativo');
+    // FIX #19: Usar constante centralizada para filtro de status
+    const alunosAtivos = (data || []).filter(a => isAlunoAtivo(a.status));
     
     return alunosAtivos.map(a => {
       const cpfClean = a.cpf ? a.cpf.replace(/\D/g, '') : '';

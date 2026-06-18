@@ -1,7 +1,5 @@
 import { db } from './db';
 
-const LEGACY_SALT = 'dc-digital-offline-salt-2026';
-const ITERATIONS = 100_000;
 const KEY_LENGTH = 256;
 
 
@@ -48,7 +46,7 @@ async function getOrCreateSecureKey(userId: string): Promise<CryptoKey> {
       ['encrypt', 'decrypt']
     );
 
-    const existingSalt = record?.salt || LEGACY_SALT;
+    const existingSalt = record?.salt || 'dc-digital-v2'; // Mantido apenas para compatibilidade do schema
     await db.userSalts.put({ userId, salt: existingSalt, cryptoKey: newKey });
     return newKey;
   } catch (err) {

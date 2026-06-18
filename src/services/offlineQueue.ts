@@ -8,6 +8,9 @@ import { db, now, hashOperation, type QueueOperation, type QueueStatus, type Syn
 
 const MAX_RETRIES = 5;
 
+// FIX #10: Limite máximo de itens na fila para evitar crescimento ilimitado
+const MAX_QUEUE_SIZE = 5000;
+
 // ============================================================
 // Operações da fila
 // ============================================================
@@ -30,6 +33,24 @@ export async function enqueue(
     .where('hash').equals(hash)
     .filter(item => item.status === 'pending')
     .first();
+
+  if (existing?.id) {
+    await db.syncQueue.update(existing.id, {
+      payload: JSON.stringify(payload),
+      updatedAt: timestamp,
+      localId,
+    });
+    return existing.id;
+  }
+
+  // FIX #10: Verificar limite máximo da fila antes de adicionar
+  const currentCount = await db.syncQueue.where('status').anyOf(['pending', 'processing']).count();
+  if (currentCount >= MAX_QUEUE_SIZE) {
+    throw new Error(
+      `Limite de operações pendentes atingido (${MAX_QUEUE_SIZE}). ` +
+      `Conecte-se à internet para sincronizar antes de fazer mais alterações.`
+    );
+  }
 
   if (existing?.id) {
     await db.syncQueue.update(existing.id, {

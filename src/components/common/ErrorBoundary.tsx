@@ -38,7 +38,8 @@ export default class ErrorBoundary extends Component<Props, State> {
             <p className="text-slate-500 mb-6 text-sm">
               Ocorreu um erro inesperado no aplicativo. Tente recarregar a página ou voltar para o início.
             </p>
-            {this.state.error && (
+            {/* FIX #4: Ocultar detalhes do erro em produção para não expor informações internas */}
+            {import.meta.env.DEV && this.state.error && (
               <pre className="mb-6 p-4 bg-slate-50 rounded-xl text-left text-xs font-mono text-slate-600 overflow-auto max-h-40 border border-slate-100">
                 {this.state.error.message}
               </pre>
