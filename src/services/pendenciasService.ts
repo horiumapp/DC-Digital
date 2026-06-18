@@ -75,11 +75,13 @@ export const fetchPendenciasPorEscola = async (
   professorEmail?: string
 ): Promise<PaginatedPendencias> => {
   try {
-    // Buscar TODOS os horários relevantes para consolidar pendências corretamente.
-    // A paginação é aplicada sobre o resultado consolidado, não sobre os horários brutos.
+    // FIX #16: Limitar a query para evitar payloads gigantes em escolas grandes
+    const HORARIOS_LIMIT = 5000;
+
     let query = supabase
       .from('professor_horarios')
-      .select('*, turmas(id, nome, turno), professores(id, nome, email)');
+      .select('*, turmas(id, nome, turno), professores(id, nome, email)')
+      .limit(HORARIOS_LIMIT);
 
     if (escolaId !== 'TODAS') {
       query = query.eq('escola_id', escolaId);
@@ -89,6 +91,10 @@ export const fetchPendenciasPorEscola = async (
 
     if (hError) throw hError;
     if (!horarios) return { data: [], total: 0 };
+
+    if (horarios.length >= HORARIOS_LIMIT) {
+      console.warn(`[pendenciasService] Dados truncados: ${HORARIOS_LIMIT} horários atingidos. Considere implementar lógica server-side.`);
+    }
 
     const professorEmailLower = professorEmail?.toLowerCase().trim();
     const horariosFiltrados = professorEmailLower

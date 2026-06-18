@@ -52,15 +52,6 @@ export async function enqueue(
     );
   }
 
-  if (existing?.id) {
-    await db.syncQueue.update(existing.id, {
-      payload: JSON.stringify(payload),
-      updatedAt: timestamp,
-      localId,
-    });
-    return existing.id;
-  }
-
   return await db.syncQueue.add({
     table,
     operation,

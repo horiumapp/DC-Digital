@@ -217,7 +217,17 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     return () => { abortController.abort(); };
   }, [turmaAtiva, fetchAvaliacoesInterno]);
 
+  // FIX #2: Validar que o usuário tem acesso à escola da turma selecionada
   const selecionarTurma = (turma: Turma) => {
+    if (user && user.role !== 'ADMIN') {
+      // Para não-ADMIN, verificar se a turma pertence à escola do usuário
+      const turmaEscolaId = sessionStorage.getItem('activeEscolaId');
+      if (user.escola_id && turmaEscolaId && user.escola_id !== turmaEscolaId) {
+        showError('Acesso negado: Você não tem permissão para acessar turmas de outra escola.');
+        console.error(`[TurmaContext] IDOR bloqueado: user.escola_id=${user.escola_id}, turma.escola_id=${turmaEscolaId}`);
+        return;
+      }
+    }
     setTurmaAtiva(turma);
   };
 

@@ -249,6 +249,27 @@ export class DCDigitalDB extends Dexie {
       files:       '++localId, syncStatus, relatedTable, relatedId',
       userSalts:   'userId',
     });
+
+    // FIX #17: Adicionar índice updatedAt para limpeza eficiente de dados antigos
+    // Permite range queries em vez de iteração JavaScript completa
+    this.version(3).stores({
+      // Dados operacionais — adicionar índice updatedAt
+      turmas:      'id, escola_id',
+      alunos:      'id, turma_id, syncStatus',
+      frequencias: '++localId, [turma_id+aluno_id+data+tempo+disciplina], turma_id, syncStatus, updatedAt',
+      conteudos:   '++localId, [turma_id+data+tempo+disciplina], turma_id, syncStatus, updatedAt',
+      avaliacoes:  '++localId, turma_id, disciplina, syncStatus, id',
+      notas:       '++localId, avaliacao_id, [avaliacao_id+aluno_id], syncStatus',
+      horarios:    '++localId, turma_id',
+      fechamentos: '++localId, [turma_id+disciplina+bimestre], syncStatus',
+
+      // Sistema
+      syncQueue:   '++id, table, status, createdAt, hash',
+      syncLogs:    '++id, timestamp, table, status',
+      cachedUsers: 'id',
+      files:       '++localId, syncStatus, relatedTable, relatedId',
+      userSalts:   'userId',
+    });
   }
 }
 

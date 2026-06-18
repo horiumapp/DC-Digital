@@ -29,6 +29,45 @@ function getCorsHeaders(req: Request): Record<string, string> | null {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALID_CARGOS = ["ADMIN", "GESTOR", "SECRETARIO", "PROFESSOR", "ALUNO"];
 
+// FIX #3: Rate limiting em memória por usuário (reseta em cold start, mas protege contra abuso)
+const RATE_LIMIT_WINDOW_MS = 60_000; // 60 segundos
+const RATE_LIMIT_MAX_REQUESTS = 10;   // Máximo 10 criações por janela
+
+interface RateLimitEntry {
+  count: number;
+  windowStart: number;
+}
+
+const rateLimitMap = new Map<string, RateLimitEntry>();
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(userId);
+
+  if (!entry || (now - entry.windowStart) > RATE_LIMIT_WINDOW_MS) {
+    // Nova janela
+    rateLimitMap.set(userId, { count: 1, windowStart: now });
+    return true;
+  }
+
+  if (entry.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return false; // Limite excedido
+  }
+
+  entry.count++;
+  return true;
+}
+
+// Limpar entradas expiradas periodicamente (a cada 5 minutos) para evitar leak de memória
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitMap.entries()) {
+    if ((now - entry.windowStart) > RATE_LIMIT_WINDOW_MS * 2) {
+      rateLimitMap.delete(key);
+    }
+  }
+}, 5 * 60_000);
+
 Deno.serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req);
 
@@ -85,6 +124,14 @@ Deno.serve(async (req: Request) => {
         .eq("id", callerUser.id)
         .maybeSingle();
       effectiveRole = userData?.cargo;
+    }
+
+    // FIX #3: Verificar rate limit antes de processar a requisição
+    if (!checkRateLimit(callerUser.id)) {
+      return new Response(
+        JSON.stringify({ error: "Limite de requisições excedido. Aguarde 60 segundos antes de criar mais contas." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" } }
+      );
     }
 
     // 2. Ler e validar tipos do body da requisição

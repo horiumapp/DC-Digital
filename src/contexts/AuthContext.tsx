@@ -63,17 +63,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { user: authUser } = session;
       const metadata = authUser.user_metadata;
 
-      // Segurança: Prioriza app_metadata (não alterável pelo cliente)
+      // FIX #1: Segurança: Prioriza app_metadata (assinado pelo JWT, não alterável pelo cliente)
+      // NUNCA usar role do cache IndexedDB — ele pode ser manipulado via DevTools.
       let role: UserRole = (authUser.app_metadata?.role as UserRole);
       let escolaId: string | undefined;
       let name = metadata?.full_name || authUser.email?.split('@')[0] || 'Usuário';
 
-      // 1. Tentar ler do cache local primeiro para ter respostas rápidas/offline
+      // 1. Tentar ler APENAS dados não-sensíveis do cache (nome, escola_id) para UX rápida
       let cached: Awaited<ReturnType<typeof getCachedUser>> | undefined;
       try {
         cached = await getCachedUser();
         if (cached && cached.id === authUser.id) {
-          if (!role) role = cached.role as UserRole;
+          // FIX #1: NÃO copiar role do cache. Apenas dados de apresentação.
           escolaId = cached.escola_id;
           name = cached.name;
         }
@@ -83,7 +84,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // 2. Se estiver online, buscar dados atualizados do Supabase
       // FIX #7: O servidor é SEMPRE fonte de verdade para a role quando online.
-      // Isso impede que um cache obsoleto conceda acesso indevido após revogação.
       if (navigator.onLine) {
         try {
           const { data: userData, error } = await supabase
@@ -106,12 +106,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      // FIX #1: Se não temos role (nem do JWT, nem do servidor), negar acesso
+      // Isso impede escalação via cache IndexedDB manipulado
       if (!role) {
         console.error('[AuthContext] Acesso não autorizado: Nível de acesso (role) não definido para este usuário.');
         await supabase.auth.signOut();
         setUser(null);
         setLoading(false);
-        showToastErrorRef.current('Acesso não autorizado: Nível de acesso não definido. Entre em contato com o suporte.');
+        showToastErrorRef.current(
+          navigator.onLine
+            ? 'Acesso não autorizado: Nível de acesso não definido. Entre em contato com o suporte.'
+            : 'Sem conexão: não é possível verificar seu nível de acesso. Conecte-se à internet e tente novamente.'
+        );
         return;
       }
 
@@ -203,13 +209,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Limpa dados locais e cache de chaves
       clearKeyCache();
       await clearAllLocalData(true);
-      // Limpar chaves cripto de outros usuários para evitar herança/acúmulo em dispositivos compartilhados
-      if (currentUserId) {
-        try {
-          await db.userSalts.where('userId').notEqual(currentUserId).delete();
-        } catch (err) {
-          console.warn('[AuthContext] Erro ao limpar salts de outros usuários:', err);
-        }
+      // FIX #5: Limpar chaves cripto de TODOS os usuários para evitar herança/acúmulo
+      // em dispositivos compartilhados. Mais agressivo que antes (limpava só "outros").
+      try {
+        await db.userSalts.clear();
+      } catch (err) {
+        console.warn('[AuthContext] Erro ao limpar salts de usuários:', err);
       }
       sessionStorage.removeItem('activeEscolaId');
       sessionStorage.removeItem('activeTurno');
