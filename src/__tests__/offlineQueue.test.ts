@@ -187,7 +187,7 @@ describe('offlineQueue', () => {
     await markProcessing(id);
     // Simular que foi atualizado há 2 minutos
     const item = mockQueue.find(i => i.id === id);
-    if (item) item.updatedAt = new Date(Date.now() - 120_000).toISOString();
+    if (item) item.updatedAt = new Date(Date.now() - 130_000).toISOString();
     const count = await resetStuckItems();
     expect(count).toBe(1);
     expect(mockQueue.find(i => i.id === id)?.status).toBe('pending');
