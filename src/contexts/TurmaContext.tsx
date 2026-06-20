@@ -218,20 +218,20 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   }, [turmaAtiva, fetchAvaliacoesInterno]);
 
   // FIX #2: Validar que o usuário tem acesso à escola da turma selecionada
-  const selecionarTurma = (turma: Turma) => {
+  const selecionarTurma = useCallback((turma: Turma) => {
     if (user && user.role !== 'ADMIN') {
       // Para não-ADMIN, verificar se a turma pertence à escola do usuário
       const turmaEscolaId = sessionStorage.getItem('activeEscolaId');
       if (user.escola_id && turmaEscolaId && user.escola_id !== turmaEscolaId) {
-        showError('Acesso negado: Você não tem permissão para acessar turmas de outra escola.');
+        showErrorRef.current('Acesso negado: Você não tem permissão para acessar turmas de outra escola.');
         console.error(`[TurmaContext] IDOR bloqueado: user.escola_id=${user.escola_id}, turma.escola_id=${turmaEscolaId}`);
         return;
       }
     }
     setTurmaAtiva(turma);
-  };
+  }, [user]);
 
-  const registrarLancamento = (novo: Lancamento) => {
+  const registrarLancamento = useCallback((novo: Lancamento) => {
     setLancamentos(prev => {
       const existe = prev.some(l => 
         String(l.turmaId) === String(novo.turmaId) && 
@@ -242,87 +242,100 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       if (existe) return prev;
       return [...prev, novo];
     });
-  };
+  }, []);
 
-  const removerLancamento = (filtro: Lancamento) => {
+  const removerLancamento = useCallback((filtro: Lancamento) => {
     setLancamentos(prev => prev.filter(l => 
       !(String(l.turmaId) === String(filtro.turmaId) && 
         l.data === filtro.data && 
         l.tipo === filtro.tipo && 
         l.tempo === filtro.tempo)
     ));
-  };
+  }, []);
 
-  const salvarFechamento = async (bimestre: string, status: 'ABERTO' | 'FECHADO') => {
+  const salvarFechamento = useCallback(async (bimestre: string, status: 'ABERTO' | 'FECHADO') => {
     if (!turmaAtiva || !user) return;
     const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
       await OfflineTurmaService.salvarFechamento(rawId, turmaAtiva.componente, bimestre, status, user.id);
       setFechamentos(prev => ({ ...prev, [bimestre]: status === 'FECHADO' }));
-      showSuccess(`Aparata ${status === 'FECHADO' ? 'fechada' : 'reaberta'} com sucesso!`);
+      showSuccessRef.current(`Aparata ${status === 'FECHADO' ? 'fechada' : 'reaberta'} com sucesso!`);
     } catch (err) {
       console.error('Erro ao salvar fechamento:', err);
-      showError(`Não foi possível ${status === 'FECHADO' ? 'fechar' : 'reabrir'} a aparata.`);
+      showErrorRef.current(`Não foi possível ${status === 'FECHADO' ? 'fechar' : 'reabrir'} a aparata.`);
     }
-  };
+  }, [turmaAtiva, user]);
 
-  const salvarAvaliacao = async (av: Avaliacao): Promise<string> => {
+  const salvarAvaliacao = useCallback(async (av: Avaliacao): Promise<string> => {
     if (!turmaAtiva) return '';
     if (verificarPeriodoFechado(av.bimestre || av.data)) {
-      showError('Operação bloqueada: O período selecionado está fechado.');
+      showErrorRef.current('Operação bloqueada: O período selecionado está fechado.');
       return '';
     }
     const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
       const createdId = await OfflineTurmaService.salvarAvaliacao(av, rawId, turmaAtiva.componente);
       await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunos);
-      showSuccess('Avaliação salva com sucesso!');
+      showSuccessRef.current('Avaliação salva com sucesso!');
       return createdId;
     } catch (err) {
       console.error('Erro ao salvar avaliação:', err);
-      showError('Não foi possível salvar a avaliação. Verifique sua conexão.');
+      showErrorRef.current('Não foi possível salvar a avaliação. Verifique sua conexão.');
       return '';
     }
-  };
+  }, [turmaAtiva, alunos, verificarPeriodoFechado, fetchAvaliacoesInterno]);
 
-  const removerAvaliacao = async (id: string) => {
+  const removerAvaliacao = useCallback(async (id: string) => {
     const av = avaliacoes.find(a => a.id === id);
     if (av && verificarPeriodoFechado(av.bimestre || av.data)) {
-      showError('Operação bloqueada: O período correspondente a esta avaliação está fechado.');
+      showErrorRef.current('Operação bloqueada: O período correspondente a esta avaliação está fechado.');
       return;
     }
     try {
       await OfflineTurmaService.removerAvaliacao(id);
       setAvaliacoes(prev => prev.filter(a => a.id !== id));
-      showSuccess('Avaliação removida.');
+      showSuccessRef.current('Avaliação removida.');
     } catch (err) {
       console.error('Erro ao remover avaliação:', err);
-      showError('Não foi possível remover a avaliação.');
+      showErrorRef.current('Não foi possível remover a avaliação.');
     }
-  };
+  }, [avaliacoes, verificarPeriodoFechado]);
 
-  const salvarNotas = async (avaliacaoId: string, notas: { alunoId: string, valor: string }[]) => {
+  const salvarNotas = useCallback(async (avaliacaoId: string, notas: { alunoId: string, valor: string }[]) => {
     if (!turmaAtiva) return;
     const av = avaliacoes.find(a => a.id === avaliacaoId);
     if (av && verificarPeriodoFechado(av.bimestre || av.data)) {
-      showError('Operação bloqueada: O período correspondente a esta avaliação está fechado.');
+      showErrorRef.current('Operação bloqueada: O período correspondente a esta avaliação está fechado.');
       return;
     }
     const rawId = turmaAtiva.id.toString().split('||')[0];
     try {
       await OfflineTurmaService.salvarNotas(avaliacaoId, notas);
       await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunos);
-      showSuccess('Notas salvas com sucesso!');
+      showSuccessRef.current('Notas salvas com sucesso!');
     } catch (err) {
       console.error('Erro ao salvar notas:', err);
-      showError('Ocorreu um erro ao salvar as notas.');
+      showErrorRef.current('Ocorreu um erro ao salvar as notas.');
     }
-  };
+  }, [turmaAtiva, avaliacoes, alunos, verificarPeriodoFechado, fetchAvaliacoesInterno]);
 
-  const salvarFrequencia = async (data: string, tempo: string, alunosFreq: Aluno[]) => {
+  const carregarFaltasDaData = useCallback(async (data: string) => {
+    if (!turmaAtiva) return;
+    try {
+      const rawId = turmaAtiva.id.toString().split('||')[0];
+      const resp = await OfflineTurmaService.buscarFrequenciaPorDia(rawId, turmaAtiva.componente, data);
+      const idsFaltosos = new Set(resp.filter(f => f.status === 'F').map(f => f.aluno_id.toString()));
+      const normalizedDate = formatarDataParaISO(data);
+      setFaltasPorData(prev => ({ ...prev, [normalizedDate]: idsFaltosos }));
+    } catch (err) {
+      console.error('Erro ao carregar faltas:', err);
+    }
+  }, [turmaAtiva]);
+
+  const salvarFrequencia = useCallback(async (data: string, tempo: string, alunosFreq: Aluno[]) => {
     if (!turmaAtiva) return;
     if (verificarPeriodoFechado(data)) {
-      showError('Operação bloqueada: O período correspondente a esta data está fechado.');
+      showErrorRef.current('Operação bloqueada: O período correspondente a esta data está fechado.');
       return;
     }
     const rawId = turmaAtiva.id.toString().split('||')[0];
@@ -337,17 +350,17 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       });
 
       await carregarFaltasDaData(data);
-      showSuccess('Frequência salva!');
+      showSuccessRef.current('Frequência salva!');
     } catch (err) {
       console.error('Erro ao salvar frequência:', err);
-      showError('Erro ao salvar a frequência.');
+      showErrorRef.current('Erro ao salvar a frequência.');
     }
-  };
+  }, [turmaAtiva, verificarPeriodoFechado, registrarLancamento, carregarFaltasDaData]);
 
-  const salvarConteudo = async (cont: Conteudo) => {
+  const salvarConteudo = useCallback(async (cont: Conteudo) => {
     if (!turmaAtiva) return;
     if (verificarPeriodoFechado(cont.data)) {
-      showError('Operação bloqueada: O período correspondente a esta data está fechado.');
+      showErrorRef.current('Operação bloqueada: O período correspondente a esta data está fechado.');
       return;
     }
     const rawId = turmaAtiva.id.toString().split('||')[0];
@@ -356,14 +369,14 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       registrarLancamento({ turmaId: rawId, data: cont.data, tipo: 'conteudo', tempo: cont.tempo });
       const conts = await OfflineTurmaService.fetchAllConteudos(rawId, turmaAtiva.componente);
       setConteudos(conts);
-      showSuccess('Conteúdo salvo!');
+      showSuccessRef.current('Conteúdo salvo!');
     } catch (err) {
       console.error('Erro ao salvar conteúdo:', err);
-      showError('Erro ao salvar o conteúdo ministrado.');
+      showErrorRef.current('Erro ao salvar o conteúdo ministrado.');
     }
-  };
+  }, [turmaAtiva, verificarPeriodoFechado, registrarLancamento]);
 
-  const buscarFrequencia = async (data: string, tempo: string) => {
+  const buscarFrequencia = useCallback(async (data: string, tempo: string) => {
     if (!turmaAtiva) return;
     const rawId = turmaAtiva.id.toString().split('||')[0];
     const freqData = await OfflineTurmaService.buscarFrequencia(rawId, turmaAtiva.componente, data, tempo);
@@ -378,9 +391,9 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     } else {
       setAlunos(prev => prev.map(aluno => ({ ...aluno, freq: 'P', part: 'Presencial' })));
     }
-  };
+  }, [turmaAtiva, registrarLancamento]);
 
-  const buscarConteudo = async (data: string, tempo: string): Promise<Conteudo | null> => {
+  const buscarConteudo = useCallback(async (data: string, tempo: string): Promise<Conteudo | null> => {
     if (!turmaAtiva) return null;
     const rawId = turmaAtiva.id.toString().split('||')[0];
     const contData = await OfflineTurmaService.buscarConteudo(rawId, turmaAtiva.componente, data, tempo);
@@ -388,12 +401,12 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       registrarLancamento({ turmaId: rawId, data: contData.data, tipo: 'conteudo', tempo: contData.tempo });
     }
     return contData;
-  };
+  }, [turmaAtiva, registrarLancamento]);
 
-  const removerFrequencia = async (data: string, tempo: string) => {
+  const removerFrequencia = useCallback(async (data: string, tempo: string) => {
     if (!turmaAtiva) return;
     if (verificarPeriodoFechado(data)) {
-      showError('Operação bloqueada: O período correspondente a esta data está fechado.');
+      showErrorRef.current('Operação bloqueada: O período correspondente a esta data está fechado.');
       return;
     }
     const rawId = turmaAtiva.id.toString().split('||')[0];
@@ -402,16 +415,16 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       removerLancamento({ turmaId: rawId, data, tipo: 'frequencia', tempo });
       setAlunos(prev => prev.map(a => ({ ...a, freq: '', part: 'Presencial' })));
       await carregarFaltasDaData(data);
-      showSuccess('Lançamento de frequência removido.');
+      showSuccessRef.current('Lançamento de frequência removido.');
     } catch {
-      showError('Não foi possível remover a frequência.');
+      showErrorRef.current('Não foi possível remover a frequência.');
     }
-  };
+  }, [turmaAtiva, verificarPeriodoFechado, removerLancamento, carregarFaltasDaData]);
 
-  const removerConteudo = async (data: string, tempo: string) => {
+  const removerConteudo = useCallback(async (data: string, tempo: string) => {
     if (!turmaAtiva) return;
     if (verificarPeriodoFechado(data)) {
-      showError('Operação bloqueada: O período correspondente a esta data está fechado.');
+      showErrorRef.current('Operação bloqueada: O período correspondente a esta data está fechado.');
       return;
     }
     const rawId = turmaAtiva.id.toString().split('||')[0];
@@ -420,24 +433,11 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       removerLancamento({ turmaId: rawId, data, tipo: 'conteudo', tempo });
       const conts = await OfflineTurmaService.fetchAllConteudos(rawId, turmaAtiva.componente);
       setConteudos(conts);
-      showSuccess('Conteúdo removido.');
+      showSuccessRef.current('Conteúdo removido.');
     } catch {
-      showError('Não foi possível remover o conteúdo.');
+      showErrorRef.current('Não foi possível remover o conteúdo.');
     }
-  };
-
-  const carregarFaltasDaData = async (data: string) => {
-    if (!turmaAtiva) return;
-    try {
-      const rawId = turmaAtiva.id.toString().split('||')[0];
-      const resp = await OfflineTurmaService.buscarFrequenciaPorDia(rawId, turmaAtiva.componente, data);
-      const idsFaltosos = new Set(resp.filter(f => f.status === 'F').map(f => f.aluno_id.toString()));
-      const normalizedDate = formatarDataParaISO(data);
-      setFaltasPorData(prev => ({ ...prev, [normalizedDate]: idsFaltosos }));
-    } catch (err) {
-      console.error('Erro ao carregar faltas:', err);
-    }
-  };
+  }, [turmaAtiva, verificarPeriodoFechado, removerLancamento]);
 
   return (
     <TurmaContext.Provider value={{ 
