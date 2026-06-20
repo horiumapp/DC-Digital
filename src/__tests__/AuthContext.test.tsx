@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { act } from 'react';
 
@@ -108,6 +108,10 @@ describe('AuthContext', () => {
     mockMaybeSingle.mockReset();
     mockMaybeSingle.mockImplementation(async () => ({ data: { escola_id: 'escola-123' }, error: null }));
     mockGetCachedUser.mockImplementation(async () => null);
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it('deve inicializar com estado loading e depois mostrar "Não autenticado" se não houver sessão', async () => {
