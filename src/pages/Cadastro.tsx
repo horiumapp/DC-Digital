@@ -186,6 +186,7 @@ export default function Cadastro() {
                 placeholder="Mín. 8 chars, 1 maiúscula, 1 número" 
                 minLength={8}
                 required 
+                autoComplete="new-password"
                 className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30 ${
                   senhaError ? 'border-amber-400' : 'border-slate-200'
                 }`}
@@ -206,6 +207,7 @@ export default function Cadastro() {
                 placeholder="Repita a senha" 
                 minLength={8}
                 required 
+                autoComplete="new-password"
                 className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30 ${
                   senhaConfirm && senhaConfirm !== senhaPrincipal
                     ? 'border-red-400'

@@ -384,6 +384,7 @@ export default function TabProfessores() {
                     value={inlineFormData.senha}
                     onChange={(e) => setInlineFormData({...inlineFormData, senha: e.target.value})}
                     placeholder="Padrão: @prof123"
+                    autoComplete="new-password"
                     className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851]"
                   />
                 </div>

@@ -191,6 +191,7 @@ export default function NovoUsuarioEscolarModal({
               minLength={6}
               value={formData.senha}
               onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+              autoComplete="new-password"
               className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] transition-all font-medium disabled:opacity-50 disabled:bg-slate-50"
               placeholder="Mínimo 6 caracteres"
             />

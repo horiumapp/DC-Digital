@@ -203,6 +203,7 @@ export default function NovoProfessorModal({ isOpen, onClose, onSave, professorP
                     type="password"
                     value={formData.senha}
                     onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+                    autoComplete="new-password"
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all placeholder-slate-400 font-medium"
                     placeholder="Padrão: @prof123 (Mín. 6 caracteres)"
                   />
