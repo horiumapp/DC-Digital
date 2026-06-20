@@ -17,7 +17,7 @@ interface AvaliacoesListProps {
   disabled?: boolean;
 }
 
-export default function AvaliacoesList({
+const AvaliacoesList = React.memo(function AvaliacoesList({
   avaliacoes,
   alunos,
   faltasPorData,
@@ -207,3 +207,5 @@ export default function AvaliacoesList({
     </div>
   );
 }
+
+export default AvaliacoesList;

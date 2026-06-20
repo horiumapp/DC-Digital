@@ -20,7 +20,7 @@ interface NotasEditorProps {
   disabled?: boolean;
 }
 
-export default function NotasEditor({
+const NotasEditor = React.memo(function NotasEditor({
   selectedAvaliacao,
   alunosParaNotas,
   localNotas,
@@ -130,3 +130,5 @@ export default function NotasEditor({
     </div>
   );
 }
+
+export default NotasEditor;

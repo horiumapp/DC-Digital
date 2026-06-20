@@ -39,7 +39,7 @@ interface AvaliacaoFormProps {
   onSetCalendarYear: (val: number) => void;
 }
 
-export default function AvaliacaoForm({
+const AvaliacaoForm = React.memo(function AvaliacaoForm({
   selectedAvaliacao,
   selectedDate,
   instrumentoAvaliacao,
@@ -288,3 +288,5 @@ export default function AvaliacaoForm({
     </div>
   );
 }
+
+export default AvaliacaoForm;

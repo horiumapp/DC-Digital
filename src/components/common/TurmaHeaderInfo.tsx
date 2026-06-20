@@ -1,3 +1,4 @@
+import React from 'react';
 import { GraduationCap, Building2, Clock, BookOpen } from 'lucide-react';
 import { Turma } from '../../contexts/TurmaContext';
 
@@ -5,7 +6,7 @@ interface TurmaHeaderInfoProps {
   turmaAtiva: Turma;
 }
 
-export default function TurmaHeaderInfo({ turmaAtiva }: TurmaHeaderInfoProps) {
+const TurmaHeaderInfo = React.memo(function TurmaHeaderInfo({ turmaAtiva }: TurmaHeaderInfoProps) {
   return (
     <div className="grid grid-cols-4 gap-4">
       <div className="flex items-center gap-3 bg-[#eef2ff]/40 p-4 rounded-2xl border border-blue-50">
@@ -52,3 +53,5 @@ export default function TurmaHeaderInfo({ turmaAtiva }: TurmaHeaderInfoProps) {
     </div>
   );
 }
+
+export default TurmaHeaderInfo;

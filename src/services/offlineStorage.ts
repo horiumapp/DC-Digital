@@ -5,7 +5,7 @@
  * Escreve localmente com syncStatus='pending' e enfileira para sincronização.
  */
 import Dexie from 'dexie';
-import { db, now, type SyncStatus } from '../lib/db';
+import { db, now, OPERATIONAL_TABLE_NAMES, getOperationalTable, type SyncStatus } from '../lib/db';
 import { supabase } from '../lib/supabase';
 import { encryptFields, decryptFields, getOrCreateKey } from '../lib/crypto';
 import type {
@@ -430,10 +430,20 @@ export async function deleteAvaliacaoLocal(id: string): Promise<void> {
 }
 
 export async function cacheAvaliacoes(records: Array<Omit<LocalAvaliacao, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'> & { id: string }>): Promise<void> {
+  if (records.length === 0) return;
   const timestamp = now();
+
+  // FIX: Buscar todos os registros existentes de uma vez (evita N+1 queries no loop)
+  const ids = records.map(r => r.id);
+  const existingRecords = await db.avaliacoes.where('id').anyOf(ids).toArray();
+  const existingMap = new Map<string, LocalAvaliacao>();
+  for (const r of existingRecords) {
+    if (r.id) existingMap.set(r.id, r);
+  }
+
   await db.transaction('rw', db.avaliacoes, async () => {
     for (const data of records) {
-      const existing = await db.avaliacoes.where('id').equals(data.id).first();
+      const existing = existingMap.get(data.id);
       if (existing?.localId) {
         if (existing.syncStatus !== 'pending') {
           await db.avaliacoes.update(existing.localId, {
@@ -498,13 +508,22 @@ export async function getNotasLocal(avaliacaoIds: string[]): Promise<LocalNota[]
 }
 
 export async function cacheNotas(records: Omit<LocalNota, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
+  if (records.length === 0) return;
   const timestamp = now();
+
+  // FIX: Buscar todas as notas existentes das avaliações referenciadas de uma vez
+  const avaliacaoIds = [...new Set(records.map(r => r.avaliacao_id))];
+  const existingRecords = await db.notas.where('avaliacao_id').anyOf(avaliacaoIds).toArray();
+  const existingMap = new Map<string, LocalNota>();
+  for (const r of existingRecords) {
+    const key = `${r.avaliacao_id}|${r.aluno_id}`;
+    existingMap.set(key, r);
+  }
+
   await db.transaction('rw', db.notas, async () => {
     for (const data of records) {
-      const existing = await db.notas
-        .where('[avaliacao_id+aluno_id]')
-        .equals([data.avaliacao_id, data.aluno_id])
-        .first();
+      const key = `${data.avaliacao_id}|${data.aluno_id}`;
+      const existing = existingMap.get(key);
 
       if (existing?.localId) {
         if (existing.syncStatus !== 'pending') {
@@ -704,18 +723,35 @@ export async function clearOldSyncedData(maxAgeDays: number = 60): Promise<numbe
 
   let deletedCount = 0;
 
-  const tables = [db.frequencias, db.conteudos, db.avaliacoes, db.notas, db.fechamentos] as const;
+  // FIX: Usar índice composto [syncStatus+updatedAt] (schema v4) para range query eficiente
+  // em vez de .where('syncStatus').filter(JS) que fazia full scan + filter em memória
+  for (const tableName of OPERATIONAL_TABLE_NAMES) {
+    const table = getOperationalTable(tableName);
+    if (!table) continue;
 
-  for (const table of tables) {
-    const old = await (table as typeof db.frequencias)
-      .where('syncStatus').equals('synced')
-      .filter(r => r.updatedAt < cutoffISO)
-      .toArray();
-    
-    const ids = old.map(r => r.localId).filter((id): id is number => id !== undefined);
-    if (ids.length > 0) {
-      await (table as typeof db.frequencias).bulkDelete(ids);
-      deletedCount += ids.length;
+    try {
+      const old = await table
+        .where('[syncStatus+updatedAt]')
+        .between(['synced', ''], ['synced', cutoffISO])
+        .toArray();
+      
+      const ids = old.map((r: { localId?: number }) => r.localId).filter((id): id is number => id !== undefined);
+      if (ids.length > 0) {
+        await table.bulkDelete(ids);
+        deletedCount += ids.length;
+      }
+    } catch {
+      // Fallback para schema < v4 (sem índice composto)
+      const old = await table
+        .where('syncStatus').equals('synced')
+        .filter((r: { updatedAt: string }) => r.updatedAt < cutoffISO)
+        .toArray();
+      
+      const ids = old.map((r: { localId?: number }) => r.localId).filter((id): id is number => id !== undefined);
+      if (ids.length > 0) {
+        await table.bulkDelete(ids);
+        deletedCount += ids.length;
+      }
     }
   }
 
