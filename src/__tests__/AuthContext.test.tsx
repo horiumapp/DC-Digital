@@ -1,9 +1,63 @@
 // @vitest-environment happy-dom
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup } from '@testing-library/react';
-import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { act } from 'react';
+
+// ---------- Hoisted Mocks Setup ----------
+const {
+  mockCacheUser,
+  mockGetCachedUser,
+  mockClearAllLocalData,
+  mockClearSalts,
+  mockGetSession,
+  mockOnAuthStateChange,
+  mockSignOut,
+  mockMaybeSingle,
+  mockFrom,
+  setSessionVal,
+  getAuthStateCallback
+} = vi.hoisted(() => {
+  let sessionVal: any = null;
+  let authStateCallback: any = null;
+
+  const getSession = vi.fn(async () => ({ data: { session: sessionVal } }));
+  const onAuthStateChange = vi.fn((callback) => {
+    authStateCallback = callback;
+    return {
+      data: {
+        subscription: {
+          unsubscribe: vi.fn(),
+        },
+      },
+    };
+  });
+  const signOut = vi.fn(async () => {
+    sessionVal = null;
+    if (authStateCallback) {
+      authStateCallback('SIGNED_OUT', null);
+    }
+  });
+
+  const maybeSingle = vi.fn(async () => ({ data: { escola_id: 'escola-123' }, error: null }));
+  const eq = vi.fn(() => ({ maybeSingle }));
+  const select = vi.fn(() => ({ eq }));
+  const from = vi.fn(() => ({ select }));
+
+  return {
+    mockCacheUser: vi.fn(async () => {}),
+    mockGetCachedUser: vi.fn(async () => null),
+    mockClearAllLocalData: vi.fn(async () => {}),
+    mockClearSalts: vi.fn(async () => {}),
+    mockGetSession: getSession,
+    mockOnAuthStateChange: onAuthStateChange,
+    mockSignOut: signOut,
+    mockMaybeSingle: maybeSingle,
+    mockFrom: from,
+    setSessionVal: (val: any) => { sessionVal = val; },
+    getAuthStateCallback: () => authStateCallback
+  };
+});
 
 // ---------- Mock Toast ----------
 vi.mock('../components/common/Toast', () => ({
@@ -19,16 +73,11 @@ vi.mock('../components/common/LoadingFallback', () => ({
 }));
 
 // ---------- Mock offlineStorage ----------
-const mockCacheUser = vi.fn(async () => {});
-const mockGetCachedUser = vi.fn(async () => null);
-const mockClearAllLocalData = vi.fn(async () => {});
-let mockPendingCount = 0;
-
 vi.mock('../services/offlineStorage', () => ({
   cacheUser: mockCacheUser,
   getCachedUser: mockGetCachedUser,
   clearAllLocalData: mockClearAllLocalData,
-  getPendingCount: async () => mockPendingCount,
+  getPendingCount: async () => 0,
 }));
 
 // ---------- Mock crypto ----------
@@ -37,7 +86,6 @@ vi.mock('../lib/crypto', () => ({
 }));
 
 // ---------- Mock db ----------
-const mockClearSalts = vi.fn(async () => {});
 vi.mock('../lib/db', () => ({
   db: {
     userSalts: {
@@ -47,29 +95,6 @@ vi.mock('../lib/db', () => ({
 }));
 
 // ---------- Mock Supabase ----------
-let sessionMock: any = null;
-let authStateChangeCallback: any = null;
-const mockGetSession = vi.fn(async () => ({ data: { session: sessionMock } }));
-const mockOnAuthStateChange = vi.fn((callback) => {
-  authStateChangeCallback = callback;
-  return {
-    data: {
-      subscription: {
-        unsubscribe: vi.fn(),
-      },
-    },
-  };
-});
-const mockSignOut = vi.fn(async () => {
-  sessionMock = null;
-  if (authStateChangeCallback) {
-    authStateChangeCallback('SIGNED_OUT', null);
-  }
-});
-const mockMaybeSingle = vi.fn(async () => ({ data: { escola_id: 'escola-123' }, error: null }));
-const mockEq = vi.fn(() => ({ maybeSingle: mockMaybeSingle }));
-const mockSelect = vi.fn(() => ({ eq: mockEq }));
-
 vi.mock('../lib/supabase', () => ({
   supabase: {
     auth: {
@@ -77,11 +102,12 @@ vi.mock('../lib/supabase', () => ({
       onAuthStateChange: mockOnAuthStateChange,
       signOut: mockSignOut,
     },
-    from: vi.fn(() => ({
-      select: mockSelect,
-    })),
+    from: mockFrom,
   },
 }));
+
+// Import context AFTER mocks are configured
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
 
 // A test component that consumes the context
 const TestConsumer = () => {
@@ -101,9 +127,7 @@ const TestConsumer = () => {
 describe('AuthContext', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    sessionMock = null;
-    authStateChangeCallback = null;
-    mockPendingCount = 0;
+    setSessionVal(null);
     mockGetCachedUser.mockReset();
     mockMaybeSingle.mockReset();
     mockMaybeSingle.mockImplementation(async () => ({ data: { escola_id: 'escola-123' }, error: null }));
@@ -133,14 +157,14 @@ describe('AuthContext', () => {
   });
 
   it('deve autenticar com sucesso se houver sessão ativa com role no JWT', async () => {
-    sessionMock = {
+    setSessionVal({
       user: {
         id: 'user-123',
         email: 'professor@escola.com',
         user_metadata: { full_name: 'Professor Teste' },
         app_metadata: { role: 'PROFESSOR' },
       },
-    };
+    });
 
     render(
       <AuthProvider>
@@ -154,18 +178,18 @@ describe('AuthContext', () => {
 
     expect(screen.getByTestId('user-name').textContent).toBe('Professor Teste');
     expect(screen.getByTestId('user-role').textContent).toBe('PROFESSOR');
-    expect(screen.getByTestId('user-escola').textContent).toBe('escola-123'); // vindo do mock do Supabase.from('usuarios')
+    expect(screen.getByTestId('user-escola').textContent).toBe('escola-123');
   });
 
   it('deve negar acesso e deslogar se a role não estiver definida', async () => {
-    sessionMock = {
+    setSessionVal({
       user: {
         id: 'user-no-role',
         email: 'invalid@escola.com',
         user_metadata: { full_name: 'Sem Role' },
-        app_metadata: {}, // Sem role
+        app_metadata: {},
       },
-    };
+    });
 
     render(
       <AuthProvider>
@@ -177,22 +201,20 @@ describe('AuthContext', () => {
       expect(screen.queryByTestId('loading-fallback')).toBeNull();
     });
 
-    // Se não há role, o provider chama o signOut e desloga
     expect(mockSignOut).toHaveBeenCalled();
     expect(screen.getByText('Não autenticado')).toBeDefined();
   });
 
   it('deve usar dados do cache offline para preenchimento rápido', async () => {
-    sessionMock = {
+    setSessionVal({
       user: {
         id: 'user-cached',
         email: 'cached@escola.com',
         user_metadata: { full_name: 'Novo Nome Supabase' },
         app_metadata: { role: 'GESTOR' },
       },
-    };
+    });
 
-    // Cache retorna dados antigos
     mockGetCachedUser.mockResolvedValue({
       id: 'user-cached',
       name: 'Nome Antigo Cache',
@@ -210,20 +232,19 @@ describe('AuthContext', () => {
       expect(screen.queryByTestId('loading-fallback')).toBeNull();
     });
 
-    // Deve priorizar a role do JWT (GESTOR) mas pode obter escola_id do cache inicialmente
     expect(screen.getByTestId('user-role').textContent).toBe('GESTOR');
     expect(screen.getByTestId('user-name').textContent).toBe('Nome Antigo Cache');
   });
 
   it('deve deslogar limpando caches e IndexedDB', async () => {
-    sessionMock = {
+    setSessionVal({
       user: {
         id: 'user-123',
         email: 'professor@escola.com',
         user_metadata: { full_name: 'Professor Teste' },
         app_metadata: { role: 'PROFESSOR' },
       },
-    };
+    });
 
     render(
       <AuthProvider>
@@ -236,9 +257,8 @@ describe('AuthContext', () => {
     });
 
     const logoutBtn = screen.getByText('Deslogar');
-    
-    // Mock window.confirm (caso precise de confirm devido a pendências)
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const originalConfirm = window.confirm;
+    window.confirm = vi.fn().mockReturnValue(true);
 
     await act(async () => {
       logoutBtn.click();
@@ -249,6 +269,6 @@ describe('AuthContext', () => {
     expect(mockClearSalts).toHaveBeenCalled();
     expect(screen.getByText('Não autenticado')).toBeDefined();
 
-    confirmSpy.mockRestore();
+    window.confirm = originalConfirm;
   });
 });
