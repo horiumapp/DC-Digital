@@ -287,6 +287,6 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
       </div>
     </div>
   );
-}
+});
 
 export default AvaliacaoForm;

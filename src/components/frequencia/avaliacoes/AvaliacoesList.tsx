@@ -206,6 +206,6 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
       )}
     </div>
   );
-}
+});
 
 export default AvaliacoesList;

@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // FIX #1: Segurança: Prioriza app_metadata (assinado pelo JWT, não alterável pelo cliente)
       // NUNCA usar role do cache IndexedDB — ele pode ser manipulado via DevTools.
-      let role: UserRole = (authUser.app_metadata?.role as UserRole);
+      const role: UserRole = (authUser.app_metadata?.role as UserRole);
       let escolaId: string | undefined;
       let name = metadata?.full_name || authUser.email?.split('@')[0] || 'Usuário';
 

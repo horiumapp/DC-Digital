@@ -52,6 +52,6 @@ const TurmaHeaderInfo = React.memo(function TurmaHeaderInfo({ turmaAtiva }: Turm
       </div>
     </div>
   );
-}
+});
 
 export default TurmaHeaderInfo;

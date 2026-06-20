@@ -164,6 +164,6 @@ const SegundaChamadaEditor = React.memo(function SegundaChamadaEditor({
       </div>
     </div>
   );
-}
+});
 
 export default SegundaChamadaEditor;

@@ -364,6 +364,6 @@ const NovoAlunoModal = React.memo(function NovoAlunoModal({ isOpen, onClose, onS
       </div>
     </div>
   );
-}
+});
 
 export default NovoAlunoModal;

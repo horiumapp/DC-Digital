@@ -129,6 +129,6 @@ const NotasEditor = React.memo(function NotasEditor({
       </div>
     </div>
   );
-}
+});
 
 export default NotasEditor;

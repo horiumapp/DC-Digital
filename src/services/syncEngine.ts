@@ -323,7 +323,7 @@ async function processItem(item: SyncQueueItem): Promise<string | null> {
   try {
     payload = JSON.parse(item.payload);
   } catch (parseErr) {
-    throw new Error(`[DEAD_LETTER] Payload JSON corrompido na fila (table=${item.table}, id=${item.id}): ${parseErr}`);
+    throw new Error(`[DEAD_LETTER] Payload JSON corrompido na fila (table=${item.table}, id=${item.id}): ${parseErr}`, { cause: parseErr });
   }
 
   switch (item.table) {

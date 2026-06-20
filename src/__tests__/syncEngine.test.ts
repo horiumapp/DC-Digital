@@ -7,10 +7,6 @@ Object.defineProperty(globalThis, 'navigator', {
   configurable: true,
 });
 
-// ---------- Peek results controlados pelo teste ----------
-// Precisam ser variáveis de módulo acessíveis DENTRO dos mocks
-let peekResults: any[] = [];
-let peekIdx = 0;
 
 // ---------- Mock offlineQueue (inline para hoisting) ----------
 vi.mock('../services/offlineQueue', () => {

@@ -462,6 +462,6 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
     </div>,
     document.body
   );
-}
+});
 
 export default ScheduleModal;

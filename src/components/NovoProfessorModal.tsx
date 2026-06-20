@@ -358,6 +358,6 @@ const NovoProfessorModal = React.memo(function NovoProfessorModal({ isOpen, onCl
       </div>
     </div>
   );
-}
+});
 
 export default NovoProfessorModal;

@@ -227,6 +227,6 @@ const GerenciarAlocacoesModal = React.memo(function GerenciarAlocacoesModal({ is
       </div>
     </div>
   );
-}
+});
 
 export default GerenciarAlocacoesModal;

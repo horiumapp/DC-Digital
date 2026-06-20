@@ -51,7 +51,7 @@ async function getOrCreateSecureKey(userId: string): Promise<CryptoKey> {
     return newKey;
   } catch (err) {
     console.error('[crypto] Erro crítico ao obter/criar chave segura no IndexedDB:', err);
-    throw new Error('Não foi possível obter a chave de criptografia. O armazenamento seguro pode estar indisponível.');
+    throw new Error('Não foi possível obter a chave de criptografia. O armazenamento seguro pode estar indisponível.', { cause: err });
   }
 }
 

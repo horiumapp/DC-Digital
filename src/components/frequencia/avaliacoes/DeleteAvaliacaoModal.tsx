@@ -39,6 +39,6 @@ const DeleteAvaliacaoModal = React.memo(function DeleteAvaliacaoModal({
       </div>
     </div>
   );
-}
+});
 
 export default DeleteAvaliacaoModal;

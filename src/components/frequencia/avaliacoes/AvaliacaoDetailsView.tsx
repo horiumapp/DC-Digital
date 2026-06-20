@@ -83,6 +83,6 @@ const AvaliacaoDetailsView = React.memo(function AvaliacaoDetailsView({
       </button>
     </div>
   );
-}
+});
 
 export default AvaliacaoDetailsView;
