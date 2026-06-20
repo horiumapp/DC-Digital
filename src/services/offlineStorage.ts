@@ -106,15 +106,16 @@ export async function cacheAlunos(alunos: Omit<LocalAluno, 'syncStatus' | 'updat
     throw new Error('Chave de criptografia não disponível. Operação cancelada por segurança de dados (LGPD).');
   }
   const records = await Promise.all(alunos.map(async a => {
-    let record = {
+    const record = {
       ...a,
       syncStatus: 'synced' as SyncStatus,
       updatedAt: now(),
     };
-    record = await encryptFields(record, ['nome', 'cpf'], key);
-    return record;
+    // Cast seguro: encryptFields apenas lê/escreve campos por nome
+    const encrypted = await encryptFields(record as unknown as Record<string, unknown>, ['nome', 'cpf'], key);
+    return encrypted as unknown as LocalAluno;
   }));
-  await db.alunos.bulkPut(records as LocalAluno[]);
+  await db.alunos.bulkPut(records);
 }
 
 export async function getCachedAlunos(turmaId: string): Promise<LocalAluno[]> {
@@ -122,7 +123,9 @@ export async function getCachedAlunos(turmaId: string): Promise<LocalAluno[]> {
   const local = await db.alunos.where('turma_id').equals(turmaId).toArray();
   if (!key) return local;
   return await Promise.all(local.map(async a => {
-    return await decryptFields(a, ['nome', 'cpf'], key);
+    // Cast seguro: decryptFields apenas lê/escreve campos por nome
+    const decrypted = await decryptFields(a as unknown as Record<string, unknown>, ['nome', 'cpf'], key);
+    return decrypted as unknown as LocalAluno;
   }));
 }
 
