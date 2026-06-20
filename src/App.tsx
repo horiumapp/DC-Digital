@@ -10,6 +10,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { ToastProvider } from './components/common/Toast';
 import { ADMIN_ROLES, STAFF_ROLES } from './constants/authConstants';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import RouteErrorBoundary from './components/common/RouteErrorBoundary';
 
 // Lazy loading das páginas principais para dividir o peso do javascript
 const Login = React.lazy(() => import('./pages/Login'));
@@ -94,23 +95,23 @@ export default function App() {
                     {/* Rotas Privadas (Servidores - qualquer logado exceto ALUNO) */}
                     <Route element={<ProtectedRoute allowedRoles={STAFF_ROLES} />}>
                       <Route element={<Layout />}>
-                        <Route path="/turmas" element={<Turmas />} />
-                        <Route path="/diario" element={<Diario />} />
-                        <Route path="/relatorio-notas" element={<RelatorioNotas />} />
-                        <Route path="/relatorio-medias" element={<RelatorioMedias />} />
-                        <Route path="/relatorio-conteudos" element={<RelatorioConteudos />} />
-                        <Route path="/relatorio-frequencia" element={<RelatorioFrequencia />} />
-                        <Route path="/frequencia" element={<Frequencia />} />
-                        <Route path="/estatisticas" element={<Estatisticas />} />
-                        <Route path="/pendencias-lancamento" element={<PendenciasLancamento />} />
-                        <Route path="/pendencias-frequencia" element={<PendenciasFrequencia />} />
-                        <Route path="/aparata" element={<Aparata />} />
-                        <Route path="/aparata-detalhes" element={<AparataDetalhes />} />
+                        <Route path="/turmas" element={<RouteErrorBoundary><Turmas /></RouteErrorBoundary>} />
+                        <Route path="/diario" element={<RouteErrorBoundary><Diario /></RouteErrorBoundary>} />
+                        <Route path="/relatorio-notas" element={<RouteErrorBoundary><RelatorioNotas /></RouteErrorBoundary>} />
+                        <Route path="/relatorio-medias" element={<RouteErrorBoundary><RelatorioMedias /></RouteErrorBoundary>} />
+                        <Route path="/relatorio-conteudos" element={<RouteErrorBoundary><RelatorioConteudos /></RouteErrorBoundary>} />
+                        <Route path="/relatorio-frequencia" element={<RouteErrorBoundary><RelatorioFrequencia /></RouteErrorBoundary>} />
+                        <Route path="/frequencia" element={<RouteErrorBoundary><Frequencia /></RouteErrorBoundary>} />
+                        <Route path="/estatisticas" element={<RouteErrorBoundary><Estatisticas /></RouteErrorBoundary>} />
+                        <Route path="/pendencias-lancamento" element={<RouteErrorBoundary><PendenciasLancamento /></RouteErrorBoundary>} />
+                        <Route path="/pendencias-frequencia" element={<RouteErrorBoundary><PendenciasFrequencia /></RouteErrorBoundary>} />
+                        <Route path="/aparata" element={<RouteErrorBoundary><Aparata /></RouteErrorBoundary>} />
+                        <Route path="/aparata-detalhes" element={<RouteErrorBoundary><AparataDetalhes /></RouteErrorBoundary>} />
                         
                         {/* Rotas Restritas (Apenas Administrativo) */}
                         <Route element={<ProtectedRoute allowedRoles={ADMIN_ROLES} />}>
-                          <Route path="/administracao" element={<Administracao />} />
-                          <Route path="/curriculo" element={<Curriculo />} />
+                          <Route path="/administracao" element={<RouteErrorBoundary><Administracao /></RouteErrorBoundary>} />
+                          <Route path="/curriculo" element={<RouteErrorBoundary><Curriculo /></RouteErrorBoundary>} />
                         </Route>
                       </Route>
                     </Route>
