@@ -185,11 +185,11 @@ export default function Layout() {
               </span>
             </div>
           </div>
-          <Link to="/minha-privacidade" className="flex items-center space-x-2 bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-white px-4 py-3 rounded-xl text-sm font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-all shadow-md active:scale-95" title="Centro de Privacidade">
+          <Link to="/minha-privacidade" className="flex items-center space-x-2 bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-white px-4 py-3 rounded-xl text-sm font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-all shadow-md active:scale-95" title="Centro de Privacidade" aria-label="Centro de Privacidade">
             <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <span className="hidden md:inline">Privacidade</span>
           </Link>
-          <Link to="/turmas" className="flex items-center space-x-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-3 rounded-xl text-sm font-bold hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95">
+          <Link to="/turmas" className="flex items-center space-x-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-3 rounded-xl text-sm font-bold hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95" aria-label="Ir para o início">
             <Home className="w-4 h-4" />
             <span className="hidden md:inline">Início</span>
           </Link>

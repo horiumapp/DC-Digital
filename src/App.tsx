@@ -84,12 +84,12 @@ export default function App() {
 
                     {/* Rota Privada de Privacidade (Acessível a qualquer usuário logado) */}
                     <Route element={<ProtectedRoute />}>
-                      <Route path="/minha-privacidade" element={<MinhaPrivacidade />} />
+                      <Route path="/minha-privacidade" element={<RouteErrorBoundary><MinhaPrivacidade /></RouteErrorBoundary>} />
                     </Route>
 
                     {/* Rota exclusiva do Portal do Aluno (sem Layout/sidebar) */}
                     <Route element={<ProtectedRoute allowedRoles={['ALUNO']} />}>
-                      <Route path="/portal-aluno" element={<PortalAluno />} />
+                      <Route path="/portal-aluno" element={<RouteErrorBoundary><PortalAluno /></RouteErrorBoundary>} />
                     </Route>
 
                     {/* Rotas Privadas (Servidores - qualquer logado exceto ALUNO) */}
