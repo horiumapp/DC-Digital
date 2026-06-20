@@ -7,7 +7,7 @@ interface AvaliacaoDetailsViewProps {
   onBack: () => void;
 }
 
-export default function AvaliacaoDetailsView({
+const AvaliacaoDetailsView = React.memo(function AvaliacaoDetailsView({
   selectedAvaliacao,
   onBack
 }: AvaliacaoDetailsViewProps) {
@@ -84,3 +84,5 @@ export default function AvaliacaoDetailsView({
     </div>
   );
 }
+
+export default AvaliacaoDetailsView;

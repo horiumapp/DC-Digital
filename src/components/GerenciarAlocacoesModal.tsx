@@ -9,7 +9,7 @@ interface GerenciarAlocacoesModalProps {
   onAlocacoesChanged: () => void;
 }
 
-export default function GerenciarAlocacoesModal({ isOpen, onClose, professor, onAlocacoesChanged }: GerenciarAlocacoesModalProps) {
+const GerenciarAlocacoesModal = React.memo(function GerenciarAlocacoesModal({ isOpen, onClose, professor, onAlocacoesChanged }: GerenciarAlocacoesModalProps) {
   const [escolas, setEscolas] = useState<any[]>([]);
   const [alocacoes, setAlocacoes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -228,3 +228,5 @@ export default function GerenciarAlocacoesModal({ isOpen, onClose, professor, on
     </div>
   );
 }
+
+export default GerenciarAlocacoesModal;

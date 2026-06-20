@@ -14,7 +14,7 @@ const DISCIPLINAS = [
   'Artes', 'Educação Física', 'Inglês', 'Ensino Religioso'
 ];
 
-export default function NovoProfessorModal({ isOpen, onClose, onSave, professorParaEditar }: NovoProfessorModalProps) {
+const NovoProfessorModal = React.memo(function NovoProfessorModal({ isOpen, onClose, onSave, professorParaEditar }: NovoProfessorModalProps) {
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
@@ -359,3 +359,5 @@ export default function NovoProfessorModal({ isOpen, onClose, onSave, professorP
     </div>
   );
 }
+
+export default NovoProfessorModal;

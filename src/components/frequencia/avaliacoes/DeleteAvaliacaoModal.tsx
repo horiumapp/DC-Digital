@@ -6,7 +6,7 @@ interface DeleteAvaliacaoModalProps {
   onCancel: () => void;
 }
 
-export default function DeleteAvaliacaoModal({
+const DeleteAvaliacaoModal = React.memo(function DeleteAvaliacaoModal({
   onConfirm,
   onCancel
 }: DeleteAvaliacaoModalProps) {
@@ -40,3 +40,5 @@ export default function DeleteAvaliacaoModal({
     </div>
   );
 }
+
+export default DeleteAvaliacaoModal;

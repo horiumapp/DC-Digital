@@ -15,7 +15,7 @@ interface ScheduleModalProps {
 const DIAS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 const SLOTS = [1, 2, 3, 4, 5, 6, 7];
 
-export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }: ScheduleModalProps) {
+const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, professorId, escolaId }: ScheduleModalProps) {
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [schedule, setSchedule] = useState<Record<string, any>>({});
@@ -463,3 +463,5 @@ export default function ScheduleModal({ isOpen, onClose, professorId, escolaId }
     document.body
   );
 }
+
+export default ScheduleModal;

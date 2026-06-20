@@ -17,7 +17,7 @@ interface SegundaChamadaEditorProps {
   onGenerateNewCaptcha: () => void;
 }
 
-export default function SegundaChamadaEditor({
+const SegundaChamadaEditor = React.memo(function SegundaChamadaEditor({
   selectedAvaliacao,
   alunos,
   secondCallRows,
@@ -165,3 +165,5 @@ export default function SegundaChamadaEditor({
     </div>
   );
 }
+
+export default SegundaChamadaEditor;

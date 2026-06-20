@@ -12,7 +12,7 @@ interface NovoAlunoModalProps {
   fixedEscolaId?: string;
 }
 
-export default function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEditar, fixedEscolaId }: NovoAlunoModalProps) {
+const NovoAlunoModal = React.memo(function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEditar, fixedEscolaId }: NovoAlunoModalProps) {
   const { showError } = useToast();
   const [escolas, setEscolas] = useState<any[]>([]);
   const [turmas, setTurmas] = useState<any[]>([]);
@@ -365,3 +365,5 @@ export default function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEdita
     </div>
   );
 }
+
+export default NovoAlunoModal;
