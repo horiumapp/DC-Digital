@@ -58,16 +58,41 @@ export async function saveUserConsent(input: UserConsentInput) {
 
 /**
  * Envia uma nova solicitação de direitos LGPD.
+ * 
+ * ADVISORY: Esta função é chamável por visitantes anônimos (sem login).
+ * Recomenda-se configurar rate limiting server-side via:
+ * - Supabase Edge Function com throttle por IP
+ * - Ou trigger PostgreSQL limitando inserts por email/hora
  */
 export async function submitLgpdRequest(input: LgpdRequestInput) {
   try {
+    // Validação de input
+    const nome = (input.nome || '').trim();
+    const email = (input.email || '').trim().toLowerCase();
+    const mensagem = (input.mensagem || '').trim();
+    const tipo = input.tipo;
+
+    if (!nome || nome.length < 2 || nome.length > 200) {
+      return { data: null, error: new Error('Nome inválido (2-200 caracteres).') };
+    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+      return { data: null, error: new Error('E-mail inválido.') };
+    }
+    if (!mensagem || mensagem.length < 10 || mensagem.length > 5000) {
+      return { data: null, error: new Error('Mensagem inválida (10-5000 caracteres).') };
+    }
+    const tiposValidos = ['acesso', 'correcao', 'exclusao', 'revogacao', 'compartilhamento', 'outro'];
+    if (!tiposValidos.includes(tipo)) {
+      return { data: null, error: new Error('Tipo de solicitação inválido.') };
+    }
+
     const { data, error } = await supabase
       .from('lgpd_requests')
       .insert({
-        nome: input.nome,
-        email: input.email,
-        tipo: input.tipo,
-        mensagem: input.mensagem,
+        nome,
+        email,
+        tipo,
+        mensagem,
         status: 'recebida',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),

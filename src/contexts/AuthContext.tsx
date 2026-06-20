@@ -83,21 +83,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('[AuthContext] Erro ao carregar usuário cacheado:', err);
       }
 
-      // 2. Se estiver online, buscar dados atualizados do Supabase
-      // FIX #7: O servidor é SEMPRE fonte de verdade para a role quando online.
+      // 2. Se estiver online, buscar dados complementares do Supabase
+      // SEGURANÇA: O servidor complementa APENAS dados não-sensíveis (escola_id, nome).
+      // A role NUNCA é sobrescrita pelo servidor — app_metadata (JWT) é a fonte definitiva,
+      // pois é assinada pelo backend e não pode ser manipulada pelo cliente.
       if (navigator.onLine) {
         try {
           const { data: userData, error } = await supabase
             .from('usuarios')
-            .select('cargo, escola_id')
+            .select('escola_id')
             .eq('id', authUser.id)
             .maybeSingle();
           
           if (!error && userData) {
-            // Servidor sobrescreve cache/app_metadata quando disponível
-            if (userData.cargo) {
-              role = userData.cargo as UserRole;
-            }
             if (userData.escola_id) {
               escolaId = userData.escola_id;
             }

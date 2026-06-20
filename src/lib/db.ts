@@ -270,6 +270,26 @@ export class DCDigitalDB extends Dexie {
       files:       '++localId, syncStatus, relatedTable, relatedId',
       userSalts:   'userId',
     });
+
+    // v4: Adiciona índice composto [syncStatus+updatedAt] em TODAS as tabelas operacionais
+    // Permite que clearOldSyncedData faça range queries eficientes via índice
+    // em vez de filtrar via JavaScript (padrão anterior)
+    this.version(4).stores({
+      turmas:      'id, escola_id',
+      alunos:      'id, turma_id, syncStatus',
+      frequencias: '++localId, [turma_id+aluno_id+data+tempo+disciplina], turma_id, syncStatus, updatedAt, [syncStatus+updatedAt]',
+      conteudos:   '++localId, [turma_id+data+tempo+disciplina], turma_id, syncStatus, updatedAt, [syncStatus+updatedAt]',
+      avaliacoes:  '++localId, turma_id, disciplina, syncStatus, id, [syncStatus+updatedAt]',
+      notas:       '++localId, avaliacao_id, [avaliacao_id+aluno_id], syncStatus, [syncStatus+updatedAt]',
+      horarios:    '++localId, turma_id',
+      fechamentos: '++localId, [turma_id+disciplina+bimestre], syncStatus, [syncStatus+updatedAt]',
+
+      syncQueue:   '++id, table, status, createdAt, hash',
+      syncLogs:    '++id, timestamp, table, status',
+      cachedUsers: 'id',
+      files:       '++localId, syncStatus, relatedTable, relatedId',
+      userSalts:   'userId',
+    });
   }
 }
 
@@ -279,6 +299,33 @@ export const db = new DCDigitalDB();
 // ============================================================
 // Helpers
 // ============================================================
+
+/**
+ * Acesso tipado a tabelas operacionais do banco.
+ * Elimina type assertions perigosas como `(db as unknown as Record<...>)[name]`.
+ */
+type OperationalTableName = 'frequencias' | 'conteudos' | 'avaliacoes' | 'notas' | 'fechamentos';
+type OperationalTable = typeof db.frequencias | typeof db.conteudos | typeof db.avaliacoes | typeof db.notas | typeof db.fechamentos;
+
+const OPERATIONAL_TABLES: Record<OperationalTableName, () => OperationalTable> = {
+  frequencias: () => db.frequencias,
+  conteudos:   () => db.conteudos,
+  avaliacoes:  () => db.avaliacoes,
+  notas:       () => db.notas,
+  fechamentos: () => db.fechamentos,
+};
+
+/**
+ * Retorna a tabela operacional pelo nome, de forma tipada e segura.
+ * Retorna undefined para nomes desconhecidos.
+ */
+export function getOperationalTable(name: string): OperationalTable | undefined {
+  const getter = OPERATIONAL_TABLES[name as OperationalTableName];
+  return getter ? getter() : undefined;
+}
+
+/** Lista de nomes de tabelas operacionais (para iteração segura) */
+export const OPERATIONAL_TABLE_NAMES: OperationalTableName[] = ['frequencias', 'conteudos', 'avaliacoes', 'notas', 'fechamentos'];
 
 /** Gera timestamp ISO atual */
 export const now = (): string => new Date().toISOString();
@@ -318,3 +365,4 @@ export async function hashOperation(table: string, operation: QueueOperation, pa
   }
   return 'fb_' + Math.abs(hash).toString(36);
 }
+

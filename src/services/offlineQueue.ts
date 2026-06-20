@@ -196,10 +196,10 @@ export async function retryAllErrors(): Promise<number> {
  * Útil para recovery após crash/reload.
  */
 export async function resetStuckItems(): Promise<number> {
-  const sixtySecondsAgo = new Date(Date.now() - 60_000).toISOString();
+  const twoMinutesAgo = new Date(Date.now() - 120_000).toISOString();
   const stuck = await db.syncQueue
     .where('status').equals('processing')
-    .filter(item => item.updatedAt < sixtySecondsAgo)
+    .filter(item => item.updatedAt < twoMinutesAgo)
     .toArray();
 
   const timestamp = now();
