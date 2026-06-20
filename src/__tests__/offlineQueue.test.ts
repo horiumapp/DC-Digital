@@ -1,81 +1,70 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ---------- Mock do Dexie (IndexedDB) ----------
-// Simula a tabela syncQueue como um array em memória
+// vi.mock é hoisted, então a factory inline é obrigatória
 
 let mockQueue: any[] = [];
 let autoId = 1;
 
-const createMockTable = () => ({
-  add: vi.fn(async (item: any) => {
-    const id = autoId++;
-    mockQueue.push({ ...item, id });
-    return id;
-  }),
-  get: vi.fn(async (id: number) => mockQueue.find(i => i.id === id)),
-  update: vi.fn(async (id: number, changes: any) => {
-    const idx = mockQueue.findIndex(i => i.id === id);
-    if (idx >= 0) mockQueue[idx] = { ...mockQueue[idx], ...changes };
-  }),
-  delete: vi.fn(async (id: number) => {
-    mockQueue = mockQueue.filter(i => i.id !== id);
-  }),
-  clear: vi.fn(async () => { mockQueue = []; }),
-  where: vi.fn((field: string) => ({
-    equals: (val: string) => ({
-      filter: (fn: (item: any) => boolean) => ({
-        first: async () => mockQueue.filter(i => i[field] === val).filter(fn)[0],
-        toArray: async () => mockQueue.filter(i => i[field] === val).filter(fn),
-      }),
-      count: async () => mockQueue.filter(i => i[field] === val).length,
-      toArray: async () => mockQueue.filter(i => i[field] === val),
-      sortBy: async (sortField: string) =>
-        mockQueue
-          .filter(i => i[field] === val)
-          .sort((a: any, b: any) => (a[sortField] > b[sortField] ? 1 : -1)),
-    }),
-    anyOf: (vals: string[]) => ({
-      count: async () => mockQueue.filter(i => vals.includes(i[field])).length,
-    }),
-  })),
-  orderBy: vi.fn((_field: string) => ({
-    toArray: async () => [...mockQueue].sort((a, b) => (a.createdAt > b.createdAt ? 1 : -1)),
-  })),
+vi.mock('../lib/db', () => {
+  // Funções precisam ser inline no factory
+  return {
+    db: {
+      syncQueue: {
+        add: async (item: any) => {
+          const id = autoId++;
+          mockQueue.push({ ...item, id });
+          return id;
+        },
+        get: async (id: number) => mockQueue.find(i => i.id === id),
+        update: async (id: number, changes: any) => {
+          const idx = mockQueue.findIndex(i => i.id === id);
+          if (idx >= 0) mockQueue[idx] = { ...mockQueue[idx], ...changes };
+        },
+        delete: async (id: number) => {
+          mockQueue = mockQueue.filter(i => i.id !== id);
+        },
+        clear: async () => { mockQueue = []; },
+        where: (field: string) => ({
+          equals: (val: string) => ({
+            filter: (fn: (item: any) => boolean) => ({
+              first: async () => mockQueue.filter(i => i[field] === val).filter(fn)[0],
+              toArray: async () => mockQueue.filter(i => i[field] === val).filter(fn),
+            }),
+            count: async () => mockQueue.filter(i => i[field] === val).length,
+            toArray: async () => mockQueue.filter(i => i[field] === val),
+            sortBy: async (sortField: string) =>
+              mockQueue
+                .filter(i => i[field] === val)
+                .sort((a: any, b: any) => (a[sortField] > b[sortField] ? 1 : -1)),
+          }),
+          anyOf: (vals: string[]) => ({
+            count: async () => mockQueue.filter(i => vals.includes(i[field])).length,
+          }),
+        }),
+        orderBy: () => ({
+          toArray: async () => [...mockQueue].sort((a, b) => (a.createdAt > b.createdAt ? 1 : -1)),
+        }),
+      },
+    },
+    now: () => new Date().toISOString(),
+    hashOperation: async (_t: string, _o: string, p: any) =>
+      `hash_${JSON.stringify(p).slice(0, 16)}`,
+  };
 });
-
-vi.mock('../lib/db', () => ({
-  db: { syncQueue: createMockTable() },
-  now: () => new Date().toISOString(),
-  hashOperation: async (_t: string, _o: string, p: any) =>
-    `hash_${JSON.stringify(p).slice(0, 16)}`,
-}));
 
 // ---------- Import sob teste ----------
 import {
-  enqueue,
-  dequeue,
-  peek,
-  getAllPending,
-  getPendingCount,
-  markProcessing,
-  markDone,
-  retry,
-  fail,
-  retryAllErrors,
-  resetStuckItems,
-  clearQueue,
-  getQueueStats,
+  enqueue, dequeue, peek, getPendingCount,
+  markProcessing, markDone,
+  retry, fail, retryAllErrors, resetStuckItems,
+  clearQueue, getQueueStats,
 } from '../services/offlineQueue';
 
 describe('offlineQueue', () => {
   beforeEach(() => {
     mockQueue = [];
     autoId = 1;
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
   });
 
   // ====== enqueue ======
@@ -96,15 +85,12 @@ describe('offlineQueue', () => {
   });
 
   it('deve lançar erro quando a fila atinge o limite máximo', async () => {
-    // Adicionar 5000 itens (simulando mockQueue cheia)
+    // Preencher fila com 5000 itens
     for (let i = 0; i < 5000; i++) {
       mockQueue.push({
         id: autoId++,
-        table: 'test',
-        operation: 'UPSERT',
-        payload: '{}',
-        status: 'pending',
-        hash: `hash_${i}`,
+        table: 'test', operation: 'UPSERT', payload: '{}',
+        status: 'pending', hash: `unique_hash_${i}`,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         retryCount: 0,
@@ -112,7 +98,7 @@ describe('offlineQueue', () => {
     }
 
     await expect(
-      enqueue('frequencias', 'UPSERT', { turma_id: 'novo' })
+      enqueue('frequencias', 'UPSERT', { turma_id: 'novo_unico' })
     ).rejects.toThrow(/Limite de operações pendentes/);
   });
 
@@ -168,7 +154,6 @@ describe('offlineQueue', () => {
 
   it('deve marcar como error após MAX_RETRIES (5)', async () => {
     const id = await enqueue('t', 'INSERT', { x: 1 });
-    // Simular 5 retries
     for (let i = 0; i < 5; i++) {
       await retry(id, `Erro ${i + 1}`);
     }
