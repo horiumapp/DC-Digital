@@ -29,8 +29,9 @@ export default function RecuperarSenha() {
 
       setSuccess('Enviamos um link de redefinição para o seu e-mail. Por favor, verifique a sua caixa de entrada e a pasta de spam.');
 
-    } catch (err: any) {
-      setError(translateSupabaseError(err.message));
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setError(translateSupabaseError(errMsg));
     } finally {
       setIsLoading(false);
     }
@@ -75,6 +76,7 @@ export default function RecuperarSenha() {
                   name="email" 
                   placeholder="seu@email.com" 
                   required 
+                  autoComplete="email"
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
                 />
               </div>

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import LoadingFallback from '../components/common/LoadingFallback';
 import { cacheUser, getCachedUser, clearAllLocalData, getPendingCount } from '../services/offlineStorage';
@@ -52,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Monitora a sessão real do Supabase
   useEffect(() => {
-    const fetchUserData = async (session: any) => {
+    const fetchUserData = async (session: Session | null) => {
       // Se não há sessão e já não temos usuário, apenas paramos o loading inicial
       if (!session?.user) {
         if (userRef.current) setUser(null);

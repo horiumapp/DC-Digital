@@ -471,7 +471,7 @@ async function updateTempAvaliacaoId(localId: number, serverId: string): Promise
           payloadChanged = true;
         }
         if (Array.isArray(payloadObj.records)) {
-          payloadObj.records = payloadObj.records.map((r: any) => {
+          payloadObj.records = payloadObj.records.map((r: Record<string, unknown>) => {
             if (r.avaliacao_id === tempIdString) {
               r.avaliacao_id = serverId;
               payloadChanged = true;

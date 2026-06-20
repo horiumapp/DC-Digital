@@ -111,10 +111,10 @@ export async function cacheAlunos(alunos: Omit<LocalAluno, 'syncStatus' | 'updat
       syncStatus: 'synced' as SyncStatus,
       updatedAt: now(),
     };
-    record = await encryptFields(record as any, ['nome', 'cpf'], key);
+    record = await encryptFields(record, ['nome', 'cpf'], key);
     return record;
   }));
-  await db.alunos.bulkPut(records as unknown as LocalAluno[]);
+  await db.alunos.bulkPut(records as LocalAluno[]);
 }
 
 export async function getCachedAlunos(turmaId: string): Promise<LocalAluno[]> {
@@ -122,7 +122,7 @@ export async function getCachedAlunos(turmaId: string): Promise<LocalAluno[]> {
   const local = await db.alunos.where('turma_id').equals(turmaId).toArray();
   if (!key) return local;
   return await Promise.all(local.map(async a => {
-    return await decryptFields(a as any, ['nome', 'cpf'], key);
+    return await decryptFields(a, ['nome', 'cpf'], key);
   }));
 }
 
@@ -729,7 +729,7 @@ export async function clearOldSyncedData(maxAgeDays: number = 60): Promise<numbe
 
 /** Limpa TODOS os dados locais (para logout) */
 export async function clearAllLocalData(clearQueue = false, clearCrypto = false): Promise<void> {
-  const promises: Promise<any>[] = [
+  const promises: Promise<void>[] = [
     db.turmas.clear(),
     db.alunos.clear(),
     db.frequencias.clear(),
@@ -751,7 +751,14 @@ export async function clearAllLocalData(clearQueue = false, clearCrypto = false)
   if (clearQueue) {
     promises.push(db.syncQueue.clear());
   }
-  await Promise.all(promises);
+  // FIX: Usar allSettled para garantir que todas as tabelas sejam tentadas
+  // mesmo se alguma falhar (ex: IndexedDB corrompido parcialmente)
+  const results = await Promise.allSettled(promises);
+  const failures = results.filter(r => r.status === 'rejected');
+  if (failures.length > 0) {
+    console.warn(`[offlineStorage] clearAllLocalData: ${failures.length} tabela(s) falharam:`,
+      failures.map(f => (f as PromiseRejectedResult).reason));
+  }
 }
 
 /** Verifica uso de armazenamento */

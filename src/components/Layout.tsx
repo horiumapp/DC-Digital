@@ -8,7 +8,6 @@ import PrivacyLinksFooter from './PrivacyLinksFooter';
 import { useAuth } from '../contexts/AuthContext';
 import { useOffline } from '../contexts/OfflineContext';
 import { ADMIN_ROLES } from '../constants/authConstants';
-import { clearKeyCache } from '../lib/crypto';
 
 export default function Layout() {
   const location = useLocation();
@@ -57,6 +56,7 @@ export default function Layout() {
           <button 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="lg:hidden p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+            aria-label={isMobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
           >
             {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -72,6 +72,8 @@ export default function Layout() {
             <div className="relative" ref={adminRef}>
               <button
                 onClick={() => setIsAdminOpen(prev => !prev)}
+                aria-expanded={isAdminOpen}
+                aria-haspopup="true"
                 className="px-6 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold flex items-center space-x-2 hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95"
               >
                 <span>Administração</span>
@@ -192,8 +194,9 @@ export default function Layout() {
             <span className="hidden md:inline">Início</span>
           </Link>
           <button
-            onClick={async () => { clearKeyCache(); await clearLocalData(); await logout(); navigate('/'); }}
+            onClick={async () => { await logout(); navigate('/'); }}
             className="flex items-center space-x-2 bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-all shadow-md hover:shadow-lg active:scale-95 cursor-pointer"
+            aria-label="Sair do sistema"
           >
             <span className="hidden md:inline">Sair</span>
             <LogOut className="w-4 h-4 text-red-500" />

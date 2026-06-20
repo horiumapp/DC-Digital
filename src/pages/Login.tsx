@@ -243,6 +243,7 @@ export default function Login() {
                   name="email" 
                   placeholder="seu@email.com" 
                   required 
+                  autoComplete="username"
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
                 />
               </div>
@@ -256,6 +257,7 @@ export default function Login() {
                   placeholder="000.000.000-00" 
                   maxLength={14}
                   required 
+                  autoComplete="username"
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
                 />
                 <p className="text-[10px] text-slate-400 font-medium">Digite os 11 dígitos da Matrícula para acessar.</p>
@@ -270,6 +272,7 @@ export default function Login() {
                 name="password" 
                 placeholder="••••••••" 
                 required 
+                autoComplete="current-password"
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
               />
             </div>
