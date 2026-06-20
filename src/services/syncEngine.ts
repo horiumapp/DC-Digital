@@ -6,7 +6,7 @@
  * de conflitos via last-write-wins.
  */
 import { supabase } from '../lib/supabase';
-import { db, now, hashOperation, type SyncLogEntry, type SyncQueueItem } from '../lib/db';
+import { db, now, hashOperation, getOperationalTable, type SyncLogEntry, type SyncQueueItem } from '../lib/db';
 import * as Queue from './offlineQueue';
 
 // ============================================================
@@ -115,7 +115,9 @@ export async function syncAll(): Promise<SyncResult> {
         emit('itemSynced', { table: item.table, operation: item.operation });
 
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : String(err);
+        const rawErrorMsg = err instanceof Error ? err.message : String(err);
+        // LGPD: Sanitizar PII antes de persistir no log
+        const errorMsg = sanitizePII(rawErrorMsg);
         
         // FIX #8: Diferenciar erros recuperáveis de não-recuperáveis.
         // Erros fatais (RLS, duplicate, FK) são movidos para dead letter
@@ -178,6 +180,25 @@ function isNonRecoverableError(errorMsg: string): boolean {
     msg.includes('violates check constraint') ||
     msg.includes('invalid input syntax')
   );
+}
+
+// ============================================================
+// Sanitização de PII em logs de erro (LGPD)
+// ============================================================
+
+/**
+ * Remove dados pessoais (nomes, CPFs, emails) de mensagens de erro
+ * antes de persisti-las nos logs de sincronização.
+ */
+function sanitizePII(msg: string): string {
+  let sanitized = msg;
+  // CPFs: 000.000.000-00 ou 00000000000
+  sanitized = sanitized.replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, '[CPF_REDACTED]');
+  // Emails
+  sanitized = sanitized.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL_REDACTED]');
+  // Nomes completos entre aspas (comum em erros de "nome = 'Fulano de Tal'")
+  sanitized = sanitized.replace(/['"]([A-ZÁÉÍÓÚÃÕÂÊÎÔÛÇ][a-záéíóúãõâêîôûç]+(\s+[A-ZÁÉÍÓÚÃÕÂÊÎÔÛÇ][a-záéíóúãõâêîôûç]+)+)['"]/g, "'[NOME_REDACTED]'");
+  return sanitized;
 }
 
 // ============================================================
@@ -511,9 +532,9 @@ async function markLocalRecordSynced(item: { table: string; localId?: number }):
   if (!item.localId) return;
   
   const timestamp = now();
-  const table = (db as unknown as Record<string, { update: (id: number, data: Record<string, unknown>) => Promise<unknown> }>)[item.table];
+  const table = getOperationalTable(item.table);
   
-  if (table?.update) {
+  if (table) {
     try {
       await table.update(item.localId, {
         syncStatus: 'synced',
