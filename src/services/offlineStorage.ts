@@ -122,11 +122,17 @@ export async function getCachedAlunos(turmaId: string): Promise<LocalAluno[]> {
   const key = await getCryptoKey();
   const local = await db.alunos.where('turma_id').equals(turmaId).toArray();
   if (!key) return local;
-  return await Promise.all(local.map(async a => {
-    // Cast seguro: decryptFields apenas lê/escreve campos por nome
-    const decrypted = await decryptFields(a as unknown as Record<string, unknown>, ['nome', 'cpf'], key);
+  let anyDecryptionFailed = false;
+  const result = await Promise.all(local.map(async a => {
+    // FIX #3: decryptFields agora retorna { data, decryptionFailed }
+    const { data: decrypted, decryptionFailed } = await decryptFields(a as unknown as Record<string, unknown>, ['nome', 'cpf'], key);
+    if (decryptionFailed) anyDecryptionFailed = true;
     return decrypted as unknown as LocalAluno;
   }));
+  if (anyDecryptionFailed) {
+    console.warn('[offlineStorage] Descriptografia falhou para alguns alunos. Dados precisam ser re-cacheados do servidor.');
+  }
+  return result;
 }
 
 // ============================================================
@@ -742,12 +748,11 @@ export async function clearOldSyncedData(maxAgeDays: number = 60): Promise<numbe
       }
     } catch {
       // Fallback para schema < v4 (sem índice composto)
-      const old = await table
-        .where('syncStatus').equals('synced')
-        .filter((r: { updatedAt: string }) => r.updatedAt < cutoffISO)
-        .toArray();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const allRecords = await (table as any).where('syncStatus').equals('synced').toArray() as Array<{ localId?: number; updatedAt: string }>;
+      const old = allRecords.filter(r => r.updatedAt < cutoffISO);
       
-      const ids = old.map((r: { localId?: number }) => r.localId).filter((id): id is number => id !== undefined);
+      const ids = old.map(r => r.localId).filter((id): id is number => id !== undefined);
       if (ids.length > 0) {
         await table.bulkDelete(ids);
         deletedCount += ids.length;
@@ -761,6 +766,23 @@ export async function clearOldSyncedData(maxAgeDays: number = 60): Promise<numbe
   if (logIds.length > 0) {
     await db.syncLogs.bulkDelete(logIds);
     deletedCount += logIds.length;
+  }
+
+  // FIX #6: Limpar dead letter (itens com status 'error') mais antigos que maxAgeDays
+  // Sem isso, a tabela syncQueue cresce indefinidamente com itens irrecuperáveis.
+  try {
+    const oldErrors = await db.syncQueue
+      .where('status').equals('error')
+      .filter(item => item.updatedAt < cutoffISO)
+      .toArray();
+    const errorIds = oldErrors.map(e => e.id).filter((id): id is number => id !== undefined);
+    if (errorIds.length > 0) {
+      await db.syncQueue.bulkDelete(errorIds);
+      deletedCount += errorIds.length;
+      console.log(`[offlineStorage] Limpeza: ${errorIds.length} itens dead letter removidos da fila`);
+    }
+  } catch (err) {
+    console.warn('[offlineStorage] Erro ao limpar dead letter da syncQueue:', err);
   }
 
   return deletedCount;

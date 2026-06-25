@@ -67,9 +67,23 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     wasOffline.current = !isOnline;
   }, [isOnline]);
 
-  // Limpeza periódica de dados antigos (a cada 24h)
+  // FIX #7: Limpeza periódica com localStorage para rastrear último cleanup.
+  // O setInterval de 24h anterior nunca disparava pois tabs não ficam abertas 24h.
+  // Agora verifica no mount se já se passaram 24h desde a última limpeza.
   useEffect(() => {
+    const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h
+    const RECHECK_INTERVAL_MS = 4 * 60 * 60 * 1000; // Re-check a cada 4h (caso a tab fique aberta)
+    const STORAGE_KEY = 'dc_digital_last_cleanup';
+
     const cleanup = async () => {
+      const lastCleanup = localStorage.getItem(STORAGE_KEY);
+      const lastCleanupTime = lastCleanup ? parseInt(lastCleanup, 10) : 0;
+      const elapsed = Date.now() - lastCleanupTime;
+
+      if (elapsed < CLEANUP_INTERVAL_MS) {
+        return; // Ainda não passou tempo suficiente
+      }
+
       try {
         const deleted = await clearOldSyncedData(60);
         if (deleted > 0) {
@@ -81,13 +95,15 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         if (estimate.percentUsed > 80) {
           console.warn(`[OfflineProvider] Armazenamento em ${estimate.percentUsed.toFixed(1)}% — considere limpar dados`);
         }
+
+        localStorage.setItem(STORAGE_KEY, Date.now().toString());
       } catch (err) {
         console.error('[OfflineProvider] Erro na limpeza:', err);
       }
     };
 
-    cleanup(); // Rodar na inicialização
-    const interval = setInterval(cleanup, 24 * 60 * 60 * 1000); // 24h
+    cleanup(); // Rodar na inicialização (só executa se 24h+ se passaram)
+    const interval = setInterval(cleanup, RECHECK_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
 

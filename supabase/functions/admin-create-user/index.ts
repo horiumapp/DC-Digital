@@ -115,15 +115,14 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Verificar role do chamador
-    let effectiveRole = callerUser.app_metadata?.role;
+    // Verificar role do chamador — SOMENTE via app_metadata (JWT assinado pelo backend)
+    // FIX #4: Removido fallback para tabela `usuarios` que poderia ser manipulada via RLS.
+    const effectiveRole = callerUser.app_metadata?.role;
     if (!effectiveRole) {
-      const { data: userData } = await supabaseAdmin
-        .from("usuarios")
-        .select("cargo")
-        .eq("id", callerUser.id)
-        .maybeSingle();
-      effectiveRole = userData?.cargo;
+      return new Response(
+        JSON.stringify({ error: "Seu perfil não possui permissão configurada (role ausente no JWT). Contate o administrador." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // FIX #3: Verificar rate limit antes de processar a requisição

@@ -57,14 +57,51 @@ export async function saveUserConsent(input: UserConsentInput) {
 }
 
 /**
+ * Rate limiting client-side para solicitações LGPD (primeira barreira).
+ * Limita a 5 solicitações por 15 minutos por sessão.
+ * 
+ * IMPORTANTE: Isso NÃO substitui rate limiting server-side.
+ * Configurar também uma das seguintes proteções:
+ * - Edge Function intermediária com throttle por IP/email
+ * - Trigger PostgreSQL: BEFORE INSERT ON lgpd_requests limitando por email/hora
+ */
+const LGPD_RATE_LIMIT_KEY = 'dc_lgpd_rate_limit';
+const LGPD_RATE_LIMIT_MAX = 5;
+const LGPD_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutos
+
+function checkLgpdRateLimit(): boolean {
+  try {
+    const stored = sessionStorage.getItem(LGPD_RATE_LIMIT_KEY);
+    const entries: number[] = stored ? JSON.parse(stored) : [];
+    const now = Date.now();
+    // Limpar entradas expiradas
+    const recent = entries.filter(ts => (now - ts) < LGPD_RATE_LIMIT_WINDOW_MS);
+    if (recent.length >= LGPD_RATE_LIMIT_MAX) {
+      return false; // Limite excedido
+    }
+    recent.push(now);
+    sessionStorage.setItem(LGPD_RATE_LIMIT_KEY, JSON.stringify(recent));
+    return true;
+  } catch {
+    return true; // Se sessionStorage falhar, permitir (não bloquear funcionalidade)
+  }
+}
+
+/**
  * Envia uma nova solicitação de direitos LGPD.
  * 
- * ADVISORY: Esta função é chamável por visitantes anônimos (sem login).
- * Recomenda-se configurar rate limiting server-side via:
- * - Supabase Edge Function com throttle por IP
- * - Ou trigger PostgreSQL limitando inserts por email/hora
+ * FIX #2: Agora com rate limiting client-side (5 req/15min).
+ * Para proteção server-side, configurar trigger PostgreSQL ou Edge Function.
  */
 export async function submitLgpdRequest(input: LgpdRequestInput) {
+  // FIX #2: Verificar rate limit antes de processar
+  if (!checkLgpdRateLimit()) {
+    return {
+      data: null,
+      error: new Error('Muitas solicitações em pouco tempo. Aguarde 15 minutos antes de enviar outra.'),
+    };
+  }
+
   try {
     // Validação de input
     const nome = (input.nome || '').trim();

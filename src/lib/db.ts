@@ -350,7 +350,7 @@ export async function hashOperation(table: string, operation: QueueOperation, pa
       const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      return hashHex.slice(0, 16);
+      return hashHex.slice(0, 32);
     }
   } catch (err) {
     console.warn('SubtleCrypto error, falling back to DJB2:', err);

@@ -98,6 +98,21 @@ export async function decrypt(encryptedBase64: string, key: CryptoKey): Promise<
   return decoder.decode(plaintext);
 }
 
+/**
+ * Verifica se um texto parece estar criptografado (base64 válido com comprimento
+ * compatível com IV de 12 bytes + pelo menos 1 byte de ciphertext + 16 bytes de GCM tag).
+ */
+export function looksEncrypted(value: string): boolean {
+  if (!value || value.length < 40) return false;
+  try {
+    const decoded = atob(value);
+    // IV (12) + mínimo ciphertext+tag (17) = 29 bytes
+    return decoded.length >= 29;
+  } catch {
+    return false;
+  }
+}
+
 // ============================================================
 // Helpers para objetos
 // ============================================================
@@ -124,28 +139,44 @@ export async function encryptFields<T extends Record<string, unknown>>(
 }
 
 /**
+ * Resultado de decryptFields com flag de falha.
+ * Se `decryptionFailed` for true, o chamador deve forçar re-cache do servidor.
+ */
+export interface DecryptResult<T> {
+  data: T;
+  decryptionFailed: boolean;
+}
+
+/**
  * Descriptografa campos sensíveis de um objeto.
+ * Retorna `decryptionFailed: true` se algum campo criptografado não pôde ser descriptografado
+ * (chave perdida/corrompida), sinalizando que o chamador deve buscar dados frescos do servidor.
  */
 export async function decryptFields<T extends Record<string, unknown>>(
   data: T,
   sensitiveFields: (keyof T)[],
   key: CryptoKey
-): Promise<T> {
+): Promise<DecryptResult<T>> {
   const decrypted = { ...data };
+  let decryptionFailed = false;
 
   for (const field of sensitiveFields) {
     const value = data[field];
     if (typeof value === 'string' && value.length > 0) {
-      try {
-        (decrypted as Record<string, unknown>)[field as string] = await decrypt(value, key);
-      } catch {
-        // Se falhar a descriptografia (dado não estava criptografado), manter original
-        (decrypted as Record<string, unknown>)[field as string] = value;
+      if (looksEncrypted(value)) {
+        try {
+          (decrypted as Record<string, unknown>)[field as string] = await decrypt(value, key);
+        } catch {
+          // FIX #3: Chave perdida/corrompida — sinalizar para re-cache
+          (decrypted as Record<string, unknown>)[field as string] = '[DADOS PROTEGIDOS - RECONECTE PARA ATUALIZAR]';
+          decryptionFailed = true;
+        }
       }
+      // Se não parece criptografado, manter original (texto plano legado)
     }
   }
 
-  return decrypted;
+  return { data: decrypted, decryptionFailed };
 }
 
 // ============================================================

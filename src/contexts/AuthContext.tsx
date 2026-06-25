@@ -87,7 +87,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // SEGURANÇA: O servidor complementa APENAS dados não-sensíveis (escola_id, nome).
       // A role NUNCA é sobrescrita pelo servidor — app_metadata (JWT) é a fonte definitiva,
       // pois é assinada pelo backend e não pode ser manipulada pelo cliente.
-      if (navigator.onLine) {
+      // FIX #10: Usar ping real em vez de navigator.onLine (pode reportar 'true' sem internet)
+      let isReallyOnline = navigator.onLine;
+      if (isReallyOnline) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3000);
+          const res = await fetch('/ping.txt', { method: 'HEAD', cache: 'no-store', signal: controller.signal });
+          clearTimeout(timeoutId);
+          isReallyOnline = res.status >= 200 && res.status < 500;
+        } catch {
+          isReallyOnline = false;
+        }
+      }
+      if (isReallyOnline) {
         try {
           const { data: userData, error } = await supabase
             .from('usuarios')
@@ -113,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setLoading(false);
         showToastErrorRef.current(
-          navigator.onLine
+          isReallyOnline
             ? 'Acesso não autorizado: Nível de acesso não definido. Entre em contato com o suporte.'
             : 'Sem conexão: não é possível verificar seu nível de acesso. Conecte-se à internet e tente novamente.'
         );
