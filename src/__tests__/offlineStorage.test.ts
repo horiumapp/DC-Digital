@@ -289,12 +289,12 @@ describe('offlineStorage Service', () => {
     const originalAdd = db.frequencias.add;
 
     // Fazer a primeira chamada lançar erro de cota
-    db.frequencias.add = async (item: any) => {
+    (db.frequencias.add as any) = async (item: any) => {
       if (!hasThrown) {
         hasThrown = true;
         throw new DOMException('QuotaExceededError', 'QuotaExceededError');
       }
-      return await originalAdd(item);
+      return await originalAdd.call(db.frequencias, item);
     };
 
     const freq = {

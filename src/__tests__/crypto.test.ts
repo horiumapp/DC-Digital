@@ -94,9 +94,9 @@ describe('Serviço de Criptografia (crypto.ts)', () => {
     expect(encryptedObj.nome).not.toBe(userObj.nome);
     expect(encryptedObj.cpf).not.toBe(userObj.cpf);
 
-    // Descriptografar de volta
-    const decryptedObj = await decryptFields(encryptedObj, ['nome', 'cpf'], key);
-    expect(decryptedObj).toEqual(userObj);
+    const decryptedResult = await decryptFields(encryptedObj, ['nome', 'cpf'], key);
+    expect(decryptedResult.decryptionFailed).toBe(false);
+    expect(decryptedResult.data).toEqual(userObj);
   });
 
   it('deve falhar ao descriptografar com chave de outro usuário', async () => {

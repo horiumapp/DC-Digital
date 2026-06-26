@@ -46,7 +46,7 @@ const {
 
   return {
     mockCacheUser: vi.fn(async () => { }),
-    mockGetCachedUser: vi.fn(async () => null),
+    mockGetCachedUser: vi.fn(async (): Promise<Record<string, any> | null | undefined> => null),
     mockClearAllLocalData: vi.fn(async () => { }),
     mockClearSalts: vi.fn(async () => { }),
     mockGetSession: getSession,
@@ -132,6 +132,8 @@ describe('AuthContext', () => {
     mockMaybeSingle.mockReset();
     mockMaybeSingle.mockImplementation(async () => ({ data: { escola_id: 'escola-123' }, error: null }));
     mockGetCachedUser.mockImplementation(async () => null);
+    // Mock fetch para que o ping real (/ping.txt) retorne sucesso no ambiente de teste
+    vi.stubGlobal('fetch', vi.fn(async () => ({ status: 200 })));
   });
 
   afterEach(() => {
@@ -218,8 +220,11 @@ describe('AuthContext', () => {
     mockGetCachedUser.mockResolvedValue({
       id: 'user-cached',
       name: 'Nome Antigo Cache',
-      escola_id: 'escola-cached-id',
+      email: 'cached@escola.com',
       role: 'GESTOR',
+      title: 'GESTOR',
+      escola_id: 'escola-cached-id',
+      cachedAt: new Date().toISOString(),
     });
 
     render(
