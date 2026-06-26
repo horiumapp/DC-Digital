@@ -45,10 +45,10 @@ const {
   const from = vi.fn(() => ({ select }));
 
   return {
-    mockCacheUser: vi.fn(async () => {}),
+    mockCacheUser: vi.fn(async () => { }),
     mockGetCachedUser: vi.fn(async () => null),
-    mockClearAllLocalData: vi.fn(async () => {}),
-    mockClearSalts: vi.fn(async () => {}),
+    mockClearAllLocalData: vi.fn(async () => { }),
+    mockClearSalts: vi.fn(async () => { }),
     mockGetSession: getSession,
     mockOnAuthStateChange: onAuthStateChange,
     mockSignOut: signOut,
@@ -132,19 +132,10 @@ describe('AuthContext', () => {
     mockMaybeSingle.mockReset();
     mockMaybeSingle.mockImplementation(async () => ({ data: { escola_id: 'escola-123' }, error: null }));
     mockGetCachedUser.mockImplementation(async () => null);
-
-    // Mock global fetch for ping.txt to simulate being online during tests
-    vi.stubGlobal('fetch', vi.fn(async (url) => {
-      if (typeof url === 'string' && url.includes('/ping.txt')) {
-        return { status: 200, ok: true };
-      }
-      return { status: 404, ok: false };
-    }));
   });
 
   afterEach(() => {
     cleanup();
-    vi.unstubAllGlobals();
   });
 
   it('deve inicializar com estado loading e depois mostrar "Não autenticado" se não houver sessão', async () => {

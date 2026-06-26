@@ -67,7 +67,7 @@ describe('Serviço de Criptografia (crypto.ts)', () => {
   it('deve tratar com segurança textos grandes sem estourar o limite da pilha', async () => {
     const userId = 'user-test-uuid-stack';
     const key = await getOrCreateKey(userId);
-    
+
     // Gerar uma string grande (~100KB)
     const largeText = 'A'.repeat(100_000);
 
@@ -95,9 +95,8 @@ describe('Serviço de Criptografia (crypto.ts)', () => {
     expect(encryptedObj.cpf).not.toBe(userObj.cpf);
 
     // Descriptografar de volta
-    const decryptedResult = await decryptFields(encryptedObj, ['nome', 'cpf'], key);
-    expect(decryptedResult.decryptionFailed).toBe(false);
-    expect(decryptedResult.data).toEqual(userObj);
+    const decryptedObj = await decryptFields(encryptedObj, ['nome', 'cpf'], key);
+    expect(decryptedObj).toEqual(userObj);
   });
 
   it('deve falhar ao descriptografar com chave de outro usuário', async () => {
