@@ -353,9 +353,9 @@ export default function TabProfessores() {
           {/* Form Inline (Image 1 style) */}
           <div className="px-8 -mt-6 relative z-20 mb-6">
             <div className="bg-white p-6 rounded-2xl shadow-xl shadow-blue-900/5 border border-slate-100 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 {/* Nome */}
-                <div className="space-y-2 lg:col-span-1">
+                <div className="space-y-2 lg:col-span-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">NOME DO PROFESSOR</label>
                   <input
                     type="text"
@@ -366,25 +366,13 @@ export default function TabProfessores() {
                   />
                 </div>
                 {/* E-mail */}
-                <div className="space-y-2 lg:col-span-1">
+                <div className="space-y-2 lg:col-span-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-MAIL (OPCIONAL)</label>
                   <input
                     type="email"
                     value={inlineFormData.email}
                     onChange={(e) => setInlineFormData({...inlineFormData, email: e.target.value})}
                     placeholder="E-mail de acesso"
-                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851]"
-                  />
-                </div>
-                {/* Senha */}
-                <div className="space-y-2 lg:col-span-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">SENHA (OPCIONAL)</label>
-                  <input
-                    type="password"
-                    value={inlineFormData.senha}
-                    onChange={(e) => setInlineFormData({...inlineFormData, senha: e.target.value})}
-                    placeholder="Padrão: @prof123"
-                    autoComplete="new-password"
                     className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851]"
                   />
                 </div>
