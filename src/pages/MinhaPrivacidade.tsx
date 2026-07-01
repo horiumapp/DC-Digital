@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Shield, User, Download, AlertTriangle, ShieldCheck, Loader2 } from 'lucide-react';
+import { ArrowLeft, Shield, User, Download, AlertTriangle, ShieldCheck, Loader2, KeyRound } from 'lucide-react';
 import Background from '../components/Background';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -26,6 +26,13 @@ export default function MinhaPrivacidade() {
   const [profile, setProfile] = useState<PersonalProfile | null>(null);
   const [cookieConsent, setCookieConsent] = useState(true);
   const [marketingConsent, setMarketingConsent] = useState(false);
+
+  // Estados para alteração de senha
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
 
   const backUrl = user?.role === 'ALUNO' ? '/portal-aluno' : '/turmas';
 
@@ -189,6 +196,54 @@ export default function MinhaPrivacidade() {
     });
   };
 
+  const validarForcaSenha = (senha: string): string | null => {
+    if (senha.length < 8) return 'A senha deve ter no mínimo 8 caracteres.';
+    if (!/[A-Z]/.test(senha)) return 'A senha deve conter pelo menos uma letra maiúscula.';
+    if (!/[0-9]/.test(senha)) return 'A senha deve conter pelo menos um número.';
+    return null;
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    if (password !== confirmPassword) {
+      setPasswordError('As senhas não coincidem. Tente novamente.');
+      return;
+    }
+
+    const forcaError = validarForcaSenha(password);
+    if (forcaError) {
+      setPasswordError(forcaError);
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+
+      if (error) throw error;
+
+      await logSecurityEvent({
+        userId: user?.id,
+        userEmail: user?.email || undefined,
+        action: 'PERSONAL_DATA_CHANGE',
+        entity: 'usuarios',
+        entityId: user?.id,
+        metadata: { descricao: 'Alteração de senha realizada pelo próprio usuário no Centro de Privacidade.' }
+      });
+
+      setPasswordSuccess('Senha alterada com sucesso!');
+      setPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      setPasswordError(err.message || 'Erro ao atualizar senha.');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -329,6 +384,72 @@ export default function MinhaPrivacidade() {
               </Link>
             </div>
           </div>
+        </div>
+
+        {/* Alterar Senha (Segurança) */}
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 space-y-4">
+          <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
+            <KeyRound className="w-5 h-5 text-[#0f2851] dark:text-blue-400" />
+            Alterar Senha de Acesso
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Defina uma nova senha forte para proteger sua conta e acessar o sistema.
+          </p>
+
+          {passwordError && (
+            <div className="p-4 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 text-xs font-semibold rounded-xl border border-red-100 dark:border-red-900/30">
+              {passwordError}
+            </div>
+          )}
+
+          {passwordSuccess && (
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+              {passwordSuccess}
+            </div>
+          )}
+
+          <form onSubmit={handlePasswordChange} className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl pt-2">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Nova Senha</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mínimo 8 caracteres"
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] dark:bg-slate-750 dark:text-white transition-all text-sm font-medium"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Confirmar Nova Senha</label>
+              <input
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Repita a nova senha"
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] dark:bg-slate-750 dark:text-white transition-all text-sm font-medium"
+              />
+            </div>
+
+            <div className="sm:col-span-2 flex justify-end">
+              <button
+                type="submit"
+                disabled={passwordLoading}
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95"
+              >
+                {passwordLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  'Salvar Nova Senha'
+                )}
+              </button>
+            </div>
+          </form>
         </div>
 
         {/* Gerenciamento de Consentimentos */}
