@@ -204,7 +204,7 @@ Deno.serve(async (req: Request) => {
     const allowedCargos: Record<string, string[]> = {
       ADMIN: ["ADMIN", "GESTOR", "SECRETARIO", "PROFESSOR", "ALUNO"],
       GESTOR: ["PROFESSOR", "ALUNO"],
-      SECRETARIO: ["ALUNO"],
+      SECRETARIO: ["PROFESSOR", "ALUNO"],
     };
 
     const allowed = allowedCargos[effectiveRole as string];
