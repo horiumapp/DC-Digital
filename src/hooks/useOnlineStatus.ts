@@ -6,6 +6,7 @@
  * mesmo sem acesso real à internet).
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { pingInternet } from '../utils/network';
 
 interface OnlineStatusResult {
   /** Se o dispositivo tem conexão real com a internet */
@@ -19,28 +20,6 @@ interface OnlineStatusResult {
 // Intervalo de ping (ms)
 const PING_INTERVAL_ONLINE = 30_000;   // 30s quando online
 const PING_INTERVAL_OFFLINE = 10_000;  // 10s quando offline (tenta reconectar mais rápido)
-const PING_TIMEOUT = 5_000;            // 5s timeout
-
-async function pingInternet(): Promise<boolean> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), PING_TIMEOUT);
-    
-    // FIX #9: Usar /ping.txt (arquivo estático real em public/) em vez de /api/ping
-    // que era reescrito para index.html pelo SPA router, causando falsos positivos
-    // e consumo desnecessário de banda.
-    const response = await fetch('/ping.txt', {
-      method: 'HEAD',
-      cache: 'no-store',
-      signal: controller.signal,
-    });
-    
-    clearTimeout(timeoutId);
-    return response.status >= 200 && response.status < 500;
-  } catch {
-    return false;
-  }
-}
 
 export function useOnlineStatus(): OnlineStatusResult {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);

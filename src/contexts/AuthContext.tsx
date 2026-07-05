@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import LoadingFallback from '../components/common/LoadingFallback';
 import { cacheUser, getCachedUser, clearAllLocalData, getPendingCount } from '../services/offlineStorage';
 import { clearKeyCache } from '../lib/crypto';
+import { pingInternet } from '../utils/network';
 import { useToast } from '../components/common/Toast';
 import { db } from '../lib/db';
 
@@ -88,18 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // A role NUNCA é sobrescrita pelo servidor — app_metadata (JWT) é a fonte definitiva,
       // pois é assinada pelo backend e não pode ser manipulada pelo cliente.
       // FIX #10: Usar ping real em vez de navigator.onLine (pode reportar 'true' sem internet)
-      let isReallyOnline = navigator.onLine;
-      if (isReallyOnline) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 3000);
-          const res = await fetch('/ping.txt', { method: 'HEAD', cache: 'no-store', signal: controller.signal });
-          clearTimeout(timeoutId);
-          isReallyOnline = res.status >= 200 && res.status < 500;
-        } catch {
-          isReallyOnline = false;
-        }
-      }
+      const isReallyOnline = await pingInternet(3000);
       if (isReallyOnline) {
         try {
           const { data: userData, error } = await supabase

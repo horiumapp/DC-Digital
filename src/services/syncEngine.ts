@@ -8,6 +8,7 @@
 import { supabase } from '../lib/supabase';
 import { db, now, hashOperation, getOperationalTable, type SyncLogEntry, type SyncQueueItem } from '../lib/db';
 import * as Queue from './offlineQueue';
+import { pingInternet } from '../utils/network';
 
 // ============================================================
 // Tipos
@@ -78,8 +79,10 @@ export async function syncAll(): Promise<SyncResult> {
     return { synced: 0, failed: 0, errors: ['Sincronização já em andamento'] };
   }
 
-  // Verificar se realmente está online
-  if (!navigator.onLine) {
+  // FIX: Verificar se realmente está online com ping real
+  // navigator.onLine pode retornar true em Wi-Fi sem rota ou portal captive
+  const isReallyOnline = await pingInternet();
+  if (!isReallyOnline) {
     return { synced: 0, failed: 0, errors: ['Sem conexão com a internet'] };
   }
 

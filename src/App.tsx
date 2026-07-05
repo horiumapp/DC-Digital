@@ -65,8 +65,8 @@ export default function App() {
       <ToastProvider>
         <AuthProvider>
           <OfflineProvider>
-            <TurmaProvider>
-              <Router>
+            <Router>
+              <TurmaProvider>
                 {/* Suspense isola e exibe a tela de carregamento para as páginas fatiadas serem importadas */}
                 <Suspense fallback={<LoadingFallback />}>
                   <Routes>
@@ -121,8 +121,8 @@ export default function App() {
                   </Routes>
                   <CookieBanner />
                 </Suspense>
-              </Router>
-            </TurmaProvider>
+              </TurmaProvider>
+            </Router>
           </OfflineProvider>
         </AuthProvider>
       </ToastProvider>

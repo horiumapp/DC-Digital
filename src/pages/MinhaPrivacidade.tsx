@@ -1,26 +1,34 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Shield, User, Download, AlertTriangle, ShieldCheck, Loader2, KeyRound } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, Shield, User, AlertTriangle, ShieldCheck, Loader2, KeyRound } from 'lucide-react';
 import Background from '../components/Background';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { logSecurityEvent } from '../services/securityLogService';
 import { saveUserConsent } from '../services/lgpdService';
 import { getSavedConsent, saveConsentLocal } from '../utils/lgpdConsent';
+import { translateSupabaseError } from '../utils/supabaseErrors';
 import DataExportButton from '../components/DataExportButton';
 import ConsentToggle from '../components/ConsentToggle';
+
+interface EscolaRelation {
+  nome: string;
+}
+
+interface TurmaRelation {
+  nome: string;
+}
 
 interface PersonalProfile {
   nome: string;
   email: string;
   documento?: string;
   perfil: string;
-  outrosDados: Record<string, any>;
+  outrosDados: Record<string, string | string[]>;
 }
 
 export default function MinhaPrivacidade() {
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<PersonalProfile | null>(null);
@@ -28,6 +36,7 @@ export default function MinhaPrivacidade() {
   const [marketingConsent, setMarketingConsent] = useState(false);
 
   // Estados para alteração de senha
+  const [currentPassword, setCurrentPassword] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -83,8 +92,8 @@ export default function MinhaPrivacidade() {
               telefone: a.telefone || '---',
               endereco: a.endereco || '---',
               matricula: a.matricula || '---',
-              escola: (a.escolas as any)?.nome || '---',
-              turma: (a.turmas as any)?.nome || '---',
+              escola: (a.escolas as EscolaRelation | null)?.nome || '---',
+              turma: (a.turmas as TurmaRelation | null)?.nome || '---',
             },
           });
         }
@@ -112,7 +121,7 @@ export default function MinhaPrivacidade() {
           documento: p?.cpf || '---',
           perfil: user.role,
           outrosDados: {
-            escola: (u?.escolas as any)?.nome || '---',
+            escola: (u?.escolas as EscolaRelation | null)?.nome || '---',
             cargo_sistema: u?.cargo || '---',
             telefone: p?.telefone || '---',
             vinculo: p?.vinculo || '---',
@@ -208,6 +217,12 @@ export default function MinhaPrivacidade() {
     setPasswordError(null);
     setPasswordSuccess(null);
 
+    // FIX: Exigir senha atual antes de permitir alteração (impede alteração por session hijacking)
+    if (!currentPassword) {
+      setPasswordError('Informe sua senha atual para confirmar a alteração.');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setPasswordError('As senhas não coincidem. Tente novamente.');
       return;
@@ -221,6 +236,17 @@ export default function MinhaPrivacidade() {
 
     setPasswordLoading(true);
     try {
+      // FIX: Reautenticar com a senha atual antes de alterar
+      const { error: reAuthError } = await supabase.auth.signInWithPassword({
+        email: user?.email || '',
+        password: currentPassword,
+      });
+
+      if (reAuthError) {
+        setPasswordError('Senha atual incorreta. Verifique e tente novamente.');
+        return;
+      }
+
       const { error } = await supabase.auth.updateUser({ password });
 
       if (error) throw error;
@@ -235,10 +261,12 @@ export default function MinhaPrivacidade() {
       });
 
       setPasswordSuccess('Senha alterada com sucesso!');
+      setCurrentPassword('');
       setPassword('');
       setConfirmPassword('');
-    } catch (err: any) {
-      setPasswordError(err.message || 'Erro ao atualizar senha.');
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setPasswordError(translateSupabaseError(errMsg));
     } finally {
       setPasswordLoading(false);
     }
@@ -409,14 +437,29 @@ export default function MinhaPrivacidade() {
           )}
 
           <form onSubmit={handlePasswordChange} className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl pt-2">
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Senha Atual</label>
+              <input
+                type="password"
+                required
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Digite sua senha atual"
+                autoComplete="current-password"
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] dark:bg-slate-750 dark:text-white transition-all text-sm font-medium max-w-sm"
+              />
+            </div>
+
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Nova Senha</label>
               <input
                 type="password"
                 required
+                minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Mínimo 8 caracteres"
+                autoComplete="new-password"
                 className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] dark:bg-slate-750 dark:text-white transition-all text-sm font-medium"
               />
             </div>
@@ -426,9 +469,11 @@ export default function MinhaPrivacidade() {
               <input
                 type="password"
                 required
+                minLength={8}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Repita a nova senha"
+                autoComplete="new-password"
                 className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] dark:bg-slate-750 dark:text-white transition-all text-sm font-medium"
               />
             </div>

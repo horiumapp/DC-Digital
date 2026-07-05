@@ -7,6 +7,11 @@ Object.defineProperty(globalThis, 'navigator', {
   configurable: true,
 });
 
+// ---------- Mock network utility (pingInternet) ----------
+vi.mock('../utils/network', () => ({
+  pingInternet: vi.fn(async () => true), // Por padrão, simula online
+}));
+
 
 // ---------- Mock offlineQueue (inline para hoisting) ----------
 vi.mock('../services/offlineQueue', () => {
@@ -95,6 +100,7 @@ vi.mock('../lib/db', () => {
 import * as SyncEngine from '../services/syncEngine';
 import * as Queue from '../services/offlineQueue';
 import { supabase } from '../lib/supabase';
+import { pingInternet } from '../utils/network';
 
 // Helper para configurar peek com resultados sequenciais
 function setupPeek(items: any[]) {
@@ -141,7 +147,7 @@ describe('syncEngine', () => {
   });
 
   it('deve retornar erro quando está offline', async () => {
-    (globalThis as any).navigator = { onLine: false };
+    vi.mocked(pingInternet).mockResolvedValueOnce(false);
     const result = await SyncEngine.syncAll();
     expect(result.errors).toContain('Sem conexão com a internet');
   });

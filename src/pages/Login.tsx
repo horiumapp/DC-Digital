@@ -272,6 +272,7 @@ export default function Login() {
                 name="password" 
                 placeholder="••••••••" 
                 required 
+                minLength={6}
                 autoComplete="current-password"
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
               />
