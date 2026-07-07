@@ -132,8 +132,7 @@ describe('AuthContext', () => {
     mockMaybeSingle.mockReset();
     mockMaybeSingle.mockImplementation(async () => ({ data: { escola_id: 'escola-123' }, error: null }));
     mockGetCachedUser.mockImplementation(async () => null);
-    // Mock fetch para que o ping real (/ping.txt) retorne sucesso no ambiente de teste
-    vi.stubGlobal('fetch', vi.fn(async () => ({ status: 200 })));
+    vi.stubGlobal('fetch', vi.fn(async () => ({ status: 200, ok: true })));
   });
 
   afterEach(() => {
