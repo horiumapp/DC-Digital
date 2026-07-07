@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from 'react';
 
 import { getBimestrePorData, formatarDataParaISO } from '../utils/dateUtils';
+import { getTid } from '../utils/turmaUtils';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
 import { useToast } from '../components/common/Toast';
 import { useAuth } from './AuthContext';
@@ -176,7 +177,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
         setFechamentos({});
 
         try {
-          const rawId = turmaAtiva.id.toString().split('||')[0];
+          const rawId = getTid(turmaAtiva.id);
           const [ls, hs, alumnosData, conts, freqs, fechamentosData] = await Promise.all([
             OfflineTurmaService.fetchLancamentos(rawId, turmaAtiva.componente),
             OfflineTurmaService.fetchHorario(rawId, turmaAtiva.componente),
@@ -255,7 +256,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const salvarFechamento = useCallback(async (bimestre: string, status: 'ABERTO' | 'FECHADO') => {
     if (!turmaAtiva || !user) return;
-    const rawId = turmaAtiva.id.toString().split('||')[0];
+    const rawId = getTid(turmaAtiva.id);
     try {
       await OfflineTurmaService.salvarFechamento(rawId, turmaAtiva.componente, bimestre, status, user.id);
       setFechamentos(prev => ({ ...prev, [bimestre]: status === 'FECHADO' }));
@@ -272,7 +273,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       showErrorRef.current('Operação bloqueada: O período selecionado está fechado.');
       return '';
     }
-    const rawId = turmaAtiva.id.toString().split('||')[0];
+    const rawId = getTid(turmaAtiva.id);
     try {
       const createdId = await OfflineTurmaService.salvarAvaliacao(av, rawId, turmaAtiva.componente);
       await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunos);
@@ -308,7 +309,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       showErrorRef.current('Operação bloqueada: O período correspondente a esta avaliação está fechado.');
       return;
     }
-    const rawId = turmaAtiva.id.toString().split('||')[0];
+    const rawId = getTid(turmaAtiva.id);
     try {
       await OfflineTurmaService.salvarNotas(avaliacaoId, notas);
       await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunos);
@@ -322,7 +323,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const carregarFaltasDaData = useCallback(async (data: string) => {
     if (!turmaAtiva) return;
     try {
-      const rawId = turmaAtiva.id.toString().split('||')[0];
+      const rawId = getTid(turmaAtiva.id);
       const resp = await OfflineTurmaService.buscarFrequenciaPorDia(rawId, turmaAtiva.componente, data);
       const idsFaltosos = new Set(resp.filter(f => f.status === 'F').map(f => f.aluno_id.toString()));
       const normalizedDate = formatarDataParaISO(data);
@@ -338,7 +339,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       showErrorRef.current('Operação bloqueada: O período correspondente a esta data está fechado.');
       return;
     }
-    const rawId = turmaAtiva.id.toString().split('||')[0];
+    const rawId = getTid(turmaAtiva.id);
     try {
       await OfflineTurmaService.salvarFrequencia(rawId, turmaAtiva.componente, data, tempo, alunosFreq);
       
@@ -363,7 +364,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       showErrorRef.current('Operação bloqueada: O período correspondente a esta data está fechado.');
       return;
     }
-    const rawId = turmaAtiva.id.toString().split('||')[0];
+    const rawId = getTid(turmaAtiva.id);
     try {
       await OfflineTurmaService.salvarConteudo(rawId, turmaAtiva.componente, cont);
       registrarLancamento({ turmaId: rawId, data: cont.data, tipo: 'conteudo', tempo: cont.tempo });
@@ -378,7 +379,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const buscarFrequencia = useCallback(async (data: string, tempo: string) => {
     if (!turmaAtiva) return;
-    const rawId = turmaAtiva.id.toString().split('||')[0];
+    const rawId = getTid(turmaAtiva.id);
     const freqData = await OfflineTurmaService.buscarFrequencia(rawId, turmaAtiva.componente, data, tempo);
 
     if (freqData.length > 0) {
@@ -395,7 +396,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const buscarConteudo = useCallback(async (data: string, tempo: string): Promise<Conteudo | null> => {
     if (!turmaAtiva) return null;
-    const rawId = turmaAtiva.id.toString().split('||')[0];
+    const rawId = getTid(turmaAtiva.id);
     const contData = await OfflineTurmaService.buscarConteudo(rawId, turmaAtiva.componente, data, tempo);
     if (contData) {
       registrarLancamento({ turmaId: rawId, data: contData.data, tipo: 'conteudo', tempo: contData.tempo });
@@ -409,7 +410,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       showErrorRef.current('Operação bloqueada: O período correspondente a esta data está fechado.');
       return;
     }
-    const rawId = turmaAtiva.id.toString().split('||')[0];
+    const rawId = getTid(turmaAtiva.id);
     try {
       await OfflineTurmaService.removerFrequencia(rawId, turmaAtiva.componente, data, tempo);
       removerLancamento({ turmaId: rawId, data, tipo: 'frequencia', tempo });
@@ -427,7 +428,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       showErrorRef.current('Operação bloqueada: O período correspondente a esta data está fechado.');
       return;
     }
-    const rawId = turmaAtiva.id.toString().split('||')[0];
+    const rawId = getTid(turmaAtiva.id);
     try {
       await OfflineTurmaService.removerConteudo(rawId, turmaAtiva.componente, data, tempo);
       removerLancamento({ turmaId: rawId, data, tipo: 'conteudo', tempo });

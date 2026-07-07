@@ -29,7 +29,7 @@ export async function pingInternet(timeoutMs: number = PING_TIMEOUT): Promise<bo
     });
 
     clearTimeout(timeoutId);
-    return response.status >= 200 && response.status < 500;
+    return response.ok; // Apenas 200-299 (rejeita 403 de portal captive, etc.)
   } catch {
     return false;
   }

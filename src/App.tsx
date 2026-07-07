@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
 import Layout from './components/Layout';
 // Importamos o Fallback e os Providers de forma direta, pois são a base
 import LoadingFallback from './components/common/LoadingFallback';
@@ -59,71 +59,79 @@ function NotFoundPage() {
   );
 }
 
+function StaffProvidersWrapper() {
+  return (
+    <OfflineProvider>
+      <TurmaProvider>
+        <Outlet />
+      </TurmaProvider>
+    </OfflineProvider>
+  );
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
       <ToastProvider>
         <AuthProvider>
-          <OfflineProvider>
-            <Router>
-              <TurmaProvider>
-                {/* Suspense isola e exibe a tela de carregamento para as páginas fatiadas serem importadas */}
-                <Suspense fallback={<LoadingFallback />}>
-                  <Routes>
-                    {/* Rotas Públicas Apenas (Visitantes) */}
-                    <Route element={<ProtectedRoute publicOnly />}>
-                      <Route path="/" element={<Login />} />
-                      <Route path="/recuperar-senha" element={<RecuperarSenha />} />
-                      <Route path="/redefinir-senha" element={<RedefinirSenha />} />
-                    </Route>
-                    
-                    {/* Rotas Legais Públicas (Acessíveis a qualquer visitante) */}
-                    <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
-                    <Route path="/termos-de-uso" element={<TermosUso />} />
-                    <Route path="/solicitacao-lgpd" element={<SolicitacaoLgpd />} />
+          <Router>
+            {/* Suspense isola e exibe a tela de carregamento para as páginas fatiadas serem importadas */}
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                {/* Rotas Públicas Apenas (Visitantes) */}
+                <Route element={<ProtectedRoute publicOnly />}>
+                  <Route path="/" element={<Login />} />
+                  <Route path="/recuperar-senha" element={<RecuperarSenha />} />
+                  <Route path="/redefinir-senha" element={<RedefinirSenha />} />
+                </Route>
+                
+                {/* Rotas Legais Públicas (Acessíveis a qualquer visitante) */}
+                <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
+                <Route path="/termos-de-uso" element={<TermosUso />} />
+                <Route path="/solicitacao-lgpd" element={<SolicitacaoLgpd />} />
 
-                    {/* Rota Privada de Privacidade (Acessível a qualquer usuário logado) */}
-                    <Route element={<ProtectedRoute />}>
-                      <Route path="/minha-privacidade" element={<RouteErrorBoundary><MinhaPrivacidade /></RouteErrorBoundary>} />
-                    </Route>
+                {/* Rota Privada de Privacidade (Acessível a qualquer usuário logado) */}
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/minha-privacidade" element={<RouteErrorBoundary><MinhaPrivacidade /></RouteErrorBoundary>} />
+                </Route>
 
-                    {/* Rota exclusiva do Portal do Aluno (sem Layout/sidebar) */}
-                    <Route element={<ProtectedRoute allowedRoles={['ALUNO']} />}>
-                      <Route path="/portal-aluno" element={<RouteErrorBoundary><PortalAluno /></RouteErrorBoundary>} />
-                    </Route>
+                {/* Rota exclusiva do Portal do Aluno (sem Layout/sidebar) */}
+                <Route element={<ProtectedRoute allowedRoles={['ALUNO']} />}>
+                  <Route path="/portal-aluno" element={<RouteErrorBoundary><PortalAluno /></RouteErrorBoundary>} />
+                </Route>
 
-                    {/* Rotas Privadas (Servidores - qualquer logado exceto ALUNO) */}
-                    <Route element={<ProtectedRoute allowedRoles={STAFF_ROLES} />}>
-                      <Route element={<Layout />}>
-                        <Route path="/turmas" element={<RouteErrorBoundary><Turmas /></RouteErrorBoundary>} />
-                        <Route path="/diario" element={<RouteErrorBoundary><Diario /></RouteErrorBoundary>} />
-                        <Route path="/relatorio-notas" element={<RouteErrorBoundary><RelatorioNotas /></RouteErrorBoundary>} />
-                        <Route path="/relatorio-medias" element={<RouteErrorBoundary><RelatorioMedias /></RouteErrorBoundary>} />
-                        <Route path="/relatorio-conteudos" element={<RouteErrorBoundary><RelatorioConteudos /></RouteErrorBoundary>} />
-                        <Route path="/relatorio-frequencia" element={<RouteErrorBoundary><RelatorioFrequencia /></RouteErrorBoundary>} />
-                        <Route path="/frequencia" element={<RouteErrorBoundary><Frequencia /></RouteErrorBoundary>} />
-                        <Route path="/estatisticas" element={<RouteErrorBoundary><Estatisticas /></RouteErrorBoundary>} />
-                        <Route path="/pendencias-lancamento" element={<RouteErrorBoundary><PendenciasLancamento /></RouteErrorBoundary>} />
-                        <Route path="/pendencias-frequencia" element={<RouteErrorBoundary><PendenciasFrequencia /></RouteErrorBoundary>} />
-                        <Route path="/aparata" element={<RouteErrorBoundary><Aparata /></RouteErrorBoundary>} />
-                        <Route path="/aparata-detalhes" element={<RouteErrorBoundary><AparataDetalhes /></RouteErrorBoundary>} />
-                        
-                        {/* Rotas Restritas (Apenas Administrativo) */}
-                        <Route element={<ProtectedRoute allowedRoles={ADMIN_ROLES} />}>
-                          <Route path="/administracao" element={<RouteErrorBoundary><Administracao /></RouteErrorBoundary>} />
-                          <Route path="/curriculo" element={<RouteErrorBoundary><Curriculo /></RouteErrorBoundary>} />
-                        </Route>
+                {/* Rotas Privadas (Servidores - qualquer logado exceto ALUNO) */}
+                <Route element={<ProtectedRoute allowedRoles={STAFF_ROLES} />}>
+                  <Route element={<StaffProvidersWrapper />}>
+                    <Route element={<Layout />}>
+                      <Route path="/turmas" element={<RouteErrorBoundary><Turmas /></RouteErrorBoundary>} />
+                      <Route path="/diario" element={<RouteErrorBoundary><Diario /></RouteErrorBoundary>} />
+                      <Route path="/relatorio-notas" element={<RouteErrorBoundary><RelatorioNotas /></RouteErrorBoundary>} />
+                      <Route path="/relatorio-medias" element={<RouteErrorBoundary><RelatorioMedias /></RouteErrorBoundary>} />
+                      <Route path="/relatorio-conteudos" element={<RouteErrorBoundary><RelatorioConteudos /></RouteErrorBoundary>} />
+                      <Route path="/relatorio-frequencia" element={<RouteErrorBoundary><RelatorioFrequencia /></RouteErrorBoundary>} />
+                      <Route path="/frequencia" element={<RouteErrorBoundary><Frequencia /></RouteErrorBoundary>} />
+                      <Route path="/estatisticas" element={<RouteErrorBoundary><Estatisticas /></RouteErrorBoundary>} />
+                      <Route path="/pendencias-lancamento" element={<RouteErrorBoundary><PendenciasLancamento /></RouteErrorBoundary>} />
+                      <Route path="/pendencias-frequencia" element={<RouteErrorBoundary><PendenciasFrequencia /></RouteErrorBoundary>} />
+                      <Route path="/aparata" element={<RouteErrorBoundary><Aparata /></RouteErrorBoundary>} />
+                      <Route path="/aparata-detalhes" element={<RouteErrorBoundary><AparataDetalhes /></RouteErrorBoundary>} />
+                      
+                      {/* Rotas Restritas (Apenas Administrativo) */}
+                      <Route element={<ProtectedRoute allowedRoles={ADMIN_ROLES} />}>
+                        <Route path="/administracao" element={<RouteErrorBoundary><Administracao /></RouteErrorBoundary>} />
+                        <Route path="/curriculo" element={<RouteErrorBoundary><Curriculo /></RouteErrorBoundary>} />
                       </Route>
                     </Route>
+                  </Route>
+                </Route>
 
-                    {/* Rota 404 — Página não encontrada (FIX #17: redireciona por role) */}
-                    <Route path="*" element={<NotFoundPage />} />
-                  </Routes>
-                  <CookieBanner />
-                </Suspense>
-              </TurmaProvider>
-            </Router>
-          </OfflineProvider>
+                {/* Rota 404 — Página não encontrada (FIX #17: redireciona por role) */}
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+              <CookieBanner />
+            </Suspense>
+          </Router>
         </AuthProvider>
       </ToastProvider>
     </ErrorBoundary>

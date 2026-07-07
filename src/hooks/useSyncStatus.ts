@@ -32,7 +32,8 @@ export function useSyncStatus(isOnline: boolean): SyncStatusResult {
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
 
-  // Atualizar contagem de pendentes periodicamente
+  // Atualizar contagem de pendentes no mount e via eventos do SyncEngine
+  // (não precisa de poll periódico — os eventos 'itemSynced' e 'complete' já atualizam)
   useEffect(() => {
     const updatePending = async () => {
       try {
@@ -44,8 +45,6 @@ export function useSyncStatus(isOnline: boolean): SyncStatusResult {
     };
 
     updatePending();
-    const interval = setInterval(updatePending, 5000);
-    return () => clearInterval(interval);
   }, []);
 
   // Escutar eventos do SyncEngine

@@ -18,8 +18,8 @@ interface OnlineStatusResult {
 }
 
 // Intervalo de ping (ms)
-const PING_INTERVAL_ONLINE = 30_000;   // 30s quando online
-const PING_INTERVAL_OFFLINE = 10_000;  // 10s quando offline (tenta reconectar mais rápido)
+const PING_INTERVAL_ONLINE = 60_000;   // 60s quando online
+const PING_INTERVAL_OFFLINE = 15_000;  // 15s quando offline (tenta reconectar mais rápido)
 
 export function useOnlineStatus(): OnlineStatusResult {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);

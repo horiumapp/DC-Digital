@@ -74,3 +74,63 @@ O banco utiliza o schema `public` do Supabase e restringe o acesso através de R
 ## Licença
 
 Este projeto é de uso exclusivo para a instituição parceira. Nenhuma parte deste código pode ser distribuída ou utilizada comercialmente sem autorização.
+
+---
+
+## 🔒 Configurações de Segurança no Supabase (Recomendado)
+
+Para garantir a total integridade dos dados e mitigar as vulnerabilidades identificadas de controle de acesso (IDOR) e ataques de negação de serviço (DDoS/brute force) no envio de solicitações LGPD, configure os seguintes itens diretamente no painel do Supabase:
+
+### 1. Políticas de RLS (Row Level Security)
+
+Garanta que RLS está habilitado em todas as tabelas:
+```sql
+ALTER TABLE public.frequencias ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.avaliacoes ENABLE ROW LEVEL SECURITY;
+-- Repetir para todas as outras tabelas operacionais
+```
+
+#### Exemplo de Política para Professores/Gestores:
+Restringir leitura e escrita com base no `escola_id` do usuário autenticado para evitar IDOR:
+```sql
+CREATE POLICY "Acesso por escola" ON public.turmas
+  FOR ALL
+  USING (
+    escola_id = (
+      SELECT escola_id FROM public.usuarios 
+      WHERE id = auth.uid()
+    )
+  );
+```
+
+### 2. Rate Limiting Server-Side para Solicitações LGPD
+
+Para evitar ataques de spam ou inundação de registros na tabela `lgpd_requests`, adicione esta trigger PostgreSQL que limita as requisições a no máximo 5 por hora por endereço de e-mail:
+
+```sql
+CREATE OR REPLACE FUNCTION check_lgpd_request_rate()
+RETURNS TRIGGER AS $$
+DECLARE
+  request_count INTEGER;
+BEGIN
+  -- Conta requisições do mesmo e-mail nos últimos 15 minutos
+  SELECT COUNT(*) INTO request_count
+  FROM public.lgpd_requests
+  WHERE email = NEW.email
+    AND created_at > NOW() - INTERVAL '15 minutes';
+
+  IF request_count >= 5 THEN
+    RAISE EXCEPTION 'Limite de solicitações LGPD excedido. Aguarde 15 minutos e tente novamente.';
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_check_lgpd_request_rate
+BEFORE INSERT ON public.lgpd_requests
+FOR EACH ROW
+EXECUTE FUNCTION check_lgpd_request_rate();
+```
+

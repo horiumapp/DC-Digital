@@ -479,11 +479,17 @@ export async function cacheAvaliacoes(records: Array<Omit<LocalAvaliacao, 'local
 export async function saveNotasLocal(records: Omit<LocalNota, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
   const timestamp = now();
   await db.transaction('rw', db.notas, async () => {
+    const avaliacaoIds = [...new Set(records.map(r => r.avaliacao_id))];
+    const existingRecords = await db.notas.where('avaliacao_id').anyOf(avaliacaoIds).toArray();
+    const existingMap = new Map<string, LocalNota>();
+    for (const r of existingRecords) {
+      const key = `${r.avaliacao_id}|${r.aluno_id}`;
+      existingMap.set(key, r);
+    }
+
     for (const data of records) {
-      const existing = await db.notas
-        .where('[avaliacao_id+aluno_id]')
-        .equals([data.avaliacao_id, data.aluno_id])
-        .first();
+      const key = `${data.avaliacao_id}|${data.aluno_id}`;
+      const existing = existingMap.get(key);
 
       if (existing?.localId) {
         await db.notas.update(existing.localId, {
@@ -565,22 +571,26 @@ export async function cacheHorarios(
   // Limpa horários existentes da turma para a disciplina específica para evitar apagar de outras disciplinas
   const comp = disciplina || (records.length > 0 ? records[0].componente : null);
 
-  const existing = await db.horarios.where('turma_id').equals(turmaId).toArray();
-  const toDelete = comp 
-    ? existing.filter(h => (h.componente || '').trim().toLowerCase() === comp.trim().toLowerCase()) 
-    : existing;
+  await db.transaction('rw', db.horarios, async () => {
+    const existing = await db.horarios.where('turma_id').equals(turmaId).toArray();
+    const toDelete = comp 
+      ? existing.filter(h => (h.componente || '').trim().toLowerCase() === comp.trim().toLowerCase()) 
+      : existing;
 
-  const ids = toDelete.map(h => h.localId).filter((id): id is number => id !== undefined);
-  if (ids.length > 0) await db.horarios.bulkDelete(ids);
+    const ids = toDelete.map(h => h.localId).filter((id): id is number => id !== undefined);
+    if (ids.length > 0) await db.horarios.bulkDelete(ids);
 
-  const timestamp = now();
-  const toAdd = records.map(h => ({
-    ...h,
-    turma_id: turmaId,
-    syncStatus: 'synced' as SyncStatus,
-    updatedAt: timestamp,
-  }));
-  await db.horarios.bulkAdd(toAdd);
+    const timestamp = now();
+    const toAdd = records.map(h => ({
+      ...h,
+      turma_id: turmaId,
+      syncStatus: 'synced' as SyncStatus,
+      updatedAt: timestamp,
+    }));
+    if (toAdd.length > 0) {
+      await db.horarios.bulkAdd(toAdd);
+    }
+  });
 }
 
 export async function getHorariosLocal(turmaId: string): Promise<LocalHorario[]> {
@@ -667,7 +677,10 @@ export async function cacheUser(user: CachedUser): Promise<void> {
   await db.cachedUsers.put(user);
 }
 
-export async function getCachedUser(): Promise<CachedUser | undefined> {
+export async function getCachedUser(userId?: string): Promise<CachedUser | undefined> {
+  if (userId) {
+    return db.cachedUsers.get(userId);
+  }
   return db.cachedUsers.toCollection().first();
 }
 

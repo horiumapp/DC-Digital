@@ -108,7 +108,7 @@ export const TurmaService = {
 
     let avQuery = supabase
       .from('avaliacoes')
-      .select('*')
+      .select('id, turma_id, tipo, data, instrumento, objetos, bimestre, valor_maximo, parent_id, disciplina')
       .eq('turma_id', tid)
       .order('data', { ascending: true });
     if (disciplina) avQuery = avQuery.ilike('disciplina', disciplina);
@@ -134,7 +134,7 @@ export const TurmaService = {
     const avaliacaoIds = avaliacoesFormatadas.map(av => av.id);
     const { data: notasData, error: notasError } = await supabase
       .from('notas')
-      .select('*')
+      .select('avaliacao_id, aluno_id, valor')
       .in('avaliacao_id', avaliacaoIds);
 
     if (notasError) throw notasError;
@@ -270,7 +270,7 @@ export const TurmaService = {
 
     let query = supabase
       .from('conteudos')
-      .select('*')
+      .select('id, turma_id, data, tempo, objetos, habilidades, descricao, disciplina')
       .eq('turma_id', tid)
       .eq('data', dataISO)
       .eq('tempo', tempo);
@@ -329,7 +329,7 @@ export const TurmaService = {
 
     let query = supabase
       .from('conteudos')
-      .select('*')
+      .select('id, turma_id, data, tempo, objetos, habilidades, descricao, disciplina')
       .eq('turma_id', tid)
       .order('data', { ascending: false });
     if (disciplina) query = query.ilike('disciplina', disciplina);

@@ -54,9 +54,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Monitora a sessão real do Supabase
   useEffect(() => {
+    let currentRequestId = 0;
+
     const fetchUserData = async (session: Session | null) => {
+      currentRequestId++;
+      const myRequestId = currentRequestId;
+
       // Se não há sessão e já não temos usuário, apenas paramos o loading inicial
       if (!session?.user) {
+        if (myRequestId !== currentRequestId) return;
         if (userRef.current) setUser(null);
         setLoading(false);
         return;
@@ -74,7 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 1. Tentar ler APENAS dados não-sensíveis do cache (nome, escola_id) para UX rápida
       let cached: Awaited<ReturnType<typeof getCachedUser>> | undefined;
       try {
-        cached = await getCachedUser();
+        cached = await getCachedUser(authUser.id);
+        if (myRequestId !== currentRequestId) return;
         if (cached && cached.id === authUser.id) {
           // FIX #1: NÃO copiar role do cache. Apenas dados de apresentação.
           escolaId = cached.escola_id;
@@ -90,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // pois é assinada pelo backend e não pode ser manipulada pelo cliente.
       // FIX #10: Usar ping real em vez de navigator.onLine (pode reportar 'true' sem internet)
       const isReallyOnline = await pingInternet(3000);
+      if (myRequestId !== currentRequestId) return;
       if (isReallyOnline) {
         try {
           const { data: userData, error } = await supabase
@@ -98,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .eq('id', authUser.id)
             .maybeSingle();
           
+          if (myRequestId !== currentRequestId) return;
           if (!error && userData) {
             if (userData.escola_id) {
               escolaId = userData.escola_id;
@@ -111,8 +120,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // FIX #1: Se não temos role (nem do JWT, nem do servidor), negar acesso
       // Isso impede escalação via cache IndexedDB manipulado
       if (!role) {
+        if (myRequestId !== currentRequestId) return;
         console.error('[AuthContext] Acesso não autorizado: Nível de acesso (role) não definido para este usuário.');
         await supabase.auth.signOut();
+        if (myRequestId !== currentRequestId) return;
         setUser(null);
         setLoading(false);
         showToastErrorRef.current(
@@ -122,6 +133,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
         return;
       }
+
+      if (myRequestId !== currentRequestId) return;
 
       const userObj: User = {
         id: authUser.id,
@@ -154,6 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('[AuthContext] Erro ao salvar usuário no cache:', err);
       }
 
+      if (myRequestId !== currentRequestId) return;
       setLoading(false);
     };
 
