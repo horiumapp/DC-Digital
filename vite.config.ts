@@ -21,6 +21,9 @@ export default defineConfig(() => {
         workbox: {
           // Arquivos a incluir no precache
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+          // FIX #8: Excluir ping.txt do precache/runtime cache para que o teste de conectividade
+          // sempre atinja o servidor real e nunca seja servido do cache offline
+          globIgnores: ['**/ping.txt'],
           // Limite de tamanho para precache (5MB)
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
           // Fallback de navegação

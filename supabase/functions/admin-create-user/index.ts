@@ -308,9 +308,15 @@ Deno.serve(async (req: Request) => {
   } catch (err: unknown) {
     const errMsg = err instanceof Error ? err.message : String(err);
     console.error("Erro inesperado:", errMsg);
+    // FIX #4: Incluir CORS headers mesmo no catch para o navegador não bloquear a resposta
+    const errorHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+      "Vary": "Origin",
+      ...(corsHeaders || {}),
+    };
     return new Response(
       JSON.stringify({ error: "Erro interno do servidor" }),
-      { status: 500, headers: { "Content-Type": "application/json", "Vary": "Origin" } }
+      { status: 500, headers: errorHeaders }
     );
   }
 });

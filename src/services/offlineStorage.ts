@@ -295,30 +295,33 @@ export async function cacheFrequencias(turmaId: string, records: Omit<LocalFrequ
 // ============================================================
 
 export async function saveConteudoLocal(data: Omit<LocalConteudo, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>): Promise<number> {
-  const existing = await db.conteudos
-    .where('[turma_id+data+tempo+disciplina]')
-    .equals([data.turma_id, data.data, data.tempo, data.disciplina])
-    .first();
+  // FIX #9: Envolver em withQuotaRecovery para recuperação automática quando IndexedDB estiver cheio
+  return withQuotaRecovery(async () => {
+    const existing = await db.conteudos
+      .where('[turma_id+data+tempo+disciplina]')
+      .equals([data.turma_id, data.data, data.tempo, data.disciplina])
+      .first();
 
-  const timestamp = now();
+    const timestamp = now();
 
-  if (existing && existing.localId) {
-    await db.conteudos.update(existing.localId, {
+    if (existing && existing.localId) {
+      await db.conteudos.update(existing.localId, {
+        ...data,
+        syncStatus: 'pending',
+        updatedAt: timestamp,
+        version: (existing.version || 0) + 1,
+      });
+      return existing.localId;
+    }
+
+    return await db.conteudos.add({
       ...data,
       syncStatus: 'pending',
+      createdAt: timestamp,
       updatedAt: timestamp,
-      version: (existing.version || 0) + 1,
-    });
-    return existing.localId;
-  }
-
-  return await db.conteudos.add({
-    ...data,
-    syncStatus: 'pending',
-    createdAt: timestamp,
-    updatedAt: timestamp,
-    version: 1,
-  }) as number;
+      version: 1,
+    }) as number;
+  });
 }
 
 export async function getConteudoLocal(turmaId: string, disciplina: string, data: string, tempo: string): Promise<LocalConteudo | undefined> {
@@ -395,29 +398,32 @@ export async function cacheConteudos(turmaId: string, records: Omit<LocalConteud
 // ============================================================
 
 export async function saveAvaliacaoLocal(data: Omit<LocalAvaliacao, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>): Promise<number> {
-  const timestamp = now();
+  // FIX #9: Envolver em withQuotaRecovery para recuperação automática quando IndexedDB estiver cheio
+  return withQuotaRecovery(async () => {
+    const timestamp = now();
 
-  // Se tem server ID, atualizar registro existente
-  if (data.id) {
-    const existing = await db.avaliacoes.where('id').equals(data.id).first();
-    if (existing?.localId) {
-      await db.avaliacoes.update(existing.localId, {
-        ...data,
-        syncStatus: 'pending',
-        updatedAt: timestamp,
-        version: (existing.version || 0) + 1,
-      });
-      return existing.localId;
+    // Se tem server ID, atualizar registro existente
+    if (data.id) {
+      const existing = await db.avaliacoes.where('id').equals(data.id).first();
+      if (existing?.localId) {
+        await db.avaliacoes.update(existing.localId, {
+          ...data,
+          syncStatus: 'pending',
+          updatedAt: timestamp,
+          version: (existing.version || 0) + 1,
+        });
+        return existing.localId;
+      }
     }
-  }
 
-  return await db.avaliacoes.add({
-    ...data,
-    syncStatus: 'pending',
-    createdAt: timestamp,
-    updatedAt: timestamp,
-    version: 1,
-  }) as number;
+    return await db.avaliacoes.add({
+      ...data,
+      syncStatus: 'pending',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      version: 1,
+    }) as number;
+  });
 }
 
 export async function getAvaliacoesLocal(turmaId: string, disciplina?: string): Promise<LocalAvaliacao[]> {
@@ -477,37 +483,40 @@ export async function cacheAvaliacoes(records: Array<Omit<LocalAvaliacao, 'local
 // ============================================================
 
 export async function saveNotasLocal(records: Omit<LocalNota, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
-  const timestamp = now();
-  await db.transaction('rw', db.notas, async () => {
-    const avaliacaoIds = [...new Set(records.map(r => r.avaliacao_id))];
-    const existingRecords = await db.notas.where('avaliacao_id').anyOf(avaliacaoIds).toArray();
-    const existingMap = new Map<string, LocalNota>();
-    for (const r of existingRecords) {
-      const key = `${r.avaliacao_id}|${r.aluno_id}`;
-      existingMap.set(key, r);
-    }
-
-    for (const data of records) {
-      const key = `${data.avaliacao_id}|${data.aluno_id}`;
-      const existing = existingMap.get(key);
-
-      if (existing?.localId) {
-        await db.notas.update(existing.localId, {
-          ...data,
-          syncStatus: 'pending',
-          updatedAt: timestamp,
-          version: (existing.version || 0) + 1,
-        });
-      } else {
-        await db.notas.add({
-          ...data,
-          syncStatus: 'pending',
-          createdAt: timestamp,
-          updatedAt: timestamp,
-          version: 1,
-        });
+  // FIX #9: Envolver em withQuotaRecovery para recuperação automática quando IndexedDB estiver cheio
+  return withQuotaRecovery(async () => {
+    const timestamp = now();
+    await db.transaction('rw', db.notas, async () => {
+      const avaliacaoIds = [...new Set(records.map(r => r.avaliacao_id))];
+      const existingRecords = await db.notas.where('avaliacao_id').anyOf(avaliacaoIds).toArray();
+      const existingMap = new Map<string, LocalNota>();
+      for (const r of existingRecords) {
+        const key = `${r.avaliacao_id}|${r.aluno_id}`;
+        existingMap.set(key, r);
       }
-    }
+
+      for (const data of records) {
+        const key = `${data.avaliacao_id}|${data.aluno_id}`;
+        const existing = existingMap.get(key);
+
+        if (existing?.localId) {
+          await db.notas.update(existing.localId, {
+            ...data,
+            syncStatus: 'pending',
+            updatedAt: timestamp,
+            version: (existing.version || 0) + 1,
+          });
+        } else {
+          await db.notas.add({
+            ...data,
+            syncStatus: 'pending',
+            createdAt: timestamp,
+            updatedAt: timestamp,
+            version: 1,
+          });
+        }
+      }
+    });
   });
 }
 
@@ -602,30 +611,33 @@ export async function getHorariosLocal(turmaId: string): Promise<LocalHorario[]>
 // ============================================================
 
 export async function saveFechamentoLocal(data: Omit<LocalFechamento, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>): Promise<number> {
-  const existing = await db.fechamentos
-    .where('[turma_id+disciplina+bimestre]')
-    .equals([data.turma_id, data.disciplina, data.bimestre])
-    .first();
+  // FIX #9: Envolver em withQuotaRecovery para recuperação automática quando IndexedDB estiver cheio
+  return withQuotaRecovery(async () => {
+    const existing = await db.fechamentos
+      .where('[turma_id+disciplina+bimestre]')
+      .equals([data.turma_id, data.disciplina, data.bimestre])
+      .first();
 
-  const timestamp = now();
+    const timestamp = now();
 
-  if (existing?.localId) {
-    await db.fechamentos.update(existing.localId, {
+    if (existing?.localId) {
+      await db.fechamentos.update(existing.localId, {
+        ...data,
+        syncStatus: 'pending',
+        updatedAt: timestamp,
+        version: (existing.version || 0) + 1,
+      });
+      return existing.localId;
+    }
+
+    return await db.fechamentos.add({
       ...data,
       syncStatus: 'pending',
+      createdAt: timestamp,
       updatedAt: timestamp,
-      version: (existing.version || 0) + 1,
-    });
-    return existing.localId;
-  }
-
-  return await db.fechamentos.add({
-    ...data,
-    syncStatus: 'pending',
-    createdAt: timestamp,
-    updatedAt: timestamp,
-    version: 1,
-  }) as number;
+      version: 1,
+    }) as number;
+  });
 }
 
 export async function getFechamentosLocal(turmaId: string, disciplina: string): Promise<LocalFechamento[]> {

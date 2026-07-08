@@ -35,7 +35,8 @@ export async function logSecurityEvent(input: SecurityLogInput): Promise<boolean
         entity: input.entity || null,
         entity_id: input.entityId || null,
         ip: null, // O IP pode ser resolvido no backend/edge se necessário, deixamos seguro no frontend
-        user_agent: (navigator.userAgent || '').substring(0, 512), // FIX #6: Truncar para evitar payloads maliciosos
+        // FIX #11: Sanitizar User-Agent contra XSS (remover tags HTML) e truncar para evitar payloads maliciosos
+        user_agent: (navigator.userAgent || '').replace(/<[^>]*>/g, '').substring(0, 512),
         created_at: new Date().toISOString(),
         metadata: cleanMetadata,
       });

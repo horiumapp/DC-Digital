@@ -122,7 +122,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!role) {
         if (myRequestId !== currentRequestId) return;
         console.error('[AuthContext] Acesso não autorizado: Nível de acesso (role) não definido para este usuário.');
-        await supabase.auth.signOut();
+        // FIX #5: signOut pode falhar se offline — garantir que setLoading(false) seja sempre chamado
+        try {
+          await supabase.auth.signOut();
+        } catch (signOutErr) {
+          console.warn('[AuthContext] signOut falhou (possivelmente offline):', signOutErr);
+        }
         if (myRequestId !== currentRequestId) return;
         setUser(null);
         setLoading(false);
