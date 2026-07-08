@@ -19,6 +19,10 @@ const isoParaDataLocal = (isoStr: string): Date => {
 export const APP_CONFIG = {
   /** Ano letivo vigente. Configurável via VITE_ANO_LETIVO no .env */
   YEAR: parseInt(import.meta.env.VITE_ANO_LETIVO || '2026'),
+  // ⚠️ IMPORTANTE: A ordem dos períodos é INTENCIONAL.
+  // Bimestres DEVEM vir antes de Semestres porque getPeriodoPorData() usa Array.find()
+  // que retorna o primeiro match. Como semestres contêm bimestres, colocar bimestres
+  // primeiro garante que o período mais específico seja retornado.
   PERIODOS: [
     { id: '1. BIMESTRE', nome: '1º Bimestre', label: '1. BIMESTRE', dataInicio: '2026-02-05', dataFim: '2026-04-23' },
     { id: '2. BIMESTRE', nome: '2º Bimestre', label: '2. BIMESTRE', dataInicio: '2026-04-24', dataFim: '2026-07-07' },

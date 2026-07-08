@@ -214,7 +214,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // LOGOUT — Revoga sessão no servidor ANTES de limpar o state da UI
   const logout = async () => {
-    const currentUserId = userRef.current?.id;
     try {
       const pending = await getPendingCount();
       if (pending > 0) {
@@ -223,22 +222,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
         if (!confirmLogout) return;
       }
-      await supabase.auth.signOut();
-    } catch (err) {
-      console.error('[AuthContext] Erro ao deslogar:', err);
-    } finally {
-      // Limpa dados locais e cache de chaves
-      clearKeyCache();
-      await clearAllLocalData(true);
-      // FIX #5: Limpar chaves cripto de TODOS os usuários para evitar herança/acúmulo
-      // em dispositivos compartilhados. Mais agressivo que antes (limpava só "outros").
+
+      // FIX #14: Tentar signOut e rastrear se foi bem-sucedido.
+      // Só limpar dados locais se signOut funcionou, para evitar perda de dados pendentes offline.
+      let signOutSuccess = false;
       try {
-        await db.userSalts.clear();
+        await supabase.auth.signOut();
+        signOutSuccess = true;
       } catch (err) {
-        console.warn('[AuthContext] Erro ao limpar salts de usuários:', err);
+        console.error('[AuthContext] Erro ao deslogar (possivelmente offline):', err);
+        // Perguntar se quer limpar dados locais mesmo assim
+        const forceClean = window.confirm(
+          'Não foi possível desconectar do servidor (sem internet). Deseja limpar os dados locais mesmo assim?'
+        );
+        signOutSuccess = forceClean;
       }
-      sessionStorage.removeItem('activeEscolaId');
-      sessionStorage.removeItem('activeTurno');
+
+      if (signOutSuccess) {
+        // Limpa dados locais e cache de chaves
+        clearKeyCache();
+        await clearAllLocalData(true);
+        // Limpar chaves cripto de TODOS os usuários para evitar herança/acúmulo
+        // em dispositivos compartilhados.
+        try {
+          await db.userSalts.clear();
+        } catch (err) {
+          console.warn('[AuthContext] Erro ao limpar salts de usuários:', err);
+        }
+        sessionStorage.removeItem('activeEscolaId');
+        sessionStorage.removeItem('activeTurno');
+      }
+
+      setUser(null);
+    } catch (err) {
+      console.error('[AuthContext] Erro inesperado no logout:', err);
       setUser(null);
     }
   };

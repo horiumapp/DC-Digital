@@ -269,32 +269,74 @@ export const fetchPendenciasPorEscola = async (
         return new Date(ano, mes - 1, dia);
       };
 
+      // FIX #7: Pré-indexar dados em Maps por turmaId+componente para evitar O(N²)
+      // Antes: cada grupo filtrava TODOS os registros. Agora: lookup O(1) por chave.
+      type FreqEntry = { data: string; tempo: string };
+      type ContEntry = { data: string; tempo: string };
+      
+      const freqIndex = new Map<string, FreqEntry[]>();
+      for (const f of (fData.data || [])) {
+        const key = `${f.turma_id}|${f.disciplina}`;
+        const arr = freqIndex.get(key);
+        if (arr) arr.push({ data: f.data, tempo: f.tempo });
+        else freqIndex.set(key, [{ data: f.data, tempo: f.tempo }]);
+      }
+
+      const contIndex = new Map<string, ContEntry[]>();
+      for (const c of (cData.data || [])) {
+        const key = `${c.turma_id}|${c.disciplina}`;
+        const arr = contIndex.get(key);
+        if (arr) arr.push({ data: c.data, tempo: c.tempo });
+        else contIndex.set(key, [{ data: c.data, tempo: c.tempo }]);
+      }
+
+      const alunoCountByTurma = new Map<string, number>();
+      for (const a of (aluData.data || [])) {
+        alunoCountByTurma.set(a.turma_id, (alunoCountByTurma.get(a.turma_id) || 0) + 1);
+      }
+
+      const avIndex = new Map<string, AvaliacaoLote[]>();
+      for (const av of (avData.data || [])) {
+        const key = `${av.turma_id}|${av.disciplina}`;
+        const arr = avIndex.get(key);
+        if (arr) arr.push(av);
+        else avIndex.set(key, [av]);
+      }
+
+      const notasByAvId = new Map<string, number>();
+      for (const n of (nData || [])) {
+        notasByAvId.set(n.avaliacao_id, (notasByAvId.get(n.avaliacao_id) || 0) + 1);
+      }
+
       // Processar cada grupo do lote localmente (sem novas queries)
       batchGroups.forEach(group => {
-        const temposArr = Array.from(group.tempos);
+        const temposSet = group.tempos;
         const dateStart = group.dateStart;
         const dateEnd = group.dateEnd;
+        const groupKey = `${group.turmaId}|${group.componente}`;
 
-        // Contar Frequências (comparar como Date, não como string)
+        // Contar Frequências usando índice pré-computado
+        const groupFreqs = freqIndex.get(groupKey) || [];
         const freqCount = new Set(
-          (fData.data || []).filter(f => {
-            if (f.turma_id !== group.turmaId || f.disciplina !== group.componente || !temposArr.includes(f.tempo)) return false;
+          groupFreqs.filter(f => {
+            if (!temposSet.has(f.tempo)) return false;
             const fDate = parseDataField(f.data);
             return fDate && fDate >= dateStart && fDate <= dateEnd;
           }).map(f => `${f.data}|${f.tempo}`)
         ).size;
 
-        // Contar Conteúdos (comparar como Date, não como string)
+        // Contar Conteúdos usando índice pré-computado
+        const groupConts = contIndex.get(groupKey) || [];
         const contCount = new Set(
-          (cData.data || []).filter(c => {
-            if (c.turma_id !== group.turmaId || c.disciplina !== group.componente || !temposArr.includes(c.tempo)) return false;
+          groupConts.filter(c => {
+            if (!temposSet.has(c.tempo)) return false;
             const cDate = parseDataField(c.data);
             return cDate && cDate >= dateStart && cDate <= dateEnd;
           }).map(c => `${c.data}|${c.tempo}`)
         ).size;
 
-        // Contar Alunos
-        const totalAlunos = (aluData.data || []).filter(a => a.turma_id === group.turmaId).length;
+        // Contar Alunos usando índice pré-computado
+        const totalAlunos = alunoCountByTurma.get(group.turmaId) || 0;
 
         // Calcular Pendência de Notas
         let pNotas = 0;
@@ -310,15 +352,17 @@ export const fetchPendenciasPorEscola = async (
           periodoVariants.add(group.periodo.toUpperCase());
         }
         
-        const avsDoGrupo = (avData.data || []).filter(av => 
-          av.turma_id === group.turmaId && 
-          av.disciplina === group.componente && 
+        const groupAvs = avIndex.get(groupKey) || [];
+        const avsDoGrupo = groupAvs.filter(av => 
           periodoVariants.has((av.bimestre || '').toUpperCase())
         );
 
         if (avsDoGrupo.length > 0 && totalAlunos > 0) {
           const groupAvIds = avsDoGrupo.map(av => av.id);
-          const notasNoLote = (nData || []).filter(n => groupAvIds.includes(n.avaliacao_id)).length;
+          let notasNoLote = 0;
+          for (const avId of groupAvIds) {
+            notasNoLote += notasByAvId.get(avId) || 0;
+          }
           const totalNotasEsperadas = groupAvIds.length * totalAlunos;
           pNotas = Math.max(0, ((totalNotasEsperadas - notasNoLote) / totalNotasEsperadas) * 100);
         }
