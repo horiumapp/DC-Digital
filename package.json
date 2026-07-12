@@ -1,11 +1,11 @@
 {
   "name": "dc-digital",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "predev": "node scripts/updateLogos.js",
-    "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev": "vite --port=3000",
     "prebuild": "node scripts/updateLogos.js",
     "build": "vite build",
     "preview": "vite preview",
