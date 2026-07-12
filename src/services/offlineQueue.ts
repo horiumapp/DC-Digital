@@ -168,7 +168,9 @@ export async function fail(id: number, error: string): Promise<void> {
 }
 
 /**
- * Reseta itens com erro para reprocessamento.
+ * Reseta itens com erro RECUPERÁVEL para reprocessamento.
+ * Itens marcados [DEAD_LETTER] (RLS, FK, duplicate key) são permanentemente
+ * irrecuperáveis e NÃO são incluídos — evita loop infinito de falhas.
  */
 export async function retryAllErrors(): Promise<number> {
   const errors = await db.syncQueue.where('status').equals('error').toArray();
@@ -176,6 +178,9 @@ export async function retryAllErrors(): Promise<number> {
   let count = 0;
 
   for (const item of errors) {
+    // Não reprocessar itens de dead letter — nunca vão sincronizar
+    if (item.lastError?.includes('[DEAD_LETTER]')) continue;
+
     if (item.id) {
       await db.syncQueue.update(item.id, {
         status: 'pending' as QueueStatus,
@@ -189,6 +194,28 @@ export async function retryAllErrors(): Promise<number> {
   }
 
   return count;
+}
+
+/**
+ * Retorna todos os itens permanentemente falhos (dead letter).
+ * Útil para exibir ao usuário na tela de diagnóstico/pendências.
+ */
+export async function getDeadLetterItems(): Promise<SyncQueueItem[]> {
+  const errors = await db.syncQueue.where('status').equals('error').toArray();
+  return errors.filter(item => item.lastError?.includes('[DEAD_LETTER]'));
+}
+
+/**
+ * Descarta itens dead letter permanentemente (ação do usuário ou admin).
+ * Retorna a quantidade de itens removidos.
+ */
+export async function discardDeadLetterItems(): Promise<number> {
+  const deadItems = await getDeadLetterItems();
+  const ids = deadItems.map(i => i.id).filter((id): id is number => id !== undefined);
+  if (ids.length > 0) {
+    await db.syncQueue.bulkDelete(ids);
+  }
+  return ids.length;
 }
 
 /**

@@ -344,9 +344,22 @@ export async function deleteConteudoLocal(turmaId: string, disciplina: string, d
     .where('[turma_id+data+tempo+disciplina]')
     .equals([turmaId, data, tempo, disciplina])
     .first();
-  if (record?.localId) {
-    await db.conteudos.delete(record.localId);
+  if (!record?.localId) return;
+
+  // Se o conteúdo ainda não foi sincronizado com o servidor, enfileirar DELETE
+  // para garantir que o dado seja removido no servidor quando reconectar.
+  if (record.syncStatus === 'pending') {
+    // Importação lazy para evitar dependência circular
+    const { enqueue } = await import('./offlineQueue');
+    await enqueue('conteudos', 'DELETE', {
+      turma_id: record.turma_id,
+      data: record.data,
+      tempo: record.tempo,
+      disciplina: record.disciplina,
+    });
   }
+
+  await db.conteudos.delete(record.localId);
 }
 
 export async function cacheConteudos(turmaId: string, records: Omit<LocalConteudo, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
@@ -651,13 +664,27 @@ export async function getFechamentosLocal(turmaId: string, disciplina: string): 
 }
 
 export async function cacheFechamentos(turmaId: string, disciplina: string, records: Omit<LocalFechamento, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
+  if (records.length === 0) return;
   const timestamp = now();
+
+  // FIX N+1: Buscar todos os fechamentos da turma+disciplina de uma vez
+  // em vez de fazer uma query por bimestre dentro do loop.
+  const existingRecords = await db.fechamentos
+    .where('[turma_id+disciplina+bimestre]')
+    .between(
+      [turmaId, disciplina, Dexie.minKey],
+      [turmaId, disciplina, Dexie.maxKey]
+    )
+    .toArray();
+
+  const existingMap = new Map<string, LocalFechamento>();
+  for (const r of existingRecords) {
+    existingMap.set(r.bimestre, r);
+  }
+
   await db.transaction('rw', db.fechamentos, async () => {
     for (const data of records) {
-      const existing = await db.fechamentos
-        .where('[turma_id+disciplina+bimestre]')
-        .equals([turmaId, disciplina, data.bimestre])
-        .first();
+      const existing = existingMap.get(data.bimestre);
 
       if (existing?.localId) {
         if (existing.syncStatus !== 'pending') {

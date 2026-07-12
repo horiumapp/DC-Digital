@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import LoadingFallback from '../components/common/LoadingFallback';
@@ -7,6 +7,8 @@ import { clearKeyCache } from '../lib/crypto';
 import { pingInternet } from '../utils/network';
 import { useToast } from '../components/common/Toast';
 import { db } from '../lib/db';
+import ConfirmActionModal from '../components/ConfirmActionModal';
+import { AlertTriangle, WifiOff } from 'lucide-react';
 
 export type UserRole = 'ADMIN' | 'GESTOR' | 'SECRETARIO' | 'PROFESSOR' | 'ALUNO';
 
@@ -39,12 +41,32 @@ interface AuthContextType {
   logout: () => Promise<void>;             // Logout Real
 }
 
+// ============================================================
+// Estado do modal de confirmação de logout
+// ============================================================
+interface LogoutModalState {
+  open: boolean;
+  /** 'pending' = tem dados pendentes | 'offline' = signOut falhou por falta de internet */
+  reason: 'pending' | 'offline';
+  pendingCount: number;
+  resolve: ((confirmed: boolean) => void) | null;
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { showError: showToastError } = useToast();
+
+  // FIX: Modal de logout no lugar de window.confirm() bloqueante
+  const [logoutModal, setLogoutModal] = useState<LogoutModalState>({
+    open: false,
+    reason: 'pending',
+    pendingCount: 0,
+    resolve: null,
+  });
+
   // Ref para evitar closure stale no callback onAuthStateChange
   const userRef = useRef<User | null>(null);
   useEffect(() => { userRef.current = user; }, [user]);
@@ -52,17 +74,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const showToastErrorRef = useRef(showToastError);
   useEffect(() => { showToastErrorRef.current = showToastError; }, [showToastError]);
 
+  // ============================================================
+  // Helper: abre modal de confirmação e aguarda resposta via Promise
+  // ============================================================
+  const askConfirmation = useCallback((reason: 'pending' | 'offline', pendingCount: number): Promise<boolean> => {
+    return new Promise<boolean>((resolve) => {
+      setLogoutModal({ open: true, reason, pendingCount, resolve });
+    });
+  }, []);
+
+  const handleModalClose = useCallback(() => {
+    setLogoutModal(prev => {
+      prev.resolve?.(false);
+      return { ...prev, open: false, resolve: null };
+    });
+  }, []);
+
+  const handleModalConfirm = useCallback(() => {
+    setLogoutModal(prev => {
+      prev.resolve?.(true);
+      return { ...prev, open: false, resolve: null };
+    });
+  }, []);
+
   // Monitora a sessão real do Supabase
   useEffect(() => {
-    let currentRequestId = 0;
+    // FIX Race Condition: AbortController por requisição para cancelar
+    // operações assíncronas longas (como pingInternet de 3s) se uma nova
+    // requisição chegar antes da primeira completar.
+    let activeAbortController: AbortController | null = null;
 
     const fetchUserData = async (session: Session | null) => {
-      currentRequestId++;
-      const myRequestId = currentRequestId;
+      // Cancelar requisição anterior, se existir
+      activeAbortController?.abort();
+      const controller = new AbortController();
+      activeAbortController = controller;
+
+      const isCancelled = () => controller.signal.aborted;
 
       // Se não há sessão e já não temos usuário, apenas paramos o loading inicial
       if (!session?.user) {
-        if (myRequestId !== currentRequestId) return;
+        if (isCancelled()) return;
         if (userRef.current) setUser(null);
         setLoading(false);
         return;
@@ -81,7 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let cached: Awaited<ReturnType<typeof getCachedUser>> | undefined;
       try {
         cached = await getCachedUser(authUser.id);
-        if (myRequestId !== currentRequestId) return;
+        if (isCancelled()) return;
         if (cached && cached.id === authUser.id) {
           // FIX #1: NÃO copiar role do cache. Apenas dados de apresentação.
           escolaId = cached.escola_id;
@@ -97,7 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // pois é assinada pelo backend e não pode ser manipulada pelo cliente.
       // FIX #10: Usar ping real em vez de navigator.onLine (pode reportar 'true' sem internet)
       const isReallyOnline = await pingInternet(3000);
-      if (myRequestId !== currentRequestId) return;
+      if (isCancelled()) return;
       if (isReallyOnline) {
         try {
           const { data: userData, error } = await supabase
@@ -106,7 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .eq('id', authUser.id)
             .maybeSingle();
           
-          if (myRequestId !== currentRequestId) return;
+          if (isCancelled()) return;
           if (!error && userData) {
             if (userData.escola_id) {
               escolaId = userData.escola_id;
@@ -120,7 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // FIX #1: Se não temos role (nem do JWT, nem do servidor), negar acesso
       // Isso impede escalação via cache IndexedDB manipulado
       if (!role) {
-        if (myRequestId !== currentRequestId) return;
+        if (isCancelled()) return;
         console.error('[AuthContext] Acesso não autorizado: Nível de acesso (role) não definido para este usuário.');
         // FIX #5: signOut pode falhar se offline — garantir que setLoading(false) seja sempre chamado
         try {
@@ -128,7 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (signOutErr) {
           console.warn('[AuthContext] signOut falhou (possivelmente offline):', signOutErr);
         }
-        if (myRequestId !== currentRequestId) return;
+        if (isCancelled()) return;
         setUser(null);
         setLoading(false);
         showToastErrorRef.current(
@@ -139,7 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (myRequestId !== currentRequestId) return;
+      if (isCancelled()) return;
 
       const userObj: User = {
         id: authUser.id,
@@ -172,7 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('[AuthContext] Erro ao salvar usuário no cache:', err);
       }
 
-      if (myRequestId !== currentRequestId) return;
+      if (isCancelled()) return;
       setLoading(false);
     };
 
@@ -185,6 +237,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       // Evento que encerra a sessão — limpar estado imediatamente
       if (event === 'SIGNED_OUT') {
+        activeAbortController?.abort();
         setUser(null);
         setLoading(false);
         return;
@@ -208,7 +261,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       fetchUserData(session);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      activeAbortController?.abort();
+      subscription.unsubscribe();
+    };
   }, []);
 
 
@@ -217,10 +273,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const pending = await getPendingCount();
       if (pending > 0) {
-        const confirmLogout = window.confirm(
-          `Você tem ${pending} alteração(ões) pendente(s) de sincronização. Se você sair agora, esses dados serão perdidos permanentemente. Deseja sair mesmo assim?`
-        );
-        if (!confirmLogout) return;
+        // FIX: Substituir window.confirm() bloqueante por modal React
+        const confirmed = await askConfirmation('pending', pending);
+        if (!confirmed) return;
       }
 
       // FIX #14: Tentar signOut e rastrear se foi bem-sucedido.
@@ -231,10 +286,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOutSuccess = true;
       } catch (err) {
         console.error('[AuthContext] Erro ao deslogar (possivelmente offline):', err);
-        // Perguntar se quer limpar dados locais mesmo assim
-        const forceClean = window.confirm(
-          'Não foi possível desconectar do servidor (sem internet). Deseja limpar os dados locais mesmo assim?'
-        );
+        // FIX: Substituir window.confirm() por modal React
+        const forceClean = await askConfirmation('offline', 0);
         signOutSuccess = forceClean;
       }
 
@@ -260,9 +313,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // ============================================================
+  // Conteúdo dos modais de confirmação de logout
+  // ============================================================
+  const logoutModalContent = logoutModal.reason === 'pending' ? {
+    title: 'Dados não sincronizados',
+    message: (
+      <span>
+        Você tem <strong>{logoutModal.pendingCount}</strong> alteração(ões) pendente(s) de sincronização.
+        Se você sair agora, esses dados serão <strong>perdidos permanentemente</strong>.
+        Deseja sair mesmo assim?
+      </span>
+    ),
+    confirmLabel: 'Sair mesmo assim',
+    icon: <AlertTriangle className="w-6 h-6" />,
+  } : {
+    title: 'Sem conexão com a internet',
+    message: 'Não foi possível desconectar do servidor. Deseja limpar os dados locais mesmo assim?',
+    confirmLabel: 'Limpar e sair',
+    icon: <WifiOff className="w-6 h-6" />,
+  };
+
   return (
     <AuthContext.Provider value={{ user, loading, logout }}>
       {loading ? <LoadingFallback /> : children}
+
+      {/* Modal de confirmação de logout — renderizado fora do fluxo principal */}
+      <ConfirmActionModal
+        isOpen={logoutModal.open}
+        onClose={handleModalClose}
+        onConfirm={handleModalConfirm}
+        title={logoutModalContent.title}
+        message={logoutModalContent.message}
+        confirmLabel={logoutModalContent.confirmLabel}
+        icon={logoutModalContent.icon}
+        variant="warning"
+      />
     </AuthContext.Provider>
   );
 }
