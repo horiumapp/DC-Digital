@@ -8,6 +8,7 @@ import Dexie from 'dexie';
 import { db, now, OPERATIONAL_TABLE_NAMES, getOperationalTable, type SyncStatus } from '../lib/db';
 import { supabase } from '../lib/supabase';
 import { encryptFields, decryptFields, getOrCreateKey } from '../lib/crypto';
+import * as Queue from './offlineQueue';
 import type {
   LocalFrequencia,
   LocalConteudo,
@@ -349,9 +350,7 @@ export async function deleteConteudoLocal(turmaId: string, disciplina: string, d
   // Se o conteúdo ainda não foi sincronizado com o servidor, enfileirar DELETE
   // para garantir que o dado seja removido no servidor quando reconectar.
   if (record.syncStatus === 'pending') {
-    // Importação lazy para evitar dependência circular
-    const { enqueue } = await import('./offlineQueue');
-    await enqueue('conteudos', 'DELETE', {
+    await Queue.enqueue('conteudos', 'DELETE', {
       turma_id: record.turma_id,
       data: record.data,
       tempo: record.tempo,
