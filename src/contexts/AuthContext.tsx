@@ -112,12 +112,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const isCancelled = () => controller.signal.aborted;
 
+      // FIX #9: Bloco try/finally externo garante que setLoading(false) seja SEMPRE
+      // chamado, mesmo que um abort ocorra no meio de um await longo (ex: pingInternet).
+      try {
+
       // Se não há sessão e já não temos usuário, apenas paramos o loading inicial
       if (!session?.user) {
         if (isCancelled()) return;
         if (userRef.current) setUser(null);
-        setLoading(false);
-        return;
+        return; // setLoading(false) será chamado no finally
       }
 
       const { user: authUser } = session;
@@ -223,16 +226,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         console.error('[AuthContext] Erro ao salvar usuário no cache:', err);
       }
-    } finally {
-      // FIX #9: setLoading(false) sempre executado em finally para evitar
-      // tela de carregamento travada caso um abort ocorra entre setUser e setLoading.
-      // A verificação isCancelled() impede o set em componentes desmontados,
-      // mas o loading DEVE ser liberado mesmo com abort para não travar a UI.
-      if (!isCancelled()) {
-        setLoading(false);
+
+      } finally {
+        // FIX #9: setLoading(false) sempre executado em finally, independente de abort.
+        // Garante que a UI nunca trave na tela de carregamento.
+        if (!isCancelled()) {
+          setLoading(false);
+        }
       }
-    }
-  };
+    };
 
     // Busca a sessão assim que inicializa
     supabase.auth.getSession().then(({ data: { session } }) => {

@@ -20,7 +20,10 @@ diario-eslint.json
 
 # Debug and temp files
 .gemini/
+# Metadata e arquivos de configuração locais
+# FIX #21: garantir que metadata.json nunca seja commitado acidentalmente
 metadata.json
+/metadata.json
 *.local
 npm-debug.log*
 yarn-debug.log*

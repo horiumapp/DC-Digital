@@ -1,4 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { reportError } from '../../utils/errorReporting';
 
 interface Props {
   children: ReactNode;
@@ -20,7 +21,13 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('[ErrorBoundary] Erro capturado:', error, errorInfo);
+    // FIX #20: Usar módulo centralizado de telemetria em vez de console.error direto.
+    // Facilita integração futura com Sentry/Datadog sem alterar este arquivo.
+    reportError({
+      error,
+      errorInfo: { componentStack: errorInfo.componentStack },
+      context: { boundary: 'global' },
+    });
   }
 
   private handleReset = () => {
