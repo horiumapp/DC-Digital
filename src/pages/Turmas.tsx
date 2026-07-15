@@ -311,6 +311,7 @@ export default function Turmas() {
           componente: disc,
           professor: user?.name || '',
           escola: t.escolas?.nome || alocacaoAtiva?.escolas?.nome || 'Escola',
+          escola_id: t.escola_id, // FIX #3: necessário para validação IDOR sem sessionStorage
           turno: t.turno,
           metricas: {
             frequencia: 0,

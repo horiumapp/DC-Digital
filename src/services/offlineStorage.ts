@@ -132,6 +132,14 @@ export async function getCachedAlunos(turmaId: string): Promise<LocalAluno[]> {
   }));
   if (anyDecryptionFailed) {
     console.warn('[offlineStorage] Descriptografia falhou para alguns alunos. Dados precisam ser re-cacheados do servidor.');
+    // FIX #1: Limpar o cache corrompido para forçar re-fetch do servidor no próximo acesso online.
+    // Manter dados cifrados irrecuperáveis no IndexedDB não tem utilidade.
+    try {
+      await db.alunos.where('turma_id').equals(turmaId).delete();
+      console.info('[offlineStorage] Cache de alunos da turma limpo — será re-sincronizado quando online.');
+    } catch (clearErr) {
+      console.error('[offlineStorage] Falha ao limpar cache de alunos com chave corrompida:', clearErr);
+    }
   }
   return result;
 }
@@ -176,9 +184,17 @@ export async function saveFrequenciasBulk(
   if (records.length === 0) return;
   const timestamp = now();
 
-  // Como as frequências em lote geralmente pertencem à mesma turma, data, tempo e disciplina,
-  // podemos otimizar buscando todas elas de uma vez para fazer a comparação em memória.
+  // FIX #6: Validar invariante do batch — todos os records devem ter mesma data/tempo/disciplina.
+  // Caso contrário, a otimização de busca abaixo retornaria resultados incorretos.
   const first = records[0];
+  const invariantViolation = records.some(
+    r => r.data !== first.data || r.tempo !== first.tempo || r.disciplina !== first.disciplina
+  );
+  if (invariantViolation) {
+    console.error('[offlineStorage] saveFrequenciasBulk: batch contém records com data/tempo/disciplina distintos. Use saveFrequenciaLocal para registros individuais.');
+    throw new Error('saveFrequenciasBulk requer que todos os records tenham a mesma data, tempo e disciplina.');
+  }
+
   const existingRecords = await db.frequencias
     .where('turma_id')
     .equals(first.turma_id)
@@ -789,7 +805,7 @@ export async function clearOldSyncedData(maxAgeDays: number = 60): Promise<numbe
     try {
       const old = await table
         .where('[syncStatus+updatedAt]')
-        .between(['synced', ''], ['synced', cutoffISO])
+        .between(['synced', Dexie.minKey], ['synced', cutoffISO]) // FIX #8: Dexie.minKey em vez de '' como lower bound
         .toArray();
       
       const ids = old.map((r: { localId?: number }) => r.localId).filter((id): id is number => id !== undefined);

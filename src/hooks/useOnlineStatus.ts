@@ -42,9 +42,10 @@ export function useOnlineStatus(): OnlineStatusResult {
 
   // Browser online/offline listeners + initial check
   useEffect(() => {
+    // FIX #5: Não confiar em navigator.onLine — pode ser true em portais captive.
+    // Executa ping real antes de declarar online.
     const handleOnline = () => {
-      setIsOnline(true);
-      setLastCheckedAt(new Date());
+      checkNow(); // ping assíncrono — atualiza isOnline com resultado real
     };
     const handleOffline = () => {
       setIsOnline(false);

@@ -223,10 +223,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         console.error('[AuthContext] Erro ao salvar usuário no cache:', err);
       }
-
-      if (isCancelled()) return;
-      setLoading(false);
-    };
+    } finally {
+      // FIX #9: setLoading(false) sempre executado em finally para evitar
+      // tela de carregamento travada caso um abort ocorra entre setUser e setLoading.
+      // A verificação isCancelled() impede o set em componentes desmontados,
+      // mas o loading DEVE ser liberado mesmo com abort para não travar a UI.
+      if (!isCancelled()) {
+        setLoading(false);
+      }
+    }
+  };
 
     // Busca a sessão assim que inicializa
     supabase.auth.getSession().then(({ data: { session } }) => {

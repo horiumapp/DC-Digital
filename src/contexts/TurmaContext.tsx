@@ -23,6 +23,7 @@ export interface Turma {
   componente: string;
   professor: string;
   escola: string;
+  escola_id?: string; // FIX #3: necessário para validação IDOR sem sessionStorage
   turno: string;
   metricas: TurmaMetricas;
   diasDeAula: number[];
@@ -218,14 +219,15 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     return () => { abortController.abort(); };
   }, [turmaAtiva, fetchAvaliacoesInterno]);
 
-  // FIX #2: Validar que o usuário tem acesso à escola da turma selecionada
+  // FIX #3: Validar IDOR usando turma.escola_id diretamente em vez de sessionStorage
+  // sessionStorage é mutável via DevTools — não é fonte confiável para autorização.
   const selecionarTurma = useCallback((turma: Turma) => {
     if (user && user.role !== 'ADMIN') {
       // Para não-ADMIN, verificar se a turma pertence à escola do usuário
-      const turmaEscolaId = sessionStorage.getItem('activeEscolaId');
-      if (user.escola_id && turmaEscolaId && user.escola_id !== turmaEscolaId) {
+      // usando o campo da turma diretamente (fonte confiável: dado do servidor)
+      if (user.escola_id && turma.escola_id && user.escola_id !== turma.escola_id) {
         showErrorRef.current('Acesso negado: Você não tem permissão para acessar turmas de outra escola.');
-        console.error(`[TurmaContext] IDOR bloqueado: user.escola_id=${user.escola_id}, turma.escola_id=${turmaEscolaId}`);
+        console.error(`[TurmaContext] IDOR bloqueado: user.escola_id=${user.escola_id}, turma.escola_id=${turma.escola_id}`);
         return;
       }
     }

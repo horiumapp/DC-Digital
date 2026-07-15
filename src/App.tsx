@@ -39,7 +39,10 @@ const TermosUso = React.lazy(() => import('./pages/TermosUso'));
 const SolicitacaoLgpd = React.lazy(() => import('./pages/SolicitacaoLgpd'));
 const MinhaPrivacidade = React.lazy(() => import('./pages/MinhaPrivacidade'));
 
-import CookieBanner from './components/CookieBanner';
+// FIX #10: CookieBanner convertido para lazy import para reduzir o bundle inicial.
+// Só é necessário para visitantes não logados.
+const CookieBanner = React.lazy(() => import('./components/CookieBanner'));
+
 
 /** FIX #17: Página 404 com redirect por role para evitar loop ALUNO → /turmas → redirect */
 function NotFoundPage() {

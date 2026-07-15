@@ -92,6 +92,11 @@ export async function syncAll(): Promise<SyncResult> {
 
   const result: SyncResult = { synced: 0, failed: 0, errors: [] };
 
+  // FIX #15: Limite de itens por ciclo para evitar bloqueio longo em filas grandes.
+  // Se a fila tiver mais itens, um próximo ciclo será agendado automaticamente.
+  const MAX_ITEMS_PER_CYCLE = 200;
+  let itemsProcessed = 0;
+
   try {
     // Resetar itens travados de sessão anterior
     await Queue.resetStuckItems();
@@ -99,7 +104,8 @@ export async function syncAll(): Promise<SyncResult> {
     // Processar fila em ordem FIFO
     let item = await Queue.peek();
 
-    while (item?.id) {
+    while (item?.id && itemsProcessed < MAX_ITEMS_PER_CYCLE) {
+      itemsProcessed++;
       try {
         await Queue.markProcessing(item.id);
         const serverId = await processItem(item);
@@ -119,13 +125,15 @@ export async function syncAll(): Promise<SyncResult> {
 
       } catch (err) {
         const rawErrorMsg = err instanceof Error ? err.message : String(err);
+        // FIX #7: Extrair código de erro Supabase/Postgres para classificação precisa
+        const errorCode = (err as { code?: string })?.code;
         // LGPD: Sanitizar PII antes de persistir no log
         const errorMsg = sanitizePII(rawErrorMsg);
         
         // FIX #8: Diferenciar erros recuperáveis de não-recuperáveis.
         // Erros fatais (RLS, duplicate, FK) são movidos para dead letter
         // em vez de bloquear toda a fila.
-        if (isNonRecoverableError(errorMsg)) {
+        if (isNonRecoverableError(errorMsg, errorCode)) {
           await Queue.fail(item.id, `[DEAD_LETTER] ${errorMsg}`);
           await logSync(item.table, item.operation, 'error', `[DEAD_LETTER] ${errorMsg}`);
           result.failed++;
@@ -147,6 +155,15 @@ export async function syncAll(): Promise<SyncResult> {
       item = await Queue.peek();
     }
 
+    // FIX #15: Se atingiu o limite por ciclo, agendar continuação automática
+    if (itemsProcessed >= MAX_ITEMS_PER_CYCLE) {
+      const hasMore = await Queue.getPendingCount() > 0;
+      if (hasMore) {
+        console.info(`[SyncEngine] Limite de ${MAX_ITEMS_PER_CYCLE} itens atingido. Agendando próximo ciclo...`);
+        scheduleSync();
+      }
+    }
+
     setState(result.failed > 0 ? 'ERROR' : 'IDLE');
     emit('complete', result);
 
@@ -166,22 +183,46 @@ export async function syncAll(): Promise<SyncResult> {
 // Detecção de erros não-recuperáveis (FIX #8)
 // ============================================================
 
+// ============================================================
+// Detecção de erros não-recuperáveis (FIX #8)
+// ============================================================
+
 /**
  * Verifica se o erro é não-recuperável (retries não vão resolver).
  * Esses itens são movidos para dead letter para não bloquear a fila.
+ *
+ * FIX #7: Usar códigos de erro específicos do Supabase/PostgREST/Postgres em vez
+ * de string matching genérico. Isso evita que erros 404 HTTP temporários (rede/deploy)
+ * sejam incorretamente classificados como dead letter permanente.
  */
-function isNonRecoverableError(errorMsg: string): boolean {
+function isNonRecoverableError(errorMsg: string, errorCode?: string): boolean {
   const msg = errorMsg.toLowerCase();
+
+  // Códigos de erro do PostgREST/Postgres (fonte: https://postgrest.org/en/stable/references/errors.html)
+  const deadLetterCodes = new Set([
+    '23503', // foreign_key_violation
+    '23505', // unique_violation
+    '23514', // check_violation
+    '42501', // insufficient_privilege
+    '22P02', // invalid_text_representation
+    'PGRST116', // Resource Not Found (RLS bloqueando GET de recurso específico)
+    'PGRST301', // JWT expired (não recuperável sem relogin)
+  ]);
+
+  if (errorCode && deadLetterCodes.has(errorCode)) return true;
+
+  // Fallback por substring — NÃO incluir 'not found' aqui (pode ser 404 HTTP transitório)
   return (
     msg.includes('row-level security') ||
     msg.includes('new row violates') ||
     msg.includes('violates foreign key') ||
     msg.includes('duplicate key') ||
     msg.includes('unique constraint') ||
-    msg.includes('not found') ||
     msg.includes('permission denied') ||
     msg.includes('violates check constraint') ||
     msg.includes('invalid input syntax')
+    // REMOVIDO: 'not found' — pode ser 404 HTTP temporário (deploy, endpoint indisponível)
+    // Se o Supabase retornar PGRST116 para registro não encontrado por RLS, usar o código acima.
   );
 }
 
