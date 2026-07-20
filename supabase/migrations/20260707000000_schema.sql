@@ -93,8 +93,9 @@ CREATE OR REPLACE FUNCTION public.get_user_role()
 AS $function$
   SELECT COALESCE(
     ((SELECT auth.jwt()) -> 'app_metadata' ->> 'role'),
-    (SELECT cargo FROM public.usuarios WHERE id = (SELECT auth.uid())),
-    'PROFESSOR'
+    (SELECT cargo FROM public.usuarios WHERE id = (SELECT auth.uid()))
+    -- SEGURANÇA: fallback 'PROFESSOR' removido. Usuário sem role é bloqueado pelo RLS.
+    -- Consistente com migration 20260712000002_security_fixes.sql.
   );
 $function$;
 
@@ -102,12 +103,14 @@ CREATE OR REPLACE FUNCTION public.get_user_role_secure()
  RETURNS text
  LANGUAGE sql
  STABLE
- SET search_path TO ''
+ SECURITY DEFINER
+ SET search_path TO 'public'
 AS $function$
   SELECT COALESCE(
     ((SELECT auth.jwt()) -> 'app_metadata' ->> 'role'),
-    (SELECT cargo FROM public.usuarios WHERE id = (SELECT auth.uid())),
-    'PROFESSOR'
+    (SELECT cargo FROM public.usuarios WHERE id = (SELECT auth.uid()))
+    -- SEGURANÇA: fallback 'PROFESSOR' removido. Usuário sem role é bloqueado pelo RLS.
+    -- Consistente com migration 20260712000002_security_fixes.sql.
   );
 $function$;
 
@@ -263,7 +266,7 @@ CREATE TABLE IF NOT EXISTS public.conteudos (
   descricao text,
   disciplina text DEFAULT 'GERAL'::text,
   CONSTRAINT conteudos_pkey PRIMARY KEY (id),
-  CONSTRAINT conteudos_uniqueness UNIQUE (data)
+  CONSTRAINT conteudos_uniqueness UNIQUE (turma_id, data, tempo, disciplina)
 );
 
 CREATE TABLE IF NOT EXISTS public.curriculo_habilidades (
@@ -314,7 +317,7 @@ CREATE TABLE IF NOT EXISTS public.fechamentos_bimestres (
   data_fechamento timestamp with time zone DEFAULT timezone('utc'::text, now()),
   usuario_fechamento_id uuid,
   CONSTRAINT fechamentos_bimestres_pkey PRIMARY KEY (id),
-  CONSTRAINT unique_fechamento_turma_disciplina_bimestre UNIQUE (bimestre)
+  CONSTRAINT unique_fechamento_turma_disciplina_bimestre UNIQUE (turma_id, disciplina, bimestre)
 );
 
 CREATE TABLE IF NOT EXISTS public.frequencias (
@@ -328,7 +331,7 @@ CREATE TABLE IF NOT EXISTS public.frequencias (
   participacao text NOT NULL,
   disciplina text DEFAULT 'GERAL'::text,
   CONSTRAINT frequencias_pkey PRIMARY KEY (id),
-  CONSTRAINT frequencias_uniqueness UNIQUE (turma_id)
+  CONSTRAINT frequencias_uniqueness UNIQUE (turma_id, aluno_id, data, tempo, disciplina)
 );
 
 CREATE TABLE IF NOT EXISTS public.lgpd_requests (
@@ -351,7 +354,7 @@ CREATE TABLE IF NOT EXISTS public.notas (
   aluno_id uuid NOT NULL,
   valor numeric NOT NULL,
   CONSTRAINT notas_pkey PRIMARY KEY (id),
-  CONSTRAINT notas_avaliacao_id_aluno_id_key UNIQUE (aluno_id)
+  CONSTRAINT notas_avaliacao_id_aluno_id_key UNIQUE (avaliacao_id, aluno_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.professor_alocacoes (
@@ -361,7 +364,7 @@ CREATE TABLE IF NOT EXISTS public.professor_alocacoes (
   turno text NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT professor_alocacoes_pkey PRIMARY KEY (id),
-  CONSTRAINT professor_alocacoes_professor_id_escola_id_turno_key UNIQUE (escola_id)
+  CONSTRAINT professor_alocacoes_professor_id_escola_id_turno_key UNIQUE (professor_id, escola_id, turno)
 );
 
 CREATE TABLE IF NOT EXISTS public.professor_horarios (
@@ -374,7 +377,7 @@ CREATE TABLE IF NOT EXISTS public.professor_horarios (
   created_at timestamp with time zone DEFAULT now(),
   componente text NOT NULL,
   CONSTRAINT professor_horarios_pkey PRIMARY KEY (id),
-  CONSTRAINT professor_horarios_professor_id_dia_semana_tempo_ordem_key UNIQUE (tempo_ordem)
+  CONSTRAINT professor_horarios_professor_id_dia_semana_tempo_ordem_key UNIQUE (professor_id, dia_semana, tempo_ordem)
 );
 
 CREATE TABLE IF NOT EXISTS public.professores (

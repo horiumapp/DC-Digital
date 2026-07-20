@@ -132,27 +132,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let escolaId: string | undefined;
       let name = metadata?.full_name || authUser.email?.split('@')[0] || 'Usuário';
 
-      // 1. Tentar ler APENAS dados não-sensíveis do cache (nome, escola_id) para UX rápida
-      let cached: Awaited<ReturnType<typeof getCachedUser>> | undefined;
-      try {
-        cached = await getCachedUser(authUser.id);
-        if (isCancelled()) return;
-        if (cached && cached.id === authUser.id) {
-          // FIX #1: NÃO copiar role do cache. Apenas dados de apresentação.
-          escolaId = cached.escola_id;
-          name = cached.name;
-        }
-      } catch (err) {
-        console.error('[AuthContext] Erro ao carregar usuário cacheado:', err);
-      }
-
-      // 2. Se estiver online, buscar dados complementares do Supabase
-      // SEGURANÇA: O servidor complementa APENAS dados não-sensíveis (escola_id, nome).
-      // A role NUNCA é sobrescrita pelo servidor — app_metadata (JWT) é a fonte definitiva,
-      // pois é assinada pelo backend e não pode ser manipulada pelo cliente.
-      // FIX #10: Usar ping real em vez de navigator.onLine (pode reportar 'true' sem internet)
-      const isReallyOnline = await pingInternet(3000);
+      // FIX M2: Executar ping e leitura de cache em PARALELO para eliminar o
+      // atraso sequencial de até 3s. Antes: ping(3s) → cache → Supabase.
+      // Agora: ping + cache em paralelo → Supabase (apenas se online).
+      // SEGURANÇA: A role NUNCA é sobrescrita pelo servidor — app_metadata (JWT)
+      // é a fonte definitiva, pois é assinada pelo backend.
+      const [cacheResult, isReallyOnline] = await Promise.all([
+        getCachedUser(authUser.id).catch((err: unknown) => {
+          console.error('[AuthContext] Erro ao carregar usuário cacheado:', err);
+          return undefined;
+        }),
+        pingInternet(3000),
+      ]);
       if (isCancelled()) return;
+
+      // Aplicar dados do cache (apenas campos de apresentação)
+      if (cacheResult && cacheResult.id === authUser.id) {
+        // FIX #1: NÃO copiar role do cache. Apenas dados de apresentação.
+        escolaId = cacheResult.escola_id;
+        name = cacheResult.name;
+      }
+      const cached = cacheResult;
+
       if (isReallyOnline) {
         try {
           const { data: userData, error } = await supabase
@@ -228,11 +229,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       } finally {
-        // FIX #9: setLoading(false) sempre executado em finally, independente de abort.
-        // Garante que a UI nunca trave na tela de carregamento.
-        if (!isCancelled()) {
-          setLoading(false);
-        }
+        // FIX #9 + FIX A6: setLoading(false) SEMPRE executado em finally,
+        // independente de abort. A guarda isCancelled() foi removida daqui pois:
+        //   - Abortar a operação NÃO deve deixar o loading infinito na UI
+        //   - O abort impede corretamente o setUser() com dados obsoletos
+        //   - O próximo fetchUserData (do novo evento de sessão) redefinirá
+        //     o loading para true quando necessário
+        setLoading(false);
       }
     };
 

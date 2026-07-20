@@ -167,6 +167,25 @@ export async function syncAll(): Promise<SyncResult> {
     setState(result.failed > 0 ? 'ERROR' : 'IDLE');
     emit('complete', result);
 
+    // FIX M6: Limpeza proativa do IndexedDB após ciclo bem-sucedido.
+    // Registros já sincronizados (syncStatus='synced') com mais de 30 dias são
+    // removidos para evitar crescimento ilimitado ao longo do ano letivo.
+    // A limpeza é feita de forma assíncrona e não-bloqueante para não atrasar
+    // o retorno do syncAll. Erros aqui são silenciosos (não afetam o fluxo).
+    if (result.synced > 0) {
+      setTimeout(() => {
+        import('../services/offlineStorage').then(({ clearOldSyncedData }) => {
+          clearOldSyncedData(30).then(deleted => {
+            if (deleted > 0) {
+              console.info(`[SyncEngine] Limpeza proativa: ${deleted} registros antigos removidos do IndexedDB.`);
+            }
+          }).catch(err => {
+            console.warn('[SyncEngine] Limpeza proativa falhou (não-crítico):', err);
+          });
+        });
+      }, 0);
+    }
+
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     result.errors.push(`Erro geral: ${errorMsg}`);
@@ -178,10 +197,6 @@ export async function syncAll(): Promise<SyncResult> {
 
   return result;
 }
-
-// ============================================================
-// Detecção de erros não-recuperáveis (FIX #8)
-// ============================================================
 
 // ============================================================
 // Detecção de erros não-recuperáveis (FIX #8)

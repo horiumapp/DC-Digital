@@ -10,6 +10,24 @@ export interface SecurityLogInput {
 }
 
 /**
+ * FIX M4 (LGPD): Gera um hash SHA-256 do email para armazenamento seguro no log.
+ * Em vez de guardar o email em texto plano no audit log, guardamos apenas o hash,
+ * que ainda permite correlacionar eventos do mesmo usuário sem expor PII.
+ * Retorna null se a API de criptografia não estiver disponível.
+ */
+async function hashEmail(email: string): Promise<string | null> {
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(email.toLowerCase().trim());
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Registra uma ação de segurança ou privacidade no banco de dados.
  * Esta função falha silenciosamente no console para garantir que o fluxo principal
  * do usuário (ex: login) continue funcionando em caso de falha de conexão.
@@ -26,11 +44,15 @@ export async function logSecurityEvent(input: SecurityLogInput): Promise<boolean
       }
     }
 
+    // FIX M4 (LGPD): Usar hash do email em vez de texto plano no log de auditoria.
+    // O hash SHA-256 permite correlacionar eventos do mesmo usuário sem expor PII.
+    const emailHash = input.userEmail ? await hashEmail(input.userEmail) : null;
+
     const { error } = await supabase
       .from('security_logs')
       .insert({
         user_id: input.userId || null,
-        user_email: input.userEmail || null,
+        user_email: emailHash, // Hash SHA-256, não o email em texto plano
         action: input.action,
         entity: input.entity || null,
         entity_id: input.entityId || null,
