@@ -43,26 +43,30 @@ export async function enqueue(
     return existing.id;
   }
 
-  // FIX #10: Verificar limite máximo da fila antes de adicionar
-  const currentCount = await db.syncQueue.where('status').anyOf(['pending', 'processing']).count();
-  if (currentCount >= MAX_QUEUE_SIZE) {
-    throw new Error(
-      `Limite de operações pendentes atingido (${MAX_QUEUE_SIZE}). ` +
-      `Conecte-se à internet para sincronizar antes de fazer mais alterações.`
-    );
-  }
+  // FIX M2: Encapsular check de limite + insert em uma transação Dexie atômica.
+  // Sem a transação, dois enqueues simultâneos poderiam ambos passar pelo check
+  // de currentCount antes de qualquer um inserir (race condition).
+  return await db.transaction('rw', db.syncQueue, async () => {
+    const currentCount = await db.syncQueue.where('status').anyOf(['pending', 'processing']).count();
+    if (currentCount >= MAX_QUEUE_SIZE) {
+      throw new Error(
+        `Limite de operações pendentes atingido (${MAX_QUEUE_SIZE}). ` +
+        `Conecte-se à internet para sincronizar antes de fazer mais alterações.`
+      );
+    }
 
-  return await db.syncQueue.add({
-    table,
-    operation,
-    payload: JSON.stringify(payload),
-    status: 'pending',
-    createdAt: timestamp,
-    updatedAt: timestamp,
-    retryCount: 0,
-    hash,
-    localId,
-  }) as number;
+    return await db.syncQueue.add({
+      table,
+      operation,
+      payload: JSON.stringify(payload),
+      status: 'pending',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      retryCount: 0,
+      hash,
+      localId,
+    }) as number;
+  });
 }
 
 /**
@@ -255,19 +259,20 @@ export async function clearQueue(): Promise<void> {
 
 /**
  * Retorna contagem por status.
+ * Nota: 'done' não é incluído pois markDone() deleta o item imediatamente.
  */
-export async function getQueueStats(): Promise<Record<QueueStatus, number>> {
-  const [pending, processing, done, error] = await Promise.all([
+export async function getQueueStats(): Promise<Record<Exclude<QueueStatus, 'done'>, number>> {
+  const [pending, processing, error] = await Promise.all([
     db.syncQueue.where('status').equals('pending').count(),
     db.syncQueue.where('status').equals('processing').count(),
-    db.syncQueue.where('status').equals('done').count(),
     db.syncQueue.where('status').equals('error').count(),
   ]);
 
   return {
     pending,
     processing,
-    done,
+    // FIX B2: 'done' removido — markDone() deleta o item (não muda status).
+    // A contagem era sempre 0, gerando confusão no código de diagnóstico.
     error,
   };
 }

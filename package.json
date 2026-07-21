@@ -16,6 +16,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@sentry/react": "^10.67.0",
     "@supabase/supabase-js": "^2.100.1",
     "dexie": "^4.4.2",
     "dexie-react-hooks": "^1.1.7",

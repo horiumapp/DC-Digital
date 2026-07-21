@@ -10,6 +10,10 @@ vi.mock('../lib/db', () => {
   // Funções precisam ser inline no factory
   return {
     db: {
+      // FIX M2: mock de transaction — executa a callback diretamente (sem transação real em ambiente de teste)
+      transaction: async (_mode: string, _tables: unknown, callback: () => Promise<unknown>) => {
+        return await callback();
+      },
       syncQueue: {
         add: async (item: any) => {
           const id = autoId++;

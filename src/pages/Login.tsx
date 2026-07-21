@@ -30,14 +30,15 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [loginMode, setLoginMode] = useState<'servidor' | 'aluno'>('servidor');
 
-  // Rate limiting client-side: bloquear após 5 tentativas falhas em 60 segundos (persistido no sessionStorage)
+  // FIX A1: Rate limiting persistido em localStorage (persiste entre abas/janelas).
+  // sessionStorage era isolado por aba, permitindo burlar o lockout abrindo nova aba.
   const [failedAttempts, setFailedAttempts] = useState(() => {
-    const stored = sessionStorage.getItem('failed_attempts');
+    const stored = localStorage.getItem('dc_failed_attempts');
     return stored ? parseInt(stored, 10) : 0;
   });
   
   const [lockoutSeconds, setLockoutSeconds] = useState(() => {
-    const until = sessionStorage.getItem('lockout_until');
+    const until = localStorage.getItem('dc_lockout_until');
     if (until) {
       const remaining = Math.ceil((parseInt(until, 10) - Date.now()) / 1000);
       return remaining > 0 ? remaining : 0;
@@ -51,7 +52,7 @@ export default function Login() {
 
   const startLockout = useCallback((duration = 60) => {
     const until = Date.now() + duration * 1000;
-    sessionStorage.setItem('lockout_until', until.toString());
+    localStorage.setItem('dc_lockout_until', until.toString());
     setLockoutSeconds(duration);
   }, []);
 
@@ -62,9 +63,9 @@ export default function Login() {
           if (prev <= 1) {
             clearInterval(lockoutTimer.current!);
             lockoutTimer.current = null;
-            sessionStorage.removeItem('lockout_until');
+            localStorage.removeItem('dc_lockout_until');
             setFailedAttempts(0);
-            sessionStorage.setItem('failed_attempts', '0');
+            localStorage.setItem('dc_failed_attempts', '0');
             return 0;
           }
           return prev - 1;
@@ -134,8 +135,8 @@ export default function Login() {
 
       // Se login bem sucedido, limpa tentativas falhas
       setFailedAttempts(0);
-      sessionStorage.setItem('failed_attempts', '0');
-      sessionStorage.removeItem('lockout_until');
+      localStorage.setItem('dc_failed_attempts', '0');
+      localStorage.removeItem('dc_lockout_until');
 
       // Redirecionar baseado na role real do usuário, ou fallback para o loginMode
       const role = signInData?.user?.app_metadata?.role;
@@ -158,7 +159,7 @@ export default function Login() {
 
       const nextAttempts = failedAttempts + 1;
       setFailedAttempts(nextAttempts);
-      sessionStorage.setItem('failed_attempts', nextAttempts.toString());
+      localStorage.setItem('dc_failed_attempts', nextAttempts.toString());
 
       if (nextAttempts >= 5) {
         startLockout(60);

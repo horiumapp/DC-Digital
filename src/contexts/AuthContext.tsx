@@ -39,6 +39,8 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   logout: () => Promise<void>;             // Logout Real
+  // FIX B1: refreshUser para re-fetch sem logout (ex: mudança de role pelo admin)
+  refreshUser: () => Promise<void>;
 }
 
 // ============================================================
@@ -58,6 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { showError: showToastError } = useToast();
+  // FIX B1: Ref para expor refreshUser via contexto sem causar re-renders
+  const refreshUserRef = useRef<(() => Promise<void>) | null>(null);
 
   // FIX: Modal de logout no lugar de window.confirm() bloqueante
   const [logoutModal, setLogoutModal] = useState<LogoutModalState>({
@@ -239,6 +243,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // FIX B1: refreshUser — aciona re-fetch a partir da sessão atual sem logout
+    const handleRefreshUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setLoading(true);
+      await fetchUserData(session);
+    };
+
+    // expor para closure abaixo
+    refreshUserRef.current = handleRefreshUser;
+
     // Busca a sessão assim que inicializa
     supabase.auth.getSession().then(({ data: { session } }) => {
       fetchUserData(session);
@@ -346,7 +360,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, logout }}>
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      logout,
+      // FIX B1: refreshUser estável via ref — não recria a closure a cada render
+      refreshUser: useCallback(async () => {
+        if (refreshUserRef.current) await refreshUserRef.current();
+      }, []),
+    }}>
       {loading ? <LoadingFallback /> : children}
 
       {/* Modal de confirmação de logout — renderizado fora do fluxo principal */}

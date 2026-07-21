@@ -1,40 +1,44 @@
 /**
  * errorReporting.ts — Módulo de telemetria de erros em produção
  *
- * FIX #20: Centralizar o reporte de erros para facilitar integração
- * futura com Sentry ou similar. Atualmente usa console.error como fallback.
+ * FIX A4: Sentry ativado com guard na variável VITE_SENTRY_DSN.
+ * Se a variável não estiver definida, o módulo funciona em modo silencioso
+ * (apenas console.error em dev, sem envio para servidor externo).
  *
  * Para habilitar o Sentry:
- * 1. npm install @sentry/react
- * 2. Adicionar VITE_SENTRY_DSN ao .env.example e .env
- * 3. Descomentar o bloco de inicialização abaixo
+ * - Adicionar VITE_SENTRY_DSN=https://... ao seu .env (já configurado ✅)
+ * - O pacote @sentry/react já está instalado ✅
  */
 
+import * as Sentry from '@sentry/react';
+
 // ============================================================
-// Inicialização do Sentry (descomentar quando a conta estiver configurada)
+// Inicialização do Sentry (ativado apenas em produção com DSN definido)
 // ============================================================
-//
-// import * as Sentry from '@sentry/react';
-//
-// if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
-//   Sentry.init({
-//     dsn: import.meta.env.VITE_SENTRY_DSN,
-//     environment: 'production',
-//     // Não enviar dados pessoais automaticamente
-//     beforeSend(event) {
-//       // Remover dados de usuário sensíveis
-//       if (event.user) {
-//         delete event.user.email;
-//         delete event.user.username;
-//       }
-//       return event;
-//     },
-//     integrations: [
-//       Sentry.browserTracingIntegration(),
-//     ],
-//     tracesSampleRate: 0.1, // 10% das transações para performance
-//   });
-// }
+let sentryInitialized = false;
+
+if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN as string,
+    environment: 'production',
+    // LGPD: Remover dados pessoais do usuário antes de enviar
+    beforeSend(event) {
+      if (event.user) {
+        delete event.user.email;
+        delete event.user.username;
+        delete event.user.ip_address;
+      }
+      return event;
+    },
+    integrations: [
+      Sentry.browserTracingIntegration(),
+    ],
+    // 10% das transações para monitoramento de performance (baixo custo de quota)
+    tracesSampleRate: 0.1,
+  });
+  sentryInitialized = true;
+  console.info('[ErrorReporting] Sentry inicializado em modo produção.');
+}
 
 export interface ErrorReport {
   error: Error;
@@ -44,7 +48,7 @@ export interface ErrorReport {
 
 /**
  * Reporta um erro crítico capturado (ex: ErrorBoundary).
- * Em produção, envia para o serviço de monitoramento configurado.
+ * Em produção com Sentry configurado, envia para o dashboard.
  * Em desenvolvimento, apenas loga no console.
  */
 export function reportError(report: ErrorReport): void {
@@ -67,10 +71,12 @@ export function reportError(report: ErrorReport): void {
   // Em produção: log mínimo (não expor stack trace ao usuário)
   console.error('[ErrorReporting] Erro crítico:', error.message);
 
-  // Placeholder para integração futura com Sentry:
-  // Sentry.captureException(error, { extra: { ...errorInfo, ...context } });
-
-  // Placeholder para integração futura com outras ferramentas (Datadog, New Relic, etc.)
+  // FIX A4: Enviar para Sentry se inicializado
+  if (sentryInitialized) {
+    Sentry.captureException(error, {
+      extra: { ...errorInfo, ...context },
+    });
+  }
 }
 
 /**
@@ -79,6 +85,10 @@ export function reportError(report: ErrorReport): void {
 export function reportWarning(message: string, context?: Record<string, unknown>): void {
   if (import.meta.env.DEV) {
     console.warn('[ErrorReporting]', message, context);
+    return;
   }
-  // Sentry.captureMessage(message, { level: 'warning', extra: context });
+  // FIX A4: Enviar warning para Sentry se inicializado
+  if (sentryInitialized) {
+    Sentry.captureMessage(message, { level: 'warning', extra: context });
+  }
 }

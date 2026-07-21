@@ -11,6 +11,27 @@ import * as Queue from './offlineQueue';
 import { pingInternet } from '../utils/network';
 
 // ============================================================
+// M5: Helper de validação de UUID
+// ============================================================
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Garante que um valor é um UUID válido.
+ * Lança erro DEAD_LETTER (não-recuperável) se inválido, evitando que
+ * um ID corrompido no IndexedDB atinja o Supabase e gere 22P02.
+ */
+function assertUUID(val: unknown, field: string): string {
+  const s = String(val ?? '');
+  if (!UUID_REGEX.test(s)) {
+    throw new Error(`[DEAD_LETTER] Campo '${field}' não é um UUID válido: '${s}'`);
+  }
+  return s;
+}
+
+// M1: Timeout por item de sincronização (ms)
+const ITEM_SYNC_TIMEOUT_MS = 20_000; // 20 segundos
+
+// ============================================================
 // Tipos
 // ============================================================
 
@@ -108,7 +129,19 @@ export async function syncAll(): Promise<SyncResult> {
       itemsProcessed++;
       try {
         await Queue.markProcessing(item.id);
-        const serverId = await processItem(item);
+        // FIX M1: AbortController + timeout por item para evitar travamento
+        // indefinido em falhas de rede durante transferência de dados.
+        const itemController = new AbortController();
+        const itemTimeout = setTimeout(
+          () => itemController.abort(new Error(`[TIMEOUT] Item ${item!.id} (${item!.table}/${item!.operation}) excedeu ${ITEM_SYNC_TIMEOUT_MS / 1000}s`)),
+          ITEM_SYNC_TIMEOUT_MS
+        );
+        let serverId: string | null;
+        try {
+          serverId = await processItem(item, itemController.signal);
+        } finally {
+          clearTimeout(itemTimeout);
+        }
         await Queue.markDone(item.id);
         
         // Se processItem retornou um novo ID (no caso de inserção de avaliação com ID temporário)
@@ -170,8 +203,8 @@ export async function syncAll(): Promise<SyncResult> {
     // FIX M6: Limpeza proativa do IndexedDB após ciclo bem-sucedido.
     // Registros já sincronizados (syncStatus='synced') com mais de 30 dias são
     // removidos para evitar crescimento ilimitado ao longo do ano letivo.
-    // A limpeza é feita de forma assíncrona e não-bloqueante para não atrasar
-    // o retorno do syncAll. Erros aqui são silenciosos (não afetam o fluxo).
+    // FIX M4: Limpeza de syncLogs antigos (> 30 dias) no mesmo ciclo.
+    // Ambas as limpezas são assíncronas e não-bloqueantes. Erros são silenciosos.
     if (result.synced > 0) {
       setTimeout(() => {
         import('../services/offlineStorage').then(({ clearOldSyncedData }) => {
@@ -183,6 +216,21 @@ export async function syncAll(): Promise<SyncResult> {
             console.warn('[SyncEngine] Limpeza proativa falhou (não-crítico):', err);
           });
         });
+
+        // FIX M4: Limpar syncLogs com mais de 30 dias para evitar crescimento
+        // ilimitado ao longo do ano letivo (pode acumular 10k+ entradas).
+        const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        db.syncLogs
+          .where('timestamp').below(cutoff)
+          .delete()
+          .then(count => {
+            if (count > 0) {
+              console.info(`[SyncEngine] Limpeza de logs: ${count} entradas de syncLog removidas (> 30 dias).`);
+            }
+          })
+          .catch(err => {
+            console.warn('[SyncEngine] Limpeza de syncLogs falhou (não-crítico):', err);
+          });
       }, 0);
     }
 
@@ -296,8 +344,9 @@ interface FechamentoPayload {
 
 function sanitizeFrequencia(payload: FrequenciaPayload): Record<string, unknown> {
   return {
-    turma_id: String(payload.turma_id),
-    aluno_id: String(payload.aluno_id),
+    // FIX M5: assertUUID valida formato antes de enviar ao Supabase
+    turma_id: assertUUID(payload.turma_id, 'turma_id'),
+    aluno_id: assertUUID(payload.aluno_id, 'aluno_id'),
     data: String(payload.data),
     tempo: String(payload.tempo),
     status: String(payload.status || 'P'),
@@ -308,7 +357,8 @@ function sanitizeFrequencia(payload: FrequenciaPayload): Record<string, unknown>
 
 function sanitizeConteudo(payload: ConteudoPayload): Record<string, unknown> {
   return {
-    turma_id: String(payload.turma_id),
+    // FIX M5: assertUUID valida formato antes de enviar ao Supabase
+    turma_id: assertUUID(payload.turma_id, 'turma_id'),
     data: String(payload.data),
     tempo: String(payload.tempo),
     objetos: Array.isArray(payload.objetos) ? payload.objetos.map(String) : [],
@@ -320,7 +370,8 @@ function sanitizeConteudo(payload: ConteudoPayload): Record<string, unknown> {
 
 function sanitizeAvaliacao(payload: AvaliacaoPayload): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {
-    turma_id: String(payload.turma_id),
+    // FIX M5: assertUUID valida formato antes de enviar ao Supabase
+    turma_id: assertUUID(payload.turma_id, 'turma_id'),
     tipo: String(payload.tipo),
     data: String(payload.data),
     instrumento: String(payload.instrumento || ''),
@@ -351,21 +402,24 @@ function sanitizeNota(payload: NotaPayload): Record<string, unknown> {
     throw new Error(`Valor de nota inválido: ${payload.valor} (deve ser numérico entre 0 e 1000)`);
   }
   return {
-    avaliacao_id: String(payload.avaliacao_id),
-    aluno_id: String(payload.aluno_id),
+    // FIX M5: assertUUID valida formato antes de enviar ao Supabase
+    avaliacao_id: assertUUID(payload.avaliacao_id, 'avaliacao_id'),
+    aluno_id: assertUUID(payload.aluno_id, 'aluno_id'),
     valor,
   };
 }
 
 function sanitizeFechamento(payload: FechamentoPayload): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {
-    turma_id: String(payload.turma_id),
+    // FIX M5: assertUUID valida formato antes de enviar ao Supabase
+    turma_id: assertUUID(payload.turma_id, 'turma_id'),
     disciplina: String(payload.disciplina),
     bimestre: String(payload.bimestre),
     status: String(payload.status || 'FECHADO'),
   };
   if (payload.usuario_fechamento_id) {
-    sanitized.usuario_fechamento_id = String(payload.usuario_fechamento_id);
+    // Validar UUID se presente
+    sanitized.usuario_fechamento_id = assertUUID(payload.usuario_fechamento_id, 'usuario_fechamento_id');
   }
   return sanitized;
 }
@@ -374,8 +428,14 @@ function sanitizeFechamento(payload: FechamentoPayload): Record<string, unknown>
 // Processamento de itens individuais
 // ============================================================
 
-async function processItem(item: SyncQueueItem): Promise<string | null> {
+// FIX M1: signal opcional para timeout por item
+async function processItem(item: SyncQueueItem, signal?: AbortSignal): Promise<string | null> {
   if (!item) throw new Error('Item nulo');
+
+  // M1: Verificar abort antes de iniciar (timeout já pode ter ocorrido)
+  if (signal?.aborted) {
+    throw signal.reason instanceof Error ? signal.reason : new Error('[TIMEOUT] Operação cancelada antes de iniciar.');
+  }
 
   // FIX: Proteger contra payloads corrompidos no IndexedDB
   let payload: Record<string, unknown>;

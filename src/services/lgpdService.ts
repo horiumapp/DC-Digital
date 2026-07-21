@@ -41,7 +41,8 @@ export async function saveUserConsent(input: UserConsentInput) {
         status: input.status,
         versao_politica: PRIVACY_POLICY_VERSION,
         ip: input.ip || null,
-        user_agent: input.userAgent || navigator.userAgent,
+        // FIX A5: Sanitizar userAgent contra XSS (remover tags HTML) e truncar como no securityLogService
+        user_agent: (input.userAgent || navigator.userAgent).replace(/<[^>]*>/g, '').substring(0, 512),
         data_hora_aceite: new Date().toISOString(),
         data_hora_revogacao: input.status === 'revogado' ? new Date().toISOString() : null,
       })

@@ -127,7 +127,10 @@ function makeFreqItem(id: number, payload?: any) {
     operation: 'UPSERT',
     payload: JSON.stringify(payload ?? {
       records: [{
-        turma_id: '1', aluno_id: 'a1', data: '2026-01-15',
+        // FIX M5: usar UUIDs válidos para compatibilidade com assertUUID()
+        turma_id: '00000000-0000-0000-0000-000000000001',
+        aluno_id: 'a1a1a1a1-0000-0000-0000-000000000001',
+        data: '2026-01-15',
         tempo: '1', status: 'P', participacao: 'Presencial', disciplina: 'Mat',
       }],
     }),
