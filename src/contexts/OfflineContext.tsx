@@ -96,6 +96,9 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
           console.warn(`[OfflineProvider] Armazenamento em ${estimate.percentUsed.toFixed(1)}% — considere limpar dados`);
         }
 
+        // FIX: Timestamp salvo APÓS sucesso das operações assíncronas.
+        // Antes era salvo antes do await, então um crash durante a limpeza registrava
+        // o horário mas não removia os dados — e a limpeza não era re-tentada por 24h.
         localStorage.setItem(STORAGE_KEY, Date.now().toString());
       } catch (err) {
         console.error('[OfflineProvider] Erro na limpeza:', err);

@@ -72,7 +72,14 @@ export async function fetchAlunos(turmaId: string | number): Promise<Aluno[]> {
     return result;
   } catch {
     // Fallback local
-    const local = await OfflineStorage.getCachedAlunos(tid);
+    const { alunos: local, decryptionFailed } = await OfflineStorage.getCachedAlunos(tid);
+
+    // FIX: Se a chave de criptografia foi perdida (troca de dispositivo, limpeza de browser),
+    // avisar o usuário claramente em vez de exibir '[DADOS PROTEGIDOS - RECONECTE PARA ATUALIZAR]'.
+    if (decryptionFailed) {
+      console.error('[turmaServiceOffline] Chave de criptografia perdida — dados de alunos offline inacessíveis. Reconecte à internet para re-sincronizar.');
+    }
+
     return local.map(a => {
       const cpfClean = a.cpf ? a.cpf.replace(/\D/g, '') : '';
       const matriculaDisplay = cpfClean.length === 11
@@ -80,7 +87,7 @@ export async function fetchAlunos(turmaId: string | number): Promise<Aluno[]> {
         : 'CPF Pendente';
       return {
         id: a.id,
-        nome: a.nome,
+        nome: decryptionFailed ? '⚠️ Dados protegidos — reconecte para visualizar' : a.nome,
         cpf: a.cpf,
         matricula: matriculaDisplay,
         freq: 'P',

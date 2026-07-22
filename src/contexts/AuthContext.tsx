@@ -62,6 +62,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { showError: showToastError } = useToast();
   // FIX B1: Ref para expor refreshUser via contexto sem causar re-renders
   const refreshUserRef = useRef<(() => Promise<void>) | null>(null);
+  // FIX: Guard de concorrência — impede chamadas paralelas a refreshUser/fetchUserData
+  // que causariam race condition no setUser (análogo ao _isSyncing do SyncEngine).
+  const _isFetchingRef = useRef(false);
 
   // FIX: Modal de logout no lugar de window.confirm() bloqueante
   const [logoutModal, setLogoutModal] = useState<LogoutModalState>({
@@ -244,10 +247,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     // FIX B1: refreshUser — aciona re-fetch a partir da sessão atual sem logout
+    // FIX: Guard _isFetchingRef impede execuções paralelas que causariam race condition.
     const handleRefreshUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setLoading(true);
-      await fetchUserData(session);
+      if (_isFetchingRef.current) {
+        console.warn('[AuthContext] refreshUser ignorado: já há um fetch em andamento.');
+        return;
+      }
+      _isFetchingRef.current = true;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setLoading(true);
+        await fetchUserData(session);
+      } finally {
+        _isFetchingRef.current = false;
+      }
     };
 
     // expor para closure abaixo

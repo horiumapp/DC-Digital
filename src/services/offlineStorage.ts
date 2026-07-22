@@ -119,10 +119,10 @@ export async function cacheAlunos(alunos: Omit<LocalAluno, 'syncStatus' | 'updat
   await db.alunos.bulkPut(records);
 }
 
-export async function getCachedAlunos(turmaId: string): Promise<LocalAluno[]> {
+export async function getCachedAlunos(turmaId: string): Promise<{ alunos: LocalAluno[]; decryptionFailed: boolean }> {
   const key = await getCryptoKey();
   const local = await db.alunos.where('turma_id').equals(turmaId).toArray();
-  if (!key) return local;
+  if (!key) return { alunos: local, decryptionFailed: false };
   let anyDecryptionFailed = false;
   const result = await Promise.all(local.map(async a => {
     // FIX #3: decryptFields agora retorna { data, decryptionFailed }
@@ -141,7 +141,9 @@ export async function getCachedAlunos(turmaId: string): Promise<LocalAluno[]> {
       console.error('[offlineStorage] Falha ao limpar cache de alunos com chave corrompida:', clearErr);
     }
   }
-  return result;
+  // FIX: Retorna flag decryptionFailed para que o chamador possa avisar o usuário
+  // em vez de exibir silenciosamente '[DADOS PROTEGIDOS - RECONECTE PARA ATUALIZAR]'.
+  return { alunos: result, decryptionFailed: anyDecryptionFailed };
 }
 
 // ============================================================

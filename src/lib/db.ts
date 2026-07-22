@@ -290,6 +290,27 @@ export class DCDigitalDB extends Dexie {
       files:       '++localId, syncStatus, relatedTable, relatedId',
       userSalts:   'userId',
     });
+
+    // v5: Adiciona índice updatedAt individual em avaliacoes e notas.
+    // A v4 tinha [syncStatus+updatedAt] composto, mas sem updatedAt simples,
+    // impedindo range queries de limpeza baseadas apenas em data.
+    // Alinha esses campos com frequencias e conteudos que já tinham updatedAt individual.
+    this.version(5).stores({
+      turmas:      'id, escola_id',
+      alunos:      'id, turma_id, syncStatus',
+      frequencias: '++localId, [turma_id+aluno_id+data+tempo+disciplina], turma_id, syncStatus, updatedAt, [syncStatus+updatedAt]',
+      conteudos:   '++localId, [turma_id+data+tempo+disciplina], turma_id, syncStatus, updatedAt, [syncStatus+updatedAt]',
+      avaliacoes:  '++localId, turma_id, disciplina, syncStatus, id, updatedAt, [syncStatus+updatedAt]',
+      notas:       '++localId, avaliacao_id, [avaliacao_id+aluno_id], syncStatus, updatedAt, [syncStatus+updatedAt]',
+      horarios:    '++localId, turma_id',
+      fechamentos: '++localId, [turma_id+disciplina+bimestre], syncStatus, [syncStatus+updatedAt]',
+
+      syncQueue:   '++id, table, status, createdAt, hash',
+      syncLogs:    '++id, timestamp, table, status',
+      cachedUsers: 'id',
+      files:       '++localId, syncStatus, relatedTable, relatedId',
+      userSalts:   'userId',
+    });
   }
 }
 

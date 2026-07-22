@@ -602,7 +602,16 @@ async function updateTempAvaliacaoId(localId: number, serverId: string): Promise
     const queueItems = await db.syncQueue.where('status').equals('pending').toArray();
     for (const item of queueItems) {
       let payloadChanged = false;
-      const payloadObj = JSON.parse(item.payload);
+      // FIX: JSON.parse sem try/catch anterior podia abortar toda a transação ao encontrar
+      // um payload corrompido, deixando o IndexedDB em estado inconsistente (avaliação com
+      // ID final, mas notas ainda com ID temporário). Agora o item é pulado individualmente.
+      let payloadObj: Record<string, unknown>;
+      try {
+        payloadObj = JSON.parse(item.payload);
+      } catch {
+        console.warn(`[SyncEngine] Payload corrompido na fila (id=${item.id}, table=${item.table}) - pulando atualização de ID temporário`);
+        continue;
+      }
 
       // Se for a tabela notas
       if (item.table === 'notas') {

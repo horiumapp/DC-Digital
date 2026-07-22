@@ -262,7 +262,8 @@ describe('offlineStorage Service', () => {
     expect(rawInDb.cpf).not.toBe('123.456.789-00');
 
     // Recuperar (descriptografa automaticamente)
-    const retrieved = await getCachedAlunos('t-1');
+    const { alunos: retrieved, decryptionFailed } = await getCachedAlunos('t-1');
+    expect(decryptionFailed).toBe(false);
     expect(retrieved).toHaveLength(1);
     expect(retrieved[0].nome).toBe('João da Silva');
     expect(retrieved[0].cpf).toBe('123.456.789-00');
