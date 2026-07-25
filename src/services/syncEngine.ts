@@ -131,6 +131,8 @@ export async function syncAll(): Promise<SyncResult> {
   return _runSyncAll();
 }
 
+/** Executa o ciclo de sincronização. Chamado por syncAll() após verificações de lock e conectividade. */
+async function _runSyncAll(): Promise<SyncResult> {
   _isSyncing = true;
   setState('SYNCING');
   emit('start');
@@ -194,6 +196,82 @@ export async function syncAll(): Promise<SyncResult> {
           await Queue.fail(item.id, `[DEAD_LETTER] ${errorMsg}`);
           await logSync(item.table, item.operation, 'error', `[DEAD_LETTER] ${errorMsg}`);
           result.failed++;
+          result.errors.push(`${item.table}/${item.operation}: [DEAD_LETTER] ${errorMsg}`);
+          emit('itemFailed', { table: item.table, error: errorMsg, deadLetter: true });
+          // Continua para o próximo item em vez de parar
+        } else {
+          // Erro recuperável — retry com backoff e parar o loop
+          await Queue.retry(item.id, errorMsg);
+          await logSync(item.table, item.operation, 'error', errorMsg);
+          result.failed++;
+          result.errors.push(`${item.table}/${item.operation}: ${errorMsg}`);
+          emit('itemFailed', { table: item.table, error: errorMsg });
+          break; // Parar apenas para erros recuperáveis (rede, timeout)
+        }
+      }
+
+      // Próximo item
+      item = await Queue.peek();
+    }
+
+    // FIX #15: Se atingiu o limite por ciclo, agendar continuação automática
+    if (itemsProcessed >= MAX_ITEMS_PER_CYCLE) {
+      const hasMore = await Queue.getPendingCount() > 0;
+      if (hasMore) {
+        console.info(`[SyncEngine] Limite de ${MAX_ITEMS_PER_CYCLE} itens atingido. Agendando próximo ciclo...`);
+        scheduleSync();
+      }
+    }
+
+    setState(result.failed > 0 ? 'ERROR' : 'IDLE');
+    emit('complete', result);
+
+    // FIX M6: Limpeza proativa do IndexedDB após ciclo bem-sucedido.
+    // Registros já sincronizados (syncStatus='synced') com mais de 30 dias são
+    // removidos para evitar crescimento ilimitado ao longo do ano letivo.
+    // FIX M4: Limpeza de syncLogs antigos (> 30 dias) no mesmo ciclo.
+    // Ambas as limpezas são assíncronas e não-bloqueantes. Erros são silenciosos.
+    if (result.synced > 0) {
+      setTimeout(() => {
+        import('../services/offlineStorage').then(({ clearOldSyncedData }) => {
+          clearOldSyncedData(30).then(deleted => {
+            if (deleted > 0) {
+              console.info(`[SyncEngine] Limpeza proativa: ${deleted} registros antigos removidos do IndexedDB.`);
+            }
+          }).catch(err => {
+            console.warn('[SyncEngine] Limpeza proativa falhou (não-crítico):', err);
+          });
+        });
+
+        // Limpar syncLogs com mais de 30 dias para evitar crescimento
+        // ilimitado ao longo do ano letivo (pode acumular 10k+ entradas).
+        const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        db.syncLogs
+          .where('timestamp').below(cutoff)
+          .delete()
+          .then(count => {
+            if (count > 0) {
+              console.info(`[SyncEngine] Limpeza de logs: ${count} entradas de syncLog removidas (> 30 dias).`);
+            }
+          })
+          .catch(err => {
+            console.warn('[SyncEngine] Limpeza de syncLogs falhou (não-crítico):', err);
+          });
+      }, 0);
+    }
+
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    result.errors.push(`Erro geral: ${errorMsg}`);
+    setState('ERROR');
+    emit('error', errorMsg);
+  } finally {
+    _isSyncing = false;
+  }
+
+  return result;
+}
+
           result.errors.push(`${item.table}/${item.operation}: [DEAD_LETTER] ${errorMsg}`);
           emit('itemFailed', { table: item.table, error: errorMsg, deadLetter: true });
           // Continua para o próximo item em vez de parar
