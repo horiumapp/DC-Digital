@@ -59,9 +59,16 @@ async function getOrCreateSecureKey(userId: string): Promise<CryptoKey> {
 // Criptografia / Descriptografia
 // ============================================================
 
+// FIX M2: Prefixo versionado para identificação determinística de dados criptografados.
+// Elimina a heurística looksEncrypted() baseada em base64, que podia gerar falsos positivos
+// para strings Base64 válidas que nunca foram criptografadas (ex: URLs, nomes em base64).
+// Formato: "enc:v1:<base64(iv + ciphertext)>"
+const ENCRYPTION_PREFIX = 'enc:v1:';
+
 /**
  * Criptografa um texto usando AES-GCM.
- * Retorna base64(iv + ciphertext) para armazenamento.
+ * Retorna "enc:v1:<base64(iv + ciphertext)>" para armazenamento.
+ * O prefixo "enc:v1:" permite identificação determinística do dado criptografado.
  */
 export async function encrypt(plaintext: string, key: CryptoKey): Promise<string> {
   const encoder = new TextEncoder();
@@ -78,15 +85,24 @@ export async function encrypt(plaintext: string, key: CryptoKey): Promise<string
   combined.set(iv);
   combined.set(new Uint8Array(ciphertext), iv.length);
 
-  return uint8ArrayToBase64(combined);
+  // FIX M2: Prefixar com 'enc:v1:' para identificação inequívoca
+  return ENCRYPTION_PREFIX + uint8ArrayToBase64(combined);
 }
 
 /**
  * Descriptografa um texto criptografado com encrypt().
+ * Suporta tanto o formato novo ("enc:v1:<base64>") quanto o legado ("<base64>").
+ * Retrocompatibilidade: dados cacheados antes do FIX M2 não têm prefixo.
  */
-export async function decrypt(encryptedBase64: string, key: CryptoKey): Promise<string> {
+export async function decrypt(encryptedValue: string, key: CryptoKey): Promise<string> {
   const decoder = new TextDecoder();
-  const combined = base64ToUint8Array(encryptedBase64);
+
+  // FIX M2: Remover prefixo versionado se presente (formato novo)
+  const base64 = encryptedValue.startsWith(ENCRYPTION_PREFIX)
+    ? encryptedValue.slice(ENCRYPTION_PREFIX.length)
+    : encryptedValue; // Formato legado: sem prefixo
+
+  const combined = base64ToUint8Array(base64);
   const iv = combined.slice(0, 12);
   const ciphertext = combined.slice(12);
 
@@ -99,14 +115,30 @@ export async function decrypt(encryptedBase64: string, key: CryptoKey): Promise<
 }
 
 /**
- * Verifica se um texto parece estar criptografado (base64 válido com comprimento
- * compatível com IV de 12 bytes + pelo menos 1 byte de ciphertext + 16 bytes de GCM tag).
+ * FIX M2: Verifica se um valor está criptografado de forma DETERMINÍSTICA.
+ *
+ * Lógica em duas camadas para retrocompatibilidade:
+ * 1. Formato novo: presença do prefixo "enc:v1:" — identificação inequívoca.
+ * 2. Formato legado: heurística base64 — apenas para dados cacheados antes do FIX M2.
+ *    Esta camada pode ser removida em uma release futura, após todos os caches
+ *    locais terem sido re-criptografados no novo formato.
+ *
+ * Motivo do FIX: strings Base64 comuns (URLs encodadas, nomes em base64, imagens)
+ * eram incorretamente identificadas como criptografadas pela heurística antiga,
+ * causando falha silenciosa de descriptografia e exibição de '[DADOS PROTEGIDOS]'.
  */
 export function looksEncrypted(value: string): boolean {
-  if (!value || value.length < 40) return false;
+  if (!value) return false;
+
+  // Formato novo: prefixo versionado explícito (sem ambiguidade)
+  if (value.startsWith(ENCRYPTION_PREFIX)) return true;
+
+  // Formato legado: heurística base64 para dados sem prefixo
+  // Mínimo: IV (12 bytes) + 1 byte ciphertext + 16 bytes GCM tag = 29 bytes
+  // Em base64: ceil(29 * 4/3) ≈ 40 chars
+  if (value.length < 40) return false;
   try {
     const decoded = atob(value);
-    // IV (12) + mínimo ciphertext+tag (17) = 29 bytes
     return decoded.length >= 29;
   } catch {
     return false;

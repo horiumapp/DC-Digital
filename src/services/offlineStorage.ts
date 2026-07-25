@@ -737,7 +737,19 @@ export async function getCachedUser(userId?: string): Promise<CachedUser | undef
   if (userId) {
     return db.cachedUsers.get(userId);
   }
-  return db.cachedUsers.toCollection().first();
+  // FIX A5: Sem userId explícito, retornamos o primeiro usuário do cache.
+  // Em dispositivos compartilhados (ex: computador de escola), pode haver múltiplos
+  // usuários cacheados. Se isso acontecer, lançamos um aviso para facilitar diagnóstico.
+  // A chave de criptografia é derivada do userId do cache — um usuário errado resultaria
+  // em falha de descriptografia e re-fetch do servidor (comportamento seguro, mas ruidoso).
+  const allCached = await db.cachedUsers.toArray();
+  if (allCached.length > 1) {
+    console.warn(
+      `[offlineStorage] getCachedUser() chamado sem userId em dispositivo com ${allCached.length} usuários em cache. ` +
+      `Retornando o primeiro. Para evitar isso, sempre passe o userId explicitamente.`
+    );
+  }
+  return allCached[0];
 }
 
 export async function clearCachedUser(): Promise<void> {

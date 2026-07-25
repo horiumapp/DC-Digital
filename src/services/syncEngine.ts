@@ -107,6 +107,30 @@ export async function syncAll(): Promise<SyncResult> {
     return { synced: 0, failed: 0, errors: ['Sem conexão com a internet'] };
   }
 
+  // FIX M4: Usar Web Locks API para serializar sincronizações entre múltiplas abas.
+  // _isSyncing é variável em memória — não compartilhada entre abas do browser.
+  // Sem esse lock, duas abas abertas simultaneamente passariam pelo check acima
+  // e sincronizariam em paralelo, causando possíveis duplicatas ou conflitos no Supabase.
+  // Fallback: se Web Locks não estiver disponível (ex: browsers antigos, testes), executa sem lock.
+  if (typeof navigator !== 'undefined' && 'locks' in navigator) {
+    return navigator.locks.request(
+      'dc-digital-sync-lock',
+      { ifAvailable: true },
+      async (lock) => {
+        if (!lock) {
+          // Outra aba já está sincronizando — aguardar
+          console.info('[SyncEngine] Outra aba está sincronizando. Aguardando próximo ciclo.');
+          return { synced: 0, failed: 0, errors: ['Sincronização em andamento em outra aba'] };
+        }
+        return _runSyncAll();
+      }
+    );
+  }
+
+  // Fallback para ambientes sem Web Locks (ex: Safari antigo, Node.js para testes)
+  return _runSyncAll();
+}
+
   _isSyncing = true;
   setState('SYNCING');
   emit('start');

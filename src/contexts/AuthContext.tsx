@@ -248,16 +248,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // FIX B1: refreshUser — aciona re-fetch a partir da sessão atual sem logout
     // FIX: Guard _isFetchingRef impede execuções paralelas que causariam race condition.
+    // FIX A2: setLoading(true) deve ser chamado ANTES de getSession() para garantir
+    // que qualquer exceção em getSession() (ex: timeout de rede) não deixe a UI
+    // em estado inconsistente. O finally de fetchUserData sempre chama setLoading(false).
     const handleRefreshUser = async () => {
       if (_isFetchingRef.current) {
         console.warn('[AuthContext] refreshUser ignorado: já há um fetch em andamento.');
         return;
       }
       _isFetchingRef.current = true;
+      setLoading(true);
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        setLoading(true);
         await fetchUserData(session);
+      } catch (err) {
+        // Se getSession() falhar, garantir que o loading seja encerrado
+        console.error('[AuthContext] Erro ao obter sessão no refreshUser:', err);
+        setLoading(false);
       } finally {
         _isFetchingRef.current = false;
       }
