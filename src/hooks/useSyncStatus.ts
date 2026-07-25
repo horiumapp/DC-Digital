@@ -14,6 +14,10 @@ interface SyncStatusResult {
   connectionState: ConnectionState;
   /** Número de itens pendentes de sincronização */
   pendingCount: number;
+  /** Número de itens irrecuperáveis (dead letter) */
+  deadLetterCount: number;
+  /** Lista de itens irrecuperáveis */
+  deadLetterItems: any[];
   /** Timestamp do último sync completo com sucesso */
   lastSyncAt: Date | null;
   /** Mensagem do último erro */
@@ -22,30 +26,38 @@ interface SyncStatusResult {
   syncNow: () => Promise<void>;
   /** Tenta reprocessar itens com erro */
   retryErrors: () => Promise<void>;
+  /** Descarta itens irrecuperáveis da dead letter queue */
+  discardDeadLetters: () => Promise<void>;
 }
+
+import { getDeadLetterItems, discardDeadLetterItems } from '../services/offlineQueue';
 
 export function useSyncStatus(isOnline: boolean): SyncStatusResult {
   const [connectionState, setConnectionState] = useState<ConnectionState>(
     isOnline ? 'ONLINE' : 'OFFLINE'
   );
   const [pendingCount, setPendingCount] = useState(0);
+  const [deadLetterItems, setDeadLetterItems] = useState<any[]>([]);
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
 
-  // Atualizar contagem de pendentes no mount e via eventos do SyncEngine
-  // (não precisa de poll periódico — os eventos 'itemSynced' e 'complete' já atualizam)
-  useEffect(() => {
-    const updatePending = async () => {
-      try {
-        const count = await getPendingCount();
-        setPendingCount(count);
-      } catch {
-        // IndexedDB pode não estar pronto
-      }
-    };
-
-    updatePending();
+  const updateCounts = useCallback(async () => {
+    try {
+      const [count, deadLetters] = await Promise.all([
+        getPendingCount(),
+        getDeadLetterItems(),
+      ]);
+      setPendingCount(count);
+      setDeadLetterItems(deadLetters);
+    } catch {
+      // IndexedDB pode não estar pronto
+    }
   }, []);
+
+  // Atualizar contagem no mount
+  useEffect(() => {
+    updateCounts();
+  }, [updateCounts]);
 
   // Escutar eventos do SyncEngine
   useEffect(() => {
@@ -72,8 +84,7 @@ export function useSyncStatus(isOnline: boolean): SyncStatusResult {
             setLastError(null);
             setConnectionState(isOnline ? 'ONLINE' : 'OFFLINE');
           }
-          // Atualizar contagem
-          getPendingCount().then(setPendingCount).catch(() => {});
+          updateCounts();
           break;
         }
         case 'error':
@@ -81,13 +92,14 @@ export function useSyncStatus(isOnline: boolean): SyncStatusResult {
           setConnectionState('ERROR');
           break;
         case 'itemSynced':
-          getPendingCount().then(setPendingCount).catch(() => {});
+        case 'itemFailed':
+          updateCounts();
           break;
       }
     });
 
     return unsubscribe;
-  }, [isOnline]);
+  }, [isOnline, updateCounts]);
 
   // Atualizar estado quando mudar o isOnline
   useEffect(() => {
@@ -104,12 +116,20 @@ export function useSyncStatus(isOnline: boolean): SyncStatusResult {
     await SyncEngine.retryErrors();
   }, []);
 
+  const discardDeadLetters = useCallback(async () => {
+    await discardDeadLetterItems();
+    await updateCounts();
+  }, [updateCounts]);
+
   return {
     connectionState,
     pendingCount,
+    deadLetterCount: deadLetterItems.length,
+    deadLetterItems,
     lastSyncAt,
     lastError,
     syncNow,
     retryErrors,
+    discardDeadLetters,
   };
 }

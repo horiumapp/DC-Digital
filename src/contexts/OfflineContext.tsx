@@ -22,6 +22,10 @@ interface OfflineContextType {
   connectionState: ConnectionState;
   /** Número de itens pendentes de sincronização */
   pendingCount: number;
+  /** Número de itens na Dead Letter Queue */
+  deadLetterCount: number;
+  /** Lista de itens na Dead Letter Queue */
+  deadLetterItems: any[];
   /** Último sync bem-sucedido */
   lastSyncAt: Date | null;
   /** Último erro de sync */
@@ -30,6 +34,8 @@ interface OfflineContextType {
   syncNow: () => Promise<void>;
   /** Tentar novamente itens com erro */
   retryErrors: () => Promise<void>;
+  /** Descartar itens mortos da fila */
+  discardDeadLetters: () => Promise<void>;
   /** Limpar todos os dados locais (usado no logout) */
   clearLocalData: () => Promise<void>;
 }
@@ -45,10 +51,13 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   const {
     connectionState,
     pendingCount,
+    deadLetterCount,
+    deadLetterItems,
     lastSyncAt,
     lastError,
     syncNow,
     retryErrors,
+    discardDeadLetters,
   } = useSyncStatus(isOnline);
 
   const wasOffline = useRef(false);
@@ -68,11 +77,9 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   }, [isOnline]);
 
   // FIX #7: Limpeza periódica com localStorage para rastrear último cleanup.
-  // O setInterval de 24h anterior nunca disparava pois tabs não ficam abertas 24h.
-  // Agora verifica no mount se já se passaram 24h desde a última limpeza.
   useEffect(() => {
     const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h
-    const RECHECK_INTERVAL_MS = 4 * 60 * 60 * 1000; // Re-check a cada 4h (caso a tab fique aberta)
+    const RECHECK_INTERVAL_MS = 4 * 60 * 60 * 1000; // Re-check a cada 4h
     const STORAGE_KEY = 'dc_digital_last_cleanup';
 
     const cleanup = async () => {
@@ -96,16 +103,13 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
           console.warn(`[OfflineProvider] Armazenamento em ${estimate.percentUsed.toFixed(1)}% — considere limpar dados`);
         }
 
-        // FIX: Timestamp salvo APÓS sucesso das operações assíncronas.
-        // Antes era salvo antes do await, então um crash durante a limpeza registrava
-        // o horário mas não removia os dados — e a limpeza não era re-tentada por 24h.
         localStorage.setItem(STORAGE_KEY, Date.now().toString());
       } catch (err) {
         console.error('[OfflineProvider] Erro na limpeza:', err);
       }
     };
 
-    cleanup(); // Rodar na inicialização (só executa se 24h+ se passaram)
+    cleanup(); // Rodar na inicialização
     const interval = setInterval(cleanup, RECHECK_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
@@ -125,10 +129,13 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         isOnline,
         connectionState,
         pendingCount,
+        deadLetterCount,
+        deadLetterItems,
         lastSyncAt,
         lastError,
         syncNow,
         retryErrors,
+        discardDeadLetters,
         clearLocalData,
       }}
     >
