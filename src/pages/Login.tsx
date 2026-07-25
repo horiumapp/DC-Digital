@@ -30,8 +30,11 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [loginMode, setLoginMode] = useState<'servidor' | 'aluno'>('servidor');
 
-  // FIX A1: Rate limiting persistido em localStorage (persiste entre abas/janelas).
-  // sessionStorage era isolado por aba, permitindo burlar o lockout abrindo nova aba.
+  // UX LOCAL (não é defesa de segurança real): contador de tentativas persistido em
+  // localStorage para exibir o timer de lockout ao usuário mesmo trocando de aba.
+  // A proteção real vem do rate limiting server-side do Supabase Auth.
+  // NOTA: este valor pode ser apagado via DevTools — intencionalmente aceitável,
+  // pois o bloqueio real está no servidor.
   const [failedAttempts, setFailedAttempts] = useState(() => {
     const stored = localStorage.getItem('dc_failed_attempts');
     return stored ? parseInt(stored, 10) : 0;
@@ -273,7 +276,7 @@ export default function Login() {
                 name="password" 
                 placeholder="••••••••" 
                 required 
-                minLength={6}
+                minLength={8}
                 autoComplete="current-password"
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
               />
