@@ -70,7 +70,7 @@ export default function PortalAluno() {
 
   useEffect(() => {
     if (user?.id) {
-      // eslint-disable-next-line react-hooks/immutability
+       
       fetchAlunoData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

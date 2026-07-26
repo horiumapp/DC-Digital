@@ -39,13 +39,13 @@ const NovoAlunoModal = React.memo(function NovoAlunoModal({ isOpen, onClose, onS
     setLoadingEscolas(false);
   }, []);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
+   
   useEffect(() => {
     if (isOpen) {
       fetchEscolas();
     }
   }, [isOpen, fetchEscolas]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+   
 
   const fetchTurmas = React.useCallback(async (escolaId: string) => {
     setLoadingTurmas(true);
@@ -54,7 +54,7 @@ const NovoAlunoModal = React.memo(function NovoAlunoModal({ isOpen, onClose, onS
     setLoadingTurmas(false);
   }, []);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
+   
   useEffect(() => {
     if (formData.escola_id) {
       fetchTurmas(formData.escola_id);
@@ -62,9 +62,9 @@ const NovoAlunoModal = React.memo(function NovoAlunoModal({ isOpen, onClose, onS
       setTurmas([]);
     }
   }, [formData.escola_id, fetchTurmas]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+   
 
-  /* eslint-disable react-hooks/set-state-in-effect */
+   
   useEffect(() => {
     if (alunoParaEditar) {
       setFormData({
@@ -94,7 +94,7 @@ const NovoAlunoModal = React.memo(function NovoAlunoModal({ isOpen, onClose, onS
       });
     }
   }, [alunoParaEditar, isOpen, escolas, fixedEscolaId]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+   
 
   const formatCPF = (value: string) => {
     return value

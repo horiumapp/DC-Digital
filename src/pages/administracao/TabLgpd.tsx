@@ -38,7 +38,7 @@ export default function TabLgpd() {
 
   // Log administrative access on mount
   useEffect(() => {
-    // eslint-disable-next-line
+     
     fetchRequests();
     logSecurityEvent({
       userId: user?.id,

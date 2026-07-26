@@ -4,21 +4,28 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// FIX: Origens permitidas — domínios explícitos (sem fallback para localhost em produção).
-// Adicione a URL exata do seu deploy de produção aqui.
-const ALLOWED_ORIGINS = [
+// FIX: Origens permitidas — suporta variável de ambiente ALLOWED_ORIGINS, domínios de desenvolvimento e previews do Vercel.
+const ENV_ALLOWED_ORIGINS = Deno.env.get("ALLOWED_ORIGINS");
+const STATIC_ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:5173",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:5173",
   "https://dc-digital.vercel.app",
 ];
+const ALLOWED_ORIGINS = ENV_ALLOWED_ORIGINS
+  ? ENV_ALLOWED_ORIGINS.split(",").map((o) => o.trim())
+  : STATIC_ALLOWED_ORIGINS;
 
 function getCorsHeaders(req: Request): Record<string, string> | null {
   const origin = req.headers.get("Origin") || "";
-  if (!ALLOWED_ORIGINS.includes(origin)) {
+  const isAllowed = ALLOWED_ORIGINS.includes(origin) || /^https:\/\/.*\.vercel\.app$/.test(origin);
+
+  if (!isAllowed && origin) {
     return null; // Origem não permitida — será rejeitada
   }
   return {
-    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Origin": origin || "*",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",

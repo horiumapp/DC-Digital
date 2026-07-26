@@ -23,7 +23,7 @@ const GerenciarAlocacoesModal = React.memo(function GerenciarAlocacoesModal({ is
     if (data) setEscolas(data);
   }, []);
 
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization
+   
   const fetchAlocacoes = React.useCallback(async () => {
     if (!professor?.id) return;
     setLoading(true);
@@ -43,7 +43,7 @@ const GerenciarAlocacoesModal = React.memo(function GerenciarAlocacoesModal({ is
 
   useEffect(() => {
     if (isOpen && professor) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       fetchEscolas();
        
       fetchAlocacoes();

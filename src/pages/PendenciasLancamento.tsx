@@ -26,7 +26,7 @@ export default function PendenciasLancamento() {
   const periodos = APP_CONFIG.PERIODOS.map(p => p.label);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/immutability
+     
     fetchInitialData();
   }, []);
 
@@ -35,7 +35,7 @@ export default function PendenciasLancamento() {
       // Atualizar o endereço (distrito) automaticamente com base na escola selecionada
       const escolaSelecionada = escolas.find(e => e.id === escolaId);
       if (escolaSelecionada && escolaSelecionada.distrito) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+         
         setDistrito(escolaSelecionada.distrito);
       }
     }
@@ -43,7 +43,7 @@ export default function PendenciasLancamento() {
 
   useEffect(() => {
     if (hasSearched) {
-      // eslint-disable-next-line react-hooks/immutability
+       
       fetchDocentes(escolaId, currentPage);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

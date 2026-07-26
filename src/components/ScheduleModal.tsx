@@ -122,7 +122,7 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
     setLoading(false);
   }, [professorId, escolaId]);
 
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization
+   
   const fetchProfessorContext = React.useCallback(async () => {
     if (!user?.email) return;
     setLoading(true);
@@ -182,7 +182,7 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
     setLoading(false);
   }, [user?.email, fetchData]);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
+   
   useEffect(() => {
     if (isOpen) {
       if (professorId && escolaId) {
@@ -192,7 +192,7 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
       }
     }
   }, [isOpen, professorId, escolaId, user, fetchData, fetchProfessorContext]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+   
 
   const handleTurmaSelect = (diaIndex: number, tempoOrdem: number, turmaId: string) => {
     const key = `${diaIndex + 1}-${tempoOrdem}`;

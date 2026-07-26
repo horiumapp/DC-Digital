@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/set-state-in-effect */
+ 
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
@@ -293,7 +293,7 @@ export default function RelatorioFrequencia() {
       const oldTitle = document.title;
       const turmaNome = selectedTurmaObj?.nome?.replace(/\s+/g, '_') || 'Turma';
       const disciplinaNome = componente?.replace(/\s+/g, '_') || 'Disciplina';
-      // eslint-disable-next-line react-hooks/immutability
+       
       document.title = `FREQ_${periodoSelecionado.replace(/\s+/g, '')}_${turmaNome}_${disciplinaNome}`;
 
       setTimeout(() => {

@@ -34,7 +34,7 @@ export default function ConnectionStatus() {
         return () => clearTimeout(timer);
       }
     }
-  }, [connectionState, deadLetterCount]);
+  }, [connectionState, deadLetterCount, visible, showOnlineBrief]);
 
   const handleDiscard = async () => {
     setIsDiscarding(true);

@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/set-state-in-effect */
+ 
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
@@ -278,7 +278,7 @@ export default function RelatorioConteudos() {
       const turmaNome = selectedTurmaObj?.nome?.replace(/\s+/g, '_') || 'Turma';
       const disciplinaNome = componente?.replace(/\s+/g, '_') || 'Disciplina';
       const periodoLimpo = periodoSelecionado.replace(/\s+/g, '');
-      // eslint-disable-next-line react-hooks/immutability
+       
       document.title = `CM_${periodoLimpo}_${turmaNome}_${disciplinaNome}`;
 
       // Pequeno timeout para garantir que o componente de impressão renderizou

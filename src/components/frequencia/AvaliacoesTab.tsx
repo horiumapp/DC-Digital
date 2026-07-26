@@ -92,7 +92,7 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
   }, [selectedAvaliacao, alunos]);
 
   // Carregar notas ao entrar em modo editor
-  /* eslint-disable react-hooks/set-state-in-effect */
+   
   useEffect(() => {
     if (avaliacaoViewMode === 'grades' && selectedAvaliacao) {
       const notasMap: Record<string, string> = {};
@@ -102,10 +102,10 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
       setLocalNotas(notasMap);
     }
   }, [avaliacaoViewMode, selectedAvaliacao, alunosParaNotas]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+   
 
   // Atualizar período letivo pela data selecionada
-  /* eslint-disable react-hooks/set-state-in-effect */
+   
   useEffect(() => {
     if (selectedDate) {
       const bim = getBimestrePorData(selectedDate);
@@ -114,7 +114,7 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
       setObjetoConhecimento('');
     }
   }, [selectedDate]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+   
 
   // Handlers
   const resetForm = () => {

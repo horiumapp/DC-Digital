@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Shield, User, AlertTriangle, ShieldCheck, Loader2, KeyRound } from 'lucide-react';
 import Background from '../components/Background';
@@ -43,23 +43,7 @@ export default function MinhaPrivacidade() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
 
-  const backUrl = user?.role === 'ALUNO' ? '/portal-aluno' : '/turmas';
-
-  // Load consents and profile details
-  useEffect(() => {
-    if (user?.id) {
-      fetchProfileData();
-      const saved = getSavedConsent();
-      if (saved) {
-        setCookieConsent(saved.status === 'accepted');
-      }
-      // Marketing defaults to false/local check if applicable
-      const savedMarketing = localStorage.getItem('dc_digital_marketing_consent') === 'true';
-      setMarketingConsent(savedMarketing);
-    }
-  }, [user]);
-
-  const fetchProfileData = async () => {
+  const fetchProfileData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
@@ -135,7 +119,22 @@ export default function MinhaPrivacidade() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  const backUrl = user?.role === 'ALUNO' ? '/portal-aluno' : '/turmas';
+
+  // Load consents and profile details
+  useEffect(() => {
+    if (user?.id) {
+      fetchProfileData();
+      const saved = getSavedConsent();
+      if (saved) {
+        setCookieConsent(saved.status === 'accepted');
+      }
+      const savedMarketing = localStorage.getItem('dc_digital_marketing_consent') === 'true';
+      setMarketingConsent(savedMarketing);
+    }
+  }, [user, fetchProfileData]);
 
   const handleCookieConsentChange = async (checked: boolean) => {
     setCookieConsent(checked);

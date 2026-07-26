@@ -103,7 +103,7 @@ export default function ObjetoConhecimentoTab({
   // Atualiza seleções iniciais quando as unidades mudam
   React.useEffect(() => {
     if (curriculoIndisponivel && !objetoUnidade) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setObjetoUnidade('TEXTO LIVRE');
     } else if (unidadesDisponiveis.length > 0 && !objetoUnidade) {
        
@@ -124,7 +124,7 @@ export default function ObjetoConhecimentoTab({
 
   React.useEffect(() => {
     if (objetosDisponiveis.length > 0 && !objetoConhecimento && objetoUnidade !== 'TEXTO LIVRE') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setObjetoConhecimento(objetosDisponiveis[0]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

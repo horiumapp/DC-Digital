@@ -41,7 +41,7 @@ const NovoProfessorModal = React.memo(function NovoProfessorModal({ isOpen, onCl
     }
   };
 
-  /* eslint-disable react-hooks/set-state-in-effect */
+   
   useEffect(() => {
     if (professorParaEditar) {
       setFormData({
@@ -69,7 +69,7 @@ const NovoProfessorModal = React.memo(function NovoProfessorModal({ isOpen, onCl
       });
     }
   }, [professorParaEditar, isOpen]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+   
 
   const toggleDisciplina = (disc: string) => {
     setFormData(prev => ({
