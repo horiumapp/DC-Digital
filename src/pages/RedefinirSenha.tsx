@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Loader2, ArrowLeft } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import Background from '../components/Background';
 import { supabase } from '../lib/supabase';
 import { APP_CONFIG } from '../config/appConfig';
@@ -18,19 +18,68 @@ export default function RedefinirSenha() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isVerifyingSession, setIsVerifyingSession] = useState(true);
+  const [isSessionValid, setIsSessionValid] = useState(false);
 
-  // Verificamos se há hash de sessão da recuperação.
-  // Quando o usuário clica no link, o Supabase passa o hash na URL.
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, _session) => {
-      // A lib do Supabase já gerencia a sessão da URL automaticamente.
-      // Este listener apenas monitora o evento PASSWORD_RECOVERY.
-      if (event === 'PASSWORD_RECOVERY') {
-        // Sessão de recuperação detectada.
+    let isMounted = true;
+
+    const verifySessionAndCode = async () => {
+      try {
+        const searchParams = new URLSearchParams(window.location.search);
+        const code = searchParams.get('code');
+
+        if (code) {
+          // Trata troca do código PKCE recebido via parâmetro URL
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) {
+            console.error('[RedefinirSenha] Erro ao trocar código:', exchangeError);
+            if (isMounted) {
+              setError('O link de redefinição de senha é inválido ou expirou. Solicite um novo link de recuperação.');
+              setIsSessionValid(false);
+            }
+            return;
+          }
+        }
+
+        // Verifica se a sessão atual existe e é válida
+        const { data: { session } } = await supabase.auth.getSession();
+        if (isMounted) {
+          if (session) {
+            setIsSessionValid(true);
+          } else {
+            setError('O link de redefinição de senha é inválido ou expirou. Solicite um novo link de recuperação.');
+            setIsSessionValid(false);
+          }
+        }
+      } catch (err) {
+        console.error('[RedefinirSenha] Erro na verificação da sessão:', err);
+        if (isMounted) {
+          setError('Ocorreu um erro ao validar seu link de recuperação. Tente novamente.');
+          setIsSessionValid(false);
+        }
+      } finally {
+        if (isMounted) {
+          setIsVerifyingSession(false);
+        }
+      }
+    };
+
+    verifySessionAndCode();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
+        if (isMounted) {
+          setIsSessionValid(true);
+          setError(null);
+        }
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleRedefinir = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -57,6 +106,11 @@ export default function RedefinirSenha() {
     }
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Auth session missing');
+      }
+
       const { error: resetError } = await supabase.auth.updateUser({ password });
 
       if (resetError) throw resetError;
@@ -92,55 +146,85 @@ export default function RedefinirSenha() {
             </p>
           </div>
 
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-lg text-sm font-medium border border-red-100 text-center">
-              {error}
+          {isVerifyingSession ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-3 text-slate-600">
+              <Loader2 className="w-8 h-8 animate-spin text-[#0f2851]" />
+              <p className="text-sm font-medium">Validando link de recuperação...</p>
             </div>
+          ) : (
+            <>
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-lg text-sm font-medium border border-red-100 text-center">
+                  {error}
+                </div>
+              )}
+
+              {!isSessionValid ? (
+                <div className="space-y-4 text-center">
+                  <p className="text-slate-600 text-sm">
+                    Para sua segurança, solicite um novo e-mail de recuperação de senha.
+                  </p>
+                  <Link
+                    to="/recuperar-senha"
+                    className="w-full inline-flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] text-white text-base font-bold py-3 px-4 rounded-xl shadow-lg transition-all"
+                  >
+                    Solicitar Novo Link
+                  </Link>
+                </div>
+              ) : (
+                <form onSubmit={handleRedefinir} className="space-y-6">
+                  <div className="space-y-2">
+                    <label htmlFor="password" className="block text-base font-medium text-slate-700">Nova Senha</label>
+                    <input 
+                      type="password" 
+                      id="password" 
+                      name="password" 
+                      placeholder="••••••••" 
+                      required 
+                      minLength={8}
+                      autoComplete="new-password"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="confirmPassword" className="block text-base font-medium text-slate-700">Confirmar Nova Senha</label>
+                    <input 
+                      type="password" 
+                      id="confirmPassword" 
+                      name="confirmPassword" 
+                      placeholder="••••••••" 
+                      required 
+                      minLength={8}
+                      autoComplete="new-password"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
+                    />
+                  </div>
+
+                  <div className="pt-2">
+                    <button 
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-4 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all active:scale-95"
+                    >
+                      {isLoading ? (
+                        <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Atualizando...</>
+                      ) : (
+                        'Salvar Nova Senha'
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              <div className="mt-8 pt-6 border-t border-slate-100 text-center">
+                <Link to="/" className="text-[#0f2851] font-bold hover:underline flex items-center justify-center gap-1 transition-all text-sm">
+                  <ArrowLeft className="w-4 h-4" />
+                  Voltar ao Login
+                </Link>
+              </div>
+            </>
           )}
-
-          <form onSubmit={handleRedefinir} className="space-y-6">
-            <div className="space-y-2">
-              <label htmlFor="password" className="block text-base font-medium text-slate-700">Nova Senha</label>
-              <input 
-                type="password" 
-                id="password" 
-                name="password" 
-                placeholder="••••••••" 
-                required 
-                minLength={8}
-                autoComplete="new-password"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="confirmPassword" className="block text-base font-medium text-slate-700">Confirmar Nova Senha</label>
-              <input 
-                type="password" 
-                id="confirmPassword" 
-                name="confirmPassword" 
-                placeholder="••••••••" 
-                required 
-                minLength={8}
-                autoComplete="new-password"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
-              />
-            </div>
-
-            <div className="pt-2">
-              <button 
-                type="submit"
-                disabled={isLoading}
-                className="w-full flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-4 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all active:scale-95"
-              >
-                {isLoading ? (
-                  <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Atualizando...</>
-                ) : (
-                  'Salvar Nova Senha'
-                )}
-              </button>
-            </div>
-          </form>
         </section>
 
         <footer className="mt-6 text-center text-slate-400 text-xs">

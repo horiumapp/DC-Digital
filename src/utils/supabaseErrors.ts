@@ -45,8 +45,20 @@ export function translateSupabaseError(errorMsg: string | undefined): string {
   }
 
   // ---- Sessão ----
-  if (code.includes('token expired') || code.includes('jwt expired')) {
+  if (
+    code.includes('token expired') ||
+    code.includes('jwt expired')
+  ) {
     return 'Sua sessão expirou. Faça o login novamente.';
+  }
+  if (
+    code.includes('auth session missing') ||
+    code.includes('session missing') ||
+    code.includes('invalid flow state') ||
+    code.includes('code_verifier') ||
+    code.includes('pkce')
+  ) {
+    return 'O link de redefinição de senha é inválido ou expirou. Solicite um novo link de recuperação.';
   }
   if (code.includes('not authenticated') || code.includes('unauthorized')) {
     return 'Você precisa estar autenticado para realizar esta ação.';
