@@ -315,8 +315,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
 
-import { syncAll } from '../services/syncEngine';
-
   // LOGOUT — Revoga sessão no servidor ANTES de limpar o state da UI
   const logout = async () => {
     try {
