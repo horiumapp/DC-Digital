@@ -523,6 +523,10 @@ async function syncFrequencia(operation: string, payload: Record<string, unknown
     .from('frequencias')
     .upsert(sanitizedRecords, { onConflict: 'turma_id,aluno_id,data,tempo,disciplina' });
   if (error) throw error;
+
+  // Atualizar syncStatus local para 'synced'
+  const avaliacaoTurmaIds = [...new Set(sanitizedRecords.map(r => String(r.turma_id)))];
+  await db.frequencias.where('turma_id').anyOf(avaliacaoTurmaIds).modify({ syncStatus: 'synced', updatedAt: now() });
 }
 
 async function syncConteudo(operation: string, payload: Record<string, unknown>): Promise<void> {
@@ -543,6 +547,8 @@ async function syncConteudo(operation: string, payload: Record<string, unknown>)
     .from('conteudos')
     .upsert(sanitized, { onConflict: 'turma_id,data,tempo,disciplina' });
   if (error) throw error;
+
+  await db.conteudos.where('turma_id').equals(String(sanitized.turma_id)).modify({ syncStatus: 'synced', updatedAt: now() });
 }
 
 async function syncAvaliacao(operation: string, payload: Record<string, unknown>): Promise<string | null> {
@@ -609,6 +615,10 @@ async function syncNotas(operation: string, payload: Record<string, unknown>): P
     .from('notas')
     .upsert(sanitizedRecords, { onConflict: 'avaliacao_id,aluno_id' });
   if (error) throw error;
+
+  // Atualizar syncStatus local de notas para 'synced'
+  const avaliacaoIds = [...new Set(sanitizedRecords.map(r => String(r.avaliacao_id)))];
+  await db.notas.where('avaliacao_id').anyOf(avaliacaoIds).modify({ syncStatus: 'synced', updatedAt: now() });
 }
 
 async function syncFechamento(operation: string, payload: Record<string, unknown>): Promise<void> {
@@ -628,6 +638,8 @@ async function syncFechamento(operation: string, payload: Record<string, unknown
     .from('fechamentos_bimestres')
     .upsert(sanitized, { onConflict: 'turma_id,disciplina,bimestre' });
   if (error) throw error;
+
+  await db.fechamentos.where('turma_id').equals(sanitized.turma_id).modify({ syncStatus: 'synced', updatedAt: now() });
 }
 
 // ============================================================
