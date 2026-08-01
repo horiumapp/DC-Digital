@@ -78,6 +78,7 @@ vi.mock('../lib/db', () => {
   }));
   const _where = vi.fn(() => ({
     equals: _equals,
+    anyOf: vi.fn(() => ({ modify: _modify, toArray: vi.fn(async () => []) })),
     below: vi.fn(() => ({ delete: vi.fn(async () => 0) })),
   }));
 
