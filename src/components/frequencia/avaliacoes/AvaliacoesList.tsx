@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, Pencil, Trash2, List, Check, Calendar as CalendarIcon, Plus } from 'lucide-react';
+import { Eye, Pencil, Trash2, List, Check, Calendar as CalendarIcon, Plus, Clock, AlertTriangle } from 'lucide-react';
 import { Avaliacao } from '../../../contexts/TurmaContext';
 import { formatarDataParaISO, formatarDataParaExibicao } from '../../../utils/dateUtils';
 
@@ -32,8 +32,32 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
 }: AvaliacoesListProps) {
   const BIMESTRES = ['1º Bimestre', '2º Bimestre', '3º Bimestre', '4º Bimestre'];
 
+  // Helper para verificar se uma avaliação tem notas pendentes
+  const isAvaliacaoPendente = (av: Avaliacao) => {
+    if (!alunos || alunos.length === 0) return false;
+    const dataIso = formatarDataParaISO(av.data);
+    const faltasNoDia = faltasPorData[dataIso] || new Set();
+    const alunosPresentes = alunos.filter(a => !faltasNoDia.has(a.id));
+    if (alunosPresentes.length === 0) return false;
+    return alunosPresentes.some(a => {
+      const nota = a.notas?.[av.id] ?? a.notas?.[String(av.id)];
+      return nota === undefined || nota === null || String(nota).trim() === '';
+    });
+  };
+
+  const avPendente = avaliacoes.filter(av => !av.parent_id).find(av => isAvaliacaoPendente(av));
+
   return (
     <div className="space-y-4">
+      {avPendente && !disabled && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-2xl text-xs font-semibold flex items-center gap-3 shadow-sm mb-2">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+          <span>
+            A avaliação <strong>{avPendente.tipo}</strong> ({formatarDataParaExibicao(avPendente.data)}) possui <strong>notas pendentes</strong>. É necessário lançar as notas de todos os alunos da avaliação anterior antes de cadastrar uma nova.
+          </span>
+        </div>
+      )}
+
       {!disabled && (
         <div className="flex items-end shadow-sm mb-2">
           <button
@@ -65,16 +89,33 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                     <tr className="bg-[#eef2ff]/30">
                       <td colSpan={4} className="px-6 py-2 font-bold text-[#0f2851] text-[11px] uppercase tracking-wider">{bim}</td>
                     </tr>
-                    {avsBim.map((av) => (
+                    {avsBim.map((av) => {
+                      const temPendencia = isAvaliacaoPendente(av);
+                      return (
                       <React.Fragment key={av.id}>
                         <tr className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 flex items-center gap-2">
-                            <div className="flex gap-1">
-                              <div className="w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center shadow-sm">
-                                <Check className="w-3 h-3" />
-                              </div>
+                          <td className="px-6 py-4 flex items-center gap-2 flex-wrap">
+                            <div className="flex gap-1 items-center">
+                              {temPendencia ? (
+                                <div className="w-5 h-5 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-sm" title="Notas pendentes">
+                                  <Clock className="w-3 h-3" />
+                                </div>
+                              ) : (
+                                <div className="w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-sm" title="Notas lançadas">
+                                  <Check className="w-3 h-3" />
+                                </div>
+                              )}
                             </div>
                             <span className="text-slate-900 font-bold text-base">{av.tipo}</span>
+                            {temPendencia ? (
+                              <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[10px] font-bold uppercase ml-1">
+                                Notas Pendentes
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-[10px] font-bold uppercase ml-1">
+                                Notas Lançadas
+                              </span>
+                            )}
                           </td>
                           <td className="px-6 py-4">
                              <div className="flex items-center gap-2 text-slate-600 font-bold uppercase text-xs">
@@ -198,7 +239,8 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                           </>
                         )}
                       </React.Fragment>
-                    ))}
+                      );
+                    })}
                   </React.Fragment>
                 );
               })}
