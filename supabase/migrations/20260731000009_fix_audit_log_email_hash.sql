@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION public.fn_audit_log_changes()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path TO 'public', 'extensions'
 AS $function$
 DECLARE
   v_record_id TEXT;
@@ -24,7 +24,11 @@ BEGIN
   -- O hash permite correlacionar eventos do mesmo usuário sem expor PII.
   v_email_hash := NULL;
   IF auth.email() IS NOT NULL THEN
-    v_email_hash := encode(digest(lower(trim(auth.email())), 'sha256'), 'hex');
+    BEGIN
+      v_email_hash := encode(digest(lower(trim(auth.email())), 'sha256'::text), 'hex');
+    EXCEPTION WHEN OTHERS THEN
+      v_email_hash := NULL;
+    END;
   END IF;
 
   INSERT INTO audit_log (user_id, user_email, action, table_name, record_id)
