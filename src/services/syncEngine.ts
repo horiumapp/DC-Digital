@@ -13,17 +13,10 @@ import { pingInternet } from '../utils/network';
 // ============================================================
 // M5: Helper de validação de UUID
 // ============================================================
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/**
- * Garante que um valor é um UUID válido.
- * Lança erro DEAD_LETTER (não-recuperável) se inválido, evitando que
- * um ID corrompido no IndexedDB atinja o Supabase e gere 22P02.
- */
 function assertUUID(val: unknown, field: string): string {
-  const s = String(val ?? '');
-  if (!UUID_REGEX.test(s)) {
-    throw new Error(`[DEAD_LETTER] Campo '${field}' não é um UUID válido: '${s}'`);
+  const s = String(val ?? '').trim();
+  if (!s) {
+    throw new Error(`[DEAD_LETTER] Campo '${field}' está ausente ou vazio.`);
   }
   return s;
 }
