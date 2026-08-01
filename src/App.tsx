@@ -11,6 +11,8 @@ import { ToastProvider } from './components/common/Toast';
 import { ADMIN_ROLES, STAFF_ROLES } from './constants/authConstants';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import RouteErrorBoundary from './components/common/RouteErrorBoundary';
+import MissingEnvScreen from './components/common/MissingEnvScreen';
+import { isSupabaseConfigured } from './lib/supabase';
 
 // Lazy loading das páginas principais para dividir o peso do javascript
 const Login = React.lazy(() => import('./pages/Login'));
@@ -73,6 +75,10 @@ function StaffProvidersWrapper() {
 }
 
 export default function App() {
+  if (!isSupabaseConfigured) {
+    return <MissingEnvScreen />;
+  }
+
   return (
     <ErrorBoundary>
       <ToastProvider>
