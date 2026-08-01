@@ -114,6 +114,17 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
       setObjetoConhecimento('');
     }
   }, [selectedDate]);
+
+  // Carregar faltas de cada data de avaliação automaticamente
+  useEffect(() => {
+    if (avaliacoes && avaliacoes.length > 0) {
+      avaliacoes.forEach(av => {
+        if (av.data && !av.parent_id) {
+          carregarFaltasDaData(av.data);
+        }
+      });
+    }
+  }, [avaliacoes, carregarFaltasDaData]);
    
 
   // Handlers

@@ -124,11 +124,10 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                               </button>
                               
                               {!disabled && (() => {
-                                const hasGrades = alunos.some(a => a.notas?.[av.id]);
                                 const hasAbsences = (faltasPorData[formatarDataParaISO(av.data)] || new Set()).size > 0;
                                 const alreadyHasSecondCall = avaliacoes.some(rp => String(rp.parent_id) === String(av.id) && rp.tipo.includes('2CH'));
                                 
-                                if (hasGrades && hasAbsences && !alreadyHasSecondCall) {
+                                if (hasAbsences && !alreadyHasSecondCall) {
                                   return (
                                     <button onClick={() => onSecondCall(av)}
                                       className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#0f2851] hover:bg-[#e0e7ff] rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100 shadow-sm">
