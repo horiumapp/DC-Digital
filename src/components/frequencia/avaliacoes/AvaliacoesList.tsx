@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, Pencil, Trash2, List, Check, Calendar as CalendarIcon, Plus, Clock, AlertTriangle } from 'lucide-react';
+import { Eye, Pencil, Trash2, List, Check, Calendar as CalendarIcon, Plus, Clock } from 'lucide-react';
 import { Avaliacao } from '../../../contexts/TurmaContext';
 import { formatarDataParaISO, formatarDataParaExibicao } from '../../../utils/dateUtils';
 
@@ -49,15 +49,6 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
 
   return (
     <div className="space-y-4">
-      {avPendente && !disabled && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-2xl text-xs font-semibold flex items-center gap-3 shadow-sm mb-2">
-          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-          <span>
-            A avaliação <strong>{avPendente.tipo}</strong> ({formatarDataParaExibicao(avPendente.data)}) possui <strong>notas pendentes</strong>. É necessário lançar as notas de todos os alunos da avaliação anterior antes de cadastrar uma nova.
-          </span>
-        </div>
-      )}
-
       {!disabled && (
         <div className="flex items-end shadow-sm mb-2">
           <button
