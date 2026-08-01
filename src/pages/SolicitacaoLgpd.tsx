@@ -235,14 +235,15 @@ export default function SolicitacaoLgpd() {
                 <input
                   type="text"
                   required
-                  placeholder="Resultado"
+                  placeholder="Digite os 4 números"
+                  maxLength={4}
                   value={captcha.captchaInput}
                   onChange={(e) => captcha.setCaptchaInput(e.target.value)}
                   className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] dark:focus:border-blue-500 transition-all placeholder-slate-400 font-medium text-sm bg-white dark:bg-slate-800/50"
                 />
               </div>
               <p className="text-[10px] text-slate-400 font-medium">
-                Resolva a operação acima. Clique no código cinza para recarregá-lo.
+                Digite os 4 números exibidos acima. Clique no código cinza para recarregá-lo.
               </p>
               {captcha.captchaError && (
                 <p className="text-xs text-red-600 dark:text-red-400 font-bold mt-1">Código incorreto. Tente novamente.</p>
