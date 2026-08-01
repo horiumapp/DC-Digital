@@ -154,7 +154,36 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
       })));
     }
     
-    return result;
+    // Mesclar com avaliações locais pendentes (que ainda não foram sincronizadas com o servidor)
+    const localAvs = await OfflineStorage.getAvaliacoesLocal(tid, disciplina);
+    const localPending = localAvs.filter(a => a.syncStatus === 'pending');
+
+    let mergedAvaliacoes = [...result.avaliacoes];
+    for (const pending of localPending) {
+      const formatted: Avaliacao = {
+        id: pending.id || pending.serverId || `local_${pending.localId}`,
+        turmaId: pending.turma_id,
+        tipo: pending.tipo,
+        data: pending.data,
+        instrumento: pending.instrumento,
+        objetos: pending.objetos,
+        bimestre: pending.bimestre,
+        valorMaximo: pending.valor_maximo,
+        parent_id: pending.parent_id,
+      };
+
+      const existingIdx = mergedAvaliacoes.findIndex(a => a.id === formatted.id);
+      if (existingIdx >= 0) {
+        mergedAvaliacoes[existingIdx] = formatted;
+      } else {
+        mergedAvaliacoes.push(formatted);
+      }
+    }
+
+    return {
+      avaliacoes: mergedAvaliacoes,
+      notasData: result.notasData,
+    };
   } catch {
     // Fallback local
     const localAvs = await OfflineStorage.getAvaliacoesLocal(tid, disciplina);

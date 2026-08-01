@@ -278,6 +278,22 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     const rawId = getTid(turmaAtiva.id);
     try {
       const createdId = await OfflineTurmaService.salvarAvaliacao(av, rawId, turmaAtiva.componente);
+      const avaliacaoSalva: Avaliacao = {
+        ...av,
+        id: createdId || av.id,
+        bimestre: av.bimestre || getBimestrePorData(av.data)
+      };
+
+      setAvaliacoes(prev => {
+        const index = prev.findIndex(a => a.id === av.id || a.id === createdId);
+        if (index >= 0) {
+          const updated = [...prev];
+          updated[index] = avaliacaoSalva;
+          return updated;
+        }
+        return [...prev, avaliacaoSalva];
+      });
+
       await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunos);
       showSuccessRef.current('Avaliação salva com sucesso!');
       return createdId;
