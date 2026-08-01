@@ -105,6 +105,13 @@ export default function ConnectionStatus() {
               Ver {deadLetterCount} erro(s)
             </button>
           )}
+          <button
+            onClick={() => setVisible(false)}
+            className="ml-2 opacity-70 hover:opacity-100 transition-opacity cursor-pointer text-xs"
+            aria-label="Fechar"
+          >
+            ✕
+          </button>
         </div>
       ),
     },
