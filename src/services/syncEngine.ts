@@ -176,7 +176,12 @@ async function _runSyncAll(): Promise<SyncResult> {
         emit('itemSynced', { table: item.table, operation: item.operation });
 
       } catch (err) {
-        const rawErrorMsg = err instanceof Error ? err.message : String(err);
+        const rawErrorMsg = err instanceof Error
+          ? err.message
+          : (typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message?: unknown }).message === 'string')
+            ? String((err as { message: string }).message)
+            : (typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err));
+
         // FIX #7: Extrair código de erro Supabase/Postgres para classificação precisa
         const errorCode = (err as { code?: string })?.code;
         // LGPD: Sanitizar PII antes de persistir no log
@@ -565,6 +570,15 @@ async function syncNotas(operation: string, payload: Record<string, unknown>): P
   // Notas sempre são upsert em batch ou individual
   const records = Array.isArray(payload.records) ? payload.records : [payload];
   const sanitizedRecords = records.map(r => sanitizeNota(r as unknown as NotaPayload));
+  
+  // Se a avaliação pai ainda tiver um ID temporário, aguardar ela ser sincronizada primeiro
+  for (const rec of sanitizedRecords) {
+    const avId = String(rec.avaliacao_id);
+    if (avId.startsWith('temp_') || avId.startsWith('local_')) {
+      throw new Error(`Aguardando sincronização da avaliação no servidor (id temporário: ${avId})`);
+    }
+  }
+
   const { error } = await supabase
     .from('notas')
     .upsert(sanitizedRecords, { onConflict: 'avaliacao_id,aluno_id' });
