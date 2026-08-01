@@ -6,7 +6,6 @@ import { cacheUser, getCachedUser, clearAllLocalData, getPendingCount } from '..
 import { clearKeyCache } from '../lib/crypto';
 import { pingInternet } from '../utils/network';
 import { useToast } from '../components/common/Toast';
-import { db } from '../lib/db';
 import ConfirmActionModal from '../components/ConfirmActionModal';
 import { AlertTriangle, WifiOff } from 'lucide-react';
 
@@ -262,8 +261,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession();
         await fetchUserData(session);
       } catch (err) {
-        // Se getSession() falhar, garantir que o loading seja encerrado
+        // Se getSession() falhar, fetchUserData não foi chamado — garantir loading=false
         console.error('[AuthContext] Erro ao obter sessão no refreshUser:', err);
+        // FIX M6: setLoading(false) apenas aqui se fetchUserData não foi chamado.
+        // Se fetchUserData foi chamado, seu finally já faz setLoading(false).
         setLoading(false);
       } finally {
         _isFetchingRef.current = false;
@@ -339,14 +340,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (signOutSuccess) {
         // Limpa dados locais e cache de chaves
         clearKeyCache();
-        await clearAllLocalData(true);
-        // Limpar chaves cripto de TODOS os usuários para evitar herança/acúmulo
-        // em dispositivos compartilhados.
-        try {
-          await db.userSalts.clear();
-        } catch (err) {
-          console.warn('[AuthContext] Erro ao limpar salts de usuários:', err);
-        }
+        // FIX C2: Passar clearCrypto=true para limpar chaves de criptografia
+        // (userSalts) no logout, evitando herança em dispositivos compartilhados.
+        await clearAllLocalData(true, true);
         sessionStorage.removeItem('activeEscolaId');
         sessionStorage.removeItem('activeTurno');
       }

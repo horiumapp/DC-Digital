@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as SyncEngine from '../services/syncEngine';
 import { getPendingCount } from '../services/offlineStorage';
+import type { SyncQueueItem } from '../lib/db';
 
 export type ConnectionState = 'ONLINE' | 'OFFLINE' | 'SYNCING' | 'ERROR';
 
@@ -17,7 +18,7 @@ interface SyncStatusResult {
   /** Número de itens irrecuperáveis (dead letter) */
   deadLetterCount: number;
   /** Lista de itens irrecuperáveis */
-  deadLetterItems: any[];
+  deadLetterItems: SyncQueueItem[];
   /** Timestamp do último sync completo com sucesso */
   lastSyncAt: Date | null;
   /** Mensagem do último erro */
@@ -37,7 +38,7 @@ export function useSyncStatus(isOnline: boolean): SyncStatusResult {
     isOnline ? 'ONLINE' : 'OFFLINE'
   );
   const [pendingCount, setPendingCount] = useState(0);
-  const [deadLetterItems, setDeadLetterItems] = useState<any[]>([]);
+  const [deadLetterItems, setDeadLetterItems] = useState<SyncQueueItem[]>([]);
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
 

@@ -88,11 +88,9 @@ async function getCryptoKey(): Promise<CryptoKey | null> {
       // Ignora erro de rede/sessão
     }
 
-    if (!userId) {
-      const cached = await getCachedUser();
-      userId = cached?.id;
-    }
-
+    // FIX C5: Sem userId da sessão, NÃO buscar usuário arbitrário do cache.
+    // Em dispositivos compartilhados, getCachedUser() sem userId pode retornar
+    // o usuário errado, levando a uso da chave cripto incorreta.
     if (!userId) return null;
     return await getOrCreateKey(userId);
   } catch (err) {
@@ -184,52 +182,56 @@ export async function saveFrequenciasBulk(
   records: Omit<LocalFrequencia, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]
 ): Promise<void> {
   if (records.length === 0) return;
-  const timestamp = now();
+  // FIX M4: Envolver em withQuotaRecovery — esta é a operação que salva mais dados
+  // de uma vez, sendo a mais propensa a QuotaExceeded.
+  return withQuotaRecovery(async () => {
+    const timestamp = now();
 
-  // FIX #6: Validar invariante do batch — todos os records devem ter mesma data/tempo/disciplina.
-  // Caso contrário, a otimização de busca abaixo retornaria resultados incorretos.
-  const first = records[0];
-  const invariantViolation = records.some(
-    r => r.data !== first.data || r.tempo !== first.tempo || r.disciplina !== first.disciplina
-  );
-  if (invariantViolation) {
-    console.error('[offlineStorage] saveFrequenciasBulk: batch contém records com data/tempo/disciplina distintos. Use saveFrequenciaLocal para registros individuais.');
-    throw new Error('saveFrequenciasBulk requer que todos os records tenham a mesma data, tempo e disciplina.');
-  }
-
-  const existingRecords = await db.frequencias
-    .where('turma_id')
-    .equals(first.turma_id)
-    .filter(f => f.data === first.data && f.tempo === first.tempo && f.disciplina === first.disciplina)
-    .toArray();
-
-  const existingMap = new Map<string, LocalFrequencia>();
-  for (const r of existingRecords) {
-    const key = `${r.aluno_id}`;
-    existingMap.set(key, r);
-  }
-
-  await db.transaction('rw', db.frequencias, async () => {
-    for (const data of records) {
-      const existing = existingMap.get(data.aluno_id);
-
-      if (existing && existing.localId) {
-        await db.frequencias.update(existing.localId, {
-          ...data,
-          syncStatus: 'pending',
-          updatedAt: timestamp,
-          version: (existing.version || 0) + 1,
-        });
-      } else {
-        await db.frequencias.add({
-          ...data,
-          syncStatus: 'pending',
-          createdAt: timestamp,
-          updatedAt: timestamp,
-          version: 1,
-        });
-      }
+    // FIX #6: Validar invariante do batch — todos os records devem ter mesma data/tempo/disciplina.
+    // Caso contrário, a otimização de busca abaixo retornaria resultados incorretos.
+    const first = records[0];
+    const invariantViolation = records.some(
+      r => r.data !== first.data || r.tempo !== first.tempo || r.disciplina !== first.disciplina
+    );
+    if (invariantViolation) {
+      console.error('[offlineStorage] saveFrequenciasBulk: batch contém records com data/tempo/disciplina distintos. Use saveFrequenciaLocal para registros individuais.');
+      throw new Error('saveFrequenciasBulk requer que todos os records tenham a mesma data, tempo e disciplina.');
     }
+
+    const existingRecords = await db.frequencias
+      .where('turma_id')
+      .equals(first.turma_id)
+      .filter(f => f.data === first.data && f.tempo === first.tempo && f.disciplina === first.disciplina)
+      .toArray();
+
+    const existingMap = new Map<string, LocalFrequencia>();
+    for (const r of existingRecords) {
+      const key = `${r.aluno_id}`;
+      existingMap.set(key, r);
+    }
+
+    await db.transaction('rw', db.frequencias, async () => {
+      for (const data of records) {
+        const existing = existingMap.get(data.aluno_id);
+
+        if (existing && existing.localId) {
+          await db.frequencias.update(existing.localId, {
+            ...data,
+            syncStatus: 'pending',
+            updatedAt: timestamp,
+            version: (existing.version || 0) + 1,
+          });
+        } else {
+          await db.frequencias.add({
+            ...data,
+            syncStatus: 'pending',
+            createdAt: timestamp,
+            updatedAt: timestamp,
+            version: 1,
+          });
+        }
+      }
+    });
   });
 }
 
@@ -365,9 +367,11 @@ export async function deleteConteudoLocal(turmaId: string, disciplina: string, d
     .first();
   if (!record?.localId) return;
 
-  // Se o conteúdo ainda não foi sincronizado com o servidor, enfileirar DELETE
-  // para garantir que o dado seja removido no servidor quando reconectar.
-  if (record.syncStatus === 'pending') {
+  // FIX C3: Apenas enfileirar DELETE se o registro JÁ FOI sincronizado com o servidor.
+  // Se syncStatus === 'pending', o registro nunca chegou ao Supabase, então não há
+  // o que deletar remotamente. Enfileirar DELETE para registros inexistentes causava
+  // erros no servidor e poluição da fila com dead letters desnecessárias.
+  if (record.syncStatus !== 'pending') {
     await Queue.enqueue('conteudos', 'DELETE', {
       turma_id: record.turma_id,
       data: record.data,

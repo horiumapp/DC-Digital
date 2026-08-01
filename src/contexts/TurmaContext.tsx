@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef, useMemo } from 'react';
 
 import { getBimestrePorData, formatarDataParaISO } from '../utils/dateUtils';
 import { getTid } from '../utils/turmaUtils';
@@ -442,16 +442,28 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     }
   }, [turmaAtiva, verificarPeriodoFechado, removerLancamento]);
 
+  // FIX M1: Memorizar o value do Provider para evitar re-renders desnecessários
+  // em todos os consumidores quando nenhum dado mudou de fato.
+  const contextValue = useMemo(() => ({
+    turmaAtiva, selecionarTurma, 
+    lancamentos, registrarLancamento, removerLancamento,
+    alunos, avaliacoes, conteudos, horarioTurma, loading, 
+    salvarAvaliacao, removerAvaliacao, salvarNotas,
+    salvarFrequencia, salvarConteudo, buscarFrequencia, buscarConteudo,
+    removerFrequencia, removerConteudo, carregarFaltasDaData, faltasPorData,
+    fechamentos, salvarFechamento, verificarPeriodoFechado
+  }), [
+    turmaAtiva, selecionarTurma,
+    lancamentos, registrarLancamento, removerLancamento,
+    alunos, avaliacoes, conteudos, horarioTurma, loading,
+    salvarAvaliacao, removerAvaliacao, salvarNotas,
+    salvarFrequencia, salvarConteudo, buscarFrequencia, buscarConteudo,
+    removerFrequencia, removerConteudo, carregarFaltasDaData, faltasPorData,
+    fechamentos, salvarFechamento, verificarPeriodoFechado
+  ]);
+
   return (
-    <TurmaContext.Provider value={{ 
-      turmaAtiva, selecionarTurma, 
-      lancamentos, registrarLancamento, removerLancamento,
-      alunos, avaliacoes, conteudos, horarioTurma, loading, 
-      salvarAvaliacao, removerAvaliacao, salvarNotas,
-      salvarFrequencia, salvarConteudo, buscarFrequencia, buscarConteudo,
-      removerFrequencia, removerConteudo, carregarFaltasDaData, faltasPorData,
-      fechamentos, salvarFechamento, verificarPeriodoFechado
-    }}>
+    <TurmaContext.Provider value={contextValue}>
       {children}
     </TurmaContext.Provider>
   );

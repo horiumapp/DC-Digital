@@ -5,6 +5,7 @@
  * e dispara sync automático quando a internet volta.
  */
 import React, { createContext, useContext, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import type { SyncQueueItem } from '../lib/db';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useSyncStatus, type ConnectionState } from '../hooks/useSyncStatus';
 import * as SyncEngine from '../services/syncEngine';
@@ -25,7 +26,7 @@ interface OfflineContextType {
   /** Número de itens na Dead Letter Queue */
   deadLetterCount: number;
   /** Lista de itens na Dead Letter Queue */
-  deadLetterItems: any[];
+  deadLetterItems: SyncQueueItem[];
   /** Último sync bem-sucedido */
   lastSyncAt: Date | null;
   /** Último erro de sync */

@@ -4,6 +4,7 @@ import { ArrowLeft, Send, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-
 import Background from '../components/Background';
 import { useAuth } from '../contexts/AuthContext';
 import { submitLgpdRequest } from '../services/lgpdService';
+import { useCaptcha } from '../hooks/useCaptcha';
 
 export default function SolicitacaoLgpd() {
   const { user } = useAuth();
@@ -18,6 +19,11 @@ export default function SolicitacaoLgpd() {
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // FIX C6: CAPTCHA para proteger formulário público contra bots.
+  // O formulário LGPD é acessível sem autenticação, então precisa de
+  // proteção contra submissões automatizadas.
+  const captcha = useCaptcha();
 
   // Auto-fill user details if logged in
   useEffect(() => {
@@ -49,6 +55,13 @@ export default function SolicitacaoLgpd() {
       return;
     }
 
+    // FIX C6: Validar CAPTCHA antes de enviar
+    if (!captcha.validateCaptcha()) {
+      setError('Código de verificação incorreto. Tente novamente.');
+      captcha.generateNewCaptcha();
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { error: submitError } = await submitLgpdRequest({
@@ -64,7 +77,8 @@ export default function SolicitacaoLgpd() {
       // Reset non-user fields
       setMensagem('');
       setDeclaracao(false);
-    } catch (err: any) {
+      captcha.generateNewCaptcha();
+    } catch (err: unknown) {
       setError('Erro ao enviar solicitação. Por favor, tente novamente mais tarde.');
     } finally {
       setIsLoading(false);
@@ -204,6 +218,36 @@ export default function SolicitacaoLgpd() {
                 Declaro que as informações fornecidas neste formulário são verdadeiras e exatas. Autorizo o uso dos dados informados exclusivamente para o atendimento e processamento desta solicitação de privacidade.
               </span>
             </label>
+
+            {/* FIX C6: CAPTCHA de verificação */}
+            <div className="space-y-2 border border-slate-100 dark:border-slate-700 p-4 rounded-xl bg-slate-50/50 dark:bg-slate-800/50">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                Código de Verificação
+              </label>
+              <div className="flex gap-3 items-center">
+                <div 
+                  onClick={captcha.generateNewCaptcha}
+                  className="cursor-pointer select-none bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-lg font-mono font-bold tracking-widest text-lg border border-slate-300 dark:border-slate-600 shadow-inner hover:bg-slate-300 dark:hover:bg-slate-600 transition-all flex items-center justify-center min-w-[80px]"
+                  title="Clique para gerar outro código"
+                >
+                  {captcha.generatedCaptcha}
+                </div>
+                <input
+                  type="text"
+                  required
+                  placeholder="Resultado"
+                  value={captcha.captchaInput}
+                  onChange={(e) => captcha.setCaptchaInput(e.target.value)}
+                  className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] dark:focus:border-blue-500 transition-all placeholder-slate-400 font-medium text-sm bg-white dark:bg-slate-800/50"
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 font-medium">
+                Resolva a operação acima. Clique no código cinza para recarregá-lo.
+              </p>
+              {captcha.captchaError && (
+                <p className="text-xs text-red-600 dark:text-red-400 font-bold mt-1">Código incorreto. Tente novamente.</p>
+              )}
+            </div>
 
             {/* Enviar */}
             <div className="pt-2">

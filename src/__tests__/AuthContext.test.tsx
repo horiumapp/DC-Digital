@@ -269,8 +269,8 @@ describe('AuthContext', () => {
     });
 
     expect(mockSignOut).toHaveBeenCalled();
-    expect(mockClearAllLocalData).toHaveBeenCalledWith(true);
-    expect(mockClearSalts).toHaveBeenCalled();
+    // FIX C2: clearAllLocalData agora recebe clearCrypto=true para limpar chaves cripto
+    expect(mockClearAllLocalData).toHaveBeenCalledWith(true, true);
     expect(screen.getByText('Não autenticado')).toBeDefined();
 
     window.confirm = originalConfirm;

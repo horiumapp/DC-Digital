@@ -134,6 +134,9 @@ export function looksEncrypted(value: string): boolean {
   if (value.startsWith(ENCRYPTION_PREFIX)) return true;
 
   // Formato legado: heurística base64 para dados sem prefixo
+  // @deprecated — Será removido na v2.0.0. Todos os caches locais devem ter sido
+  // re-criptografados no formato novo (enc:v1:) até lá. Se ainda houver dados legados,
+  // forçar clearAllLocalData() na migração para v2.0.0.
   // Mínimo: IV (12 bytes) + 1 byte ciphertext + 16 bytes GCM tag = 29 bytes
   // Em base64: ceil(29 * 4/3) ≈ 40 chars
   if (value.length < 40) return false;
