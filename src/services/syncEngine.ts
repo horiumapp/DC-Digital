@@ -829,9 +829,12 @@ export async function getQueueStats() {
 
 /** Tenta reprocessar itens com erro */
 export async function retryErrors(): Promise<number> {
+  await autoRepairDeadLetters();
   const count = await Queue.retryAllErrors();
   if (count > 0) {
     scheduleSync();
+  } else {
+    syncAll();
   }
   return count;
 }
