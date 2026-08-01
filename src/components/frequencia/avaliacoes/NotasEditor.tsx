@@ -64,7 +64,9 @@ const NotasEditor = React.memo(function NotasEditor({
             <tr>
               <th className="px-8 py-5 font-black text-[10px] tracking-widest w-20">Nº</th>
               <th className="px-8 py-5 font-black text-[10px] tracking-widest">Aluno</th>
-              <th className="px-8 py-5 font-black text-[10px] tracking-widest w-56 text-center">Nota (0,0 a 10,0)</th>
+              <th className="px-8 py-5 font-black text-[10px] tracking-widest w-56 text-center">
+                Nota (0,00 a {selectedAvaliacao.valorMaximo ? Number(selectedAvaliacao.valorMaximo).toFixed(2).replace('.', ',') : '10,00'})
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">

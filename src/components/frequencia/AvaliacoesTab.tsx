@@ -166,9 +166,21 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
     if (!validateCaptcha()) { alert('Código incorreto!'); return; }
     if (!selectedAvaliacao) return;
 
+    const maxVal = selectedAvaliacao.valorMaximo ? Number(selectedAvaliacao.valorMaximo) : 10;
+
     const notasToSave = Object.entries(localNotas)
       .filter(([_, val]) => val !== '')
       .map(([alunoId, valor]) => ({ alunoId, valor }));
+
+    const notaInvalida = notasToSave.find(n => {
+      const v = parseFloat(n.valor.replace(',', '.'));
+      return !isNaN(v) && v > maxVal;
+    });
+
+    if (notaInvalida) {
+      alert(`A nota informada (${notaInvalida.valor}) é superior ao valor máximo permitido (${maxVal.toFixed(2).replace('.', ',')}) para esta avaliação.`);
+      return;
+    }
 
     await salvarNotas(selectedAvaliacao.id, notasToSave);
     setAvaliacaoViewMode('list');
@@ -179,8 +191,17 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
     if (!validateCaptcha()) { alert('Código incorreto!'); return; }
     if (!selectedAvaliacao) return;
 
+    const maxVal = selectedAvaliacao.valorMaximo ? Number(selectedAvaliacao.valorMaximo) : 10;
     const selectedAlunIds = Object.keys(secondCallRows).filter(id => secondCallRows[id].selected);
     if (selectedAlunIds.length === 0) { alert('Selecione pelo menos um aluno!'); return; }
+
+    for (const id of selectedAlunIds) {
+      const g = parseFloat((secondCallRows[id].grade || '').replace(',', '.'));
+      if (!isNaN(g) && g > maxVal) {
+        alert(`A nota digitada (${secondCallRows[id].grade}) excede o valor máximo permitido (${maxVal.toFixed(2).replace('.', ',')}).`);
+        return;
+      }
+    }
 
     setIsSaving(true);
     const dates = [...new Set(selectedAlunIds.map(id => secondCallRows[id].date))];
@@ -214,7 +235,9 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
     const numStr = val.replace(/\D/g, '');
     if (!numStr) { setLocalNotas(prev => ({ ...prev, [alunoId]: '' })); return; }
     const numVal = parseInt(numStr, 10);
-    if (numVal > 1000) return;
+    const maxVal = selectedAvaliacao?.valorMaximo ? Number(selectedAvaliacao.valorMaximo) : 10;
+    const maxPermitido = Math.round(maxVal * 100);
+    if (numVal > maxPermitido) return;
     const formatted = (numVal / 100).toFixed(2).replace('.', ',');
     setLocalNotas(prev => ({ ...prev, [alunoId]: formatted }));
   };
