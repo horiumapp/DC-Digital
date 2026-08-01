@@ -35,7 +35,13 @@ const SegundaChamadaEditor = React.memo(function SegundaChamadaEditor({
 
   const handleSelectAll = (checked: boolean) => {
     const newRows = { ...secondCallRows };
-    Object.keys(newRows).forEach(id => newRows[id].selected = checked);
+    // Apenas alunos visíveis na tabela (prop alunos já filtrada)
+    const visibleIds = new Set(alunos.map(a => a.id));
+    Object.keys(newRows).forEach(id => {
+      if (visibleIds.has(id)) {
+        newRows[id].selected = checked;
+      }
+    });
     onSetSecondCallRows(newRows);
   };
 

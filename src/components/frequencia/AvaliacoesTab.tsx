@@ -21,7 +21,7 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
   const { 
     turmaAtiva, alunos, avaliacoes, conteudos, loading, 
     salvarAvaliacao, removerAvaliacao, salvarNotas, 
-    carregarFaltasDaData: _carregarFaltasDaData, faltasPorData 
+    carregarFaltasDaData, faltasPorData 
   } = useTurma();
 
   const [avaliacaoViewMode, setAvaliacaoViewMode] = useState<'list' | 'details' | 'edit' | 'grades' | 'second_call'>('list');
@@ -253,9 +253,10 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
             setValorMaximo(novoRP.valorMaximo ? novoRP.valorMaximo.toString().replace('.', ',') : '10,00');
             setAvaliacaoViewMode('edit');
           }}
-          onShowGrades={(av) => { setSelectedAvaliacao(av); setAvaliacaoViewMode('grades'); }}
+          onShowGrades={(av) => { setSelectedAvaliacao(av); carregarFaltasDaData(av.data); setAvaliacaoViewMode('grades'); }}
           onSecondCall={(av) => {
             setSelectedAvaliacao(av);
+            carregarFaltasDaData(av.data);
             const rows: any = {};
             alunos.forEach(a => {
               rows[a.id] = { selected: !a.notas?.[av.id], date: new Date().toISOString().split('T')[0], grade: '' };

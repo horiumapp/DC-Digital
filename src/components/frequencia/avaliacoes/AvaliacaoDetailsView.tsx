@@ -27,7 +27,7 @@ const AvaliacaoDetailsView = React.memo(function AvaliacaoDetailsView({
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Código da Avaliação</label>
             <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700">
-              AV-{String(selectedAvaliacao.id).padStart(6, '0')}
+              {selectedAvaliacao.tipo}
             </div>
           </div>
           <div className="space-y-2">

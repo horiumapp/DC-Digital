@@ -114,8 +114,16 @@ export function useSyncStatus(isOnline: boolean): SyncStatusResult {
   }, [isOnline]);
 
   const retryErrors = useCallback(async () => {
-    await SyncEngine.retryErrors();
-  }, []);
+    const retriedCount = await SyncEngine.retryErrors();
+    // Se itens foram recolocados na fila, limpar o erro enquanto o sync roda
+    if (retriedCount > 0) {
+      setLastError(null);
+      setConnectionState(isOnline ? 'ONLINE' : 'OFFLINE');
+    } else {
+      // Nenhum item recuperável — verificar se ainda há erros
+      await updateCounts();
+    }
+  }, [isOnline, updateCounts]);
 
   const discardDeadLetters = useCallback(async () => {
     await discardDeadLetterItems();
