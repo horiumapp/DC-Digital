@@ -147,11 +147,12 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       
       if (notasData.length > 0) {
         setAlunos(prevAlunos => {
-          const baseAlunos = contextAlunos.length > 0 ? contextAlunos : prevAlunos;
+          const baseAlunos = prevAlunos.length > 0 ? prevAlunos : contextAlunos;
           return baseAlunos.map(aluno => {
             const notasAluno: Record<string, string> = {};
-            notasData.filter(n => n.aluno_id.toString() === aluno.id).forEach(n => {
-              notasAluno[n.avaliacao_id.toString()] = n.valor.toFixed(2).replace('.', ',');
+            notasData.filter(n => String(n.aluno_id) === String(aluno.id)).forEach(n => {
+              const valNum = typeof n.valor === 'number' ? n.valor : parseFloat(String(n.valor));
+              notasAluno[String(n.avaliacao_id)] = !isNaN(valNum) ? valNum.toFixed(2).replace('.', ',') : String(n.valor);
             });
             return { ...aluno, notas: { ...(aluno.notas || {}), ...notasAluno } };
           });
@@ -322,7 +323,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const salvarNotas = useCallback(async (avaliacaoId: string, notas: { alunoId: string, valor: string }[]) => {
     if (!turmaAtiva) return;
-    const av = avaliacoes.find(a => a.id === avaliacaoId);
+    const av = avaliacoes.find(a => String(a.id) === String(avaliacaoId));
     if (av && verificarPeriodoFechado(av.bimestre || av.data)) {
       showErrorRef.current('Operação bloqueada: O período correspondente a esta avaliação está fechado.');
       return;
@@ -330,6 +331,27 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     const rawId = getTid(turmaAtiva.id);
     try {
       await OfflineTurmaService.salvarNotas(avaliacaoId, notas);
+
+      // Atualiza o estado local dos alunos imediatamente com as novas notas
+      setAlunos(prevAlunos => {
+        const notasMap = new Map<string, string>();
+        notas.forEach(n => notasMap.set(String(n.alunoId), n.valor));
+
+        return prevAlunos.map(aluno => {
+          const novaNota = notasMap.get(String(aluno.id));
+          if (novaNota !== undefined) {
+            return {
+              ...aluno,
+              notas: {
+                ...(aluno.notas || {}),
+                [String(avaliacaoId)]: novaNota
+              }
+            };
+          }
+          return aluno;
+        });
+      });
+
       await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunos);
       showSuccessRef.current('Notas salvas com sucesso!');
     } catch (err) {
@@ -402,7 +424,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
     if (freqData.length > 0) {
       setAlunos(prev => prev.map(aluno => {
-        const f = freqData.find(fd => fd.aluno_id === aluno.id);
+        const f = freqData.find(fd => String(fd.aluno_id) === String(aluno.id));
         if (f) return { ...aluno, freq: f.status, part: f.participacao || 'Presencial' };
         return aluno;
       }));

@@ -534,8 +534,8 @@ export async function salvarNotas(
 ): Promise<void> {
   // 1. Salvar localmente
   const records = notas.map(n => ({
-    avaliacao_id: avaliacaoId,
-    aluno_id: n.alunoId,
+    avaliacao_id: String(avaliacaoId),
+    aluno_id: String(n.alunoId),
     valor: parseFloat(n.valor.replace(',', '.')),
   }));
 
