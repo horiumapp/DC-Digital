@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 import { db, now, hashOperation, getOperationalTable, type SyncLogEntry, type SyncQueueItem } from '../lib/db';
 import * as Queue from './offlineQueue';
 import { pingInternet } from '../utils/network';
+import { getTid } from '../utils/turmaUtils';
 
 // ============================================================
 // M5: Helper de validação de UUID
@@ -371,7 +372,7 @@ interface FechamentoPayload {
 function sanitizeFrequencia(payload: FrequenciaPayload): Record<string, unknown> {
   return {
     // FIX M5: assertUUID valida formato antes de enviar ao Supabase
-    turma_id: assertUUID(payload.turma_id, 'turma_id'),
+    turma_id: assertUUID(getTid(String(payload.turma_id)), 'turma_id'),
     aluno_id: assertUUID(payload.aluno_id, 'aluno_id'),
     data: String(payload.data),
     tempo: String(payload.tempo),
@@ -384,7 +385,7 @@ function sanitizeFrequencia(payload: FrequenciaPayload): Record<string, unknown>
 function sanitizeConteudo(payload: ConteudoPayload): Record<string, unknown> {
   return {
     // FIX M5: assertUUID valida formato antes de enviar ao Supabase
-    turma_id: assertUUID(payload.turma_id, 'turma_id'),
+    turma_id: assertUUID(getTid(String(payload.turma_id)), 'turma_id'),
     data: String(payload.data),
     tempo: String(payload.tempo),
     objetos: Array.isArray(payload.objetos) ? payload.objetos.map(String) : [],
@@ -397,7 +398,7 @@ function sanitizeConteudo(payload: ConteudoPayload): Record<string, unknown> {
 function sanitizeAvaliacao(payload: AvaliacaoPayload): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {
     // FIX M5: assertUUID valida formato antes de enviar ao Supabase
-    turma_id: assertUUID(payload.turma_id, 'turma_id'),
+    turma_id: assertUUID(getTid(String(payload.turma_id)), 'turma_id'),
     tipo: String(payload.tipo),
     data: String(payload.data),
     instrumento: String(payload.instrumento || ''),
@@ -444,7 +445,7 @@ function sanitizeNota(payload: NotaPayload): Record<string, unknown> {
 function sanitizeFechamento(payload: FechamentoPayload): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {
     // FIX M5: assertUUID valida formato antes de enviar ao Supabase
-    turma_id: assertUUID(payload.turma_id, 'turma_id'),
+    turma_id: assertUUID(getTid(String(payload.turma_id)), 'turma_id'),
     disciplina: String(payload.disciplina),
     bimestre: String(payload.bimestre),
     status: String(payload.status || 'FECHADO'),
@@ -713,16 +714,33 @@ async function updateTempAvaliacaoId(localId: number, serverId: string): Promise
   });
 }
 
-/** Repara automaticamente itens na fila marcados com DEAD_LETTER que possuem parent_id temporário já resolvido no IndexedDB */
+/** Repara automaticamente itens na fila marcados com DEAD_LETTER que possuem parent_id temporário ou turma_id composto */
 async function autoRepairDeadLetters(): Promise<void> {
   try {
     const queueItems = await db.syncQueue.toArray();
     for (const item of queueItems) {
-      if (item.status !== 'error' && !item.lastError?.includes('invalid input syntax') && !item.lastError?.includes('parent_id')) continue;
+      if (item.status !== 'error' && !item.lastError?.includes('invalid input syntax') && !item.lastError?.includes('parent_id') && !item.lastError?.includes('uuid')) continue;
       let payloadObj: Record<string, unknown>;
       try {
         payloadObj = JSON.parse(item.payload);
       } catch {
+        continue;
+      }
+
+      // Auto-reparo de turma_id composto (ex: UUID||Componente)
+      if (payloadObj.turma_id && String(payloadObj.turma_id).includes('||')) {
+        const cleanTurmaId = getTid(String(payloadObj.turma_id));
+        payloadObj.turma_id = cleanTurmaId;
+        const newHash = await hashOperation(item.table, item.operation, payloadObj);
+        await db.syncQueue.update(item.id!, {
+          payload: JSON.stringify(payloadObj),
+          hash: newHash,
+          status: 'pending',
+          retryCount: 0,
+          lastError: undefined,
+          updatedAt: now(),
+        });
+        console.info(`[SyncEngine] Dead letter id=${item.id} auto-reparado com turma_id limpo=${cleanTurmaId}`);
         continue;
       }
 

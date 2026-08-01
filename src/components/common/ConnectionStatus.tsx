@@ -92,7 +92,12 @@ export default function ConnectionStatus() {
       action: (
         <div className="flex items-center gap-1.5 ml-2">
           <button
-            onClick={retryErrors}
+            onClick={async () => {
+              const retriedCount = await retryErrors();
+              if (retriedCount === 0 && deadLetterCount > 0) {
+                setShowDeadLetterModal(true);
+              }
+            }}
             className="px-2 py-0.5 bg-white/20 rounded-md text-xs font-semibold hover:bg-white/30 transition-colors cursor-pointer"
           >
             Tentar novamente

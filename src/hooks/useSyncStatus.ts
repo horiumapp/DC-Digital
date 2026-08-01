@@ -26,7 +26,7 @@ interface SyncStatusResult {
   /** Força sincronização agora */
   syncNow: () => Promise<void>;
   /** Tenta reprocessar itens com erro */
-  retryErrors: () => Promise<void>;
+  retryErrors: () => Promise<number>;
   /** Descarta itens irrecuperáveis da dead letter queue */
   discardDeadLetters: () => Promise<void>;
 }
@@ -113,7 +113,7 @@ export function useSyncStatus(isOnline: boolean): SyncStatusResult {
     await SyncEngine.syncAll();
   }, [isOnline]);
 
-  const retryErrors = useCallback(async () => {
+  const retryErrors = useCallback(async (): Promise<number> => {
     const retriedCount = await SyncEngine.retryErrors();
     // Se itens foram recolocados na fila, limpar o erro enquanto o sync roda
     if (retriedCount > 0) {
@@ -123,6 +123,7 @@ export function useSyncStatus(isOnline: boolean): SyncStatusResult {
       // Nenhum item recuperável — verificar se ainda há erros
       await updateCounts();
     }
+    return retriedCount;
   }, [isOnline, updateCounts]);
 
   const discardDeadLetters = useCallback(async () => {

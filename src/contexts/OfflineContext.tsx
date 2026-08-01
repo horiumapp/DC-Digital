@@ -34,7 +34,7 @@ interface OfflineContextType {
   /** Forçar sincronização agora */
   syncNow: () => Promise<void>;
   /** Tentar novamente itens com erro */
-  retryErrors: () => Promise<void>;
+  retryErrors: () => Promise<number>;
   /** Descartar itens mortos da fila */
   discardDeadLetters: () => Promise<void>;
   /** Limpar todos os dados locais (usado no logout) */
