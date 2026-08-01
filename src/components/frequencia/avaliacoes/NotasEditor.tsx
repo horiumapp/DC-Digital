@@ -2,7 +2,7 @@ import React from 'react';
 import { List, Check, AlertCircle } from 'lucide-react';
 import Captcha from '../../common/Captcha';
 
-import { formatarDataParaISO } from '../../../utils/dateUtils';
+import { formatarDataParaISO, formatarDataParaExibicao } from '../../../utils/dateUtils';
 
 interface NotasEditorProps {
   selectedAvaliacao: any;
@@ -52,7 +52,7 @@ const NotasEditor = React.memo(function NotasEditor({
             </div>
           </div>
           <div className="flex gap-6">
-            <div className="bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10">Data: {selectedAvaliacao.data}</div>
+            <div className="bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10">Data: {formatarDataParaExibicao(selectedAvaliacao.data)}</div>
             <div className="bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10">Escala: 0 a {selectedAvaliacao.valorMaximo ? Number(selectedAvaliacao.valorMaximo).toFixed(2).replace('.', ',') : '10,00'}</div>
           </div>
         </div>
