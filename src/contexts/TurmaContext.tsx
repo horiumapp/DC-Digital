@@ -153,7 +153,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
             notasData.filter(n => n.aluno_id.toString() === aluno.id).forEach(n => {
               notasAluno[n.avaliacao_id.toString()] = n.valor.toFixed(2).replace('.', ',');
             });
-            return { ...aluno, notas: notasAluno };
+            return { ...aluno, notas: { ...(aluno.notas || {}), ...notasAluno } };
           });
         });
       }

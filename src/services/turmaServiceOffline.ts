@@ -180,24 +180,62 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
       }
     }
 
-    // Mesclar notas do servidor com notas salvas localmente no IndexedDB
-    const avIds = mergedAvaliacoes.map(a => a.id);
-    const localNotas = await OfflineStorage.getNotasLocal(avIds);
+    // Mesclar notas do servidor com notas salvas localmente no IndexedDB (suportando IDs temporários e aliases)
+    const possibleAvIds = new Set<string>();
+    mergedAvaliacoes.forEach(a => {
+      if (a.id) possibleAvIds.add(String(a.id));
+    });
+    localAvs.forEach(a => {
+      if (a.id) possibleAvIds.add(String(a.id));
+      if (a.serverId) possibleAvIds.add(String(a.serverId));
+      if (a.localId) {
+        possibleAvIds.add(String(a.localId));
+        possibleAvIds.add(`temp_${a.localId}`);
+        possibleAvIds.add(`local_${a.localId}`);
+      }
+    });
+
+    const localNotas = await OfflineStorage.getNotasLocal(Array.from(possibleAvIds));
+
+    const aliasToCanonicalMap = new Map<string, string[]>();
+    localAvs.forEach(av => {
+      const canonical = mergedAvaliacoes.find(m => 
+        m.id === av.id || m.id === av.serverId || (av.localId && (m.id === `temp_${av.localId}` || m.id === `local_${av.localId}` || m.id === String(av.localId)))
+      )?.id || av.id || av.serverId || (av.localId ? `temp_${av.localId}` : '');
+
+      if (canonical) {
+        const aliases = new Set<string>([canonical]);
+        if (av.id) aliases.add(String(av.id));
+        if (av.serverId) aliases.add(String(av.serverId));
+        if (av.localId) {
+          aliases.add(String(av.localId));
+          aliases.add(`temp_${av.localId}`);
+          aliases.add(`local_${av.localId}`);
+        }
+        const aliasArr = Array.from(aliases);
+        aliasArr.forEach(alias => {
+          aliasToCanonicalMap.set(alias, aliasArr);
+        });
+      }
+    });
 
     const mergedNotasMap = new Map<string, NotaRecord>();
-    result.notasData.forEach(n => {
-      mergedNotasMap.set(`${n.avaliacao_id}_${n.aluno_id}`, {
-        avaliacao_id: n.avaliacao_id.toString(),
-        aluno_id: n.aluno_id.toString(),
-        valor: n.valor,
+    const addNotaToMap = (avaliacaoId: string, alunoId: string, valor: number) => {
+      const aliases = aliasToCanonicalMap.get(avaliacaoId) || [avaliacaoId];
+      aliases.forEach(avId => {
+        mergedNotasMap.set(`${avId}_${alunoId}`, {
+          avaliacao_id: avId,
+          aluno_id: alunoId,
+          valor: valor,
+        });
       });
+    };
+
+    result.notasData.forEach(n => {
+      addNotaToMap(n.avaliacao_id.toString(), n.aluno_id.toString(), n.valor);
     });
     localNotas.forEach(n => {
-      mergedNotasMap.set(`${n.avaliacao_id}_${n.aluno_id}`, {
-        avaliacao_id: n.avaliacao_id.toString(),
-        aluno_id: n.aluno_id.toString(),
-        valor: n.valor,
-      });
+      addNotaToMap(n.avaliacao_id.toString(), n.aluno_id.toString(), n.valor);
     });
 
     return {
