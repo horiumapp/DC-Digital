@@ -189,8 +189,8 @@ export default function Layout() {
             <Home className="w-4 h-4" />
             <span className="hidden md:inline">Início</span>
           </Link>
-          <Link to="/minha-privacidade" className="flex items-center justify-center bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-white px-3 py-3 rounded-xl text-sm font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-all shadow-md active:scale-95" title="Centro de Privacidade" aria-label="Centro de Privacidade">
-            <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          <Link to="/minha-privacidade" className="flex items-center justify-center bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-white px-4 py-3 rounded-xl text-sm font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-all shadow-md active:scale-95" title="Centro de Privacidade" aria-label="Centro de Privacidade">
+            <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           </Link>
           <button
             onClick={async () => { await logout(); navigate('/'); }}
