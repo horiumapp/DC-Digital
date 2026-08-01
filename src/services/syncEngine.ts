@@ -48,7 +48,7 @@ let _isSyncing = false;
 let _debounceTimer: ReturnType<typeof setTimeout> | null = null;
 const _listeners: Set<SyncListener> = new Set();
 
-const DEBOUNCE_MS = 2000;
+const DEBOUNCE_MS = 300;
 
 function setState(newState: SyncState) {
   if (_state !== newState) {

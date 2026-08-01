@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import LoadingFallback from '../components/common/LoadingFallback';
 import { cacheUser, getCachedUser, clearAllLocalData, getPendingCount } from '../services/offlineStorage';
+import { syncAll } from '../services/syncEngine';
 import { clearKeyCache } from '../lib/crypto';
 import { pingInternet } from '../utils/network';
 import { useToast } from '../components/common/Toast';
@@ -314,9 +315,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
 
+import { syncAll } from '../services/syncEngine';
+
   // LOGOUT — Revoga sessão no servidor ANTES de limpar o state da UI
   const logout = async () => {
     try {
+      // Tentar sincronizar imediatamente pendências de fundo antes de checar/deslogar
+      if (navigator.onLine) {
+        await syncAll();
+      }
+
       const pending = await getPendingCount();
       if (pending > 0) {
         // FIX: Substituir window.confirm() bloqueante por modal React
