@@ -639,7 +639,7 @@ async function syncFechamento(operation: string, payload: Record<string, unknown
     .upsert(sanitized, { onConflict: 'turma_id,disciplina,bimestre' });
   if (error) throw error;
 
-  await db.fechamentos.where('turma_id').equals(sanitized.turma_id).modify({ syncStatus: 'synced', updatedAt: now() });
+  await db.fechamentos.where('turma_id').equals(String(sanitized.turma_id)).modify({ syncStatus: 'synced', updatedAt: now() });
 }
 
 // ============================================================
