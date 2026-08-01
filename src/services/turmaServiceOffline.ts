@@ -180,9 +180,29 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
       }
     }
 
+    // Mesclar notas do servidor com notas salvas localmente no IndexedDB
+    const avIds = mergedAvaliacoes.map(a => a.id);
+    const localNotas = await OfflineStorage.getNotasLocal(avIds);
+
+    const mergedNotasMap = new Map<string, NotaRecord>();
+    result.notasData.forEach(n => {
+      mergedNotasMap.set(`${n.avaliacao_id}_${n.aluno_id}`, {
+        avaliacao_id: n.avaliacao_id.toString(),
+        aluno_id: n.aluno_id.toString(),
+        valor: n.valor,
+      });
+    });
+    localNotas.forEach(n => {
+      mergedNotasMap.set(`${n.avaliacao_id}_${n.aluno_id}`, {
+        avaliacao_id: n.avaliacao_id.toString(),
+        aluno_id: n.aluno_id.toString(),
+        valor: n.valor,
+      });
+    });
+
     return {
       avaliacoes: mergedAvaliacoes,
-      notasData: result.notasData,
+      notasData: Array.from(mergedNotasMap.values()),
     };
   } catch {
     // Fallback local

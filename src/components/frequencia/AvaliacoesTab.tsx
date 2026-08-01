@@ -85,7 +85,7 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
     if (selectedAvaliacao.parent_id) {
       return alunos.filter(aluno => {
         const notaPai = parseFloat((aluno.notas?.[selectedAvaliacao.parent_id] || '0').replace(',', '.'));
-        return notaPai < 6.0;
+        return notaPai < 5.0;
       });
     }
     return alunos;

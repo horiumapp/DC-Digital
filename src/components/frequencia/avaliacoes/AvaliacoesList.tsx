@@ -106,7 +106,7 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
 
                                   {alunos.some(aluno => {
                                     const nota = parseFloat((aluno.notas?.[av.id] || '').replace(',', '.'));
-                                    return !isNaN(nota) && nota < 6.0;
+                                    return !isNaN(nota) && nota < 5.0;
                                   }) && !avaliacoes.some(rp => String(rp.parent_id) === String(av.id)) && (
                                     <button 
                                       onClick={() => onAddRP(av)}
