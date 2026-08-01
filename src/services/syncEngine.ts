@@ -140,6 +140,7 @@ async function _runSyncAll(): Promise<SyncResult> {
   try {
     // Resetar itens travados de sessão anterior
     await Queue.resetStuckItems();
+    await autoRepairDeadLetters();
 
     // Processar fila em ordem FIFO
     let item = await Queue.peek();
@@ -411,11 +412,17 @@ function sanitizeAvaliacao(payload: AvaliacaoPayload): Record<string, unknown> {
     disciplina: String(payload.disciplina),
   };
 
-  if (payload.id && !String(payload.id).startsWith('temp_')) {
+  if (payload.id && !String(payload.id).startsWith('temp_') && !String(payload.id).startsWith('local_')) {
     sanitized.id = String(payload.id);
   }
-  if (payload.parent_id) {
-    sanitized.parent_id = String(payload.parent_id);
+  if (payload.parent_id !== undefined && payload.parent_id !== null && payload.parent_id !== '') {
+    const parentStr = String(payload.parent_id);
+    if (!parentStr.startsWith('temp_') && !parentStr.startsWith('local_')) {
+      const parentNum = Number(parentStr);
+      if (!isNaN(parentNum)) {
+        sanitized.parent_id = parentNum;
+      }
+    }
   }
 
   return sanitized;
@@ -544,6 +551,24 @@ async function syncAvaliacao(operation: string, payload: Record<string, unknown>
     return null;
   }
 
+  // RESOLVER PARENT_ID SE AINDA FOR TEMPORÁRIO
+  if (payload.parent_id !== undefined && payload.parent_id !== null && payload.parent_id !== '') {
+    const pStr = String(payload.parent_id);
+    if (pStr.startsWith('temp_') || pStr.startsWith('local_') || isNaN(Number(pStr))) {
+      const localIdNum = parseInt(pStr.replace(/\D/g, ''), 10);
+      if (!isNaN(localIdNum)) {
+        const parentLocal = await db.avaliacoes.get(localIdNum);
+        if (parentLocal && parentLocal.serverId) {
+          payload.parent_id = Number(parentLocal.serverId);
+        } else if (parentLocal && parentLocal.id && !String(parentLocal.id).startsWith('temp_') && !String(parentLocal.id).startsWith('local_')) {
+          payload.parent_id = Number(parentLocal.id);
+        } else {
+          throw new Error(`Aguardando sincronização da avaliação pai no servidor (id temporário: ${pStr})`);
+        }
+      }
+    }
+  }
+
   const sanitized = sanitizeAvaliacao(payload as unknown as AvaliacaoPayload);
 
   // Se tem ID do server, é update
@@ -611,18 +636,19 @@ async function syncFechamento(operation: string, payload: Record<string, unknown
 /** Atualiza as referências locais e da fila de um ID temporário de avaliação para o UUID final */
 async function updateTempAvaliacaoId(localId: number, serverId: string): Promise<void> {
   const timestamp = now();
-  const tempIdString = `temp_${localId}`;
+  const possibleTempIds = new Set([`temp_${localId}`, `local_${localId}`, String(localId)]);
 
   await db.transaction('rw', [db.avaliacoes, db.notas, db.syncQueue], async () => {
     // 1. Atualizar registro local da avaliação
     await db.avaliacoes.update(localId, {
       id: serverId,
+      serverId: serverId,
       syncStatus: 'synced',
       updatedAt: timestamp,
     });
 
     // 2. Atualizar notas locais associadas
-    const notasAfetadas = await db.notas.where('avaliacao_id').equals(tempIdString).toArray();
+    const notasAfetadas = await db.notas.filter(n => possibleTempIds.has(String(n.avaliacao_id))).toArray();
     for (const nota of notasAfetadas) {
       if (nota.localId) {
         await db.notas.update(nota.localId, {
@@ -632,13 +658,10 @@ async function updateTempAvaliacaoId(localId: number, serverId: string): Promise
       }
     }
 
-    // 3. Atualizar payloads das operações pendentes de notas e avaliações na fila (syncQueue)
-    const queueItems = await db.syncQueue.where('status').equals('pending').toArray();
+    // 3. Atualizar payloads das operações pendentes/erros de notas e avaliações na fila (syncQueue)
+    const queueItems = await db.syncQueue.toArray();
     for (const item of queueItems) {
       let payloadChanged = false;
-      // FIX: JSON.parse sem try/catch anterior podia abortar toda a transação ao encontrar
-      // um payload corrompido, deixando o IndexedDB em estado inconsistente (avaliação com
-      // ID final, mas notas ainda com ID temporário). Agora o item é pulado individualmente.
       let payloadObj: Record<string, unknown>;
       try {
         payloadObj = JSON.parse(item.payload);
@@ -649,13 +672,13 @@ async function updateTempAvaliacaoId(localId: number, serverId: string): Promise
 
       // Se for a tabela notas
       if (item.table === 'notas') {
-        if (payloadObj.avaliacao_id === tempIdString) {
+        if (possibleTempIds.has(String(payloadObj.avaliacao_id))) {
           payloadObj.avaliacao_id = serverId;
           payloadChanged = true;
         }
         if (Array.isArray(payloadObj.records)) {
           payloadObj.records = payloadObj.records.map((r: Record<string, unknown>) => {
-            if (r.avaliacao_id === tempIdString) {
+            if (possibleTempIds.has(String(r.avaliacao_id))) {
               r.avaliacao_id = serverId;
               payloadChanged = true;
             }
@@ -664,29 +687,71 @@ async function updateTempAvaliacaoId(localId: number, serverId: string): Promise
         }
       }
 
-      // Se for tabela avaliacoes (ex: um UPDATE ou DELETE posterior)
+      // Se for tabela avaliacoes
       if (item.table === 'avaliacoes') {
-        if (payloadObj.id === tempIdString) {
+        if (possibleTempIds.has(String(payloadObj.id))) {
           payloadObj.id = serverId;
           payloadChanged = true;
         }
-        if (payloadObj.parent_id === tempIdString) {
-          payloadObj.parent_id = serverId;
+        if (possibleTempIds.has(String(payloadObj.parent_id))) {
+          payloadObj.parent_id = Number(serverId);
           payloadChanged = true;
         }
       }
 
       if (payloadChanged && item.id) {
-        // Recalcular hash para consistência com o novo payload
         const newHash = await hashOperation(item.table, item.operation, payloadObj);
         await db.syncQueue.update(item.id, {
           payload: JSON.stringify(payloadObj),
           hash: newHash,
+          status: 'pending',
+          lastError: undefined,
           updatedAt: timestamp,
         });
       }
     }
   });
+}
+
+/** Repara automaticamente itens na fila marcados com DEAD_LETTER que possuem parent_id temporário já resolvido no IndexedDB */
+async function autoRepairDeadLetters(): Promise<void> {
+  try {
+    const queueItems = await db.syncQueue.toArray();
+    for (const item of queueItems) {
+      if (item.status !== 'error' && !item.lastError?.includes('invalid input syntax') && !item.lastError?.includes('parent_id')) continue;
+      let payloadObj: Record<string, unknown>;
+      try {
+        payloadObj = JSON.parse(item.payload);
+      } catch {
+        continue;
+      }
+
+      if (item.table === 'avaliacoes' && payloadObj.parent_id) {
+        const pStr = String(payloadObj.parent_id);
+        if (pStr.startsWith('temp_') || pStr.startsWith('local_') || isNaN(Number(pStr))) {
+          const localIdNum = parseInt(pStr.replace(/\D/g, ''), 10);
+          if (!isNaN(localIdNum)) {
+            const parentLocal = await db.avaliacoes.get(localIdNum);
+            if (parentLocal && (parentLocal.serverId || (parentLocal.id && !String(parentLocal.id).startsWith('local_') && !String(parentLocal.id).startsWith('temp_')))) {
+              const realId = Number(parentLocal.serverId || parentLocal.id);
+              payloadObj.parent_id = realId;
+              const newHash = await hashOperation(item.table, item.operation, payloadObj);
+              await db.syncQueue.update(item.id!, {
+                payload: JSON.stringify(payloadObj),
+                hash: newHash,
+                status: 'pending',
+                lastError: undefined,
+                updatedAt: now(),
+              });
+              console.info(`[SyncEngine] Dead letter id=${item.id} auto-reparado com parent_id=${realId}`);
+            }
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[SyncEngine] Falha ao tentar auto-reparar dead letters:', err);
+  }
 }
 
 /** Atualiza o syncStatus do registro local para 'synced' */
