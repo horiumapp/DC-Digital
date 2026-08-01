@@ -79,17 +79,21 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
     return objetos;
   }, [unidadeDidatica, conteudos]);
 
-  // Alunos filtrados para notas (lógica de RP)
+  // Alunos filtrados para notas (lógica de RP: alunos com nota abaixo de 50% do valor máximo da avaliação)
   const alunosParaNotas = React.useMemo(() => {
     if (!selectedAvaliacao) return [];
     if (selectedAvaliacao.parent_id) {
+      const parentAv = avaliacoes.find(a => String(a.id) === String(selectedAvaliacao.parent_id));
+      const parentMax = parentAv?.valorMaximo ? Number(parentAv.valorMaximo) : (selectedAvaliacao.valorMaximo ? Number(selectedAvaliacao.valorMaximo) : 10);
+      const mediaCorte = parentMax / 2;
       return alunos.filter(aluno => {
-        const notaPai = parseFloat((aluno.notas?.[selectedAvaliacao.parent_id] || '0').replace(',', '.'));
-        return notaPai < 5.0;
+        const notaPaiStr = aluno.notas?.[selectedAvaliacao.parent_id] || aluno.notas?.[String(selectedAvaliacao.parent_id)];
+        const notaPai = parseFloat((notaPaiStr || '0').replace(',', '.'));
+        return !isNaN(notaPai) && notaPai < mediaCorte;
       });
     }
     return alunos;
-  }, [selectedAvaliacao, alunos]);
+  }, [selectedAvaliacao, alunos, avaliacoes]);
 
   // Carregar notas ao entrar em modo editor
    

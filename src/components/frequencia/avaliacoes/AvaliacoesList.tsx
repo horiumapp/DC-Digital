@@ -107,7 +107,9 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                                   {alunos.some(aluno => {
                                     const notaStr = aluno.notas?.[av.id] || aluno.notas?.[String(av.id)];
                                     const nota = parseFloat((notaStr || '').replace(',', '.'));
-                                    return !isNaN(nota) && nota < 5.0;
+                                    const maxVal = av.valorMaximo ? Number(av.valorMaximo) : 10;
+                                    const mediaCorte = maxVal / 2;
+                                    return !isNaN(nota) && nota < mediaCorte;
                                   }) && !avaliacoes.some(rp => String(rp.parent_id) === String(av.id)) && (
                                     <button 
                                       onClick={() => onAddRP(av)}
