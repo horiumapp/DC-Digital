@@ -105,7 +105,7 @@ export async function syncAll(): Promise<SyncResult> {
   // Sem esse lock, duas abas abertas simultaneamente passariam pelo check acima
   // e sincronizariam em paralelo, causando possíveis duplicatas ou conflitos no Supabase.
   // Fallback: se Web Locks não estiver disponível (ex: browsers antigos, testes), executa sem lock.
-  if (typeof navigator !== 'undefined' && 'locks' in navigator) {
+  if (typeof navigator !== 'undefined' && navigator.locks && typeof navigator.locks.request === 'function') {
     return navigator.locks.request(
       'dc-digital-sync-lock',
       { ifAvailable: true },

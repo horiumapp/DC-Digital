@@ -89,7 +89,7 @@ vi.mock('../lib/db', () => {
       avaliacoes: { where: _where },
       notas: { where: _where },
       fechamentos: { where: _where },
-      syncQueue: { where: _where },
+      syncQueue: { where: _where, toArray: vi.fn(async () => []) },
     },
     now: () => new Date().toISOString(),
     hashOperation: vi.fn(async () => 'test-hash'),

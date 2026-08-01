@@ -158,7 +158,7 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
     const localAvs = await OfflineStorage.getAvaliacoesLocal(tid, disciplina);
     const localPending = localAvs.filter(a => a.syncStatus === 'pending');
 
-    let mergedAvaliacoes = [...result.avaliacoes];
+    const mergedAvaliacoes = [...result.avaliacoes];
     for (const pending of localPending) {
       const formatted: Avaliacao = {
         id: pending.id || pending.serverId || `local_${pending.localId}`,
