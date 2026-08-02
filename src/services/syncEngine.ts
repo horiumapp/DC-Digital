@@ -741,7 +741,7 @@ async function updateTempAvaliacaoId(localId: number, serverId: string): Promise
 async function autoRepairDeadLetters(): Promise<void> {
   try {
     const queueItems = await db.syncQueue.toArray();
-    const allLocalAvaliacoes = await db.avaliacoes.toArray();
+    const allLocalAvaliacoes = typeof db.avaliacoes?.toArray === 'function' ? await db.avaliacoes.toArray() : [];
 
     // Mapeamento de IDs temporários para o serverId / UUID real da avaliação
     const tempToRealMap = new Map<string, string>();
