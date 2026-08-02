@@ -4,6 +4,7 @@ import { useTurma, Avaliacao } from '../../contexts/TurmaContext';
 import { APP_CONFIG } from '../../config/appConfig';
 import { useCaptcha } from '../../hooks/useCaptcha';
 import { getBimestrePorData, formatarDataParaISO, formatarDataParaExibicao } from '../../utils/dateUtils';
+import { isAvaliacaoPendente, getMensagemPendenciaAvaliacao } from '../../utils/avaliacaoUtils';
 
 // Sub-componentes
 import AvaliacoesList from './avaliacoes/AvaliacoesList';
@@ -131,7 +132,7 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
   }, [avaliacoes, carregarFaltasDaData]);
    
 
-  // Avaliação com notas pendentes (se houver)
+  // Avaliação com notas/RP/2CH pendentes (se houver)
   const avaliacaoPendente = React.useMemo(() => {
     if (!avaliacoes || avaliacoes.length === 0 || !alunos || alunos.length === 0) {
       return null;
@@ -141,19 +142,8 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
     if (avsPrincipais.length === 0) return null;
 
     for (const av of avsPrincipais) {
-      const dataIso = formatarDataParaISO(av.data);
-      const faltasNoDia = faltasPorData[dataIso] || new Set();
-      const alunosPresentes = alunos.filter(a => !faltasNoDia.has(a.id));
-
-      if (alunosPresentes.length > 0) {
-        const temPendente = alunosPresentes.some(a => {
-          const nota = a.notas?.[av.id] ?? a.notas?.[String(av.id)];
-          return nota === undefined || nota === null || String(nota).trim() === '';
-        });
-
-        if (temPendente) {
-          return av;
-        }
+      if (isAvaliacaoPendente(av, avaliacoes, alunos, faltasPorData)) {
+        return av;
       }
     }
 
@@ -180,7 +170,7 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
 
     const isEditingExisting = selectedAvaliacao && avaliacoes.some(a => String(a.id) === String(selectedAvaliacao.id));
     if (!isEditingExisting && avaliacaoPendente) {
-      alert(`Não é possível cadastrar uma nova avaliação enquanto a avaliação anterior (${avaliacaoPendente.tipo} - ${formatarDataParaExibicao(avaliacaoPendente.data)}) tiver notas pendentes.`);
+      alert(getMensagemPendenciaAvaliacao(avaliacaoPendente, avaliacoes, alunos, faltasPorData));
       return;
     }
 
@@ -353,7 +343,7 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
           }}
           onAddAvaliacao={() => { 
             if (avaliacaoPendente) {
-              alert(`Não é possível adicionar uma nova avaliação. A avaliação anterior (${avaliacaoPendente.tipo} - ${formatarDataParaExibicao(avaliacaoPendente.data)}) possui notas pendentes. Por favor, lance as notas de todos os alunos da avaliação anterior antes de cadastrar uma nova.`);
+              alert(getMensagemPendenciaAvaliacao(avaliacaoPendente, avaliacoes, alunos, faltasPorData));
               return;
             }
             resetForm(); 

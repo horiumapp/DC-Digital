@@ -2,6 +2,7 @@ import React from 'react';
 import { Eye, Pencil, Trash2, List, Check, Calendar as CalendarIcon, Plus, Clock } from 'lucide-react';
 import { Avaliacao } from '../../../contexts/TurmaContext';
 import { formatarDataParaISO, formatarDataParaExibicao } from '../../../utils/dateUtils';
+import { isAvaliacaoPendente } from '../../../utils/avaliacaoUtils';
 
 interface AvaliacoesListProps {
   avaliacoes: Avaliacao[];
@@ -31,21 +32,6 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
   disabled
 }: AvaliacoesListProps) {
   const BIMESTRES = ['1º Bimestre', '2º Bimestre', '3º Bimestre', '4º Bimestre'];
-
-  // Helper para verificar se uma avaliação tem notas pendentes
-  const isAvaliacaoPendente = (av: Avaliacao) => {
-    if (!alunos || alunos.length === 0) return false;
-    const dataIso = formatarDataParaISO(av.data);
-    const faltasNoDia = faltasPorData[dataIso] || new Set();
-    const alunosPresentes = alunos.filter(a => !faltasNoDia.has(a.id));
-    if (alunosPresentes.length === 0) return false;
-    return alunosPresentes.some(a => {
-      const nota = a.notas?.[av.id] ?? a.notas?.[String(av.id)];
-      return nota === undefined || nota === null || String(nota).trim() === '';
-    });
-  };
-
-  const avPendente = avaliacoes.filter(av => !av.parent_id).find(av => isAvaliacaoPendente(av));
 
   return (
     <div className="space-y-4">
@@ -81,7 +67,7 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                       <td colSpan={4} className="px-6 py-2 font-bold text-[#0f2851] text-[11px] uppercase tracking-wider">{bim}</td>
                     </tr>
                     {avsBim.map((av) => {
-                      const temPendencia = isAvaliacaoPendente(av);
+                      const temPendencia = isAvaliacaoPendente(av, avaliacoes, alunos, faltasPorData);
                       return (
                       <React.Fragment key={av.id}>
                         <tr className="hover:bg-slate-50 transition-colors">
