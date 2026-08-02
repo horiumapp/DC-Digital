@@ -176,6 +176,27 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
       return;
     }
 
+    const valMax = parseFloat(valorMaximo.replace(',', '.')) || 10;
+    const bimestre = getBimestrePorData(selectedDate);
+
+    // Validação de limite de pontos do bimestre para avaliações principais
+    if (!isCreatingChildEvaluation) {
+      const { limite, somaExistentes, pontosDisponiveis } = getInfoPontosBimestre(
+        bimestre,
+        avaliacoes,
+        isEditingExisting ? selectedAvaliacao.id : undefined
+      );
+
+      if (valMax > pontosDisponiveis) {
+        alert(
+          `A pontuação informada (${valMax.toFixed(2).replace('.', ',')} pts) excede o limite máximo permitido de ${limite.toFixed(2).replace('.', ',')} pontos do ${bimestre}.\n\n` +
+          `Pontos já utilizados em outras avaliações do bimestre: ${somaExistentes.toFixed(2).replace('.', ',')} pts.\n` +
+          `Pontos disponíveis para esta avaliação: ${pontosDisponiveis.toFixed(2).replace('.', ',')} pts.`
+        );
+        return;
+      }
+    }
+
     const payload: Avaliacao = {
       id: isEditingExisting ? selectedAvaliacao.id : `temp_${Date.now()}`,
       turmaId: turmaAtiva?.id || '',
@@ -183,8 +204,8 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
       data: selectedDate,
       instrumento: instrumentoAvaliacao,
       objetos: objetosAvaliacao,
-      bimestre: getBimestrePorData(selectedDate),
-      valorMaximo: parseFloat(valorMaximo.replace(',', '.')) || 10,
+      bimestre,
+      valorMaximo: valMax,
       parent_id: selectedAvaliacao?.parent_id
     };
 
