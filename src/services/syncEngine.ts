@@ -649,7 +649,17 @@ async function syncFechamento(operation: string, payload: Record<string, unknown
 /** Atualiza as referências locais e da fila de um ID temporário de avaliação para o UUID final */
 async function updateTempAvaliacaoId(localId: number, serverId: string): Promise<void> {
   const timestamp = now();
-  const possibleTempIds = new Set([`temp_${localId}`, `local_${localId}`, String(localId)]);
+  const localRecord = await db.avaliacoes.get(localId);
+  const tempIdFromRecord = localRecord?.id ? String(localRecord.id) : null;
+  const serverIdFromRecord = localRecord?.serverId ? String(localRecord.serverId) : null;
+
+  const possibleTempIds = new Set([
+    `temp_${localId}`,
+    `local_${localId}`,
+    String(localId),
+  ]);
+  if (tempIdFromRecord) possibleTempIds.add(tempIdFromRecord);
+  if (serverIdFromRecord) possibleTempIds.add(serverIdFromRecord);
 
   await db.transaction('rw', [db.avaliacoes, db.notas, db.syncQueue], async () => {
     // 1. Atualizar registro local da avaliação
@@ -707,7 +717,7 @@ async function updateTempAvaliacaoId(localId: number, serverId: string): Promise
           payloadChanged = true;
         }
         if (possibleTempIds.has(String(payloadObj.parent_id))) {
-          payloadObj.parent_id = Number(serverId);
+          payloadObj.parent_id = serverId;
           payloadChanged = true;
         }
       }
@@ -718,6 +728,7 @@ async function updateTempAvaliacaoId(localId: number, serverId: string): Promise
           payload: JSON.stringify(payloadObj),
           hash: newHash,
           status: 'pending',
+          retryCount: 0,
           lastError: undefined,
           updatedAt: timestamp,
         });
@@ -726,12 +737,27 @@ async function updateTempAvaliacaoId(localId: number, serverId: string): Promise
   });
 }
 
-/** Repara automaticamente itens na fila marcados com DEAD_LETTER que possuem parent_id temporário ou turma_id composto */
+/** Repara automaticamente itens na fila marcados com erro que possuem ID temporário ou turma_id composto */
 async function autoRepairDeadLetters(): Promise<void> {
   try {
     const queueItems = await db.syncQueue.toArray();
+    const allLocalAvaliacoes = await db.avaliacoes.toArray();
+
+    // Mapeamento de IDs temporários para o serverId / UUID real da avaliação
+    const tempToRealMap = new Map<string, string>();
+    for (const av of allLocalAvaliacoes) {
+      if (av.serverId || (av.id && !String(av.id).startsWith('temp_') && !String(av.id).startsWith('local_'))) {
+        const realId = String(av.serverId || av.id);
+        if (av.id) tempToRealMap.set(String(av.id), realId);
+        if (av.localId) {
+          tempToRealMap.set(String(av.localId), realId);
+          tempToRealMap.set(`temp_${av.localId}`, realId);
+          tempToRealMap.set(`local_${av.localId}`, realId);
+        }
+      }
+    }
+
     for (const item of queueItems) {
-      if (item.status !== 'error' && !item.lastError?.includes('invalid input syntax') && !item.lastError?.includes('parent_id') && !item.lastError?.includes('uuid')) continue;
       let payloadObj: Record<string, unknown>;
       try {
         payloadObj = JSON.parse(item.payload);
@@ -739,12 +765,36 @@ async function autoRepairDeadLetters(): Promise<void> {
         continue;
       }
 
-      // Auto-reparo de turma_id composto (ex: UUID||Componente)
+      let repaired = false;
+
+      // 1. Auto-reparo de turma_id composto (ex: UUID||Componente)
       if (payloadObj.turma_id && String(payloadObj.turma_id).includes('||')) {
         const cleanTurmaId = getTid(String(payloadObj.turma_id));
         payloadObj.turma_id = cleanTurmaId;
+        repaired = true;
+      }
+
+      // 2. Auto-reparo de notas com avaliacao_id temporário
+      if (item.table === 'notas' && payloadObj.avaliacao_id) {
+        const avIdStr = String(payloadObj.avaliacao_id);
+        if (tempToRealMap.has(avIdStr)) {
+          payloadObj.avaliacao_id = tempToRealMap.get(avIdStr);
+          repaired = true;
+        }
+      }
+
+      // 3. Auto-reparo de avaliações filhas (RP/2CH) com parent_id temporário
+      if (item.table === 'avaliacoes' && payloadObj.parent_id) {
+        const pStr = String(payloadObj.parent_id);
+        if (tempToRealMap.has(pStr)) {
+          payloadObj.parent_id = tempToRealMap.get(pStr);
+          repaired = true;
+        }
+      }
+
+      if (repaired && item.id) {
         const newHash = await hashOperation(item.table, item.operation, payloadObj);
-        await db.syncQueue.update(item.id!, {
+        await db.syncQueue.update(item.id, {
           payload: JSON.stringify(payloadObj),
           hash: newHash,
           status: 'pending',
@@ -752,31 +802,7 @@ async function autoRepairDeadLetters(): Promise<void> {
           lastError: undefined,
           updatedAt: now(),
         });
-        console.info(`[SyncEngine] Dead letter id=${item.id} auto-reparado com turma_id limpo=${cleanTurmaId}`);
-        continue;
-      }
-
-      if (item.table === 'avaliacoes' && payloadObj.parent_id) {
-        const pStr = String(payloadObj.parent_id);
-        if (pStr.startsWith('temp_') || pStr.startsWith('local_') || isNaN(Number(pStr))) {
-          const localIdNum = parseInt(pStr.replace(/\D/g, ''), 10);
-          if (!isNaN(localIdNum)) {
-            const parentLocal = await db.avaliacoes.get(localIdNum);
-            if (parentLocal && (parentLocal.serverId || (parentLocal.id && !String(parentLocal.id).startsWith('local_') && !String(parentLocal.id).startsWith('temp_')))) {
-              const realId = Number(parentLocal.serverId || parentLocal.id);
-              payloadObj.parent_id = realId;
-              const newHash = await hashOperation(item.table, item.operation, payloadObj);
-              await db.syncQueue.update(item.id!, {
-                payload: JSON.stringify(payloadObj),
-                hash: newHash,
-                status: 'pending',
-                lastError: undefined,
-                updatedAt: now(),
-              });
-              console.info(`[SyncEngine] Dead letter id=${item.id} auto-reparado com parent_id=${realId}`);
-            }
-          }
-        }
+        console.info(`[SyncEngine] Item em fila id=${item.id} (${item.table}) auto-reparado com sucesso.`);
       }
     }
   } catch (err) {
