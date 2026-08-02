@@ -4,7 +4,7 @@ import { useTurma, Avaliacao } from '../../contexts/TurmaContext';
 import { APP_CONFIG } from '../../config/appConfig';
 import { useCaptcha } from '../../hooks/useCaptcha';
 import { getBimestrePorData, formatarDataParaISO, formatarDataParaExibicao } from '../../utils/dateUtils';
-import { isAvaliacaoPendente, getMensagemPendenciaAvaliacao } from '../../utils/avaliacaoUtils';
+import { isAvaliacaoPendente, getMensagemPendenciaAvaliacao, getInfoPontosBimestre } from '../../utils/avaliacaoUtils';
 
 // Sub-componentes
 import AvaliacoesList from './avaliacoes/AvaliacoesList';

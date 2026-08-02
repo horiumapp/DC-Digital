@@ -137,3 +137,43 @@ export function getMensagemPendenciaAvaliacao(
 
   return `A avaliação anterior (${av.tipo}) possui pendências. Por favor, resolva as pendências da avaliação anterior antes de cadastrar uma nova.`;
 }
+
+/**
+ * Retorna o limite máximo de pontos para o bimestre.
+ * 1º e 2º Bimestres = 20.0 pontos.
+ * 3º e 4º Bimestres = 30.0 pontos.
+ */
+export function getLimitePontosBimestre(bimestreOuData: string): number {
+  const str = String(bimestreOuData || '').toUpperCase();
+  if (str.includes('3') || str.includes('4')) return 30.0;
+  return 20.0;
+}
+
+/**
+ * Retorna o total de pontos já utilizados em avaliações principais no bimestre
+ * e a quantidade de pontos disponíveis para uma nova avaliação.
+ */
+export function getInfoPontosBimestre(
+  bimestre: string,
+  avaliacoes: Avaliacao[],
+  avaliacaoAtualId?: string | number
+): { limite: number; somaExistentes: number; pontosDisponiveis: number } {
+  const limite = getLimitePontosBimestre(bimestre);
+
+  // Filtrar apenas avaliações principais (!av.parent_id) do mesmo bimestre
+  const avaliacoesDoBimestre = avaliacoes.filter(av => {
+    if (av.parent_id) return false;
+    if (avaliacaoAtualId && String(av.id) === String(avaliacaoAtualId)) return false;
+    const bNome = av.bimestre || getBimestrePorData(av.data);
+    return bNome === bimestre;
+  });
+
+  const somaExistentes = avaliacoesDoBimestre.reduce((acc, av) => {
+    const val = Number(av.valorMaximo ?? 10);
+    return acc + (isNaN(val) ? 10 : val);
+  }, 0);
+
+  const pontosDisponiveis = Math.max(0, limite - somaExistentes);
+
+  return { limite, somaExistentes, pontosDisponiveis };
+}
