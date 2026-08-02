@@ -36,6 +36,7 @@ vi.mock('../services/offlineQueue', () => {
     markDone: _markDone,
     retry: _retry,
     fail: _fail,
+    retryAllErrors: vi.fn(async () => 0),
     getAllPending: _getAllPending,
     getPendingCount: _getPendingCount,
   };
