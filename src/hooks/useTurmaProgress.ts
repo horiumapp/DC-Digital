@@ -116,21 +116,26 @@ export function useTurmaProgress(
     const avaliacoesDaTurma = avaliacoes.filter(av => {
       const avTurmaId = String(av.turmaId).split('||')[0];
       if (avTurmaId !== activeTurmaId) return false;
-      if (!av.data || av.id.includes('temp_')) return false;
+      if (!av.data) return false;
       const dataIso = formatarDataParaISO(av.data);
       if (!dataIso.startsWith(APP_CONFIG.YEAR.toString())) return false;
       const bNome = av.bimestre || getBimestrePorData(av.data);
       return bNome === periodoSelecionado.nome;
     });
     
-    const avaliacoesCadastradas = avaliacoesDaTurma.length;
-    const nAulasSemanais = horarioTurma?.length || 0;
-    const totalSlotsSemanais = nAulasSemanais > 0 ? nAulasSemanais : (turmaAtiva.tempos?.length || 0);
-    const avaliacoesPrevistas = totalSlotsSemanais <= 3 ? 2 : 3;
-    
-    const pAvaliacoes = (totalEsperado > 0 && avaliacoesPrevistas > 0 && avaliacoesCadastradas > 0) 
-      ? Math.min(100, Math.round((avaliacoesCadastradas / avaliacoesPrevistas) * 100)) 
-      : 0;
+    // Considerar apenas avaliações principais (!av.parent_id) para a soma dos 20,0 pontos do bimestre
+    const avaliacoesPrincipais = avaliacoesDaTurma.filter(av => !av.parent_id);
+    const somaPontosCadastrados = avaliacoesPrincipais.reduce((acc, av) => {
+      const val = Number(av.valorMaximo ?? 10);
+      return acc + (isNaN(val) ? 10 : val);
+    }, 0);
+
+    // Definir a meta do bimestre: 20,0 pontos para 1º e 2º bimestres, 30,0 pontos para 3º e 4º bimestres (Total anual: 100,0 pts)
+    const strPeriodo = `${periodoSelecionado?.nome || ''} ${periodoSelecionado?.id || ''} ${periodoSelecionado?.label || ''}`.toUpperCase();
+    const isTerceiroOuQuarto = strPeriodo.includes('3') || strPeriodo.includes('4');
+
+    const META_PONTUACAO_BIMESTRE = isTerceiroOuQuarto ? 30.0 : 20.0;
+    const pAvaliacoes = Math.min(100, Math.round((somaPontosCadastrados / META_PONTUACAO_BIMESTRE) * 100));
 
     let notasLancadasCount = 0;
     if (avaliacoesDaTurma.length > 0 && alunos.length > 0) {
