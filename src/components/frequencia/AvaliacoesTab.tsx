@@ -169,7 +169,9 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
     if (objetosAvaliacao.length === 0) { alert('Adicione pelo menos um Objeto de Conhecimento!'); return; }
 
     const isEditingExisting = selectedAvaliacao && avaliacoes.some(a => String(a.id) === String(selectedAvaliacao.id));
-    if (!isEditingExisting && avaliacaoPendente) {
+    const isCreatingChildEvaluation = selectedAvaliacao && !!selectedAvaliacao.parent_id;
+
+    if (!isEditingExisting && !isCreatingChildEvaluation && avaliacaoPendente) {
       alert(getMensagemPendenciaAvaliacao(avaliacaoPendente, avaliacoes, alunos, faltasPorData));
       return;
     }
