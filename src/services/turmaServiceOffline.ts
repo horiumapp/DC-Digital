@@ -154,29 +154,39 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
       })));
     }
     
-    // Mesclar com avaliações locais pendentes (que ainda não foram sincronizadas com o servidor)
+    // Mesclar com avaliações locais salvas no IndexedDB (inclusive criadas recentemente)
     const localAvs = await OfflineStorage.getAvaliacoesLocal(tid, disciplina);
-    const localPending = localAvs.filter(a => a.syncStatus === 'pending');
-
     const mergedAvaliacoes = [...result.avaliacoes];
-    for (const pending of localPending) {
+    const remoteIds = new Set(result.avaliacoes.map(a => String(a.id)));
+
+    for (const local of localAvs) {
       const formatted: Avaliacao = {
-        id: pending.id || pending.serverId || `local_${pending.localId}`,
-        turmaId: pending.turma_id,
-        tipo: pending.tipo,
-        data: pending.data,
-        instrumento: pending.instrumento,
-        objetos: pending.objetos,
-        bimestre: pending.bimestre,
-        valorMaximo: pending.valor_maximo,
-        parent_id: pending.parent_id,
+        id: local.id || local.serverId || `local_${local.localId}`,
+        turmaId: local.turma_id,
+        tipo: local.tipo,
+        data: local.data,
+        instrumento: local.instrumento,
+        objetos: local.objetos,
+        bimestre: local.bimestre,
+        valorMaximo: local.valor_maximo,
+        parent_id: local.parent_id,
       };
 
-      const existingIdx = mergedAvaliacoes.findIndex(a => a.id === formatted.id);
-      if (existingIdx >= 0) {
-        mergedAvaliacoes[existingIdx] = formatted;
-      } else {
-        mergedAvaliacoes.push(formatted);
+      const idToCheck = String(formatted.id);
+      const isRemote = remoteIds.has(idToCheck) || (local.id && remoteIds.has(String(local.id))) || (local.serverId && remoteIds.has(String(local.serverId)));
+
+      if (!isRemote) {
+        const existingIdx = mergedAvaliacoes.findIndex(a => 
+          String(a.id) === idToCheck || 
+          (local.id && String(a.id) === String(local.id)) ||
+          (local.serverId && String(a.id) === String(local.serverId))
+        );
+
+        if (existingIdx >= 0) {
+          mergedAvaliacoes[existingIdx] = formatted;
+        } else {
+          mergedAvaliacoes.push(formatted);
+        }
       }
     }
 
