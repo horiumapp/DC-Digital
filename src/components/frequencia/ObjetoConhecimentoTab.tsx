@@ -340,7 +340,7 @@ export default function ObjetoConhecimentoTab({
                   <option value="">Selecione o Conteúdo Ministrado...</option>
                   {todosConteudos.map((item, idx) => (
                     <option key={idx} value={item.descricao}>
-                      {item.unidade ? `${item.unidade} - ${item.descricao}` : item.descricao}
+                      {item.descricao}
                     </option>
                   ))}
                   <option value="TEXTO LIVRE">-- OUTRO / TEXTO LIVRE --</option>
