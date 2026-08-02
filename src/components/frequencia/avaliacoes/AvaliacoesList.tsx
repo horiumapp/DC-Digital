@@ -98,11 +98,6 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                               )}
                             </div>
                             <span className="text-slate-900 font-bold text-base">{av.tipo}</span>
-                            {temPendencia && (
-                              <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[10px] font-bold uppercase ml-1">
-                                Notas Pendentes
-                              </span>
-                            )}
                           </td>
                           <td className="px-6 py-4">
                              <div className="flex items-center gap-2 text-slate-600 font-bold uppercase text-xs">
