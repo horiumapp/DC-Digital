@@ -98,13 +98,9 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                               )}
                             </div>
                             <span className="text-slate-900 font-bold text-base">{av.tipo}</span>
-                            {temPendencia ? (
+                            {temPendencia && (
                               <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[10px] font-bold uppercase ml-1">
                                 Notas Pendentes
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-[10px] font-bold uppercase ml-1">
-                                Notas Lançadas
                               </span>
                             )}
                           </td>
