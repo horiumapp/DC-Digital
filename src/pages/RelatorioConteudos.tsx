@@ -311,7 +311,7 @@ export default function RelatorioConteudos() {
             <Link to="/diario" className="bg-[#eef2ff] text-[#0f2851] px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold border border-blue-100 hover:bg-[#e0e7ff] transition-all shadow-sm">
               <ArrowLeft className="w-4 h-4" /> Voltar
             </Link>
-            <h1 className="text-xl font-semibold text-[#0f2851]">Relatório de Objeto de Conhecimento Ministrado</h1>
+            <h1 className="text-xl font-semibold text-[#0f2851]">Relatório de Conteúdo Ministrado</h1>
           </div>
           <span className="bg-emerald-100 text-emerald-700 text-[12px] font-bold px-3 py-1 rounded-full border border-emerald-200">Ano: {APP_CONFIG.YEAR}</span>
         </div>

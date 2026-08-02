@@ -95,41 +95,22 @@ export default function ObjetoConhecimentoTab({
 
   const unidadesDisponiveis = unidadesBD;
 
-  const [objetoUnidade, setObjetoUnidade] = useState('');
+  const todosConteudos = React.useMemo(() => {
+    const list: { unidade: string; descricao: string }[] = [];
+    unidadesDisponiveis.forEach(u => {
+      u.objetos?.forEach((o: any) => {
+        const desc = typeof o === 'object' && o !== null ? (o.descricao || o.titulo_oc || '') : o;
+        if (desc) list.push({ unidade: u.nome || '', descricao: desc });
+      });
+    });
+    return list;
+  }, [unidadesDisponiveis]);
+
   const [objetoConhecimento, setObjetoConhecimento] = useState('');
   const [objetoObservacao, setObjetoObservacao] = useState('');
   const [objetoStatus, setObjetoStatus] = useState('Ministrado');
+  const [modoTextoLivre, setModoTextoLivre] = useState(false);
 
-  // Atualiza seleções iniciais quando as unidades mudam
-  React.useEffect(() => {
-    if (curriculoIndisponivel && !objetoUnidade) {
-       
-      setObjetoUnidade('TEXTO LIVRE');
-    } else if (unidadesDisponiveis.length > 0 && !objetoUnidade) {
-       
-      setObjetoUnidade(unidadesDisponiveis[0].nome);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unidadesDisponiveis, curriculoIndisponivel]);
-
-  const objetosDisponiveis = React.useMemo(() => {
-    const unidade = unidadesDisponiveis.find(u => u.nome === objetoUnidade);
-    return unidade ? unidade.objetos.map((o: { descricao: string }) => o.descricao) : [];
-  }, [objetoUnidade, unidadesDisponiveis]);
-
-  const habilidadesDisponiveis = React.useMemo(() => {
-    const unidade = unidadesDisponiveis.find(u => u.nome === objetoUnidade);
-    return unidade ? unidade.habilidades.map((h: { codigo: string }) => h.codigo) : [];
-  }, [objetoUnidade, unidadesDisponiveis]);
-
-  React.useEffect(() => {
-    if (objetosDisponiveis.length > 0 && !objetoConhecimento && objetoUnidade !== 'TEXTO LIVRE') {
-       
-      setObjetoConhecimento(objetosDisponiveis[0]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [objetosDisponiveis, objetoUnidade]);
-  
   const [showObjetoTable, setShowObjetoTable] = useState(false);
   const [showNoRecordsObjeto, setShowNoRecordsObjeto] = useState(false);
   const [showDeleteObjetoModal, setShowDeleteObjetoModal] = useState(false);
@@ -152,23 +133,12 @@ export default function ObjetoConhecimentoTab({
             status: 'Ministrado'
           });
           setObjetoConhecimento(objStr);
-          setObjetoUnidade(dados.habilidades && dados.habilidades.length > 0 ? dados.habilidades[0] : 'TEXTO LIVRE');
           setObjetoObservacao(dados.descricao || '');
         } else {
           setObjetoSalvo(false);
           setObjetoData(null);
           setShowObjetoTable(false);
-          // Reset para o padrão sugerido
-          if (curriculoIndisponivel) {
-            setObjetoUnidade('TEXTO LIVRE');
-            setObjetoConhecimento('');
-          } else if (unidadesDisponiveis.length > 0) {
-            setObjetoUnidade(unidadesDisponiveis[0].nome);
-            if (unidadesDisponiveis[0].objetos.length > 0) {
-              const rawReset = unidadesDisponiveis[0].objetos[0];
-              setObjetoConhecimento(typeof rawReset === 'object' && rawReset !== null ? (rawReset.descricao || '') : (rawReset || ''));
-            }
-          }
+          setObjetoConhecimento('');
         }
       }
     };
@@ -197,12 +167,8 @@ export default function ObjetoConhecimentoTab({
 
   const handleSave = async () => {
     // Validação: todos os campos obrigatórios devem estar preenchidos
-    if (!objetoUnidade || objetoUnidade.trim() === '') {
-      alert('Por favor, selecione a Unidade Didática antes de salvar.');
-      return;
-    }
     if (!objetoConhecimento || (typeof objetoConhecimento === 'string' && objetoConhecimento.trim() === '')) {
-      alert('Por favor, selecione ou preencha o Objeto de Conhecimento antes de salvar.');
+      alert('Por favor, preencha o Conteúdo Ministrado antes de salvar.');
       return;
     }
 
@@ -217,7 +183,7 @@ export default function ObjetoConhecimentoTab({
         data: selectedDate,
         tempo: tempoAula,
         objetos: [objParaSalvar],
-        habilidades: objetoUnidade === 'TEXTO LIVRE' ? [] : [objetoUnidade, ...habilidadesDisponiveis],
+        habilidades: [],
         descricao: objetoObservacao
       });
 
@@ -281,7 +247,7 @@ export default function ObjetoConhecimentoTab({
                   }}
                   className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] flex items-center gap-2 shadow-sm active:scale-95"
                 >
-                  <span className="text-lg leading-none">+</span> Adicionar Objeto de Conhecimento
+                  <span className="text-lg leading-none">+</span> Adicionar Conteúdo Ministrado
                 </button>
               )}
           </div>
@@ -300,7 +266,7 @@ export default function ObjetoConhecimentoTab({
               <table className="w-full text-sm text-left">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
                   <tr>
-                    <th className="px-4 py-3 font-medium">Descrição</th>
+                    <th className="px-4 py-3 font-medium">CONTEÚDO MINISTRADO</th>
                     <th className="px-4 py-3 font-medium">Observações</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium text-center">Ações</th>
@@ -356,43 +322,48 @@ export default function ObjetoConhecimentoTab({
             </div>
           )}
           <div className="grid grid-cols-12 gap-4">
-            <div className="col-span-4">
-              <label className="block text-sm text-slate-600 mb-1">Unidade didática</label>
-              <select
-                className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 bg-white"
-                value={objetoUnidade}
-                onChange={(e) => { setObjetoUnidade(e.target.value); setObjetoConhecimento(''); }}
-              >
-                <option value="">Selecione a Unidade...</option>
-                {unidadesDisponiveis.map(u => (
-                  <option key={u.nome} value={u.nome}>{u.nome}</option>
-                ))}
-                <option value="TEXTO LIVRE">-- OUTRA / TEXTO LIVRE --</option>
-              </select>
-            </div>
-            <div className="col-span-4">
-              <label className="block text-sm text-slate-600 mb-1">Objeto de Conhecimento</label>
-              {objetoUnidade === 'TEXTO LIVRE' ? (
-                <input
-                  type="text"
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 bg-white"
-                  value={objetoConhecimento}
-                  onChange={(e) => setObjetoConhecimento(e.target.value)}
-                  placeholder="Digite o objeto de conhecimento..."
-                />
-              ) : (
+            <div className="col-span-8">
+              <label className="block text-sm text-slate-600 mb-1">CONTEÚDO MINISTRADO</label>
+              {todosConteudos.length > 0 && !modoTextoLivre ? (
                 <select
                   className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 bg-white"
                   value={objetoConhecimento}
-                  onChange={(e) => setObjetoConhecimento(e.target.value)}
-                  disabled={!objetoUnidade}
+                  onChange={(e) => {
+                    if (e.target.value === 'TEXTO LIVRE') {
+                      setModoTextoLivre(true);
+                      setObjetoConhecimento('');
+                    } else {
+                      setObjetoConhecimento(e.target.value);
+                    }
+                  }}
                 >
-                  <option value="">Selecione o Objeto...</option>
-                  {objetosDisponiveis.map(o => (
-                    <option key={o} value={o}>{o}</option>
+                  <option value="">Selecione o Conteúdo Ministrado...</option>
+                  {todosConteudos.map((item, idx) => (
+                    <option key={idx} value={item.descricao}>
+                      {item.unidade ? `${item.unidade} - ${item.descricao}` : item.descricao}
+                    </option>
                   ))}
-                  <option value="OUTRO">-- OUTRO / TEXTO LIVRE --</option>
+                  <option value="TEXTO LIVRE">-- OUTRO / TEXTO LIVRE --</option>
                 </select>
+              ) : (
+                <div className="space-y-1">
+                  <input
+                    type="text"
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 bg-white"
+                    value={objetoConhecimento}
+                    onChange={(e) => setObjetoConhecimento(e.target.value)}
+                    placeholder="Digite o conteúdo ministrado..."
+                  />
+                  {todosConteudos.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setModoTextoLivre(false)}
+                      className="text-xs text-blue-600 hover:underline font-medium"
+                    >
+                      ← Selecionar da lista de currículo
+                    </button>
+                  )}
+                </div>
               )}
             </div>
             <div className="col-span-2">
@@ -419,19 +390,6 @@ export default function ObjetoConhecimentoTab({
                 <option>Em andamento</option>
               </select>
             </div>
-
-            {habilidadesDisponiveis.length > 0 && objetoUnidade !== 'TEXTO LIVRE' && (
-              <div className="col-span-12 mt-2">
-                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Habilidades Vinculadas</label>
-                <div className="flex flex-wrap gap-2">
-                  {habilidadesDisponiveis.map(hab => (
-                    <span key={hab} className="px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-[10px] font-black border border-blue-100">
-                      {hab}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           <div>
@@ -478,9 +436,9 @@ export default function ObjetoConhecimentoTab({
                 <Trash2 className="w-5 h-5 text-red-600" />
               </div>
               <div className="flex-1">
-                <h3 className="text-base font-semibold text-slate-800 mb-1">Excluir Objeto de Conhecimento</h3>
+                <h3 className="text-base font-semibold text-slate-800 mb-1">Excluir Conteúdo Ministrado</h3>
                 <p className="text-sm text-slate-600">
-                  Tem certeza que deseja excluir o objeto de conhecimento lançado para o dia <strong>{selectedDate}</strong>, tempo <strong>{tempoAula}</strong>?
+                  Tem certeza que deseja excluir o conteúdo ministrado lançado para o dia <strong>{selectedDate}</strong>, tempo <strong>{tempoAula}</strong>?
                 </p>
                 <p className="text-xs text-red-600 mt-2 font-medium">Esta ação não pode ser desfeita.</p>
               </div>

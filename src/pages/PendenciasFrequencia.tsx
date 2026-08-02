@@ -209,7 +209,7 @@ export default function PendenciasFrequencia() {
                 className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
               >
                 <option value="FREQUENCIA">FREQUENCIA</option>
-                <option value="OBJETO DE CONHECIMENTO">OBJETO DE CONHECIMENTO</option>
+                <option value="CONTEÚDO MINISTRADO">CONTEÚDO MINISTRADO</option>
               </select>
             </div>
           </div>
