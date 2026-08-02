@@ -1,5 +1,5 @@
 import { Avaliacao, Aluno } from '../contexts/TurmaContext';
-import { formatarDataParaISO, formatarDataParaExibicao } from './dateUtils';
+import { formatarDataParaISO, formatarDataParaExibicao, getBimestrePorData } from './dateUtils';
 
 /**
  * Verifica se uma avaliação possui pendências de notas, RP ou 2ª Chamada.
