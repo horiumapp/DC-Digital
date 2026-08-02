@@ -420,9 +420,7 @@ function sanitizeAvaliacao(payload: AvaliacaoPayload): Record<string, unknown> {
     const parentStr = String(payload.parent_id);
     if (!parentStr.startsWith('temp_') && !parentStr.startsWith('local_')) {
       const parentNum = Number(parentStr);
-      if (!isNaN(parentNum)) {
-        sanitized.parent_id = parentNum;
-      }
+      sanitized.parent_id = !isNaN(parentNum) ? parentNum : parentStr;
     }
   }
 
@@ -561,17 +559,16 @@ async function syncAvaliacao(operation: string, payload: Record<string, unknown>
   // RESOLVER PARENT_ID SE AINDA FOR TEMPORÁRIO
   if (payload.parent_id !== undefined && payload.parent_id !== null && payload.parent_id !== '') {
     const pStr = String(payload.parent_id);
-    if (pStr.startsWith('temp_') || pStr.startsWith('local_') || isNaN(Number(pStr))) {
+    if (pStr.startsWith('temp_') || pStr.startsWith('local_')) {
       const localIdNum = parseInt(pStr.replace(/\D/g, ''), 10);
-      if (!isNaN(localIdNum)) {
-        const parentLocal = await db.avaliacoes.get(localIdNum);
-        if (parentLocal && parentLocal.serverId) {
-          payload.parent_id = Number(parentLocal.serverId);
-        } else if (parentLocal && parentLocal.id && !String(parentLocal.id).startsWith('temp_') && !String(parentLocal.id).startsWith('local_')) {
-          payload.parent_id = Number(parentLocal.id);
-        } else {
-          throw new Error(`Aguardando sincronização da avaliação pai no servidor (id temporário: ${pStr})`);
-        }
+      const parentLocal = await db.avaliacoes
+        .filter(av => String(av.id) === pStr || String(av.localId) === String(localIdNum))
+        .first();
+
+      if (parentLocal && (parentLocal.serverId || (parentLocal.id && !String(parentLocal.id).startsWith('temp_') && !String(parentLocal.id).startsWith('local_')))) {
+        payload.parent_id = parentLocal.serverId || parentLocal.id;
+      } else {
+        throw new Error(`Aguardando sincronização da avaliação pai no servidor (id temporário: ${pStr})`);
       }
     }
   }
