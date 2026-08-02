@@ -137,22 +137,28 @@ export function useTurmaProgress(
     const META_PONTUACAO_BIMESTRE = isTerceiroOuQuarto ? 30.0 : 20.0;
     const pAvaliacoes = Math.min(100, Math.round((somaPontosCadastrados / META_PONTUACAO_BIMESTRE) * 100));
 
-    let notasLancadasCount = 0;
-    if (avaliacoesDaTurma.length > 0 && alunos.length > 0) {
-      avaliacoesDaTurma.forEach(av => {
+    // --- NOTAS (Progresso de Lançamento de Notas proporcional à meta de pontos do bimestre) ---
+    let somaPontosComNotaLancada = 0;
+
+    if (avaliacoesPrincipais.length > 0 && alunos.length > 0) {
+      avaliacoesPrincipais.forEach(av => {
+        const valMax = Number(av.valorMaximo ?? 10);
+        const val = isNaN(valMax) ? 10 : valMax;
+        
+        let alunosComNota = 0;
         alunos.forEach(aluno => {
           const nota = aluno.notas ? aluno.notas[av.id] : null;
           if (nota !== undefined && nota !== null && nota !== '') {
-            notasLancadasCount++;
+            alunosComNota++;
           }
         });
+
+        const proporcaoAlunosComNota = alunosComNota / alunos.length;
+        somaPontosComNotaLancada += val * proporcaoAlunosComNota;
       });
     }
 
-    const totalNotasEsperadas = avaliacoesDaTurma.length * alunos.length;
-    const pNotas = (totalNotasEsperadas > 0 && avaliacoesDaTurma.length > 0) 
-      ? Math.min(100, Math.round((notasLancadasCount / totalNotasEsperadas) * 100)) 
-      : 0;
+    const pNotas = Math.min(100, Math.round((somaPontosComNotaLancada / META_PONTUACAO_BIMESTRE) * 100));
 
     return {
       pFreq, pObj, pAvaliacoes, pNotas, freqLancadas, conteudoLancados, totalEsperado, barColor
