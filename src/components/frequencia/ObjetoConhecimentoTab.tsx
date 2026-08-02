@@ -266,7 +266,7 @@ export default function ObjetoConhecimentoTab({
               <table className="w-full text-sm text-left">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
                   <tr>
-                    <th className="px-4 py-3 font-medium">CONTEÚDO MINISTRADO</th>
+                    <th className="px-4 py-3 font-medium">Conteúdo ministrado</th>
                     <th className="px-4 py-3 font-medium">Observações</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium text-center">Ações</th>
@@ -323,7 +323,7 @@ export default function ObjetoConhecimentoTab({
           )}
           <div className="grid grid-cols-12 gap-4">
             <div className="col-span-8">
-              <label className="block text-sm text-slate-600 mb-1">CONTEÚDO MINISTRADO</label>
+              <label className="block text-sm text-slate-600 mb-1">Conteúdo ministrado</label>
               {todosConteudos.length > 0 && !modoTextoLivre ? (
                 <select
                   className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 bg-white"
