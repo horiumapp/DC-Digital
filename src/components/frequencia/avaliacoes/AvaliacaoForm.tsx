@@ -150,12 +150,17 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
               }}
               onBlur={() => {
                  let val = parseFloat(valorMaximo.replace(',', '.')) || 0;
-                 if (val > 100) val = 100; // Limite arbitrário seguro
+                 if (val > 100) val = 100;
                  onSetValorMaximo(val.toFixed(2).replace('.', ','));
               }}
               className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-black text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10"
               placeholder="0,00"
             />
+            {!selectedAvaliacao?.parent_id && selectedDate && (
+              <p className="text-[11px] font-bold text-slate-500 pl-1 mt-1">
+                Meta do {getBimestrePorData(selectedDate)}: <span className="text-[#0f2851] font-extrabold">{(getBimestrePorData(selectedDate).includes('3') || getBimestrePorData(selectedDate).includes('4') ? 30 : 20).toFixed(2).replace('.', ',')} pts</span>
+              </p>
+            )}
           </div>
         </div>
       </div>

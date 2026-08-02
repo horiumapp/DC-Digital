@@ -369,7 +369,19 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
               alert(getMensagemPendenciaAvaliacao(avaliacaoPendente, avaliacoes, alunos, faltasPorData));
               return;
             }
+            const dataPadrao = new Date().toISOString().split('T')[0];
+            const bimPadrao = getBimestrePorData(dataPadrao);
+            const { limite, pontosDisponiveis } = getInfoPontosBimestre(bimPadrao, avaliacoes);
+
+            if (pontosDisponiveis <= 0) {
+              alert(`A pontuação máxima do ${bimPadrao} (${limite.toFixed(2).replace('.', ',')} pontos) já foi totalmente distribuída entre as avaliações cadastradas.`);
+              return;
+            }
+
             resetForm(); 
+            setSelectedDate(dataPadrao);
+            const maxSugerido = Math.min(10, pontosDisponiveis);
+            setValorMaximo(maxSugerido.toFixed(2).replace('.', ','));
             setAvaliacaoViewMode('edit'); 
           }}
           disabled={disabled}
