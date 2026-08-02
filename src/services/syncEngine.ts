@@ -142,6 +142,7 @@ async function _runSyncAll(): Promise<SyncResult> {
     // Resetar itens travados de sessão anterior
     await Queue.resetStuckItems();
     await autoRepairDeadLetters();
+    await Queue.retryAllErrors();
 
     // Processar fila em ordem FIFO
     let item = await Queue.peek();
@@ -772,11 +773,19 @@ async function autoRepairDeadLetters(): Promise<void> {
       }
 
       // 2. Auto-reparo de notas com avaliacao_id temporário
-      if (item.table === 'notas' && payloadObj.avaliacao_id) {
-        const avIdStr = String(payloadObj.avaliacao_id);
-        if (tempToRealMap.has(avIdStr)) {
-          payloadObj.avaliacao_id = tempToRealMap.get(avIdStr);
+      if (item.table === 'notas') {
+        if (payloadObj.avaliacao_id && tempToRealMap.has(String(payloadObj.avaliacao_id))) {
+          payloadObj.avaliacao_id = tempToRealMap.get(String(payloadObj.avaliacao_id));
           repaired = true;
+        }
+        if (Array.isArray(payloadObj.records)) {
+          payloadObj.records = payloadObj.records.map((r: Record<string, unknown>) => {
+            if (r && r.avaliacao_id && tempToRealMap.has(String(r.avaliacao_id))) {
+              repaired = true;
+              return { ...r, avaliacao_id: tempToRealMap.get(String(r.avaliacao_id)) };
+            }
+            return r;
+          });
         }
       }
 
