@@ -45,28 +45,25 @@ export async function pingSupabase(timeoutMs: number = PING_TIMEOUT): Promise<bo
 
   try {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-    if (!supabaseUrl || !supabaseKey) {
-      console.warn('[network] Variáveis VITE_SUPABASE_URL/KEY não configuradas — pulando ping Supabase');
+    if (!supabaseUrl) {
+      console.warn('[network] VITE_SUPABASE_URL não configurada — pulando ping Supabase');
       return true; // Não bloquear sync se config estiver faltando
     }
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    const response = await fetch(`${supabaseUrl}/rest/v1/`, {
+    // Pingar a raiz do projeto Supabase — endpoint público, não requer auth.
+    // Evita erros 401 no console que ocorriam ao usar /rest/v1/ sem Bearer token.
+    const response = await fetch(supabaseUrl, {
       method: 'HEAD',
       cache: 'no-store',
       signal: controller.signal,
-      headers: { 'apikey': supabaseKey },
     });
 
     clearTimeout(timeoutId);
     // Qualquer resposta HTTP indica que o servidor está acessível.
-    // 401/403 = servidor respondeu mas sem auth (esperado, pois não enviamos Bearer token)
-    // 400 = endpoint acessível, query inválida
-    // O objetivo é detectar CONECTIVIDADE, não autenticação.
     return response.status > 0;
   } catch {
     return false;
