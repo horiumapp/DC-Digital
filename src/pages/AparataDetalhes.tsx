@@ -73,7 +73,7 @@ export default function AparataDetalhes() {
 
     return (alunos || []).map((aluno, index) => {
       // Cálculo da Soma Parcial (considerando as notas e eventuais recuperações)
-      let media = '0,00';
+      let somaParcial = '0,00';
       if (principalAvs.length > 0) {
         let soma = 0;
         principalAvs.forEach(av => {
@@ -86,7 +86,7 @@ export default function AparataDetalhes() {
           
           soma += Math.max(isNaN(valAv) ? 0 : valAv, isNaN(valRp) ? 0 : valRp);
         });
-        media = soma.toFixed(2).replace('.', ',');
+        somaParcial = soma.toFixed(2).replace('.', ',');
       }
       
       const faltas = faltasMap[aluno.id] || 0;
@@ -95,7 +95,7 @@ export default function AparataDetalhes() {
         ...aluno,
         n: index + 1,
         matricula: aluno.matricula, 
-        media,
+        somaParcial,
         faltas
       };
     });
@@ -282,8 +282,8 @@ export default function AparataDetalhes() {
                         <td className="px-4 py-2.5 text-[#0f2851] font-bold text-sm hover:underline cursor-pointer">{aluno.nome}</td>
                         <td className="px-4 py-2.5 text-slate-700 text-sm font-mono uppercase">{aluno.matricula}</td>
                         <td className="px-4 py-2.5">
-                          <span className={`inline-block text-white text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[42px] text-center ${parseFloat(aluno.media.replace(',', '.')) >= 6 ? 'bg-emerald-500' : 'bg-red-500'}`}>
-                            {aluno.media}
+                          <span className={`inline-block text-white text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[42px] text-center ${parseFloat(aluno.somaParcial.replace(',', '.')) >= 6 ? 'bg-emerald-500' : 'bg-red-500'}`}>
+                            {aluno.somaParcial}
                           </span>
                         </td>
                         <td className="px-4 py-2.5">

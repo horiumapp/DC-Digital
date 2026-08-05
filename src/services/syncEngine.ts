@@ -34,6 +34,8 @@ export type SyncState = 'IDLE' | 'SYNCING' | 'ERROR';
 export interface SyncResult {
   synced: number;
   failed: number;
+  total: number;      // total de itens na fila quando o sync começou
+  remaining: number;  // itens restantes após o ciclo
   errors: string[];
 }
 
@@ -91,21 +93,21 @@ export function scheduleSync(): void {
 /** Sincroniza toda a fila de operações pendentes */
 export async function syncAll(): Promise<SyncResult> {
   if (_isSyncing) {
-    return { synced: 0, failed: 0, errors: ['Sincronização já em andamento'] };
+    return { synced: 0, failed: 0, total: 0, remaining: 0, errors: ['Sincronização já em andamento'] };
   }
 
   // FIX: Verificar se realmente está online com ping real
   // navigator.onLine pode retornar true em Wi-Fi sem rota ou portal captive
   const isReallyOnline = await pingInternet();
   if (!isReallyOnline) {
-    return { synced: 0, failed: 0, errors: ['Sem conexão com a internet'] };
+    return { synced: 0, failed: 0, total: 0, remaining: 0, errors: ['Sem conexão com a internet'] };
   }
 
   // FIX P1-#5: Verificar se o Supabase está acessível antes de sincronizar.
   // Internet pode estar ok, mas o backend pode estar fora (manutenção, deploy).
   const isSupabaseUp = await pingSupabase();
   if (!isSupabaseUp) {
-    return { synced: 0, failed: 0, errors: ['Servidor indisponível. Tentando novamente em breve.'] };
+    return { synced: 0, failed: 0, total: 0, remaining: 0, errors: ['Servidor indisponível. Tentando novamente em breve.'] };
   }
 
   // FIX P0-#1: Verificar sessão Supabase antes de sincronizar.
@@ -114,7 +116,7 @@ export async function syncAll(): Promise<SyncResult> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      return { synced: 0, failed: 0, errors: ['Sessão expirada. Faça login novamente para sincronizar.'] };
+      return { synced: 0, failed: 0, total: 0, remaining: 0, errors: ['Sessão expirada. Faça login novamente para sincronizar.'] };
     }
   } catch {
     // Se não conseguiu verificar a sessão, prosseguir com cautela
@@ -134,7 +136,7 @@ export async function syncAll(): Promise<SyncResult> {
         if (!lock) {
           // Outra aba já está sincronizando — aguardar
           console.info('[SyncEngine] Outra aba está sincronizando. Aguardando próximo ciclo.');
-          return { synced: 0, failed: 0, errors: ['Sincronização em andamento em outra aba'] };
+          return { synced: 0, failed: 0, total: 0, remaining: 0, errors: ['Sincronização em andamento em outra aba'] };
         }
         return _runSyncAll();
       }
@@ -151,7 +153,10 @@ async function _runSyncAll(): Promise<SyncResult> {
   setState('SYNCING');
   emit('start');
 
-  const result: SyncResult = { synced: 0, failed: 0, errors: [] };
+  const result: SyncResult = { synced: 0, failed: 0, total: 0, remaining: 0, errors: [] };
+
+  // FIX P2-#7: Capturar total de itens pendentes no início do ciclo para progresso
+  result.total = await Queue.getPendingCount();
 
   // FIX #15: Limite de itens por ciclo para evitar bloqueio longo em filas grandes.
   // Se a fila tiver mais itens, um próximo ciclo será agendado automaticamente.
@@ -253,6 +258,9 @@ async function _runSyncAll(): Promise<SyncResult> {
         scheduleSync();
       }
     }
+
+    // FIX P2-#7: Calcular itens restantes após o ciclo
+    result.remaining = await Queue.getPendingCount();
 
     setState(result.failed > 0 ? 'ERROR' : 'IDLE');
     emit('complete', result);
