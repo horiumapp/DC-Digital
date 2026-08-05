@@ -32,6 +32,7 @@ export default defineConfig(() => {
             /^\/auth\//,       // Não cachear rotas de auth
             /^\/api\//,        // Não cachear APIs
             /^\/rest\/v1\//,   // Não cachear API REST do Supabase
+            /\.(?:js|css|woff2?|png|jpg|jpeg|svg|gif|webp|ico|json|txt|map)$/,  // Não interceptar assets estáticos
           ],
           // Runtime caching strategies
           runtimeCaching: [
