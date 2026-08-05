@@ -63,7 +63,11 @@ export async function pingSupabase(timeoutMs: number = PING_TIMEOUT): Promise<bo
     });
 
     clearTimeout(timeoutId);
-    return response.ok || response.status === 400; // 400 = endpoint acessível, query inválida
+    // Qualquer resposta HTTP indica que o servidor está acessível.
+    // 401/403 = servidor respondeu mas sem auth (esperado, pois não enviamos Bearer token)
+    // 400 = endpoint acessível, query inválida
+    // O objetivo é detectar CONECTIVIDADE, não autenticação.
+    return response.status > 0;
   } catch {
     return false;
   }
