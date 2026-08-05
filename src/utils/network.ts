@@ -54,17 +54,18 @@ export async function pingSupabase(timeoutMs: number = PING_TIMEOUT): Promise<bo
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    // Pingar a raiz do projeto Supabase — endpoint público, não requer auth.
-    // Evita erros 401 no console que ocorriam ao usar /rest/v1/ sem Bearer token.
-    const response = await fetch(supabaseUrl, {
+    // Pingar a raiz do projeto Supabase com mode: 'no-cors'.
+    // Respostas opacas (status 0) são esperadas — se o fetch completar
+    // sem lançar exceção, o servidor está acessível.
+    await fetch(supabaseUrl, {
       method: 'HEAD',
+      mode: 'no-cors',
       cache: 'no-store',
       signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
-    // Qualquer resposta HTTP indica que o servidor está acessível.
-    return response.status > 0;
+    return true; // Fetch completou sem erro = servidor acessível
   } catch {
     return false;
   }
