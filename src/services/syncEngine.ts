@@ -8,7 +8,7 @@
 import { supabase } from '../lib/supabase';
 import { db, now, hashOperation, getOperationalTable, type SyncLogEntry, type SyncQueueItem } from '../lib/db';
 import * as Queue from './offlineQueue';
-import { pingInternet } from '../utils/network';
+import { pingInternet, pingSupabase } from '../utils/network';
 import { getTid } from '../utils/turmaUtils';
 
 // ============================================================
@@ -49,7 +49,7 @@ let _isSyncing = false;
 let _debounceTimer: ReturnType<typeof setTimeout> | null = null;
 const _listeners: Set<SyncListener> = new Set();
 
-const DEBOUNCE_MS = 500;
+const DEBOUNCE_MS = 2000;
 
 function setState(newState: SyncState) {
   if (_state !== newState) {
@@ -99,6 +99,26 @@ export async function syncAll(): Promise<SyncResult> {
   const isReallyOnline = await pingInternet();
   if (!isReallyOnline) {
     return { synced: 0, failed: 0, errors: ['Sem conexão com a internet'] };
+  }
+
+  // FIX P1-#5: Verificar se o Supabase está acessível antes de sincronizar.
+  // Internet pode estar ok, mas o backend pode estar fora (manutenção, deploy).
+  const isSupabaseUp = await pingSupabase();
+  if (!isSupabaseUp) {
+    return { synced: 0, failed: 0, errors: ['Servidor indisponível. Tentando novamente em breve.'] };
+  }
+
+  // FIX P0-#1: Verificar sessão Supabase antes de sincronizar.
+  // Se o JWT expirou, todos os itens falhariam com 401/403, gastando retries
+  // e potencialmente movendo dados válidos para dead letter.
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return { synced: 0, failed: 0, errors: ['Sessão expirada. Faça login novamente para sincronizar.'] };
+    }
+  } catch {
+    // Se não conseguiu verificar a sessão, prosseguir com cautela
+    console.warn('[SyncEngine] Não foi possível verificar sessão — prosseguindo com sync.');
   }
 
   // FIX M4: Usar Web Locks API para serializar sincronizações entre múltiplas abas.
@@ -201,13 +221,23 @@ async function _runSyncAll(): Promise<SyncResult> {
           emit('itemFailed', { table: item.table, error: errorMsg, deadLetter: true });
           // Continua para o próximo item em vez de parar
         } else {
-          // Erro recuperável — retry com backoff e parar o loop
+          // Erro recuperável — retry com backoff
           await Queue.retry(item.id, errorMsg);
           await logSync(item.table, item.operation, 'error', errorMsg);
           result.failed++;
           result.errors.push(`${item.table}/${item.operation}: ${errorMsg}`);
           emit('itemFailed', { table: item.table, error: errorMsg });
-          break; // Parar apenas para erros recuperáveis (rede, timeout)
+
+          // FIX P0-#3: Erros de dependência (avaliação pai pendente) NÃO devem
+          // bloquear a fila inteira. Outros itens independentes podem ser sincronizados
+          // enquanto a dependência é resolvida em ciclos futuros.
+          // Apenas erros de rede/timeout (verdadeiramente recuperáveis por reconexão)
+          // devem parar o loop, pois indicam que o servidor está inacessível.
+          const isDependencyError = errorMsg.includes('Aguardando sincronização');
+          if (!isDependencyError) {
+            break; // Parar para erros de rede/timeout — servidor inacessível
+          }
+          // Para erros de dependência: continuar processando próximos itens
         }
       }
 

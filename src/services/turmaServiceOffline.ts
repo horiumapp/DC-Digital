@@ -71,13 +71,31 @@ export async function fetchAlunos(turmaId: string | number): Promise<Aluno[]> {
     })));
     return result;
   } catch {
-    // Fallback local
+    // Fallback local (stale data)
     const { alunos: local, decryptionFailed } = await OfflineStorage.getCachedAlunos(tid);
 
     // FIX: Se a chave de criptografia foi perdida (troca de dispositivo, limpeza de browser),
     // avisar o usuário claramente em vez de exibir '[DADOS PROTEGIDOS - RECONECTE PARA ATUALIZAR]'.
     if (decryptionFailed) {
       console.error('[turmaServiceOffline] Chave de criptografia perdida — dados de alunos offline inacessíveis. Reconecte à internet para re-sincronizar.');
+    }
+
+    // FIX P1-#6: Stale-while-revalidate — retorna dados locais imediatamente
+    // e tenta revalidar em background se online (erro pode ser intermitente)
+    if (_isOnline && !decryptionFailed) {
+      TurmaService.fetchAlunos(turmaId).then(async (fresh) => {
+        try {
+          await OfflineStorage.cacheAlunos(fresh.map(a => ({
+            id: a.id,
+            nome: a.nome,
+            cpf: a.cpf,
+            turma_id: tid,
+          })));
+          console.info('[turmaServiceOffline] Cache de alunos revalidado em background.');
+        } catch (cacheErr) {
+          console.warn('[turmaServiceOffline] Falha ao re-cachear alunos em background:', cacheErr);
+        }
+      }).catch(() => { /* silencioso — já retornamos stale data */ });
     }
 
     return local.map(a => {
@@ -569,16 +587,27 @@ export async function removerFrequencia(
   const tid = getTid(turmaId);
   const dataISO = normalizarDataISO(data);
 
+  // FIX P0-#2: Verificar se há registros sincronizados ANTES de deletar.
+  // Se todos eram 'pending' (nunca enviados ao servidor), não enfileirar DELETE
+  // remoto — evita dead letters para dados inexistentes no Supabase.
+  // Padrão já usado em deleteConteudoLocal (FIX C3).
+  const existing = await OfflineStorage.getAllFrequenciasLocal(tid, disciplina);
+  const hasSyncedRecords = existing.some(
+    r => r.data === dataISO && r.tempo === tempo && r.syncStatus !== 'pending'
+  );
+
   // 1. Remover localmente
   await OfflineStorage.deleteFrequenciasLocal(tid, disciplina, dataISO, tempo);
 
-  // 2. Enfileirar
-  await Queue.enqueue('frequencias', 'DELETE', {
-    turma_id: tid,
-    data: dataISO,
-    tempo,
-    disciplina,
-  });
+  // 2. Só enfileirar DELETE se havia registros já sincronizados com o servidor
+  if (hasSyncedRecords) {
+    await Queue.enqueue('frequencias', 'DELETE', {
+      turma_id: tid,
+      data: dataISO,
+      tempo,
+      disciplina,
+    });
+  }
 
   if (_isOnline) {
     SyncEngine.scheduleSync();
