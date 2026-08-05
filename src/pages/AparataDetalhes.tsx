@@ -72,11 +72,10 @@ export default function AparataDetalhes() {
     const principalAvs = avaliacoes.filter(a => a.tipo.startsWith('AV') && !a.tipo.startsWith('RP'));
 
     return (alunos || []).map((aluno, index) => {
-      // Cálculo Correto da Média (considerando as notas e eventuais recuperações)
+      // Cálculo da Soma Parcial (considerando as notas e eventuais recuperações)
       let media = '0,00';
       if (principalAvs.length > 0) {
         let soma = 0;
-        let counted = 0;
         principalAvs.forEach(av => {
           const rp = avaliacoes.find(a => a.parent_id?.toString() === av.id?.toString());
           const valAvStr = aluno.notas?.[av.id];
@@ -86,9 +85,8 @@ export default function AparataDetalhes() {
           const valRp = valRpStr ? parseFloat(valRpStr.replace(',', '.')) : 0;
           
           soma += Math.max(isNaN(valAv) ? 0 : valAv, isNaN(valRp) ? 0 : valRp);
-          counted++;
         });
-        media = counted > 0 ? (soma / counted).toFixed(2).replace('.', ',') : '0,00';
+        media = soma.toFixed(2).replace('.', ',');
       }
       
       const faltas = faltasMap[aluno.id] || 0;
@@ -273,7 +271,7 @@ export default function AparataDetalhes() {
                       <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase w-12">Nº</th>
                       <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Nome</th>
                       <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Matrícula</th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Média</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Soma Parcial</th>
                       <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Faltas</th>
                     </tr>
                   </thead>
