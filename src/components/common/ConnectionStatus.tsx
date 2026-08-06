@@ -6,6 +6,7 @@ export default function ConnectionStatus() {
   const {
     connectionState,
     pendingCount,
+    isNearCapacity,
     deadLetterCount,
     deadLetterItems,
     lastError,
@@ -72,9 +73,11 @@ export default function ConnectionStatus() {
       ) : null,
     },
     OFFLINE: {
-      bg: 'bg-amber-500/95',
-      icon: <WifiOff className="w-4 h-4" />,
-      text: pendingCount > 0
+      bg: isNearCapacity ? 'bg-amber-600/95 font-bold' : 'bg-amber-500/95',
+      icon: isNearCapacity ? <AlertTriangle className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />,
+      text: isNearCapacity
+        ? `Atenção: Fila offline próxima do limite (${pendingCount}/5000) • Conecte-se à internet para sincronizar!`
+        : pendingCount > 0
         ? `Sem conexão • ${pendingCount} alteração(ões) salva(s) localmente`
         : 'Sem conexão — trabalhando offline',
       action: null,
