@@ -72,6 +72,16 @@ vi.mock('../components/common/LoadingFallback', () => ({
   default: () => <div data-testid="loading-fallback">Carregando...</div>,
 }));
 
+// ---------- Mock network & syncEngine ----------
+vi.mock('../utils/network', () => ({
+  pingInternet: vi.fn(async () => true),
+  pingSupabase: vi.fn(async () => true),
+}));
+
+vi.mock('../services/syncEngine', () => ({
+  syncAll: vi.fn(async () => ({ synced: 0, failed: 0, total: 0, remaining: 0, errors: [] })),
+}));
+
 // ---------- Mock offlineStorage ----------
 vi.mock('../services/offlineStorage', () => ({
   cacheUser: mockCacheUser,

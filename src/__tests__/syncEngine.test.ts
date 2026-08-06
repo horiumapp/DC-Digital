@@ -7,9 +7,10 @@ Object.defineProperty(globalThis, 'navigator', {
   configurable: true,
 });
 
-// ---------- Mock network utility (pingInternet) ----------
+// ---------- Mock network utility (pingInternet & pingSupabase) ----------
 vi.mock('../utils/network', () => ({
   pingInternet: vi.fn(async () => true), // Por padrão, simula online
+  pingSupabase: vi.fn(async () => true),
 }));
 
 
