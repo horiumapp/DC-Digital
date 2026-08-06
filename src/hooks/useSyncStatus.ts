@@ -23,6 +23,8 @@ interface SyncStatusResult {
   lastSyncAt: Date | null;
   /** Mensagem do último erro */
   lastError: string | null;
+  /** Indica se a fila pendente está próxima da capacidade máxima (>= 80% do limite de 5000) */
+  isNearCapacity: boolean;
   /** Força sincronização agora */
   syncNow: () => Promise<void>;
   /** Tenta reprocessar itens com erro */
@@ -134,6 +136,7 @@ export function useSyncStatus(isOnline: boolean): SyncStatusResult {
   return {
     connectionState,
     pendingCount,
+    isNearCapacity: pendingCount >= 4000,
     deadLetterCount: deadLetterItems.length,
     deadLetterItems,
     lastSyncAt,

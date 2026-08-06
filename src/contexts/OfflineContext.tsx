@@ -23,6 +23,8 @@ interface OfflineContextType {
   connectionState: ConnectionState;
   /** Número de itens pendentes de sincronização */
   pendingCount: number;
+  /** Se a fila pendente está próxima do limite (>= 80%) */
+  isNearCapacity: boolean;
   /** Número de itens na Dead Letter Queue */
   deadLetterCount: number;
   /** Lista de itens na Dead Letter Queue */
@@ -52,6 +54,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   const {
     connectionState,
     pendingCount,
+    isNearCapacity,
     deadLetterCount,
     deadLetterItems,
     lastSyncAt,
@@ -130,6 +133,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         isOnline,
         connectionState,
         pendingCount,
+        isNearCapacity,
         deadLetterCount,
         deadLetterItems,
         lastSyncAt,

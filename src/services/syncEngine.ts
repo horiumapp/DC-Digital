@@ -11,6 +11,8 @@ import * as Queue from './offlineQueue';
 import { pingInternet, pingSupabase } from '../utils/network';
 import { getTid } from '../utils/turmaUtils';
 
+import { reportWarning } from '../utils/errorReporting';
+
 // ============================================================
 // M5: Helper de validação de UUID
 // ============================================================
@@ -224,6 +226,12 @@ async function _runSyncAll(): Promise<SyncResult> {
           result.failed++;
           result.errors.push(`${item.table}/${item.operation}: [DEAD_LETTER] ${errorMsg}`);
           emit('itemFailed', { table: item.table, error: errorMsg, deadLetter: true });
+          reportWarning(`[SyncEngine DLQ] Item movido para dead-letter: ${item.table}/${item.operation}`, {
+            table: item.table,
+            operation: item.operation,
+            error: errorMsg,
+            errorCode,
+          });
           // Continua para o próximo item em vez de parar
         } else {
           // Erro recuperável — retry com backoff
