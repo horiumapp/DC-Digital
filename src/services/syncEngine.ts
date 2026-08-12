@@ -789,7 +789,12 @@ async function updateTempAvaliacaoId(localId: number, serverId: string): Promise
 /** Repara automaticamente itens na fila marcados com erro que possuem ID temporário ou turma_id composto */
 async function autoRepairDeadLetters(): Promise<void> {
   try {
-    const queueItems = await db.syncQueue.toArray();
+    // FIX P2: Filtrar apenas itens que podem precisar de reparo (error/pending)
+    // em vez de carregar toda a fila (até 5000 itens) na memória.
+    // Itens 'done' já foram deletados e 'processing' não devem ser tocados.
+    const queueItems = await db.syncQueue
+      .where('status').anyOf(['error', 'pending'])
+      .toArray();
     const allLocalAvaliacoes = typeof db.avaliacoes?.toArray === 'function' ? await db.avaliacoes.toArray() : [];
 
     // Mapeamento de IDs temporários para o serverId / UUID real da avaliação

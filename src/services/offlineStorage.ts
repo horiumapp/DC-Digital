@@ -471,7 +471,13 @@ export async function getAvaliacoesLocal(turmaId: string, disciplina?: string): 
 export async function deleteAvaliacaoLocal(id: string): Promise<void> {
   const record = await db.avaliacoes.where('id').equals(id).first();
   if (record?.localId) {
-    await db.avaliacoes.delete(record.localId);
+    // FIX R1: Limpar notas associadas em transação atômica para evitar órfãs no IndexedDB.
+    // Sem isso, notas referenciando uma avaliação inexistente permaneciam indefinidamente,
+    // consumindo espaço e podendo causar erros de referência na sincronização.
+    await db.transaction('rw', [db.avaliacoes, db.notas], async () => {
+      await db.notas.where('avaliacao_id').equals(id).delete();
+      await db.avaliacoes.delete(record.localId);
+    });
   }
 }
 
