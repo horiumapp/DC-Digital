@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { User, Home, LogOut, ChevronDown, Menu, X, Shield } from 'lucide-react';
+import { User, Home, LogOut, ChevronDown, Menu, X, Shield, AlertTriangle } from 'lucide-react';
 import ScheduleModal from './ScheduleModal';
 import Background from './Background';
 import ConnectionStatus from './common/ConnectionStatus';
@@ -13,7 +13,7 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { clearLocalData } = useOffline();
+  const { clearLocalData, deadLetterCount } = useOffline();
 
   // If no user, mock a fallback slightly just to not break layout in weird state
   const hasAdminAccess = user ? user.role === 'ADMIN' : false;
@@ -204,6 +204,17 @@ export default function Layout() {
       </header>
 
       <ConnectionStatus />
+
+      {/* FIX: Alerta proativo quando há itens na Dead Letter Queue */}
+      {deadLetterCount > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800 px-4 py-2.5 flex items-center justify-center gap-2 text-sm">
+          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+          <span className="text-amber-800 dark:text-amber-200 font-medium">
+            {deadLetterCount} registro(s) não puderam ser sincronizados.
+            <span className="hidden sm:inline"> Verifique o status de conexão ou entre em contato com o suporte.</span>
+          </span>
+        </div>
+      )}
 
       <main className="flex-1">
         <Outlet />

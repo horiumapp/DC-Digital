@@ -16,10 +16,15 @@ import { reportWarning } from '../utils/errorReporting';
 // ============================================================
 // M5: Helper de validação de UUID
 // ============================================================
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function assertUUID(val: unknown, field: string): string {
   const s = String(val ?? '').trim();
   if (!s) {
     throw new Error(`[DEAD_LETTER] Campo '${field}' está ausente ou vazio.`);
+  }
+  if (!UUID_REGEX.test(s)) {
+    throw new Error(`[DEAD_LETTER] Campo '${field}' não é um UUID válido: ${s}`);
   }
   return s;
 }
@@ -456,7 +461,7 @@ function sanitizeAvaliacao(payload: AvaliacaoPayload): Record<string, unknown> {
         }))
       : [],
     bimestre: String(payload.bimestre),
-    valor_maximo: Number(payload.valor_maximo || 10),
+    valor_maximo: (() => { const vm = Number(payload.valor_maximo || 10); return (vm > 0 && vm <= 1000) ? vm : 10; })(),
     disciplina: String(payload.disciplina),
   };
 

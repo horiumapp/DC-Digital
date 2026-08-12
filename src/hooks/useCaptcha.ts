@@ -2,9 +2,13 @@ import { useState } from 'react';
 
 /**
  * Gera um código numérico de 4 dígitos (1000-9999).
+ * Usa crypto.getRandomValues() — criptograficamente seguro,
+ * ao contrário de Math.random() que é previsível.
  */
 function generate4DigitCode(): string {
-  return Math.floor(1000 + Math.random() * 9000).toString();
+  const arr = new Uint16Array(1);
+  crypto.getRandomValues(arr);
+  return (1000 + (arr[0] % 9000)).toString();
 }
 
 export function useCaptcha() {

@@ -89,6 +89,11 @@ export default defineConfig(() => {
     // SEGURANÇA: GEMINI_API_KEY removida do bundle frontend.
     // Para usar a Gemini API, utilize uma Edge Function do Supabase (server-side).
     define: {},
+    // FIX: Remover console.log/warn/error e debugger em builds de produção
+    // para evitar exposição de internos de autenticação e sessão.
+    esbuild: {
+      drop: process.env.NODE_ENV === 'production' ? ['console' as const, 'debugger' as const] : [],
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),

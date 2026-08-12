@@ -320,7 +320,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // Tentar sincronizar imediatamente pendências de fundo antes de checar/deslogar
       if (navigator.onLine) {
-        await syncAll();
+        const syncResult = await syncAll();
+        // FIX: Se o sync falhou com erros, logar para diagnóstico.
+        // O fluxo de getPendingCount() abaixo já cuidará de alertar o usuário.
+        if (syncResult.failed > 0) {
+          console.warn(`[AuthContext] Sync pré-logout: ${syncResult.failed} item(ns) falharam.`);
+        }
       }
 
       const pending = await getPendingCount();

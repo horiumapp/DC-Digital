@@ -119,6 +119,11 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [faltasPorData, setFaltasPorData] = useState<Record<string, Set<string>>>({});
   const [fechamentos, setFechamentos] = useState<Record<string, boolean>>({});
+
+  // FIX Race Condition: Ref para alunos evita stale closure em callbacks assíncronos
+  // (salvarNotas, salvarAvaliacao) que capturam snapshot antigo via closure.
+  const alunosRef = useRef<Aluno[]>([]);
+  useEffect(() => { alunosRef.current = alunos; }, [alunos]);
   
   const { showError, showSuccess } = useToast();
 
@@ -295,7 +300,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
         return [...prev, avaliacaoSalva];
       });
 
-      await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunos);
+      await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunosRef.current);
       showSuccessRef.current('Avaliação salva com sucesso!');
       return createdId;
     } catch (err) {
@@ -303,7 +308,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       showErrorRef.current('Não foi possível salvar a avaliação. Verifique sua conexão.');
       return '';
     }
-  }, [turmaAtiva, alunos, verificarPeriodoFechado, fetchAvaliacoesInterno]);
+  }, [turmaAtiva, verificarPeriodoFechado, fetchAvaliacoesInterno]);
 
   const removerAvaliacao = useCallback(async (id: string) => {
     const av = avaliacoes.find(a => a.id === id);
@@ -352,13 +357,13 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
         });
       });
 
-      await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunos);
+      await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunosRef.current);
       showSuccessRef.current('Notas salvas com sucesso!');
     } catch (err) {
       console.error('Erro ao salvar notas:', err);
       showErrorRef.current('Ocorreu um erro ao salvar as notas.');
     }
-  }, [turmaAtiva, avaliacoes, alunos, verificarPeriodoFechado, fetchAvaliacoesInterno]);
+  }, [turmaAtiva, avaliacoes, verificarPeriodoFechado, fetchAvaliacoesInterno]);
 
   const carregarFaltasDaData = useCallback(async (data: string) => {
     if (!turmaAtiva) return;

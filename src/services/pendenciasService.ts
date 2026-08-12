@@ -67,6 +67,38 @@ interface ConsolidadoGroup {
   countedSlots: Set<string>;
 }
 
+// FIX: Interface e função movidas para escopo do módulo (antes estavam dentro do loop por lote)
+interface PostgrestQueryBuilder {
+  abortSignal: (signal: AbortSignal) => this;
+  range: (from: number, to: number) => Promise<{ data: unknown[] | null; error: Error | null }>;
+}
+
+const FETCH_ALL_PAGE_SIZE = 1000;
+
+/** Busca todos os registros de uma tabela em lote com paginação automática e timeout */
+async function fetchAllPaginated<T>(builder: () => PostgrestQueryBuilder): Promise<T[]> {
+  const result: T[] = [];
+  let offset = 0;
+
+  // Timeout de 15 segundos (15000 ms) por chamada de lote
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort('Timeout excedido'), 15000);
+
+  try {
+    while (true) {
+      const { data, error } = await builder().abortSignal(controller.signal).range(offset, offset + FETCH_ALL_PAGE_SIZE - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      result.push(...(data as T[]));
+      if (data.length < FETCH_ALL_PAGE_SIZE) break;
+      offset += FETCH_ALL_PAGE_SIZE;
+    }
+  } finally {
+    clearTimeout(timeoutId);
+  }
+  return result;
+}
+
 export const fetchPendenciasPorEscola = async (
   escolaId: string, 
   periodosSelecionados: string[],
@@ -181,37 +213,6 @@ export const fetchPendenciasPorEscola = async (
 
       const batchComponentes = [...new Set(batchGroups.map(g => g.componente))];
 
-      interface PostgrestQueryBuilder {
-        abortSignal: (signal: AbortSignal) => this;
-        range: (from: number, to: number) => Promise<{ data: unknown[] | null; error: Error | null }>;
-      }
-
-      const PAGE_SIZE = 1000;
-
-      /** Busca todos os registros de uma tabela em lote com paginação automática e timeout */
-      const fetchAll = async <T>(builder: () => PostgrestQueryBuilder): Promise<T[]> => {
-        const result: T[] = [];
-        let offset = 0;
-        
-        // Timeout de 15 segundos (15000 ms) por chamada de lote
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort('Timeout excedido'), 15000);
-
-        try {
-          while (true) {
-            const { data, error } = await builder().abortSignal(controller.signal).range(offset, offset + PAGE_SIZE - 1);
-            if (error) throw error;
-            if (!data || data.length === 0) break;
-            result.push(...(data as T[]));
-            if (data.length < PAGE_SIZE) break;
-            offset += PAGE_SIZE;
-          }
-        } finally {
-          clearTimeout(timeoutId);
-        }
-        return result;
-      };
-
       interface FrequenciaLote { turma_id: string; disciplina: string; tempo: string; data: string; }
       interface ConteudoLote { turma_id: string; disciplina: string; tempo: string; data: string; }
       interface AvaliacaoLote { id: string; turma_id: string; disciplina: string; bimestre: string; }
@@ -219,7 +220,7 @@ export const fetchPendenciasPorEscola = async (
       interface NotaLote { avaliacao_id: string; }
 
       const [fAll, cAll, avAll, aluAll] = await Promise.all([
-        fetchAll<FrequenciaLote>(() => {
+        fetchAllPaginated<FrequenciaLote>(() => {
           let q = supabase.from('frequencias')
             .select('turma_id, disciplina, tempo, data')
             .in('turma_id', batchTurmaIds)
@@ -228,7 +229,7 @@ export const fetchPendenciasPorEscola = async (
           if (maxDateISO) q = q.lte('data', maxDateISO);
           return q as unknown as PostgrestQueryBuilder;
         }),
-        fetchAll<ConteudoLote>(() => {
+        fetchAllPaginated<ConteudoLote>(() => {
           let q = supabase.from('conteudos')
             .select('turma_id, disciplina, tempo, data')
             .in('turma_id', batchTurmaIds)
@@ -237,11 +238,11 @@ export const fetchPendenciasPorEscola = async (
           if (maxDateISO) q = q.lte('data', maxDateISO);
           return q as unknown as PostgrestQueryBuilder;
         }),
-        fetchAll<AvaliacaoLote>(() => supabase.from('avaliacoes')
+        fetchAllPaginated<AvaliacaoLote>(() => supabase.from('avaliacoes')
           .select('id, turma_id, disciplina, bimestre')
           .in('turma_id', batchTurmaIds)
           .in('disciplina', batchComponentes) as unknown as PostgrestQueryBuilder),
-        fetchAll<AlunoLote>(() => supabase.from('alunos')
+        fetchAllPaginated<AlunoLote>(() => supabase.from('alunos')
           .select('id, turma_id')
           .in('turma_id', batchTurmaIds) as unknown as PostgrestQueryBuilder)
       ]);
@@ -255,7 +256,7 @@ export const fetchPendenciasPorEscola = async (
       // Buscar notas em lote para todas as avaliações encontradas
       const avIds = avAll.map(av => av.id);
       const nData = avIds.length > 0
-        ? await fetchAll<NotaLote>(() => supabase.from('notas').select('avaliacao_id').in('avaliacao_id', avIds) as unknown as PostgrestQueryBuilder)
+        ? await fetchAllPaginated<NotaLote>(() => supabase.from('notas').select('avaliacao_id').in('avaliacao_id', avIds) as unknown as PostgrestQueryBuilder)
         : [];
 
       // Helper: converte 'DD/MM/YYYY' ou 'YYYY-MM-DD' para Date para comparação
