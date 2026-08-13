@@ -21,7 +21,7 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': [
         'warn',
-        { allowConstantExport: true, allowExportNames: ['useAuth', 'useOffline', 'useTurma', 'Root'] },
+        { allowConstantExport: true, allowExportNames: ['useAuth', 'useOffline', 'useTurma', 'useToast', 'Root'] },
       ],
       // Permite uso de 'any' em casos herdados (migrar gradualmente)
       '@typescript-eslint/no-explicit-any': 'warn',

@@ -59,7 +59,7 @@ export default function RelatorioNotas() {
   const [hasSearched, setHasSearched] = useState(false);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
-  const [notas, setNotas] = useState<any[]>([]);
+  const [notas, setNotas] = useState<Record<string, unknown>[]>([]);
 
   const fetchTurmasProfessor = React.useCallback(async () => {
     setLoading(true);

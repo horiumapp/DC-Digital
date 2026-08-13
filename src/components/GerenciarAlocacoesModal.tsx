@@ -2,16 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { X, Building2, Clock, Plus, Trash2, MapPin } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
+interface EscolaItem {
+  id: string;
+  nome: string;
+}
+
+interface AlocacaoRow {
+  id: string;
+  escola_id: string;
+  turno: string;
+  escolas?: { nome: string } | { nome: string }[];
+}
+
 interface GerenciarAlocacoesModalProps {
   isOpen: boolean;
   onClose: () => void;
-  professor: any;
+  professor: { id: string; nome: string } | null;
   onAlocacoesChanged: () => void;
 }
 
 const GerenciarAlocacoesModal = React.memo(function GerenciarAlocacoesModal({ isOpen, onClose, professor, onAlocacoesChanged }: GerenciarAlocacoesModalProps) {
-  const [escolas, setEscolas] = useState<any[]>([]);
-  const [alocacoes, setAlocacoes] = useState<any[]>([]);
+  const [escolas, setEscolas] = useState<EscolaItem[]>([]);
+  const [alocacoes, setAlocacoes] = useState<AlocacaoRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [novaAlocacao, setNovaAlocacao] = useState({
     escola_id: '',
@@ -30,7 +42,7 @@ const GerenciarAlocacoesModal = React.memo(function GerenciarAlocacoesModal({ is
     const { data, error } = await supabase
       .from('professor_alocacoes')
       .select('id, escola_id, turno, escolas(nome)')
-      .eq('professor_id', professor.id)
+      .eq('professor_id', professor?.id)
       .order('turno');
       
     if (error) {

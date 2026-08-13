@@ -9,11 +9,11 @@ interface CalendarWidgetProps {
   year: number;
   currentMonth: number;
   onMonthChange: (month: number) => void;
-  turmaAtiva: any;
-  lancamentos: any[];
-  avaliacoes: any[];
-  alunos: any[];
-  horarioTurma?: any[];
+  turmaAtiva: { id: string; nome: string } | null;
+  lancamentos: unknown[];
+  avaliacoes: unknown[];
+  alunos: unknown[];
+  horarioTurma?: unknown[];
   minMonth?: number;
   maxMonth?: number;
   periodoStart?: string;

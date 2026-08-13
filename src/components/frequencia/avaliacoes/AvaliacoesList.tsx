@@ -6,7 +6,7 @@ import { isAvaliacaoPendente } from '../../../utils/avaliacaoUtils';
 
 interface AvaliacoesListProps {
   avaliacoes: Avaliacao[];
-  alunos: any[];
+  alunos: { id: string; nome?: string; notas?: Record<string, unknown> }[];
   faltasPorData: Record<string, Set<string>>;
   onViewDetails: (av: Avaliacao) => void;
   onEdit: (av: Avaliacao) => void;

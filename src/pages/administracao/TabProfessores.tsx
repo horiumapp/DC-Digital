@@ -23,12 +23,16 @@ export interface ProfessorRow {
   nome: string;
   email: string;
   cpf?: string;
+  telefone?: string;
+  vinculo?: string;
+  status?: string;
+  senha?: string;
   departamento?: string;
   disciplinas?: string[];
   usuario_id?: string;
   alocacoes_count?: number;
-  professor_alocacoes?: any[];
-  professor_horarios?: any[];
+  professor_alocacoes?: { id?: string; escola_id: string; turno?: string; escolas?: { nome?: string } | { nome?: string }[] }[];
+  professor_horarios?: { id?: string; escola_id?: string; dia_semana?: number }[];
 }
 
 export interface EscolaOption {
@@ -130,7 +134,7 @@ export default function TabProfessores() {
     setLoading(false);
   };
 
-  const handleSaveProfessor = async (novoProfessor: any) => {
+  const handleSaveProfessor = async (novoProfessor: NovoProfessorFormData | ProfessorRow) => {
     const professorData = {
       nome: novoProfessor.nome,
       email: novoProfessor.email,
@@ -158,7 +162,7 @@ export default function TabProfessores() {
       }
     } else {
       // Limpa chaves vazias para não conflitar com constraints UNIQUE (tipo cpf vazio)
-      const dataToInsert = { ...professorData };
+      const dataToInsert: Record<string, string | null | string[] | undefined> = { ...professorData };
       if (!dataToInsert.cpf) dataToInsert.cpf = null;
       if (!dataToInsert.email) dataToInsert.email = null;
 
@@ -234,7 +238,7 @@ export default function TabProfessores() {
     
     handleSaveProfessor({
       ...inlineFormData,
-      email: inlineFormData.email || null,
+      email: inlineFormData.email || '',
       cpf: '',
       telefone: '',
       status: 'Ativo',
@@ -266,7 +270,7 @@ export default function TabProfessores() {
 
   const getProfessorCount = (escolaId: string) => {
     return professores.filter(p => 
-      (p as any).professor_alocacoes?.some((aloc: { escola_id: string }) => aloc.escola_id === escolaId)
+      p.professor_alocacoes?.some((aloc: { escola_id: string }) => aloc.escola_id === escolaId)
     ).length;
   };
 
@@ -285,7 +289,7 @@ export default function TabProfessores() {
 
   const professoresDaEscola = selectedEscola 
     ? professores.filter(p => 
-        p.professor_alocacoes?.some((aloc: any) => aloc.escola_id === selectedEscola.id) &&
+        p.professor_alocacoes?.some((aloc: { escola_id: string }) => aloc.escola_id === selectedEscola.id) &&
         (p.nome.toLowerCase().includes(buscaProfessor.toLowerCase()) ||
          (p.cpf && p.cpf.includes(buscaProfessor)) ||
          (p.email && p.email.toLowerCase().includes(buscaProfessor.toLowerCase())))

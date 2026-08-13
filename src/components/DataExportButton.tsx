@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 
 interface DataExportButtonProps {
-  getData: () => Promise<any>;
+  getData: () => Promise<unknown>;
   fileName?: string;
   onExportSuccess?: () => void;
-  onExportError?: (error: any) => void;
+  onExportError?: (error: unknown) => void;
 }
 
 export default function DataExportButton({ getData, fileName = 'meus_dados_privacidade.json', onExportSuccess, onExportError }: DataExportButtonProps) {

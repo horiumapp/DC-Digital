@@ -4,7 +4,7 @@ import Captcha from '../common/Captcha';
 import { useCaptcha } from '../../hooks/useCaptcha';
 
 interface AnotacoesTabProps {
-  turmaAtiva: any;
+  turmaAtiva: { id: string; nome?: string } | null;
   tempoAula: string;
   setTempoAula: (v: string) => void;
   disponiveisTempos: string[];

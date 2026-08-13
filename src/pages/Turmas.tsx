@@ -93,7 +93,7 @@ export default function Turmas() {
           escola_id: t.escola_id
         })));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (isMounted.current) {
         console.error('Erro ao carregar turmas:', err);
         // Tenta recuperar do cache local em caso de erro
@@ -189,7 +189,7 @@ export default function Turmas() {
             a.findIndex(t => (t.escola_id === v.escola_id && t.turno === v.turno)) === i
           );
           
-          const mappedAlocs: EscolaAlocacao[] = uniqueAlocs.map((item: any) => {
+          const mappedAlocs: EscolaAlocacao[] = uniqueAlocs.map((item: { id: string; escola_id: string; turno: string; escolas?: { nome: string } | { nome: string }[] }) => {
             const escolaObj = Array.isArray(item.escolas)
               ? item.escolas[0]
               : item.escolas;
@@ -227,7 +227,7 @@ export default function Turmas() {
         console.warn("Nenhum professor encontrado com o e-mail:", emailLimpo);
         showError("Cadastro de professor não encontrado para este e-mail.");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (isMounted.current) {
         console.error('Erro ao carregar lotações:', err);
         // Tenta recuperar do cache local do usuário em caso de erro/falha de rede

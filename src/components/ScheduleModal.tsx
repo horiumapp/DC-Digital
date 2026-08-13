@@ -5,6 +5,13 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/db';
 
+export interface ScheduleTurmaItem {
+  id?: string;
+  nome?: string;
+  turno?: string;
+  componente_horario?: string;
+}
+
 interface ScheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -18,8 +25,8 @@ const SLOTS = [1, 2, 3, 4, 5, 6, 7];
 const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, professorId, escolaId }: ScheduleModalProps) {
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [schedule, setSchedule] = useState<Record<string, any>>({});
-  const [turmas, setTurmas] = useState<any[]>([]);
+  const [schedule, setSchedule] = useState<Record<string, ScheduleTurmaItem>>({});
+  const [turmas, setTurmas] = useState<ScheduleTurmaItem[]>([]);
   const [professorDisciplinas, setProfessorDisciplinas] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const { user } = useAuth();
@@ -67,7 +74,7 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
         .in('professor_id', targetProfIds)
         .eq('escola_id', targetEscolaId);
 
-      const mappedSchedule: Record<string, any> = {};
+      const mappedSchedule: Record<string, ScheduleTurmaItem> = {};
       if (scheduleData) {
         scheduleData.forEach(item => {
           const key = `${item.dia_semana}-${item.tempo_ordem}`;
@@ -96,7 +103,7 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
         const filteredHorarios = localHorarios.filter(h => schoolTurmaIds.has(h.turma_id));
         
         // 3. Mapear horários
-        const mappedSchedule: Record<string, any> = {};
+        const mappedSchedule: Record<string, ScheduleTurmaItem> = {};
         filteredHorarios.forEach(item => {
           const key = `${item.dia_semana}-${item.tempo_ordem}`;
           const matchingTurma = localTurmas.find(t => t.id === item.turma_id);
@@ -246,7 +253,7 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
         .eq('professor_id', targetProfId)
         .eq('escola_id', targetEscolaId);
 
-      const inserts = Object.entries(schedule).map(([key, turma]: [string, any]) => {
+      const inserts = Object.entries(schedule).map(([key, turma]: [string, ScheduleTurmaItem]) => {
         const [dia, tempo] = key.split('-').map(Number);
         // Garantir que componente nunca fique vazio - usar disciplina selecionada ou fallback para a primeira disciplina do professor
         const componente = turma.componente_horario || professorDisciplinas[0] || '';

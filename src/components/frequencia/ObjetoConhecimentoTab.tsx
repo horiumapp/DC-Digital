@@ -19,7 +19,7 @@ interface CurriculoUnidade {
 }
 
 interface ObjetoConhecimentoTabProps {
-  turmaAtiva: any;
+  turmaAtiva: { id: string; nome?: string } | null;
   selectedDate: string;
   tempoAula: string;
   setTempoAula: (v: string) => void;
@@ -98,8 +98,8 @@ export default function ObjetoConhecimentoTab({
   const todosConteudos = React.useMemo(() => {
     const list: { unidade: string; descricao: string }[] = [];
     unidadesDisponiveis.forEach(u => {
-      u.objetos?.forEach((o: any) => {
-        const desc = typeof o === 'object' && o !== null ? (o.descricao || o.titulo_oc || '') : o;
+      u.objetos?.forEach((o: CurriculoObjeto | string) => {
+        const desc = typeof o === 'object' && o !== null ? (o.descricao || '') : o;
         if (desc) list.push({ unidade: u.nome || '', descricao: desc });
       });
     });
@@ -124,7 +124,7 @@ export default function ObjetoConhecimentoTab({
           // Garantir que o valor de objetos é sempre string (pode vir como objeto do banco)
           const rawObj = dados.objetos[0];
           const objStr = typeof rawObj === 'object' && rawObj !== null
-            ? ((rawObj as any).descricao || (rawObj as any).titulo_oc || JSON.stringify(rawObj))
+            ? ((rawObj as Record<string, unknown>).descricao as string || (rawObj as Record<string, unknown>).titulo_oc as string || JSON.stringify(rawObj))
             : (rawObj || '');
           setObjetoSalvo(true);
           setObjetoData({
@@ -175,7 +175,7 @@ export default function ObjetoConhecimentoTab({
     if (validateCaptcha()) {
       // Garantir que objetoConhecimento seja string ao salvar
       const objParaSalvar = typeof objetoConhecimento === 'object' && objetoConhecimento !== null
-        ? ((objetoConhecimento as any).descricao || (objetoConhecimento as any).titulo_oc || JSON.stringify(objetoConhecimento))
+        ? ((objetoConhecimento as Record<string, unknown>).descricao as string || (objetoConhecimento as Record<string, unknown>).titulo_oc as string || JSON.stringify(objetoConhecimento))
         : objetoConhecimento;
 
       await salvarConteudo({

@@ -1,11 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, Mail, CreditCard, Phone, Activity, Briefcase, GraduationCap, LayoutGrid, KeyRound, Plus } from 'lucide-react';
 
+export interface NovoProfessorFormData {
+  nome: string;
+  email: string;
+  cpf: string;
+  telefone: string;
+  senha?: string;
+  status: string;
+  vinculo: string;
+  departamento: string;
+  disciplinas: string[];
+}
+
+export interface ProfessorEditTarget {
+  id?: string;
+  nome?: string;
+  email?: string;
+  cpf?: string;
+  telefone?: string;
+  status?: string;
+  vinculo?: string;
+  departamento?: string;
+  disciplinas?: string[];
+}
+
 interface NovoProfessorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (professor: any) => void;
-  professorParaEditar?: any;
+  onSave: (professor: NovoProfessorFormData) => void;
+  professorParaEditar?: ProfessorEditTarget | null;
 }
 
 const DEPARTAMENTOS = ['Geral', 'BIOLÓGICAS', 'HUMANAS', 'EXATAS', 'LINGUAGENS'];

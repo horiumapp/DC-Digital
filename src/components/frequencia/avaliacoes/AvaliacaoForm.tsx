@@ -4,11 +4,13 @@ import Captcha from '../../common/Captcha';
 import { getBimestrePorData } from '../../../utils/dateUtils';
 import CustomDatePicker from './CustomDatePicker';
 
+import { Avaliacao } from '../../../contexts/TurmaContext';
+
 interface AvaliacaoFormProps {
-  selectedAvaliacao: any;
+  selectedAvaliacao: Avaliacao | null;
   selectedDate: string;
   instrumentoAvaliacao: string;
-  objetosAvaliacao: any[];
+  objetosAvaliacao: { unidade?: string; objeto?: string }[];
   periodoLetivo: string;
   unidadeDidatica: string;
   objetoConhecimento: string;

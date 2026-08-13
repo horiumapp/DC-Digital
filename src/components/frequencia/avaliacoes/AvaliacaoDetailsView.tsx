@@ -2,8 +2,10 @@ import React from 'react';
 import { Eye } from 'lucide-react';
 import { formatarDataParaExibicao } from '../../../utils/dateUtils';
 
+import { Avaliacao } from '../../../contexts/TurmaContext';
+
 interface AvaliacaoDetailsViewProps {
-  selectedAvaliacao: any;
+  selectedAvaliacao: Avaliacao | null;
   onBack: () => void;
 }
 
@@ -63,7 +65,7 @@ const AvaliacaoDetailsView = React.memo(function AvaliacaoDetailsView({
                   </td>
                 </tr>
               ) : (
-                selectedAvaliacao.objetos.map((obj: any, idx: number) => (
+                selectedAvaliacao.objetos.map((obj: { unidade?: string; objeto?: string }, idx: number) => (
                   <tr key={idx} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 text-slate-700 font-bold text-xs">{obj.unidade || '-'}</td>
                     <td className="px-6 py-4 text-slate-600 text-xs">{obj.objeto || '-'}</td>

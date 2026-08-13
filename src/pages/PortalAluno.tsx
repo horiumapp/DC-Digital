@@ -118,8 +118,8 @@ export default function PortalAluno() {
       return;
     }
 
-    const escolaData = alunoEncontrado.escolas as any;
-    const turmaData = alunoEncontrado.turmas as any;
+    const escolaData = (Array.isArray(alunoEncontrado.escolas) ? alunoEncontrado.escolas[0] : alunoEncontrado.escolas) as { nome?: string; logo_url?: string; inep?: string; diretor?: string; distrito?: string } | null;
+    const turmaData = (Array.isArray(alunoEncontrado.turmas) ? alunoEncontrado.turmas[0] : alunoEncontrado.turmas) as { nome?: string; turno?: string; escola_id?: string; ensino?: string; ano_letivo?: string | number } | null;
 
     // Buscar colegas para calcular o número de chamada (por ordem alfabética)
     const { data: colegas } = await supabase

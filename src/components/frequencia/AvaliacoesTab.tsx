@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { useTurma, Avaliacao } from '../../contexts/TurmaContext';
 import { APP_CONFIG } from '../../config/appConfig';
 import { useCaptcha } from '../../hooks/useCaptcha';
-import { getBimestrePorData, formatarDataParaISO, formatarDataParaExibicao } from '../../utils/dateUtils';
+import { getBimestrePorData, formatarDataParaISO } from '../../utils/dateUtils';
 import { isAvaliacaoPendente, getMensagemPendenciaAvaliacao, getInfoPontosBimestre } from '../../utils/avaliacaoUtils';
 
 // Sub-componentes
@@ -26,17 +26,17 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
   } = useTurma();
 
   const [avaliacaoViewMode, setAvaliacaoViewMode] = useState<'list' | 'details' | 'edit' | 'grades' | 'second_call'>('list');
-  const [selectedAvaliacao, setSelectedAvaliacao] = useState<any>(null);
+  const [selectedAvaliacao, setSelectedAvaliacao] = useState<Avaliacao | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [instrumentoAvaliacao, setInstrumentoAvaliacao] = useState('AVALIACAO ESCRITA');
-  const [objetosAvaliacao, setObjetosAvaliacao] = useState<any[]>([]);
+  const [objetosAvaliacao, setObjetosAvaliacao] = useState<{ unidade?: string; objeto?: string }[]>([]);
   const [periodoLetivo, setPeriodoLetivo] = useState('');
   const [unidadeDidatica, setUnidadeDidatica] = useState('');
   const [objetoConhecimento, setObjetoConhecimento] = useState('');
   const [valorMaximo, setValorMaximo] = useState('10,00');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [avaliacaoToDelete, setAvaliacaoToDelete] = useState<any>(null);
+  const [avaliacaoToDelete, setAvaliacaoToDelete] = useState<Avaliacao | null>(null);
   const [localNotas, setLocalNotas] = useState<Record<string, string>>({});
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
@@ -335,7 +335,8 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
               return;
             }
 
-            const novoRP: any = {
+            const novoRP: Avaliacao = {
+              id: '',
               turmaId: av.turmaId,
               tipo: av.tipo.includes('AV') ? av.tipo.replace('AV', 'RP') : `RP - ${av.tipo}`,
               data: new Date().toISOString().split('T')[0],
@@ -348,7 +349,7 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
             setSelectedAvaliacao(novoRP);
             setSelectedDate(novoRP.data);
             setInstrumentoAvaliacao(novoRP.instrumento);
-            setObjetosAvaliacao(novoRP.objetos);
+            setObjetosAvaliacao(novoRP.objetos || []);
             setValorMaximo(novoRP.valorMaximo ? novoRP.valorMaximo.toString().replace('.', ',') : '10,00');
             setAvaliacaoViewMode('edit');
           }}
@@ -356,7 +357,7 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
           onSecondCall={(av) => {
             setSelectedAvaliacao(av);
             carregarFaltasDaData(av.data);
-            const rows: any = {};
+            const rows: Record<string, { selected: boolean; date: string; grade: string }> = {};
             alunos.forEach(a => {
               rows[a.id] = { selected: !a.notas?.[av.id], date: new Date().toISOString().split('T')[0], grade: '' };
             });

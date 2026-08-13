@@ -14,9 +14,13 @@ export interface AlunoRow {
   id: string;
   nome: string;
   cpf?: string;
-  nome_responsavel?: string;
   turma_id: string;
   escola_id?: string;
+  data_nascimento?: string;
+  sexo?: string;
+  nome_responsavel?: string;
+  telefone?: string;
+  endereco?: string;
   status?: string;
   turmas?: { nome: string; turno?: string };
   escolas?: { nome: string };
@@ -139,18 +143,18 @@ export default function TabAlunos() {
     }
   }
 
-  const handleSaveAluno = async (novoAluno: any) => {
+  const handleSaveAluno = async (novoAluno: { escola_id: string; turma_id: string; nome: string; dataNascimento?: string; data_nascimento?: string; cpf?: string; sexo?: string; nomeResponsavel?: string; nome_responsavel?: string; telefone?: string; status?: string; endereco?: string }) => {
     const alunoData = {
       escola_id: novoAluno.escola_id,
       turma_id: novoAluno.turma_id,
       nome: novoAluno.nome,
-      data_nascimento: novoAluno.data_nascimento,
+      data_nascimento: novoAluno.dataNascimento || novoAluno.data_nascimento,
       cpf: novoAluno.cpf,
       sexo: novoAluno.sexo,
-      nome_responsavel: novoAluno.nome_responsavel,
+      nome_responsavel: novoAluno.nomeResponsavel || novoAluno.nome_responsavel,
       telefone: novoAluno.telefone,
       endereco: novoAluno.endereco,
-      status: novoAluno.status
+      status: novoAluno.status || 'Ativo'
     };
 
     if (alunoParaEditar) {
@@ -230,7 +234,7 @@ export default function TabAlunos() {
     }
   };
 
-  const handleEditAluno = (aluno: any) => {
+  const handleEditAluno = (aluno: AlunoRow) => {
     setAlunoParaEditar(aluno);
     setIsNovoAlunoModalOpen(true);
   };
@@ -282,7 +286,7 @@ export default function TabAlunos() {
     return acc;
   }, {});
 
-  const _turmasComAlunos = Object.values(alunosAgrupados).sort((a: any, b: any) => {
+  const _turmasComAlunos = Object.values(alunosAgrupados).sort((a, b) => {
     if (a.id === 'sem-turma') return 1;
     if (b.id === 'sem-turma') return -1;
     return a.nome.localeCompare(b.nome);
@@ -290,7 +294,7 @@ export default function TabAlunos() {
 
   // Agrupar turmas por turno para o acordeão
   const turnosOrdenados = ['MANHÃ', 'TARDE', 'NOITE', 'INTEGRAL'];
-  const turmasPorTurno = todasTurmas.reduce((acc: Record<string, any[]>, t) => {
+  const turmasPorTurno = todasTurmas.reduce((acc: Record<string, TurmaItem[]>, t) => {
     const turno = t.turno?.toUpperCase() || 'N/A';
     if (!acc[turno]) acc[turno] = [];
     acc[turno].push(t);
@@ -547,7 +551,7 @@ export default function TabAlunos() {
                                   </thead>
                                   <tbody className="divide-y divide-slate-50">
                                     {alunosDaTurma.length > 0 ? (
-                                      alunosDaTurma.map((aluno: any, index: number) => (
+                                      alunosDaTurma.map((aluno: AlunoRow, index: number) => (
                                         <tr key={aluno.id} className="hover:bg-slate-50/50 transition-colors group">
                                           <td className="px-6 py-4 text-xs font-black text-slate-300 tabular-nums">
                                             {(index + 1).toString().padStart(2, '0')}
@@ -650,7 +654,7 @@ export default function TabAlunos() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {alunosAgrupados['sem-turma'].alunos.map((aluno: any, index: number) => (
+                        {alunosAgrupados['sem-turma'].alunos.map((aluno: AlunoRow, index: number) => (
                           <tr key={aluno.id} className="hover:bg-red-50/30 transition-colors group">
                             <td className="px-6 py-4 text-xs font-black text-slate-300 tabular-nums">
                               {(index + 1).toString().padStart(2, '0')}

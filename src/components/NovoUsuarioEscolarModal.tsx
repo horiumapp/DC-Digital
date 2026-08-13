@@ -94,7 +94,7 @@ export default function NovoUsuarioEscolarModal({
       // Limpar formulário
       setFormData({ nome: '', email: '', senha: '' });
       onSuccess();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Erro inesperado ao criar usuário:", err);
       showError('Erro inesperado ao criar a conta. Tente novamente.');
     } finally {
