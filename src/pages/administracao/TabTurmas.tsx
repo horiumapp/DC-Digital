@@ -7,16 +7,39 @@ import ConfirmActionModal from '../../components/ConfirmActionModal';
 
 import { useToast } from '../../components/common/Toast';
 
+export interface TurmaRow {
+  id: string;
+  escola_id: string;
+  nome: string;
+  turno: string;
+  ano_letivo?: number | string;
+  escolas?: { nome: string };
+}
+
+export interface EscolaItem {
+  id: string;
+  nome: string;
+  logo_url?: string;
+  turmasCount?: number;
+}
+
+export interface NovaTurmaData {
+  escola_id: string;
+  nome: string;
+  turno: string;
+  ano_letivo?: number | string;
+}
+
 export default function TabTurmas() {
   const { user } = useAuth();
   const { showError } = useToast();
   const [buscaTurma, setBuscaTurma] = useState('');
   const [isNovaTurmaModalOpen, setIsNovaTurmaModalOpen] = useState(false);
-  const [turmaParaEditar, setTurmaParaEditar] = useState<any>(null);
-  const [turmaParaExcluir, setTurmaParaExcluir] = useState<any>(null);
-  const [turmas, setTurmas] = useState<any[]>([]);
-  const [escolas, setEscolas] = useState<any[]>([]);
-  const [selectedEscola, setSelectedEscola] = useState<any>(null);
+  const [turmaParaEditar, setTurmaParaEditar] = useState<TurmaRow | null>(null);
+  const [turmaParaExcluir, setTurmaParaExcluir] = useState<TurmaRow | null>(null);
+  const [turmas, setTurmas] = useState<TurmaRow[]>([]);
+  const [escolas, setEscolas] = useState<EscolaItem[]>([]);
+  const [selectedEscola, setSelectedEscola] = useState<EscolaItem | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -81,7 +104,7 @@ export default function TabTurmas() {
     }
   };
 
-  const handleSaveTurma = async (novaTurma: any) => {
+  const handleSaveTurma = async (novaTurma: NovaTurmaData) => {
     if (turmaParaEditar) {
       const { error } = await supabase
         .from('turmas')
@@ -120,7 +143,7 @@ export default function TabTurmas() {
     }
   };
 
-  const handleEditTurma = (turma: any) => {
+  const handleEditTurma = (turma: TurmaRow) => {
     setTurmaParaEditar(turma);
     setIsNovaTurmaModalOpen(true);
   };
@@ -154,7 +177,7 @@ export default function TabTurmas() {
   });
 
   // Agrupar turmas por turno para melhor visualização
-  const turmasPorTurno = turmasFiltradas.reduce((acc: Record<string, any[]>, t) => {
+  const turmasPorTurno = turmasFiltradas.reduce((acc: Record<string, TurmaRow[]>, t) => {
     const turno = t.turno || 'Não Definido';
     if (!acc[turno]) acc[turno] = [];
     acc[turno].push(t);

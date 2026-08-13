@@ -4,7 +4,6 @@ import { useCaptcha } from '../hooks/useCaptcha';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Background from '../components/Background';
 import { useAuth } from '../contexts/AuthContext';
-import { APP_CONFIG } from '../config/appConfig';
 import { supabase } from '../lib/supabase';
 import { translateSupabaseError } from '../utils/supabaseErrors';
 import PrivacyLinksFooter from '../components/PrivacyLinksFooter';

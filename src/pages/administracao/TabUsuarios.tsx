@@ -4,12 +4,26 @@ import { supabase } from '../../lib/supabase';
 import { Search, Shield, User, GraduationCap, Briefcase, Key, Users, Building2, Mail } from 'lucide-react';
 import { useToast } from '../../components/common/Toast';
 
+interface UsuarioRow {
+  id: string;
+  nome_completo?: string;
+  email?: string;
+  cargo: string;
+  escola_id?: string;
+  criado_em: string;
+}
+
+interface EscolaRow {
+  id: string;
+  nome: string;
+}
+
 export default function TabUsuarios() {
   const { user: _user } = useAuth();
   const { showError } = useToast();
   
-  const [usuarios, setUsuarios] = useState<any[]>([]);
-  const [escolas, setEscolas] = useState<any[]>([]);
+  const [usuarios, setUsuarios] = useState<UsuarioRow[]>([]);
+  const [escolas, setEscolas] = useState<EscolaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
   const [filtroCargo, setFiltroCargo] = useState('TODOS');

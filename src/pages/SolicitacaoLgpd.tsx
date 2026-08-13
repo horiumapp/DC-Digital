@@ -78,7 +78,7 @@ export default function SolicitacaoLgpd() {
       setMensagem('');
       setDeclaracao(false);
       captcha.generateNewCaptcha();
-    } catch (err: unknown) {
+    } catch (_err: unknown) {
       setError('Erro ao enviar solicitação. Por favor, tente novamente mais tarde.');
     } finally {
       setIsLoading(false);
@@ -178,7 +178,7 @@ export default function SolicitacaoLgpd() {
               <select
                 id="tipo"
                 value={tipo}
-                onChange={(e) => setTipo(e.target.value as any)}
+                onChange={(e) => setTipo(e.target.value as typeof tipo)}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] dark:focus:border-blue-500 bg-slate-50/50 dark:bg-slate-800/50 transition-all font-medium text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
               >
                 <option value="acesso">Confirmação e Acesso Simplificado aos meus dados</option>
