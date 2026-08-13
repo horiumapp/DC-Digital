@@ -18,21 +18,37 @@ const DISCIPLINAS = [
 import { useToast } from '../../components/common/Toast';
 
 
+export interface ProfessorRow {
+  id: string;
+  nome: string;
+  email: string;
+  cpf?: string;
+  departamento?: string;
+  disciplinas?: string[];
+  usuario_id?: string;
+  alocacoes_count?: number;
+}
+
+export interface EscolaOption {
+  id: string;
+  nome: string;
+}
+
 export default function TabProfessores() {
   const { user } = useAuth();
   const { showError, showWarning, showSuccess } = useToast();
   const [buscaProfessor, setBuscaProfessor] = useState('');
   const [isNovoProfessorModalOpen, setIsNovoProfessorModalOpen] = useState(false);
-  const [professorParaEditar, setProfessorParaEditar] = useState<any>(null);
-  const [professorParaExcluir, setProfessorParaExcluir] = useState<any>(null);
+  const [professorParaEditar, setProfessorParaEditar] = useState<ProfessorRow | null>(null);
+  const [professorParaExcluir, setProfessorParaExcluir] = useState<ProfessorRow | null>(null);
   const [isAlocacoesModalOpen, setIsAlocacoesModalOpen] = useState(false);
-  const [professorParaAlocar, setProfessorParaAlocar] = useState<any>(null);
+  const [professorParaAlocar, setProfessorParaAlocar] = useState<ProfessorRow | null>(null);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
-  const [professorParaHorario, setProfessorParaHorario] = useState<any>(null);
+  const [professorParaHorario, setProfessorParaHorario] = useState<ProfessorRow | null>(null);
 
-  const [professores, setProfessores] = useState<any[]>([]);
-  const [escolas, setEscolas] = useState<any[]>([]);
-  const [selectedEscola, setSelectedEscola] = useState<any>(null);
+  const [professores, setProfessores] = useState<ProfessorRow[]>([]);
+  const [escolas, setEscolas] = useState<EscolaOption[]>([]);
+  const [selectedEscola, setSelectedEscola] = useState<EscolaOption | null>(null);
   const [_loading, setLoading] = useState(true);
 
   // Estado para o formulário inline
@@ -223,7 +239,7 @@ export default function TabProfessores() {
     });
   };
 
-  const handleEditProfessor = (professor: any) => {
+  const handleEditProfessor = (professor: ProfessorRow) => {
     setProfessorParaEditar(professor);
     setIsNovoProfessorModalOpen(true);
   };
@@ -247,7 +263,7 @@ export default function TabProfessores() {
 
   const getProfessorCount = (escolaId: string) => {
     return professores.filter(p => 
-      p.professor_alocacoes?.some((aloc: any) => aloc.escola_id === escolaId)
+      (p as any).professor_alocacoes?.some((aloc: { escola_id: string }) => aloc.escola_id === escolaId)
     ).length;
   };
 

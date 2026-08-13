@@ -10,19 +10,42 @@ import { useToast } from '../../components/common/Toast';
 
 const ALUNO_EMAIL_DOMAIN = 'aluno.dcdigital.local';
 
+export interface AlunoRow {
+  id: string;
+  nome: string;
+  cpf?: string;
+  turma_id: string;
+  escola_id?: string;
+  status?: string;
+  turmas?: { nome: string; turno?: string };
+  escolas?: { nome: string };
+}
+
+export interface EscolaItem {
+  id: string;
+  nome: string;
+}
+
+export interface TurmaItem {
+  id: string;
+  nome: string;
+  escola_id: string;
+  turno?: string;
+}
+
 export default function TabAlunos() {
   const { user } = useAuth();
   const { showError, showSuccess, showWarning } = useToast();
   const [busca, setBusca] = useState('');
   const [isNovoAlunoModalOpen, setIsNovoAlunoModalOpen] = useState(false);
-  const [alunoParaEditar, setAlunoParaEditar] = useState<any>(null);
-  const [alunoParaExcluir, setAlunoParaExcluir] = useState<any>(null);
-  const [alunos, setAlunos] = useState<any[]>([]);
-  const [escolas, setEscolas] = useState<any[]>([]);
-  const [selectedEscola, setSelectedEscola] = useState<any>(null);
+  const [alunoParaEditar, setAlunoParaEditar] = useState<AlunoRow | null>(null);
+  const [alunoParaExcluir, setAlunoParaExcluir] = useState<AlunoRow | null>(null);
+  const [alunos, setAlunos] = useState<AlunoRow[]>([]);
+  const [escolas, setEscolas] = useState<EscolaItem[]>([]);
+  const [selectedEscola, setSelectedEscola] = useState<EscolaItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedTurmas, setExpandedTurmas] = useState<Set<string>>(new Set());
-  const [todasTurmas, setTodasTurmas] = useState<any[]>([]);
+  const [todasTurmas, setTodasTurmas] = useState<TurmaItem[]>([]);
 
   useEffect(() => {
     fetchInitialData();
@@ -242,7 +265,7 @@ export default function TabAlunos() {
     : [];
 
   // Agrupar alunos por turma e turno
-  const alunosAgrupados = alunosDaEscola.reduce((acc: Record<string, any>, a) => {
+  const alunosAgrupados = alunosDaEscola.reduce((acc: Record<string, { id: string; nome: string; turno: string; alunos: AlunoRow[] }>, a) => {
     const turmaKey = a.turma_id || 'sem-turma';
     if (!acc[turmaKey]) {
       acc[turmaKey] = {
