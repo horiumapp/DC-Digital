@@ -79,6 +79,8 @@ const GerenciarAlocacoesModal = React.memo(function GerenciarAlocacoesModal({ is
       return;
     }
 
+    if (!professor?.id) return;
+
     setLoading(true);
     const { error } = await supabase.from('professor_alocacoes').insert([{
       professor_id: professor.id,

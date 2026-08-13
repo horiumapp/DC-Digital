@@ -71,7 +71,7 @@ export default function NovaTurmaModal({ isOpen, onClose, onSave, turmaParaEdita
         escola_id: turmaParaEditar.escola_id || fixedEscolaId || (escolas.length > 0 ? escolas[0].id : ''),
         nome: turmaParaEditar.nome || '',
         turno: turmaParaEditar.turno || 'Manhã',
-        ano_letivo: turmaParaEditar.ano_letivo || new Date().getFullYear().toString(),
+        ano_letivo: String(turmaParaEditar.ano_letivo || new Date().getFullYear()),
       });
     } else {
       setFormData({

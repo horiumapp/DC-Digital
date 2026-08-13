@@ -9,7 +9,7 @@ interface CalendarWidgetProps {
   year: number;
   currentMonth: number;
   onMonthChange: (month: number) => void;
-  turmaAtiva: { id: string; nome: string } | null;
+  turmaAtiva: { id: string | number; nome?: string } | null;
   lancamentos: any[];
   avaliacoes: any[];
   alunos: any[];
