@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useTurma, Avaliacao } from '../../contexts/TurmaContext';
+import { useTurma, Avaliacao, ObjetoAvaliacao } from '../../contexts/TurmaContext';
 import { APP_CONFIG } from '../../config/appConfig';
 import { useCaptcha } from '../../hooks/useCaptcha';
 import { getBimestrePorData, formatarDataParaISO } from '../../utils/dateUtils';
@@ -30,7 +30,7 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [instrumentoAvaliacao, setInstrumentoAvaliacao] = useState('AVALIACAO ESCRITA');
-  const [objetosAvaliacao, setObjetosAvaliacao] = useState<{ unidade?: string; objeto?: string }[]>([]);
+  const [objetosAvaliacao, setObjetosAvaliacao] = useState<ObjetoAvaliacao[]>([]);
   const [periodoLetivo, setPeriodoLetivo] = useState('');
   const [unidadeDidatica, setUnidadeDidatica] = useState('');
   const [objetoConhecimento, setObjetoConhecimento] = useState('');
@@ -88,7 +88,8 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
       const parentMax = parentAv?.valorMaximo ? Number(parentAv.valorMaximo) : (selectedAvaliacao.valorMaximo ? Number(selectedAvaliacao.valorMaximo) : 10);
       const mediaCorte = parentMax / 2;
       return alunos.filter(aluno => {
-        const notaPaiStr = aluno.notas?.[selectedAvaliacao.parent_id] || aluno.notas?.[String(selectedAvaliacao.parent_id)];
+        const parentId = String(selectedAvaliacao.parent_id);
+        const notaPaiStr = aluno.notas?.[parentId];
         const notaPai = parseFloat((notaPaiStr || '0').replace(',', '.'));
         return !isNaN(notaPai) && notaPai < mediaCorte;
       });

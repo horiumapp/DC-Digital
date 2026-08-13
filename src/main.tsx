@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import {StrictMode, useState, useCallback, useEffect, useRef} from 'react';
 import {createRoot} from 'react-dom/client';
 import {useRegisterSW} from 'virtual:pwa-register/react';

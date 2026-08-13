@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Search, Plus, Edit2, Trash2, Building2, User, ArrowLeft, Users, ChevronRight, Calendar, Clock, X } from 'lucide-react';
-import NovoProfessorModal from '../../components/NovoProfessorModal';
+import NovoProfessorModal, { type NovoProfessorFormData } from '../../components/NovoProfessorModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import GerenciarAlocacoesModal from '../../components/GerenciarAlocacoesModal';
 import ScheduleModal from '../../components/ScheduleModal';

@@ -45,7 +45,7 @@ export default function RelatorioMedias() {
   const [hasSearched, setHasSearched] = useState(false);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
-  const [notas, setNotas] = useState<Record<string, unknown>[]>([]);
+  const [notas, setNotas] = useState<NotaRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   const fetchTurmasProfessor = React.useCallback(async () => {

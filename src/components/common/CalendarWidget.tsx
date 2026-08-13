@@ -10,10 +10,10 @@ interface CalendarWidgetProps {
   currentMonth: number;
   onMonthChange: (month: number) => void;
   turmaAtiva: { id: string; nome: string } | null;
-  lancamentos: unknown[];
-  avaliacoes: unknown[];
-  alunos: unknown[];
-  horarioTurma?: unknown[];
+  lancamentos: any[];
+  avaliacoes: any[];
+  alunos: any[];
+  horarioTurma?: any[];
   minMonth?: number;
   maxMonth?: number;
   periodoStart?: string;

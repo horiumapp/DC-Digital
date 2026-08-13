@@ -142,7 +142,7 @@ export default function PortalAluno() {
       escola_endereco: escolaData?.distrito || '---',
       turma_nome: turmaData?.nome || 'Sem turma',
       turma_turno: turmaData?.turno || '',
-      turma_ano: turmaData?.ano_letivo || APP_CONFIG.YEAR,
+      turma_ano: String(turmaData?.ano_letivo || APP_CONFIG.YEAR),
       matricula: formatMatriculaCpf(alunoEncontrado.cpf),
       data_nascimento: alunoEncontrado.data_nascimento || '---',
       nome_responsavel: alunoEncontrado.nome_responsavel || '---',

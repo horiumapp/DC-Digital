@@ -1,12 +1,12 @@
 import React from 'react';
 import { Eye, Pencil, Trash2, List, Check, Calendar as CalendarIcon, Plus, Clock } from 'lucide-react';
-import { Avaliacao } from '../../../contexts/TurmaContext';
+import { Avaliacao, Aluno } from '../../../contexts/TurmaContext';
 import { formatarDataParaISO, formatarDataParaExibicao } from '../../../utils/dateUtils';
 import { isAvaliacaoPendente } from '../../../utils/avaliacaoUtils';
 
 interface AvaliacoesListProps {
   avaliacoes: Avaliacao[];
-  alunos: { id: string; nome?: string; notas?: Record<string, unknown> }[];
+  alunos: Aluno[];
   faltasPorData: Record<string, Set<string>>;
   onViewDetails: (av: Avaliacao) => void;
   onEdit: (av: Avaliacao) => void;

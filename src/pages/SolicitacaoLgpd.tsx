@@ -79,6 +79,7 @@ export default function SolicitacaoLgpd() {
       setDeclaracao(false);
       captcha.generateNewCaptcha();
     } catch (_err: unknown) {
+      void _err;
       setError('Erro ao enviar solicitação. Por favor, tente novamente mais tarde.');
     } finally {
       setIsLoading(false);

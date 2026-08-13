@@ -205,7 +205,9 @@ const GerenciarAlocacoesModal = React.memo(function GerenciarAlocacoesModal({ is
                         <Building2 className="w-5 h-5 text-blue-600" />
                       </div>
                       <div>
-                        <h4 className="text-sm font-bold text-slate-800">{aloc.escolas?.nome || 'Escola Desconhecida'}</h4>
+                        <h4 className="text-sm font-bold text-slate-800">
+                          {Array.isArray(aloc.escolas) ? aloc.escolas[0]?.nome : aloc.escolas?.nome || 'Escola Desconhecida'}
+                        </h4>
                         <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-500 font-medium">
                           <Clock className="w-3.5 h-3.5" />
                           <span>Turno: {aloc.turno}</span>

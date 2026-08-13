@@ -19,7 +19,7 @@ interface CurriculoUnidade {
 }
 
 interface ObjetoConhecimentoTabProps {
-  turmaAtiva: { id: string; nome?: string } | null;
+  turmaAtiva: { id: string | number; nome?: string; ensino?: string; fase?: string; componente?: string } | null;
   selectedDate: string;
   tempoAula: string;
   setTempoAula: (v: string) => void;
