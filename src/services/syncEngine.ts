@@ -6,7 +6,7 @@
  * de conflitos via last-write-wins.
  */
 import { supabase } from '../lib/supabase';
-import { db, now, hashOperation, getOperationalTable, type SyncLogEntry, type SyncQueueItem } from '../lib/db';
+import { db, now, hashOperation, getOperationalTable, type SyncLogEntry, type SyncQueueItem, type LocalFrequencia, type LocalNota } from '../lib/db';
 import * as Queue from './offlineQueue';
 import { pingInternet, pingSupabase } from '../utils/network';
 import { getTid } from '../utils/turmaUtils';
@@ -175,6 +175,8 @@ async function _runSyncAll(): Promise<SyncResult> {
     await Queue.resetStuckItems();
     await autoRepairDeadLetters();
     await Queue.retryAllErrors();
+    // FIX H5b: Reenfileirar registros locais que ficaram sem item na fila
+    await reconcileLocalRecords();
 
     // Processar fila em ordem FIFO
     let item = await Queue.peek();
@@ -574,9 +576,24 @@ async function syncFrequencia(operation: string, payload: Record<string, unknown
     .upsert(sanitizedRecords, { onConflict: 'turma_id,aluno_id,data,tempo,disciplina' });
   if (error) throw error;
 
-  // Atualizar syncStatus local para 'synced'
-  const avaliacaoTurmaIds = [...new Set(sanitizedRecords.map(r => String(r.turma_id)))];
-  await db.frequencias.where('turma_id').anyOf(avaliacaoTurmaIds).modify({ syncStatus: 'synced', updatedAt: now() });
+  // FIX C3/H5a: Marcar como 'synced' APENAS as linhas que realmente foram
+  // enviadas (chave composta), e não a turma inteira. Antes, registros 'pending'
+  // que caíram da fila eram promovidos a 'synced' sem nunca chegar ao servidor
+  // e depois purgados — perda silenciosa de dados.
+  const turmaIds = [...new Set(sanitizedRecords.map(r => String(r.turma_id)))];
+  const syncedKeys = new Set(
+    sanitizedRecords.map(r => `${String(r.turma_id)}|${String(r.aluno_id)}|${String(r.data)}|${String(r.tempo)}|${String(r.disciplina)}`)
+  );
+
+  const localRows = await db.frequencias.where('turma_id').anyOf(turmaIds).toArray();
+  await db.transaction('rw', db.frequencias, async () => {
+    for (const row of localRows) {
+      const rowKey = `${String(row.turma_id)}|${String(row.aluno_id)}|${String(row.data)}|${String(row.tempo)}|${String(row.disciplina)}`;
+      if (syncedKeys.has(rowKey) && row.localId) {
+        await db.frequencias.update(row.localId, { syncStatus: 'synced', updatedAt: now() });
+      }
+    }
+  });
 }
 
 async function syncConteudo(operation: string, payload: Record<string, unknown>): Promise<void> {
@@ -598,7 +615,13 @@ async function syncConteudo(operation: string, payload: Record<string, unknown>)
     .upsert(sanitized, { onConflict: 'turma_id,data,tempo,disciplina' });
   if (error) throw error;
 
-  await db.conteudos.where('turma_id').equals(String(sanitized.turma_id)).modify({ syncStatus: 'synced', updatedAt: now() });
+  // FIX H5a: marcar 'synced' apenas a linha que foi enviada (chave composta),
+  // e não todas as linhas da turma.
+  await db.conteudos
+    .where('turma_id')
+    .equals(String(sanitized.turma_id))
+    .filter(c => c.data === sanitized.data && c.tempo === sanitized.tempo && c.disciplina === sanitized.disciplina)
+    .modify({ syncStatus: 'synced', updatedAt: now() });
 }
 
 async function syncAvaliacao(operation: string, payload: Record<string, unknown>): Promise<string | null> {
@@ -620,6 +643,11 @@ async function syncAvaliacao(operation: string, payload: Record<string, unknown>
       if (parentLocal && (parentLocal.serverId || (parentLocal.id && !String(parentLocal.id).startsWith('temp_') && !String(parentLocal.id).startsWith('local_')))) {
         payload.parent_id = parentLocal.serverId || parentLocal.id;
       } else {
+        // FIX H5c: Se a avaliação pai foi para dead-letter, esta avaliação filha
+        // também é irrecuperável — dead-letter na hora em vez de loop infinito.
+        if (await isAvaliacaoDeadLettered(pStr)) {
+          throw new Error(`[DEAD_LETTER] A avaliação pai (${pStr}) foi rejeitada pelo servidor; esta avaliação filha não pode ser sincronizada.`);
+        }
         throw new Error(`Aguardando sincronização da avaliação pai no servidor (id temporário: ${pStr})`);
       }
     }
@@ -647,6 +675,26 @@ async function syncAvaliacao(operation: string, payload: Record<string, unknown>
   }
 }
 
+/** FIX H5c: verifica se a avaliação (via id temporário) foi movida para
+ *  dead-letter no servidor. Se sim, operações dependentes (notas / avaliações
+ *  filhas) não devem ficar retentando para sempre. */
+async function isAvaliacaoDeadLettered(tempId: string): Promise<boolean> {
+  try {
+    const localParent = await db.avaliacoes
+      .filter(a => String(a.clientTempId) === tempId || String(a.id) === tempId || String(a.serverId) === tempId)
+      .first();
+    if (!localParent?.localId) return false;
+    const deadItem = await db.syncQueue
+      .where('table')
+      .equals('avaliacoes')
+      .filter(i => i.localId === localParent.localId && i.status === 'error' && i.lastError?.includes('[DEAD_LETTER]'))
+      .first();
+    return !!deadItem;
+  } catch {
+    return false;
+  }
+}
+
 async function syncNotas(operation: string, payload: Record<string, unknown>): Promise<void> {
   // Notas sempre são upsert em batch ou individual
   const records = Array.isArray(payload.records) ? payload.records : [payload];
@@ -656,6 +704,11 @@ async function syncNotas(operation: string, payload: Record<string, unknown>): P
   for (const rec of sanitizedRecords) {
     const avId = String(rec.avaliacao_id);
     if (avId.startsWith('temp_') || avId.startsWith('local_')) {
+      // FIX H5c: Se a avaliação pai foi para dead-letter, as notas também são
+      // irrecuperáveis — dead-letter na hora em vez de retentar até MAX_RETRIES.
+      if (await isAvaliacaoDeadLettered(avId)) {
+        throw new Error(`[DEAD_LETTER] A avaliação pai (${avId}) foi rejeitada pelo servidor; as notas não podem ser sincronizadas.`);
+      }
       throw new Error(`Aguardando sincronização da avaliação no servidor (id temporário: ${avId})`);
     }
   }
@@ -688,7 +741,13 @@ async function syncFechamento(operation: string, payload: Record<string, unknown
     .upsert(sanitized, { onConflict: 'turma_id,disciplina,bimestre' });
   if (error) throw error;
 
-  await db.fechamentos.where('turma_id').equals(String(sanitized.turma_id)).modify({ syncStatus: 'synced', updatedAt: now() });
+  // FIX H5a: marcar 'synced' apenas a linha que foi enviada (chave composta),
+  // e não todos os fechamentos da turma.
+  await db.fechamentos
+    .where('turma_id')
+    .equals(String(sanitized.turma_id))
+    .filter(f => f.disciplina === sanitized.disciplina && f.bimestre === sanitized.bimestre)
+    .modify({ syncStatus: 'synced', updatedAt: now() });
 }
 
 // ============================================================
@@ -701,6 +760,9 @@ async function updateTempAvaliacaoId(localId: number, serverId: string): Promise
   const localRecord = await db.avaliacoes.get(localId);
   const tempIdFromRecord = localRecord?.id ? String(localRecord.id) : null;
   const serverIdFromRecord = localRecord?.serverId ? String(localRecord.serverId) : null;
+  // FIX C4: O id temporário gerado pela UI (temp_<Date.now>) fica em clientTempId.
+  // Sem ele, notas enfileiradas com esse id nunca eram resolvidas.
+  const clientTempId = localRecord?.clientTempId ? String(localRecord.clientTempId) : null;
 
   const possibleTempIds = new Set([
     `temp_${localId}`,
@@ -709,6 +771,7 @@ async function updateTempAvaliacaoId(localId: number, serverId: string): Promise
   ]);
   if (tempIdFromRecord) possibleTempIds.add(tempIdFromRecord);
   if (serverIdFromRecord) possibleTempIds.add(serverIdFromRecord);
+  if (clientTempId) possibleTempIds.add(clientTempId);
 
   await db.transaction('rw', [db.avaliacoes, db.notas, db.syncQueue], async () => {
     // 1. Atualizar registro local da avaliação
@@ -808,6 +871,8 @@ async function autoRepairDeadLetters(): Promise<void> {
           tempToRealMap.set(`temp_${av.localId}`, realId);
           tempToRealMap.set(`local_${av.localId}`, realId);
         }
+        // FIX C4: mapear também o id temporário gerado pela UI (temp_<Date.now>)
+        if (av.clientTempId) tempToRealMap.set(String(av.clientTempId), realId);
       }
     }
 
@@ -872,6 +937,165 @@ async function autoRepairDeadLetters(): Promise<void> {
   }
 }
 
+/** FIX H5b: Reconciliação — reenfileira registros locais 'pending'/'error' que
+ *  ficaram sem item correspondente na fila (ex: falha entre a escrita local e o
+ *  enqueue, ou item purgado por engano). Cura a perda silenciosa de dados onde
+ *  o registro nunca chegaria ao servidor. */
+async function reconcileLocalRecords(): Promise<void> {
+  try {
+    const queueItems = await db.syncQueue.toArray();
+
+    const hasMatchingItem = (table: string, match: (p: Record<string, unknown>) => boolean): boolean =>
+      queueItems.some(i => i.table === table && match(JSON.parse(i.payload) as Record<string, unknown>));
+
+    // --- Conteudos (chave composta) ---
+    const conteudoKeys = new Set<string>();
+    for (const i of queueItems) {
+      if (i.table !== 'conteudos') continue;
+      const p = JSON.parse(i.payload) as Record<string, unknown>;
+      conteudoKeys.add(`${p.turma_id}|${p.data}|${p.tempo}|${p.disciplina}`);
+    }
+    const unsyncedConteudos = await db.conteudos.filter(c => c.syncStatus !== 'synced').toArray();
+    for (const c of unsyncedConteudos) {
+      const key = `${c.turma_id}|${c.data}|${c.tempo}|${c.disciplina}`;
+      if (conteudoKeys.has(key)) continue;
+      await Queue.enqueue('conteudos', 'UPSERT', {
+        turma_id: c.turma_id,
+        data: c.data,
+        tempo: c.tempo,
+        objetos: c.objetos,
+        habilidades: c.habilidades,
+        descricao: c.descricao,
+        disciplina: c.disciplina,
+      });
+      console.info(`[SyncEngine] Reconciliação: reenfileirado conteudo ${key}`);
+    }
+
+    // --- Frequencias (chave composta por registro, batches agrupados por dia) ---
+    const freqKeys = new Set<string>();
+    for (const i of queueItems) {
+      if (i.table !== 'frequencias') continue;
+      const p = JSON.parse(i.payload) as Record<string, unknown>;
+      const recs = Array.isArray(p.records) ? p.records : [p];
+      for (const r of recs) {
+        const rr = r as Record<string, unknown>;
+        freqKeys.add(`${rr.turma_id}|${rr.aluno_id}|${rr.data}|${rr.tempo}|${rr.disciplina}`);
+      }
+    }
+    const unsyncedFreqs = await db.frequencias.filter(f => f.syncStatus !== 'synced').toArray();
+    const missingFreqs = unsyncedFreqs.filter(
+      f => !freqKeys.has(`${f.turma_id}|${f.aluno_id}|${f.data}|${f.tempo}|${f.disciplina}`)
+    );
+    if (missingFreqs.length > 0) {
+      const byDay = new Map<string, LocalFrequencia[]>();
+      for (const f of missingFreqs) {
+        const k = `${f.turma_id}|${f.data}|${f.tempo}|${f.disciplina}`;
+        const arr = byDay.get(k) ?? [];
+        arr.push(f);
+        byDay.set(k, arr);
+      }
+      for (const batch of byDay.values()) {
+        await Queue.enqueue('frequencias', 'UPSERT', {
+          records: batch.map(f => ({
+            turma_id: f.turma_id,
+            aluno_id: f.aluno_id,
+            data: f.data,
+            tempo: f.tempo,
+            status: f.status,
+            participacao: f.participacao,
+            disciplina: f.disciplina,
+          })),
+        });
+        console.info(`[SyncEngine] Reconciliação: reenfileirado batch de ${batch.length} frequencias`);
+      }
+    }
+
+    // --- Avaliacoes (via localId) ---
+    const avaliacaoQueueIds = new Set(
+      queueItems.filter(i => i.table === 'avaliacoes').map(i => i.localId).filter(Boolean)
+    );
+    const unsyncedAvs = await db.avaliacoes.filter(a => a.syncStatus !== 'synced').toArray();
+    for (const a of unsyncedAvs) {
+      if (a.localId && avaliacaoQueueIds.has(a.localId)) continue;
+      await Queue.enqueue('avaliacoes', a.id && !String(a.id).startsWith('temp_') ? 'UPDATE' : 'INSERT', {
+        ...(a.id && !String(a.id).startsWith('temp_') ? { id: a.id } : {}),
+        turma_id: a.turma_id,
+        tipo: a.tipo,
+        data: a.data,
+        instrumento: a.instrumento,
+        objetos: a.objetos,
+        bimestre: a.bimestre,
+        valor_maximo: a.valor_maximo,
+        disciplina: a.disciplina,
+        parent_id: a.parent_id,
+      }, a.localId);
+      console.info(`[SyncEngine] Reconciliação: reenfileirada avaliacao localId=${a.localId}`);
+    }
+
+    // --- Notas ---
+    const notaKeys = new Set<string>();
+    for (const i of queueItems) {
+      if (i.table !== 'notas') continue;
+      const p = JSON.parse(i.payload) as Record<string, unknown>;
+      const recs = Array.isArray(p.records) ? p.records : [p];
+      for (const r of recs) {
+        const rr = r as Record<string, unknown>;
+        notaKeys.add(`${rr.avaliacao_id}|${rr.aluno_id}`);
+      }
+    }
+    const unsyncedNotas = await db.notas.filter(n => n.syncStatus !== 'synced').toArray();
+    const missingNotas = unsyncedNotas.filter(n => !notaKeys.has(`${n.avaliacao_id}|${n.aluno_id}`));
+    // Evitar reenfileirar notas cuja avaliação ainda não sincronizou (ids temporários).
+    const resolvableAvIds = new Set<string>();
+    const allLocalAvs = await db.avaliacoes.toArray();
+    for (const av of allLocalAvs) {
+      if (av.serverId) resolvableAvIds.add(String(av.serverId));
+      if (av.id && !String(av.id).startsWith('temp_') && !String(av.id).startsWith('local_')) resolvableAvIds.add(String(av.id));
+    }
+    const byAvaliacao = new Map<string, LocalNota[]>();
+    for (const n of missingNotas) {
+      const avKey = resolvableAvIds.has(n.avaliacao_id) ? n.avaliacao_id : null;
+      if (!avKey) continue;
+      const arr = byAvaliacao.get(avKey) ?? [];
+      arr.push(n);
+      byAvaliacao.set(avKey, arr);
+    }
+    for (const batch of byAvaliacao.values()) {
+      await Queue.enqueue('notas', 'UPSERT', {
+        records: batch.map(n => ({
+          avaliacao_id: n.avaliacao_id,
+          aluno_id: n.aluno_id,
+          valor: n.valor,
+        })),
+      });
+      console.info(`[SyncEngine] Reconciliação: reenfileirado batch de ${batch.length} notas`);
+    }
+
+    // --- Fechamentos (chave composta) ---
+    const fechamentoKeys = new Set<string>();
+    for (const i of queueItems) {
+      if (i.table !== 'fechamentos') continue;
+      const p = JSON.parse(i.payload) as Record<string, unknown>;
+      fechamentoKeys.add(`${p.turma_id}|${p.disciplina}|${p.bimestre}`);
+    }
+    const unsyncedFechamentos = await db.fechamentos.filter(f => f.syncStatus !== 'synced').toArray();
+    for (const f of unsyncedFechamentos) {
+      const key = `${f.turma_id}|${f.disciplina}|${f.bimestre}`;
+      if (fechamentoKeys.has(key)) continue;
+      await Queue.enqueue('fechamentos', 'UPSERT', {
+        turma_id: f.turma_id,
+        disciplina: f.disciplina,
+        bimestre: f.bimestre,
+        status: f.status,
+        usuario_fechamento_id: f.usuario_fechamento_id,
+      });
+      console.info(`[SyncEngine] Reconciliação: reenfileirado fechamento ${key}`);
+    }
+  } catch (err) {
+    console.warn('[SyncEngine] Falha na reconciliação de registros locais:', err);
+  }
+}
+
 /** Atualiza o syncStatus do registro local para 'synced' */
 async function markLocalRecordSynced(item: { table: string; localId?: number }): Promise<void> {
   if (!item.localId) return;
@@ -930,7 +1154,9 @@ export async function getQueueStats() {
 /** Tenta reprocessar itens com erro */
 export async function retryErrors(): Promise<number> {
   await autoRepairDeadLetters();
-  const count = await Queue.retryAllErrors();
+  // FIX H5c: ação explícita do usuário — zera o backoff e tenta novamente todos
+  // os itens não-dead-letter.
+  const count = await Queue.retryAllErrors(true);
   if (count > 0) {
     scheduleSync();
   } else {

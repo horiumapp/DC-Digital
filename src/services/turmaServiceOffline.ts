@@ -8,7 +8,6 @@
  * Este módulo substitui as chamadas diretas ao turmaService original
  * na camada de contexto (TurmaContext).
  */
-import { supabase } from '../lib/supabase';
 import { getBimestrePorData } from '../utils/dateUtils';
 import type { Aluno, Avaliacao, Conteudo, Horario, Lancamento } from '../contexts/TurmaContext';
 import type { FrequenciaRecord, NotaRecord } from './turmaService';
@@ -216,6 +215,7 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
     localAvs.forEach(a => {
       if (a.id) possibleAvIds.add(String(a.id));
       if (a.serverId) possibleAvIds.add(String(a.serverId));
+      if (a.clientTempId) possibleAvIds.add(String(a.clientTempId));
       if (a.localId) {
         possibleAvIds.add(String(a.localId));
         possibleAvIds.add(`temp_${a.localId}`);
@@ -228,13 +228,14 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
     const aliasToCanonicalMap = new Map<string, string[]>();
     localAvs.forEach(av => {
       const canonical = mergedAvaliacoes.find(m => 
-        m.id === av.id || m.id === av.serverId || (av.localId && (m.id === `temp_${av.localId}` || m.id === `local_${av.localId}` || m.id === String(av.localId)))
+        m.id === av.id || m.id === av.serverId || m.id === av.clientTempId || (av.localId && (m.id === `temp_${av.localId}` || m.id === `local_${av.localId}` || m.id === String(av.localId)))
       )?.id || av.id || av.serverId || (av.localId ? `temp_${av.localId}` : '');
 
       if (canonical) {
         const aliases = new Set<string>([canonical]);
         if (av.id) aliases.add(String(av.id));
         if (av.serverId) aliases.add(String(av.serverId));
+        if (av.clientTempId) aliases.add(String(av.clientTempId));
         if (av.localId) {
           aliases.add(String(av.localId));
           aliases.add(`temp_${av.localId}`);
@@ -529,8 +530,17 @@ export async function salvarAvaliacao(
     parent_id: av.parent_id,
   };
 
+  // FIX C4: Propagar o id temporário da UI (temp_<Date.now>) para o registro
+  // local. Sem isso, notas enfileiradas com avaliacao_id = temp_... nunca eram
+  // resolvidas após a avaliação sincronizar (updateTempAvaliacaoId não conhecia
+  // esse id) e as notas ficavam em loop infinito até serem purgadas.
+  const localPayload = {
+    ...payload,
+    ...(av.id && av.id.startsWith('temp_') ? { clientTempId: av.id } : {}),
+  };
+
   // 1. Salvar localmente
-  const localId = await OfflineStorage.saveAvaliacaoLocal(payload);
+  const localId = await OfflineStorage.saveAvaliacaoLocal(localPayload);
 
   // 2. Enfileirar
   await Queue.enqueue('avaliacoes', av.id && !av.id.startsWith('temp_') ? 'UPDATE' : 'INSERT', payload, localId);

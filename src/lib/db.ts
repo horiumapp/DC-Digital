@@ -76,6 +76,10 @@ export interface LocalAvaliacao {
   localId?: number;
   serverId?: string;
   id?: string; // server ID when synced
+  // FIX C4: ID temporário gerado pela UI (ex: temp_<Date.now>) que deve viajar
+  // com o registro local para que notas pendentes referenciando-o sejam
+  // resolvidas após a sincronização da avaliação.
+  clientTempId?: string;
   turma_id: string;
   tipo: string;
   data: string;
@@ -352,26 +356,65 @@ export const OPERATIONAL_TABLE_NAMES: OperationalTableName[] = ['frequencias', '
 export const now = (): string => new Date().toISOString();
 
 /** Gera um hash SHA-256 truncado para deduplicação de operações na fila */
-export async function hashOperation(table: string, operation: QueueOperation, payload: Record<string, unknown>): Promise<string> {
+export async function hashOperation(
+  table: string,
+  operation: QueueOperation,
+  payload: Record<string, unknown>,
+  discriminator?: string | number
+): Promise<string> {
   // Usa as chaves mais relevantes para cada tabela
   const keyFields: Record<string, string[]> = {
     frequencias: ['turma_id', 'aluno_id', 'data', 'tempo', 'disciplina'],
     conteudos: ['turma_id', 'data', 'tempo', 'disciplina'],
-    avaliacoes: ['turma_id', 'disciplina', 'data', 'tipo'],
+    avaliacoes: ['id', 'parent_id', 'turma_id', 'disciplina', 'data', 'tipo'],
     notas: ['avaliacao_id', 'aluno_id'],
     fechamentos: ['turma_id', 'disciplina', 'bimestre'],
   };
-  
+
+  // FIX C3: Operações em lote ({ records: [...] }) eram hasheadas pelas chaves
+  // de topo (ausentes no payload), então TODOS os lotes de frequencias e notas
+  // colidiam no mesmo hash e a fila substituía um lote pelo outro — o primeiro
+  // nunca era sincronizado e acabava sendo purgado como "synced".
+  // Agora o hash é calculado sobre os registros normalizados e ordenados.
+  if (Array.isArray(payload.records)) {
+    const fields = keyFields[table] || [];
+    const recordsKey = payload.records
+      .map((r: Record<string, unknown>) => fields.map(f => r?.[f] ?? '').join('|'))
+      .sort()
+      .join(';');
+    return buildHashKey(`${table}:${operation}:batch:${recordsKey}`);
+  }
+
   const fields = keyFields[table] || Object.keys(payload);
-  const key = `${table}:${operation}:${fields.map(f => payload[f] ?? '').join('|')}`;
-  
+  let key = `${table}:${operation}:${fields.map(f => payload[f] ?? '').join('|')}`;
+
+  // FIX C3: DELETEs carregavam apenas { id } e colidiam no hash vazio — o último
+  // delete apagava o primeiro da fila (avaliação fantasma voltava do servidor).
+  // O id já está em keyFields de avaliacoes, mas para DELETEs de outras tabelas
+  // o id é incluído explicitamente.
+  if (operation === 'DELETE' && payload.id !== undefined) {
+    key = `${table}:DELETE:id:${String(payload.id)}`;
+  }
+
+  // FIX C3: INSERTs sem identidade no payload (ex: avaliação criada offline com
+  // id temp removido) usam o localId como discriminador, evitando que duas
+  // avaliações recém-criadas colidam no mesmo hash.
+  if (operation === 'INSERT' && discriminator !== undefined) {
+    key = `${key}:local:${String(discriminator)}`;
+  }
+
+  return buildHashKey(key);
+}
+
+function buildHashKey(key: string): Promise<string> {
   try {
     if (typeof crypto !== 'undefined' && crypto.subtle && crypto.subtle.digest) {
       const msgUint8 = new TextEncoder().encode(key);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      return hashHex.slice(0, 32);
+      return crypto.subtle.digest('SHA-256', msgUint8).then(hashBuffer => {
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        return hashHex.slice(0, 32);
+      });
     }
   } catch (err) {
     console.warn('SubtleCrypto error, falling back to DJB2:', err);
@@ -384,6 +427,6 @@ export async function hashOperation(table: string, operation: QueueOperation, pa
     hash = ((hash << 5) - hash) + char;
     hash |= 0; // Convert to 32-bit integer
   }
-  return 'fb_' + Math.abs(hash).toString(36);
+  return Promise.resolve('fb_' + Math.abs(hash).toString(36));
 }
 

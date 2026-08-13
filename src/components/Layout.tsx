@@ -13,10 +13,11 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { clearLocalData, deadLetterCount } = useOffline();
+  const { deadLetterCount } = useOffline();
 
-  // If no user, mock a fallback slightly just to not break layout in weird state
-  const hasAdminAccess = user ? user.role === 'ADMIN' : false;
+  // FIX: Usar ADMIN_ROLES em vez de apenas 'ADMIN' para alinhar o menu
+  // de navegação com as rotas protegidas (GESTOR e SECRETARIO também têm acesso).
+  const hasAdminAccess = user ? ADMIN_ROLES.includes(user.role) : false;
   const nameDisplay = user?.name || 'Visitante';
   const titleDisplay = user?.title || 'Convidado';
 

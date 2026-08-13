@@ -861,10 +861,13 @@ export async function clearOldSyncedData(maxAgeDays: number = 60): Promise<numbe
 
   // FIX #6: Limpar dead letter (itens com status 'error') mais antigos que maxAgeDays
   // Sem isso, a tabela syncQueue cresce indefinidamente com itens irrecuperáveis.
+  // FIX F8: Apenas itens marcados [DEAD_LETTER] devem ser removidos. Erros
+  // RECUPERÁVEIS (rede, dependência) podem ainda ser sincronizados após o
+  // backoff — purgá-los causaria perda silenciosa de dados.
   try {
     const oldErrors = await db.syncQueue
       .where('status').equals('error')
-      .filter(item => item.updatedAt < cutoffISO)
+      .filter(item => item.updatedAt < cutoffISO && item.lastError?.includes('[DEAD_LETTER]'))
       .toArray();
     const errorIds = oldErrors.map(e => e.id).filter((id): id is number => id !== undefined);
     if (errorIds.length > 0) {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Search, ShieldAlert, CheckCircle2, AlertCircle, Eye, RefreshCw, Mail, MessageSquare, Calendar } from 'lucide-react';
+import { Search, ShieldAlert, Eye, RefreshCw, Mail, MessageSquare, Calendar } from 'lucide-react';
 import { useToast } from '../../components/common/Toast';
 import { listLgpdRequests, updateLgpdRequest, LgpdRequest } from '../../services/lgpdService';
 import { logSecurityEvent } from '../../services/securityLogService';
@@ -116,7 +116,7 @@ export default function TabLgpd() {
           solicitante_email: selectedRequest.email,
         },
       });
-    } catch (err) {
+    } catch {
       showError('Erro ao atualizar solicitação.');
     } finally {
       setIsSaving(false);

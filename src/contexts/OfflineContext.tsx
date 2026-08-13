@@ -4,12 +4,12 @@
  * Inicializa o sistema de sincronização, monitora conexão,
  * e dispara sync automático quando a internet volta.
  */
-import React, { createContext, useContext, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
 import type { SyncQueueItem } from '../lib/db';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useSyncStatus, type ConnectionState } from '../hooks/useSyncStatus';
 import * as SyncEngine from '../services/syncEngine';
-import { clearAllLocalData, clearOldSyncedData, getStorageEstimate } from '../services/offlineStorage';
+import { clearOldSyncedData, getStorageEstimate } from '../services/offlineStorage';
 import { setOnlineStatus } from '../services/turmaServiceOffline';
 
 // ============================================================
@@ -39,8 +39,6 @@ interface OfflineContextType {
   retryErrors: () => Promise<number>;
   /** Descartar itens mortos da fila */
   discardDeadLetters: () => Promise<void>;
-  /** Limpar todos os dados locais (usado no logout) */
-  clearLocalData: () => Promise<void>;
 }
 
 const OfflineContext = createContext<OfflineContextType | undefined>(undefined);
@@ -118,15 +116,6 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, []);
 
-  const clearLocalData = useCallback(async () => {
-    try {
-      await clearAllLocalData();
-      console.log('[OfflineProvider] Dados locais limpos');
-    } catch (err) {
-      console.error('[OfflineProvider] Erro ao limpar dados locais:', err);
-    }
-  }, []);
-
   return (
     <OfflineContext.Provider
       value={{
@@ -141,7 +130,6 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         syncNow,
         retryErrors,
         discardDeadLetters,
-        clearLocalData,
       }}
     >
       {children}

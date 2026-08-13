@@ -193,9 +193,14 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (senha.length < 6) {
+    // FIX M1: Exigir senha forte — mínimo 8 caracteres, com letra e número.
+    // Antes aceitava 6 caracteres sem regra de complexidade, permitindo senhas
+    // triviais como "123456". Alinhado com o minLength={8} da tela de login.
+    const hasLetter = /[a-zA-Z]/.test(senha);
+    const hasDigit = /\d/.test(senha);
+    if (senha.length < 8 || !hasLetter || !hasDigit) {
       return new Response(
-        JSON.stringify({ error: "A senha deve ter no mínimo 6 caracteres" }),
+        JSON.stringify({ error: "A senha deve ter no mínimo 8 caracteres, incluindo letras e números" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
