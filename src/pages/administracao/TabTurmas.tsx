@@ -350,7 +350,7 @@ export default function TabTurmas() {
                     <div className="flex flex-col">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total de Turmas</span>
                       <span className="text-2xl font-black text-slate-700 tabular-nums">
-                        {escola.turmasCount.toString().padStart(2, '0')}
+                        {(escola.turmasCount || 0).toString().padStart(2, '0')}
                       </span>
                     </div>
                     <div className="p-2 bg-slate-50 text-slate-400 rounded-lg group-hover:bg-[#eef2ff] group-hover:text-[#0f2851] transition-colors">

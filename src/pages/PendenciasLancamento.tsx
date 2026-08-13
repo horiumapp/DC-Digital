@@ -3,8 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Printer, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { fetchPendenciasPorEscola, type PendenciaDocente } from '../services/pendenciasService';
 import { APP_CONFIG } from '../config/appConfig';
-import { fetchPendenciasPorEscola } from '../services/pendenciasService';
+
+interface EscolaOption {
+  id: string;
+  nome: string;
+  distrito?: string;
+}
 
 export default function PendenciasLancamento() {
   const navigate = useNavigate();
@@ -12,8 +18,8 @@ export default function PendenciasLancamento() {
   const [distrito, setDistrito] = useState('');
   const [distritos, setDistritos] = useState<string[]>([]);
   const [escolaId, setEscolaId] = useState('');
-  const [escolas, setEscolas] = useState<any[]>([]);
-  const [docentes, setDocentes] = useState<any[]>([]);
+  const [escolas, setEscolas] = useState<EscolaOption[]>([]);
+  const [docentes, setDocentes] = useState<PendenciaDocente[]>([]);
   const [totalRecords, setTotalRecords] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;

@@ -10,8 +10,10 @@ import ConfirmActionModal from '../../components/ConfirmActionModal';
 import NovaEscolaModal from '../../components/NovaEscolaModal';
 import { useToast } from '../../components/common/Toast';
 
+import { type EscolaRow, type EscolaFormData } from './TabEscolas';
+
 interface EscolaDetalhesProps {
-  escola: any;
+  escola: EscolaRow;
   onVoltar: () => void;
   onEscolaAtualizada: () => void;
 }
@@ -107,7 +109,7 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
     setUsuarioParaExcluir(null);
   };
 
-  const handleSaveEscola = async (dadosEscola: any) => {
+  const handleSaveEscola = async (dadosEscola: EscolaFormData) => {
     const { error } = await supabase
       .from('escolas')
       .update({

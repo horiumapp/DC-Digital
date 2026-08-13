@@ -42,9 +42,19 @@ async function withQuotaRecovery<T>(operation: () => Promise<T>): Promise<T> {
         const deleted = await clearOldSyncedData(30); // Limpa registros >30 dias
         console.log(`[offlineStorage] Limpeza emergencial: ${deleted} registros removidos`);
         return await operation(); // Retenta após limpeza
-      } catch (retryErr) {
-        console.error('[offlineStorage] Falha mesmo após limpeza emergencial:', retryErr);
-        throw retryErr;
+      } catch {
+        try {
+          const oldFiles = await db.files.where('syncStatus').equals('synced').toArray();
+          if (oldFiles.length > 0) {
+            const fileIds = oldFiles.map(f => f.localId).filter((id): id is number => id !== undefined);
+            await db.files.bulkDelete(fileIds);
+            console.log(`[offlineStorage] Limpeza emergencial de arquivos: ${fileIds.length} blobs removidos`);
+          }
+          return await operation();
+        } catch (filesErr) {
+          console.error('[offlineStorage] Falha mesmo após limpeza emergencial de arquivos:', filesErr);
+          throw filesErr;
+        }
       }
     }
     throw err;

@@ -64,7 +64,8 @@ export default function TabUsuarios() {
     return matchBusca && matchCargo;
   });
 
-  const getEscolaNome = (escolaId: string) => {
+  const getEscolaNome = (escolaId?: string) => {
+    if (!escolaId) return '-';
     const esc = escolas.find(e => e.id === escolaId);
     return esc ? esc.nome : '-';
   };

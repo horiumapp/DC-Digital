@@ -2,15 +2,33 @@ import React from 'react';
 import { X, Save, Loader2 } from 'lucide-react';
 import Captcha from '../../common/Captcha';
 
+interface AvaliacaoItem {
+  id?: string | number;
+  tipo?: string;
+  instrumento?: string;
+  data?: string;
+  bimestre?: string;
+  valor_maximo?: number;
+  valorMaximo?: number;
+}
+
+interface AlunoItem {
+  id: string;
+  nome: string;
+  matricula?: string;
+}
+
+export type SecondCallRowsState = Record<string, { selected: boolean; date: string; grade: string }>;
+
 interface SegundaChamadaEditorProps {
-  selectedAvaliacao: any;
-  alunos: any[];
-  secondCallRows: Record<string, { selected: boolean, date: string, grade: string }>;
+  selectedAvaliacao: AvaliacaoItem | null;
+  alunos: AlunoItem[];
+  secondCallRows: SecondCallRowsState;
   isSaving: boolean;
   generatedCaptcha: string;
   captchaInput: string;
   captchaError: boolean;
-  onSetSecondCallRows: (rows: any) => void;
+  onSetSecondCallRows: React.Dispatch<React.SetStateAction<SecondCallRowsState>>;
   onSave: () => void;
   onCancel: () => void;
   onSetCaptchaInput: (val: string) => void;
@@ -45,8 +63,8 @@ const SegundaChamadaEditor = React.memo(function SegundaChamadaEditor({
     onSetSecondCallRows(newRows);
   };
 
-  const handleRowChange = (alunoId: string, field: string, value: any) => {
-    onSetSecondCallRows((prev: any) => ({
+  const handleRowChange = (alunoId: string, field: 'selected' | 'date' | 'grade', value: boolean | string) => {
+    onSetSecondCallRows((prev) => ({
       ...prev,
       [alunoId]: { ...prev[alunoId], [field]: value }
     }));

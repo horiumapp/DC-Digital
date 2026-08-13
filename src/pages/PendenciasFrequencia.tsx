@@ -3,8 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Printer, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { fetchPendenciasPorEscola } from '../services/pendenciasService';
+import { fetchPendenciasPorEscola, type PendenciaDocente } from '../services/pendenciasService';
 import { APP_CONFIG } from '../config/appConfig';
+
+interface EscolaOption {
+  id: string;
+  nome: string;
+  distrito?: string;
+}
 
 export default function PendenciasFrequencia() {
   const navigate = useNavigate();
@@ -12,11 +18,11 @@ export default function PendenciasFrequencia() {
   const [distrito, setDistrito] = useState('');
   const [_distritos, setDistritos] = useState<string[]>([]);
   const [escolaId, setEscolaId] = useState('');
-  const [escolas, setEscolas] = useState<any[]>([]);
+  const [escolas, setEscolas] = useState<EscolaOption[]>([]);
   const [ensino, setEnsino] = useState('ENSINO FUNDAMENTAL - 1º CICLO');
   const [turno, setTurno] = useState('Matutino');
   const [tipoPendencia, setTipoPendencia] = useState('FREQUENCIA');
-  const [docentes, setDocentes] = useState<any[]>([]);
+  const [docentes, setDocentes] = useState<PendenciaDocente[]>([]);
   const [totalRecords, setTotalRecords] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;

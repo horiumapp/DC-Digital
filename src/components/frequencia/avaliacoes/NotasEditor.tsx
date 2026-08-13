@@ -4,9 +4,25 @@ import Captcha from '../../common/Captcha';
 
 import { formatarDataParaISO, formatarDataParaExibicao } from '../../../utils/dateUtils';
 
+interface AvaliacaoSelect {
+  id?: string | number;
+  tipo?: string;
+  instrumento?: string;
+  data?: string;
+  bimestre?: string;
+  valor_maximo?: number;
+  valorMaximo?: number;
+}
+
+interface AlunoNotaItem {
+  id: string;
+  nome: string;
+  matricula?: string;
+}
+
 interface NotasEditorProps {
-  selectedAvaliacao: any;
-  alunosParaNotas: any[];
+  selectedAvaliacao: AvaliacaoSelect | null;
+  alunosParaNotas: AlunoNotaItem[];
   localNotas: Record<string, string>;
   faltasPorData: Record<string, Set<string>>;
   generatedCaptcha: string;
@@ -52,7 +68,7 @@ const NotasEditor = React.memo(function NotasEditor({
             </div>
           </div>
           <div className="flex gap-6">
-            <div className="bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10">Data: {formatarDataParaExibicao(selectedAvaliacao.data)}</div>
+            <div className="bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10">Data: {formatarDataParaExibicao(selectedAvaliacao.data || '')}</div>
             <div className="bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10">Escala: 0 a {selectedAvaliacao.valorMaximo ? Number(selectedAvaliacao.valorMaximo).toFixed(2).replace('.', ',') : '10,00'}</div>
           </div>
         </div>
@@ -79,7 +95,7 @@ const NotasEditor = React.memo(function NotasEditor({
                 </td>
                 <td className="px-8 py-6">
                   <div className="relative max-w-[140px] mx-auto">
-                    {faltasPorData[formatarDataParaISO(selectedAvaliacao.data)]?.has(aluno.id) ? (
+                    {faltasPorData[formatarDataParaISO(selectedAvaliacao.data || '')]?.has(aluno.id) ? (
                       <div className="w-full bg-red-50 border-2 border-red-100 rounded-2xl px-4 py-3 text-center text-sm font-black text-red-600 uppercase tracking-widest flex items-center justify-center gap-2">
                         <AlertCircle className="w-4 h-4" /> Falta
                       </div>

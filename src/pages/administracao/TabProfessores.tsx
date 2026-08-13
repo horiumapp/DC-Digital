@@ -27,11 +27,14 @@ export interface ProfessorRow {
   disciplinas?: string[];
   usuario_id?: string;
   alocacoes_count?: number;
+  professor_alocacoes?: any[];
+  professor_horarios?: any[];
 }
 
 export interface EscolaOption {
   id: string;
   nome: string;
+  logo_url?: string;
 }
 
 export default function TabProfessores() {
@@ -589,14 +592,14 @@ export default function TabProfessores() {
                           {d.slice(0, 4)}
                         </span>
                       ))}
-                      {(professor.disciplinas?.length > 2) && (
+                      {(professor.disciplinas && professor.disciplinas.length > 2) && (
                         <span className="text-[8px] font-bold text-slate-400">+{professor.disciplinas.length - 2}</span>
                       )}
                     </div>
                     <div className="flex items-center gap-1 text-slate-400 shrink-0">
                       <Clock className="w-3 h-3" />
                       <span className="text-[10px] font-black uppercase tracking-widest tabular-nums">
-                        {professor.professor_horarios?.filter((h: any) => h.escola_id === selectedEscola.id).length || 0} AULAS
+                        {professor.professor_horarios?.filter((h: { escola_id?: string }) => h.escola_id === selectedEscola.id).length || 0} AULAS
                       </span>
                     </div>
                   </div>

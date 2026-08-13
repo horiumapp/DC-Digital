@@ -160,13 +160,20 @@ export default function PortalAluno() {
       .eq('aluno_id', alunoEncontrado.id);
 
     if (notasData) {
-      setNotas(notasData.map((n: any) => ({
-        disciplina: n.avaliacoes?.disciplina || 'N/D',
-        tipo: n.avaliacoes?.tipo || 'N/D',
-        valor: n.valor,
-        valor_maximo: n.avaliacoes?.valor_maximo || 10,
-        bimestre: n.avaliacoes?.bimestre || '1º',
-      })));
+      interface NotaRowSelect {
+        valor: number;
+        avaliacoes?: { tipo?: string; disciplina?: string; bimestre?: string; valor_maximo?: number };
+      }
+      setNotas(notasData.map((n: unknown) => {
+        const item = n as NotaRowSelect;
+        return {
+          disciplina: item.avaliacoes?.disciplina || 'N/D',
+          tipo: item.avaliacoes?.tipo || 'N/D',
+          valor: item.valor,
+          valor_maximo: item.avaliacoes?.valor_maximo || 10,
+          bimestre: item.avaliacoes?.bimestre || '1º',
+        };
+      }));
     }
 
     // Buscar frequências do aluno
