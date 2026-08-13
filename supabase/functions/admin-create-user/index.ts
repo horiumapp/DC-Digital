@@ -243,7 +243,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 6. FIX: Verificar se o chamador (GESTOR/SECRETARIO) tem vínculo com a escola
+    // 6. FIX: Verificar se o chamador (GESTOR/SECRETARIO) tem vínculo com a escola.
+    // FIX C2: Antes, se callerData.escola_id fosse NULL (usuário sem escola
+    // vinculada), o check era pulado e o chamador podia criar contas em QUALQUER
+    // escola. Agora, não-ADMIN só cria usuários da própria escola vinculada.
     if (effectiveRole !== "ADMIN") {
       const { data: callerData } = await supabaseAdmin
         .from("usuarios")
@@ -251,7 +254,14 @@ Deno.serve(async (req: Request) => {
         .eq("id", callerUser.id)
         .maybeSingle();
 
-      if (callerData?.escola_id && callerData.escola_id !== escolaIdTrimmed) {
+      if (!callerData?.escola_id) {
+        return new Response(
+          JSON.stringify({ error: "Seu usuário não possui uma escola vinculada. Contate o administrador." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (callerData.escola_id !== escolaIdTrimmed) {
         return new Response(
           JSON.stringify({ error: "Você só pode criar usuários vinculados à sua própria escola." }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -279,8 +289,10 @@ Deno.serve(async (req: Request) => {
           { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+      console.error("Erro ao criar usuário:", createError);
+      // FIX: Não vazar detalhes internos do servidor/banco para o cliente.
       return new Response(
-        JSON.stringify({ error: "Erro ao criar conta: " + createError.message }),
+        JSON.stringify({ error: "Não foi possível criar a conta. Tente novamente em instantes." }),
         { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

@@ -4,12 +4,11 @@ import { supabase } from '../../lib/supabase';
 import { Search, Edit2, Trash2, Building2, Users, GraduationCap, ChevronRight, ArrowLeft } from 'lucide-react';
 import NovoAlunoModal from '../../components/NovoAlunoModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
-import { formatMatricula, getMatriculaLogin } from '../../utils/formatters';
+import { formatMatricula, getMatriculaLogin, formatCpfObscured, gerarSenhaTemporaria } from '../../utils/formatters';
 
 import { useToast } from '../../components/common/Toast';
 
 const ALUNO_EMAIL_DOMAIN = 'aluno.dcdigital.local';
-const ALUNO_SENHA_PADRAO = 'Aluno2026';
 
 export default function TabAlunos() {
   const { user } = useAuth();
@@ -160,7 +159,8 @@ export default function TabAlunos() {
         .select();
 
       if (error) {
-        showError("Erro ao criar aluno: " + error.message);
+        console.error("Erro ao criar aluno:", error);
+        showError("Erro ao criar aluno. Verifique se os dados são válidos e tente novamente.");
       } else {
         const newAluno = newAlunoList?.[0];
         
@@ -170,11 +170,13 @@ export default function TabAlunos() {
           const pseudoEmail = `${cpfDigits}@${ALUNO_EMAIL_DOMAIN}`;
           
           try {
+            // FIX C2: senha temporária aleatória forte — nunca mais "Aluno2026"
+            const senhaTemporaria = gerarSenhaTemporaria();
             const { data: authData, error: authError } = await supabase.functions.invoke('admin-create-user', {
               body: {
                 nome: novoAluno.nome,
                 email: pseudoEmail,
-                senha: ALUNO_SENHA_PADRAO,
+                senha: senhaTemporaria,
                 cargo: 'ALUNO',
                 escola_id: novoAluno.escola_id,
               },
@@ -184,11 +186,11 @@ export default function TabAlunos() {
               const msg = authData?.error || authError?.message || 'Erro desconhecido';
               showWarning(`Aluno cadastrado, mas não foi possível criar a conta de acesso: ${msg}`);
             } else {
-              showSuccess(`Aluno ${novoAluno.nome} cadastrado! Matrícula (CPF): ${formatMatricula(newAluno.id, novoAluno.cpf)} | Senha: ${ALUNO_SENHA_PADRAO}`);
+              showSuccess(`Aluno ${novoAluno.nome} cadastrado! Matrícula (CPF): ${formatMatricula(newAluno.id, novoAluno.cpf)} | Senha: ${senhaTemporaria}`);
             }
           } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : String(err);
-            showWarning(`Aluno cadastrado, mas erro ao criar conta: ${msg}`);
+            console.error("Erro ao criar conta de acesso do aluno:", err);
+            showWarning('Aluno cadastrado, mas houve um erro ao criar a conta de acesso.');
           }
         } else if (newAluno) {
           showSuccess(`Aluno ${novoAluno.nome} cadastrado! CPF não informado — a conta de acesso será criada quando o CPF for adicionado.`);
@@ -534,7 +536,8 @@ export default function TabAlunos() {
                                                   {aluno.nome}
                                                 </span>
                                                 <span className="text-[10px] font-bold text-slate-400 tabular-nums uppercase tracking-tight">
-                                                  MATRÍCULA: {formatMatricula(aluno.id, aluno.cpf)}
+                                                  {/* FIX H4: mascarar CPF na listagem (LGPD) */}
+                                                  MATRÍCULA: {aluno.cpf ? formatCpfObscured(aluno.cpf) : 'CPF Pendente'}
                                                 </span>
                                               </div>
                                             </div>

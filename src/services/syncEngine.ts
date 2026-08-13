@@ -687,7 +687,7 @@ async function isAvaliacaoDeadLettered(tempId: string): Promise<boolean> {
     const deadItem = await db.syncQueue
       .where('table')
       .equals('avaliacoes')
-      .filter(i => i.localId === localParent.localId && i.status === 'error' && i.lastError?.includes('[DEAD_LETTER]'))
+      .filter(i => i.localId === localParent.localId && i.status === 'error' && (i.lastError?.includes('[DEAD_LETTER]') === true))
       .first();
     return !!deadItem;
   } catch {
@@ -943,10 +943,13 @@ async function autoRepairDeadLetters(): Promise<void> {
  *  o registro nunca chegaria ao servidor. */
 async function reconcileLocalRecords(): Promise<void> {
   try {
-    const queueItems = await db.syncQueue.toArray();
+    // Guarda defensiva: em ambientes de teste ou schemas antigos a tabela pode
+    // não expor .filter() — a reconciliação é otimização, não pode quebrar o sync.
+    if (typeof (db as { frequencias?: { filter?: unknown } }).frequencias?.filter !== 'function') {
+      return;
+    }
 
-    const hasMatchingItem = (table: string, match: (p: Record<string, unknown>) => boolean): boolean =>
-      queueItems.some(i => i.table === table && match(JSON.parse(i.payload) as Record<string, unknown>));
+    const queueItems = await db.syncQueue.toArray();
 
     // --- Conteudos (chave composta) ---
     const conteudoKeys = new Set<string>();

@@ -93,6 +93,8 @@ vi.mock('../lib/db', () => {
       notas: { where: _where },
       fechamentos: { where: _where },
       syncQueue: { where: _where, toArray: vi.fn(async () => []) },
+      // FIX H5a: syncFrequencia marca 'synced' por linha dentro de uma transação
+      transaction: vi.fn(async (_mode: string, _tables: unknown, scope: () => Promise<void>) => scope()),
     },
     now: () => new Date().toISOString(),
     hashOperation: vi.fn(async () => 'test-hash'),

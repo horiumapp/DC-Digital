@@ -867,7 +867,7 @@ export async function clearOldSyncedData(maxAgeDays: number = 60): Promise<numbe
   try {
     const oldErrors = await db.syncQueue
       .where('status').equals('error')
-      .filter(item => item.updatedAt < cutoffISO && item.lastError?.includes('[DEAD_LETTER]'))
+      .filter(item => item.updatedAt < cutoffISO && (item.lastError?.includes('[DEAD_LETTER]') === true))
       .toArray();
     const errorIds = oldErrors.map(e => e.id).filter((id): id is number => id !== undefined);
     if (errorIds.length > 0) {

@@ -119,6 +119,13 @@ export const fetchPendenciasPorEscola = async (
       query = query.eq('escola_id', escolaId);
     }
 
+    const professorEmailLower = professorEmail?.toLowerCase().trim();
+    if (professorEmailLower) {
+      // FIX: filtro aplicado no SERVIDOR (antes era client-side após baixar
+      // todos os horários, trafegando dados desnecessários).
+      query = query.ilike('professores.email', professorEmailLower);
+    }
+
     const { data: horarios, error: hError } = await query;
 
     if (hError) throw hError;
@@ -128,10 +135,7 @@ export const fetchPendenciasPorEscola = async (
       console.warn(`[pendenciasService] Dados truncados: ${HORARIOS_LIMIT} horários atingidos. Considere implementar lógica server-side.`);
     }
 
-    const professorEmailLower = professorEmail?.toLowerCase().trim();
-    const horariosFiltrados = professorEmailLower
-      ? horarios.filter(h => h.professores?.email?.toLowerCase().trim() === professorEmailLower)
-      : horarios;
+    const horariosFiltrados = horarios;
 
     const hoje = new Date();
     const mapConsolidado: Record<string, ConsolidadoGroup> = Object.create(null);

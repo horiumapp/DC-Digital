@@ -6,6 +6,7 @@ import NovoProfessorModal from '../../components/NovoProfessorModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import GerenciarAlocacoesModal from '../../components/GerenciarAlocacoesModal';
 import ScheduleModal from '../../components/ScheduleModal';
+import { gerarSenhaTemporaria } from '../../utils/formatters';
 
 
 const DEPARTAMENTOS = ['Geral', 'BIOLÓGICAS', 'HUMANAS', 'EXATAS', 'LINGUAGENS'];
@@ -166,9 +167,10 @@ export default function TabProfessores() {
 
         // Fase 2: Se forneceu e-mail, criar conta de acesso via Edge Function
         if (novoProfessor.email && selectedEscola) {
-          const senhaDeAcesso = novoProfessor.senha || '@prof123';
-          
-          if (senhaDeAcesso.length >= 6) {
+          // FIX C2: senha temporária aleatória forte — nunca mais "@prof123"
+          const senhaDeAcesso = novoProfessor.senha || gerarSenhaTemporaria();
+
+          if (senhaDeAcesso.length >= 8) {
             try {
               const { data: authData, error: authError } = await supabase.functions.invoke('admin-create-user', {
                 body: {
@@ -185,14 +187,14 @@ export default function TabProfessores() {
                 if (authData?.details) msg += ` - Detalhes: ${JSON.stringify(authData.details)}`;
                 showWarning(`Professor cadastrado, mas não foi possível criar a conta de acesso: ${msg}`);
               } else {
-                showSuccess(`Professor ${novoProfessor.nome} cadastrado com acesso! (Senha padrão: ${senhaDeAcesso})`);
+                showSuccess(`Professor ${novoProfessor.nome} cadastrado com acesso! (Senha: ${senhaDeAcesso})`);
               }
             } catch (err: unknown) {
-              const msg = err instanceof Error ? err.message : String(err);
-              showWarning(`Professor cadastrado, mas erro ao criar conta: ${msg}`);
+              console.error("Erro ao criar conta de acesso do professor:", err);
+              showWarning('Professor cadastrado, mas houve um erro ao criar a conta de acesso.');
             }
           } else {
-            showWarning('Professor cadastrado, mas a senha deve ter no mínimo 6 caracteres para criar conta de acesso.');
+            showWarning('Professor cadastrado, mas a senha deve ter no mínimo 8 caracteres, incluindo letras e números, para criar conta de acesso.');
           }
         }
 
