@@ -4,6 +4,7 @@ import Captcha from '../common/Captcha';
 import { useTurma } from '../../contexts/TurmaContext';
 import { useCaptcha } from '../../hooks/useCaptcha';
 import { supabase } from '../../lib/supabase';
+import * as OfflineStorage from '../../services/offlineStorage';
 import { getBimestrePorData } from '../../utils/dateUtils';
 
 interface CurriculoObjeto {
@@ -56,36 +57,61 @@ export default function ObjetoConhecimentoTab({
     async function loadCurriculo() {
       if (!turmaAtiva) return;
       setLoadingCurriculo(true);
+
+      const modalidadeRaw = turmaAtiva.ensino || '';
+      // Extract prefix before '(' to avoid mismatches between '°' and 'º'.
+      const modalidade = modalidadeRaw.split('(')[0].trim();
+      let ano = turmaAtiva.fase || '';
+      // Extract leading digit from phase (e.g. "1° ANO A" -> "1º Ano") to match curriculum format.
+      const matchAno = ano.match(/^(\d+)/);
+      if (matchAno) ano = `${matchAno[1]}º Ano`;
+
+      const chave = {
+        modalidade,
+        ano,
+        bimestre: getBimestrePorData(selectedDate) || '',
+        disciplina: turmaAtiva.componente || '',
+      };
+
       try {
-        const modalidadeRaw = turmaAtiva.ensino || "";
-        // Extract prefix before '(' to avoid mismatches between '°' and 'º'
-        const modalidadeStr = modalidadeRaw.split('(')[0].trim();
-        
-        let anoStr = turmaAtiva.fase || "";
-        // Extract leading digit from phase (e.g. "1° ANO A" -> "1º Ano") to match curriculum format
-        const matchAno = anoStr.match(/^(\d+)/);
-        if (matchAno) {
-          anoStr = `${matchAno[1]}º Ano`;
+        let unidades: CurriculoUnidade[] = [];
+
+        if (navigator.onLine) {
+          const { data, error } = await supabase
+            .from('curriculo_unidades')
+            .select('*, objetos:curriculo_objetos(*), habilidades:curriculo_habilidades(*)')
+            .ilike('modalidade', `%${chave.modalidade}%`)
+            .eq('ano', chave.ano)
+            .eq('bimestre', chave.bimestre)
+            .ilike('disciplina', `%${chave.disciplina}%`);
+
+          if (error) throw error;
+          unidades = (data || []) as CurriculoUnidade[];
+          if (unidades.length > 0) {
+            await OfflineStorage.cacheCurriculo(unidades.map(unidade => ({
+              id: unidade.id,
+              modalidade: unidade.modalidade,
+              ano: unidade.ano,
+              bimestre: unidade.bimestre,
+              disciplina: unidade.disciplina,
+              nome: unidade.nome,
+              objetos: unidade.objetos || [],
+              habilidades: unidade.habilidades || [],
+            })));
+          }
         }
 
-        const disciplina = turmaAtiva.componente || "";
-        const bimestre = getBimestrePorData(selectedDate) || "";
+        if (unidades.length === 0) {
+          unidades = await OfflineStorage.getCachedCurriculo(chave);
+        }
 
-        const { data, error } = await supabase
-          .from('curriculo_unidades')
-          .select('*, objetos:curriculo_objetos(*), habilidades:curriculo_habilidades(*)')
-          .ilike('modalidade', `%${modalidadeStr}%`)
-          .eq('ano', anoStr)
-          .eq('bimestre', bimestre)
-          .ilike('disciplina', `%${disciplina}%`);
-
-        if (error) throw error;
-        const found = data?.length || 0;
-        setUnidadesBD(data || []);
-        setCurriculoIndisponivel(found === 0);
+        setUnidadesBD(unidades);
+        setCurriculoIndisponivel(unidades.length === 0);
       } catch (err) {
         console.error('Erro ao buscar currículo:', err);
-        setCurriculoIndisponivel(true);
+        const unidadesCache = await OfflineStorage.getCachedCurriculo(chave);
+        setUnidadesBD(unidadesCache);
+        setCurriculoIndisponivel(unidadesCache.length === 0);
       } finally {
         setLoadingCurriculo(false);
       }
