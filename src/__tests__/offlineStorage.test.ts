@@ -47,6 +47,11 @@ const {
           (x: MockRecord) => !ids.includes(x.localId) && !ids.includes(x.id)
         );
       },
+      delete: async (id: unknown) => {
+        mockStore[tableName] = mockStore[tableName].filter(
+          (x: MockRecord) => x.localId !== id && x.id !== id
+        );
+      },
       clear: async () => {
         mockStore[tableName] = [];
       },
@@ -145,6 +150,10 @@ const {
           below: queryBelow,
         };
       },
+      filter: (fn: (item: MockRecord) => boolean) => ({
+        first: async () => mockStore[tableName].filter(fn)[0],
+        toArray: async () => mockStore[tableName].filter(fn),
+      }),
     };
   };
 
@@ -190,6 +199,8 @@ vi.mock('../lib/db', () => {
   return {
     db: mockDb,
     now: () => new Date().toISOString(),
+    hashOperation: async (table: string, operation: string, payload: Record<string, unknown>) =>
+      `hash_${table}_${operation}_${JSON.stringify(payload)}`,
     OPERATIONAL_TABLE_NAMES: ['frequencias', 'conteudos', 'avaliacoes', 'notas', 'fechamentos'],
     getOperationalTable: (name: string) => (mockDb as Record<string, unknown>)[name],
   };
@@ -218,6 +229,7 @@ import {
   cacheAlunos,
   getCachedAlunos,
   saveFrequenciaLocal,
+  deleteAvaliacaoLocal,
   clearOldSyncedData,
 } from '../services/offlineStorage';
 import { db } from '../lib/db';
@@ -350,5 +362,29 @@ describe('offlineStorage Service', () => {
     expect(updatedStore.frequencias.find(f => f.localId === 1)).toBeUndefined();
     expect(updatedStore.frequencias.find(f => f.localId === 2)).toBeDefined();
     expect(updatedStore.frequencias.find(f => f.localId === 3)).toBeDefined();
+  });
+
+  it('removes an offline evaluation, its notes, and only related queue entries', async () => {
+    const store = getMockStore();
+    store.avaliacoes.push({ localId: 42, clientTempId: 'temp_1720000000000' });
+    store.notas.push(
+      { localId: 1, avaliacao_id: 'temp_1720000000000' },
+      { localId: 2, avaliacao_id: 'temp_42' },
+      { localId: 3, avaliacao_id: 'avaliacao-preservada' },
+    );
+    store.syncQueue.push(
+      { id: 10, table: 'avaliacoes', operation: 'INSERT', localId: 42, payload: '{}', status: 'pending', hash: 'av', createdAt: '2026-01-01', updatedAt: '2026-01-01', retryCount: 0 },
+      { id: 11, table: 'notas', operation: 'UPSERT', payload: JSON.stringify({ records: [{ avaliacao_id: 'temp_1720000000000', aluno_id: 'a1' }] }), status: 'pending', hash: 'notas-1', createdAt: '2026-01-01', updatedAt: '2026-01-01', retryCount: 0 },
+      { id: 12, table: 'notas', operation: 'UPSERT', payload: JSON.stringify({ records: [{ avaliacao_id: 'temp_42', aluno_id: 'a2' }, { avaliacao_id: 'avaliacao-preservada', aluno_id: 'a3' }] }), status: 'pending', hash: 'notas-2', createdAt: '2026-01-01', updatedAt: '2026-01-01', retryCount: 0 },
+    );
+
+    await deleteAvaliacaoLocal('temp_1720000000000');
+
+    expect(store.avaliacoes).toHaveLength(0);
+    expect(store.notas.map(n => n.localId)).toEqual([3]);
+    expect(store.syncQueue.map(item => item.id)).toEqual([12]);
+    expect(JSON.parse(String(store.syncQueue[0].payload)).records).toEqual([
+      { avaliacao_id: 'avaliacao-preservada', aluno_id: 'a3' },
+    ]);
   });
 });
