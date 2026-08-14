@@ -8,6 +8,7 @@ import Dexie from 'dexie';
 import { db, now, hashOperation, OPERATIONAL_TABLE_NAMES, getOperationalTable, type SyncStatus } from '../lib/db';
 import { supabase } from '../lib/supabase';
 import { encryptFields, decryptFields, getOrCreateKey } from '../lib/crypto';
+import { getTid } from '../utils/turmaUtils';
 import * as Queue from './offlineQueue';
 import type {
   LocalFrequencia,
@@ -138,6 +139,7 @@ export async function cacheAlunos(alunos: Omit<LocalAluno, 'syncStatus' | 'updat
   const records = await Promise.all(alunos.map(async a => {
     const record = {
       ...a,
+      turma_id: getTid(a.turma_id),
       syncStatus: 'synced' as SyncStatus,
       updatedAt: now(),
     };
@@ -150,7 +152,8 @@ export async function cacheAlunos(alunos: Omit<LocalAluno, 'syncStatus' | 'updat
 
 export async function getCachedAlunos(turmaId: string): Promise<{ alunos: LocalAluno[]; decryptionFailed: boolean }> {
   const key = await getCryptoKey();
-  const local = await db.alunos.where('turma_id').equals(turmaId).toArray();
+  const tid = getTid(turmaId);
+  const local = await db.alunos.where('turma_id').equals(tid).toArray();
   if (!key) return { alunos: local, decryptionFailed: false };
   let anyDecryptionFailed = false;
   const result = await Promise.all(local.map(async a => {
@@ -164,7 +167,7 @@ export async function getCachedAlunos(turmaId: string): Promise<{ alunos: LocalA
     // FIX #1: Limpar o cache corrompido para forçar re-fetch do servidor no próximo acesso online.
     // Manter dados cifrados irrecuperáveis no IndexedDB não tem utilidade.
     try {
-      await db.alunos.where('turma_id').equals(turmaId).delete();
+      await db.alunos.where('turma_id').equals(tid).delete();
       console.info('[offlineStorage] Cache de alunos da turma limpo — será re-sincronizado quando online.');
     } catch (clearErr) {
       console.error('[offlineStorage] Falha ao limpar cache de alunos com chave corrompida:', clearErr);
