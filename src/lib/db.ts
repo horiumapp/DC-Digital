@@ -134,6 +134,18 @@ export interface LocalFechamento {
   version: number;
 }
 
+/** Unidade curricular cacheada para consulta BNCC offline (somente leitura). */
+export interface LocalCurriculoUnidade {
+  id: string;
+  modalidade: string;
+  ano: string;
+  bimestre: string;
+  disciplina: string;
+  nome: string;
+  objetos: Array<{ id?: string; unidade_id?: string; descricao: string }>;
+  habilidades: Array<{ id?: string; unidade_id?: string; codigo: string }>;
+  updatedAt: string;
+}
 /** Fila de sincronização */
 export interface SyncQueueItem {
   id?: number;
@@ -208,6 +220,7 @@ export class DCDigitalDB extends Dexie {
   notas!: EntityTable<LocalNota, 'localId'>;
   horarios!: EntityTable<LocalHorario, 'localId'>;
   fechamentos!: EntityTable<LocalFechamento, 'localId'>;
+  curriculos!: EntityTable<LocalCurriculoUnidade, 'id'>;
   syncQueue!: EntityTable<SyncQueueItem, 'id'>;
   syncLogs!: EntityTable<SyncLogEntry, 'id'>;
   cachedUsers!: EntityTable<CachedUser, 'id'>;
@@ -308,6 +321,24 @@ export class DCDigitalDB extends Dexie {
       notas:       '++localId, avaliacao_id, [avaliacao_id+aluno_id], syncStatus, updatedAt, [syncStatus+updatedAt]',
       horarios:    '++localId, turma_id',
       fechamentos: '++localId, [turma_id+disciplina+bimestre], syncStatus, [syncStatus+updatedAt]',
+
+      syncQueue:   '++id, table, status, createdAt, hash',
+      syncLogs:    '++id, timestamp, table, status',
+      cachedUsers: 'id',
+      files:       '++localId, syncStatus, relatedTable, relatedId',
+      userSalts:   'userId',
+    });
+    // v6: Cache somente leitura do currículo BNCC para consulta offline.
+    this.version(6).stores({
+      turmas:      'id, escola_id',
+      alunos:      'id, turma_id, syncStatus',
+      frequencias: '++localId, [turma_id+aluno_id+data+tempo+disciplina], turma_id, syncStatus, updatedAt, [syncStatus+updatedAt]',
+      conteudos:   '++localId, [turma_id+data+tempo+disciplina], turma_id, syncStatus, updatedAt, [syncStatus+updatedAt]',
+      avaliacoes:  '++localId, turma_id, disciplina, syncStatus, id, updatedAt, [syncStatus+updatedAt]',
+      notas:       '++localId, avaliacao_id, [avaliacao_id+aluno_id], syncStatus, updatedAt, [syncStatus+updatedAt]',
+      horarios:    '++localId, turma_id',
+      fechamentos: '++localId, [turma_id+disciplina+bimestre], syncStatus, [syncStatus+updatedAt]',
+      curriculos:  'id, [modalidade+ano+bimestre+disciplina]',
 
       syncQueue:   '++id, table, status, createdAt, hash',
       syncLogs:    '++id, timestamp, table, status',
