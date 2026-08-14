@@ -5,7 +5,7 @@
  * Escreve localmente com syncStatus='pending' e enfileira para sincronização.
  */
 import Dexie from 'dexie';
-import { db, now, OPERATIONAL_TABLE_NAMES, getOperationalTable, type SyncStatus } from '../lib/db';
+import { db, now, hashOperation, OPERATIONAL_TABLE_NAMES, getOperationalTable, type SyncStatus } from '../lib/db';
 import { supabase } from '../lib/supabase';
 import { encryptFields, decryptFields, getOrCreateKey } from '../lib/crypto';
 import * as Queue from './offlineQueue';
@@ -479,16 +479,80 @@ export async function getAvaliacoesLocal(turmaId: string, disciplina?: string): 
 }
 
 export async function deleteAvaliacaoLocal(id: string): Promise<void> {
-  const record = await db.avaliacoes.where('id').equals(id).first();
-  if (record?.localId) {
-    // FIX R1: Limpar notas associadas em transação atômica para evitar órfãs no IndexedDB.
-    // Sem isso, notas referenciando uma avaliação inexistente permaneciam indefinidamente,
-    // consumindo espaço e podendo causar erros de referência na sincronização.
-    await db.transaction('rw', [db.avaliacoes, db.notas], async () => {
-      await db.notas.where('avaliacao_id').equals(id).delete();
-      await db.avaliacoes.delete(record.localId);
-    });
-  }
+  const record = await db.avaliacoes
+    .filter(avaliacao => {
+      const localId = avaliacao.localId;
+      return avaliacao.id === id
+        || avaliacao.clientTempId === id
+        || avaliacao.serverId === id
+        || (localId !== undefined && (
+          String(localId) === id || `temp_${localId}` === id || `local_${localId}` === id
+        ));
+    })
+    .first();
+
+  if (!record?.localId) return;
+
+  const avaliacaoAliases = new Set(
+    [id, record.id, record.clientTempId, record.serverId, String(record.localId), `temp_${record.localId}`, `local_${record.localId}`]
+      .filter((value): value is string => Boolean(value))
+  );
+
+  await db.transaction('rw', [db.avaliacoes, db.notas, db.syncQueue], async () => {
+    const notas = await db.notas
+      .filter(nota => avaliacaoAliases.has(String(nota.avaliacao_id)))
+      .toArray();
+    const notaIds = notas.map(nota => nota.localId).filter((localId): localId is number => localId !== undefined);
+    if (notaIds.length > 0) await db.notas.bulkDelete(notaIds);
+
+    const queueItems = await db.syncQueue.toArray();
+    for (const item of queueItems) {
+      let payload: Record<string, unknown>;
+      try {
+        payload = JSON.parse(item.payload) as Record<string, unknown>;
+      } catch {
+        payload = {};
+      }
+
+      const isAvaliacaoOperation = item.table === 'avaliacoes'
+        && (item.localId === record.localId || avaliacaoAliases.has(String(payload.id)));
+      if (isAvaliacaoOperation) {
+        if (item.id !== undefined) await db.syncQueue.delete(item.id);
+        continue;
+      }
+
+      if (item.table !== 'notas') continue;
+
+      const records = Array.isArray(payload.records) ? payload.records : null;
+      if (records) {
+        const remainingRecords = records.filter(value => {
+          if (!value || typeof value !== 'object') return true;
+          return !avaliacaoAliases.has(String((value as Record<string, unknown>).avaliacao_id));
+        });
+        if (remainingRecords.length === records.length) continue;
+        if (remainingRecords.length === 0) {
+          if (item.id !== undefined) await db.syncQueue.delete(item.id);
+          continue;
+        }
+        payload.records = remainingRecords;
+      } else if (avaliacaoAliases.has(String(payload.avaliacao_id))) {
+        if (item.id !== undefined) await db.syncQueue.delete(item.id);
+        continue;
+      } else {
+        continue;
+      }
+
+      if (item.id !== undefined) {
+        await db.syncQueue.update(item.id, {
+          payload: JSON.stringify(payload),
+          hash: await hashOperation(item.table, item.operation, payload),
+          updatedAt: now(),
+        });
+      }
+    }
+
+    await db.avaliacoes.delete(record.localId);
+  });
 }
 
 export async function cacheAvaliacoes(records: Array<Omit<LocalAvaliacao, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'> & { id: string }>): Promise<void> {
@@ -940,5 +1004,4 @@ export async function getStorageEstimate(): Promise<{ usage: number; quota: numb
   }
   return { usage: 0, quota: 0, percentUsed: 0 };
 }
-
 
