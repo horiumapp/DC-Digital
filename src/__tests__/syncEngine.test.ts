@@ -108,7 +108,7 @@ import { supabase } from '../lib/supabase';
 import { pingInternet } from '../utils/network';
 
 // Helper para configurar peek com resultados sequenciais
-function setupPeek(items: any[]) {
+function setupPeek(items: (Queue.SyncQueueItem | undefined)[]) {
   let idx = 0;
   vi.mocked(Queue.peek).mockImplementation(async () => items[idx++] || undefined);
 }
@@ -122,10 +122,10 @@ function forceUpsertError(msg: string) {
     insert: vi.fn(async () => ({ data: [{ id: 'x' }], error: null })),
     select: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn(async () => ({ data: null, error: null })) })) })),
     update: vi.fn(() => ({ eq: vi.fn(async () => ({ error: null })) })),
-  } as any);
+  } as unknown as ReturnType<typeof supabase.from>);
 }
 
-function makeFreqItem(id: number, payload?: any) {
+function makeFreqItem(id: number, payload?: Record<string, unknown>): Queue.SyncQueueItem {
   return {
     id,
     table: 'frequencias',
@@ -148,7 +148,10 @@ function makeFreqItem(id: number, payload?: any) {
 
 describe('syncEngine', () => {
   beforeEach(() => {
-    (globalThis as any).navigator = { onLine: true };
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { onLine: true },
+      configurable: true,
+    });
     vi.clearAllMocks();
     // Reset peek para retornar undefined (fila vazia)
     vi.mocked(Queue.peek).mockResolvedValue(undefined);
