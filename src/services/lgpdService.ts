@@ -141,17 +141,22 @@ export async function submitLgpdRequest(input: LgpdRequestInput) {
       }
     );
 
-    const result = await response.json();
+    let result: { error?: string; success?: boolean; id?: string; created_at?: string } = {};
+    try {
+      result = await response.json();
+    } catch {
+      result = { error: `Erro na comunicação com o servidor (${response.status})` };
+    }
 
     if (!response.ok) {
       // Rate limit server-side (429) ou erro de validação
-      throw new Error(result.error || 'Erro ao processar solicitação.');
+      throw new Error(result.error || `Erro ao processar solicitação (${response.status}).`);
     }
 
     return { data: result, error: null };
   } catch (error: unknown) {
     console.error('[LGPD Service] Erro ao enviar solicitação LGPD:', error);
-    return { data: null, error };
+    return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
   }
 }
 

@@ -78,9 +78,9 @@ export default function SolicitacaoLgpd() {
       setMensagem('');
       setDeclaracao(false);
       captcha.generateNewCaptcha();
-    } catch (_err: unknown) {
-      void _err;
-      setError('Erro ao enviar solicitação. Por favor, tente novamente mais tarde.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao enviar solicitação. Por favor, tente novamente mais tarde.';
+      setError(message);
     } finally {
       setIsLoading(false);
     }

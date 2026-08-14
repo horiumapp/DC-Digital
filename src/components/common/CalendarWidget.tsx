@@ -5,15 +5,38 @@ import { Link } from 'react-router-dom';
 import { APP_CONFIG } from '../../config/appConfig';
 import { formatarDataParaISO } from '../../utils/dateUtils';
 
+interface CalendarLancamento {
+  data: string;
+  turmaId: string | number;
+  tipo: string;
+  tempo: string;
+}
+
+interface CalendarAvaliacao {
+  id: string | number;
+  data: string;
+  turmaId: string | number;
+  tipo?: string;
+}
+
+interface CalendarAluno {
+  notas?: Record<string | number, number | string | null>;
+}
+
+interface CalendarHorario {
+  dia_semana: number | string;
+  tempo_ordem: number | string;
+}
+
 interface CalendarWidgetProps {
   year: number;
   currentMonth: number;
   onMonthChange: (month: number) => void;
   turmaAtiva: { id: string | number; nome?: string } | null;
-  lancamentos: any[];
-  avaliacoes: any[];
-  alunos: any[];
-  horarioTurma?: any[];
+  lancamentos: CalendarLancamento[];
+  avaliacoes: CalendarAvaliacao[];
+  alunos: CalendarAluno[];
+  horarioTurma?: CalendarHorario[];
   minMonth?: number;
   maxMonth?: number;
   periodoStart?: string;

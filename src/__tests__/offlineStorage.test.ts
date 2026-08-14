@@ -10,9 +10,7 @@ if (!globalThis.crypto) {
 const {
   mockDb,
   getMockStore,
-  setMockStore,
-  resetMockStore,
-  setAutoId
+  resetMockStore
 } = vi.hoisted(() => {
   let mockStore: Record<string, any[]> = {
     turmas: [],

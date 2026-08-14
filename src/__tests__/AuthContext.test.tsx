@@ -15,8 +15,7 @@ const {
   mockSignOut,
   mockMaybeSingle,
   mockFrom,
-  setSessionVal,
-  getAuthStateCallback
+  setSessionVal
 } = vi.hoisted(() => {
   let sessionVal: any = null;
   let authStateCallback: any = null;
