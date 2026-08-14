@@ -3,8 +3,10 @@ import { webcrypto } from 'crypto';
 
 // Garantir que a API Web Crypto global está disponível no Node.js
 if (!globalThis.crypto) {
-  (globalThis as any).crypto = webcrypto;
+  Object.defineProperty(globalThis, 'crypto', { value: webcrypto });
 }
+
+type MockRecord = Record<string, unknown>;
 
 // ---------- Hoisted Memory Database Mock ----------
 const {
@@ -12,7 +14,7 @@ const {
   getMockStore,
   resetMockStore
 } = vi.hoisted(() => {
-  let mockStore: Record<string, any[]> = {
+  let mockStore: Record<string, MockRecord[]> = {
     turmas: [],
     alunos: [],
     frequencias: [],
@@ -28,11 +30,11 @@ const {
 
   const createTableMock = (tableName: string) => {
     return {
-      bulkPut: async (records: any[]) => {
+      bulkPut: async (records: MockRecord[]) => {
         records.forEach(r => {
           const idField = r.localId !== undefined ? 'localId' : (r.id !== undefined ? 'id' : (r.userId !== undefined ? 'userId' : 'localId'));
           const searchVal = r[idField];
-          const idx = mockStore[tableName].findIndex((x: any) => x[idField] === searchVal);
+          const idx = mockStore[tableName].findIndex((x: MockRecord) => x[idField] === searchVal);
           if (idx >= 0) {
             mockStore[tableName][idx] = { ...mockStore[tableName][idx], ...r };
           } else {
@@ -40,16 +42,16 @@ const {
           }
         });
       },
-      bulkDelete: async (ids: any[]) => {
+      bulkDelete: async (ids: unknown[]) => {
         mockStore[tableName] = mockStore[tableName].filter(
-          (x: any) => !ids.includes(x.localId) && !ids.includes(x.id)
+          (x: MockRecord) => !ids.includes(x.localId) && !ids.includes(x.id)
         );
       },
       clear: async () => {
         mockStore[tableName] = [];
       },
       toArray: async () => mockStore[tableName],
-      add: async (item: any) => {
+      add: async (item: MockRecord) => {
         const idField = item.localId !== undefined ? 'localId' : (item.id !== undefined ? 'id' : (item.userId !== undefined ? 'userId' : 'localId'));
         const newItem = { ...item };
         if (newItem[idField] === undefined) {
@@ -58,16 +60,16 @@ const {
         mockStore[tableName].push(newItem);
         return newItem[idField];
       },
-      get: async (id: any) => {
-        return mockStore[tableName].find((x: any) => x.id === id || x.userId === id || x.localId === id) || null;
+      get: async (id: unknown) => {
+        return mockStore[tableName].find((x: MockRecord) => x.id === id || x.userId === id || x.localId === id) || null;
       },
-      put: async (record: any) => {
+      put: async (record: MockRecord) => {
         const idField = record.userId !== undefined ? 'userId' : (record.localId !== undefined ? 'localId' : (record.id !== undefined ? 'id' : 'localId'));
         const searchVal = record[idField] !== undefined ? record[idField] : autoId++;
         const recordToSave = { ...record };
         recordToSave[idField] = searchVal;
         
-        const idx = mockStore[tableName].findIndex((x: any) => x[idField] === searchVal);
+        const idx = mockStore[tableName].findIndex((x: MockRecord) => x[idField] === searchVal);
         if (idx >= 0) {
           mockStore[tableName][idx] = recordToSave;
         } else {
@@ -75,8 +77,8 @@ const {
         }
         return searchVal;
       },
-      update: async (localId: any, changes: any) => {
-        const idx = mockStore[tableName].findIndex((x: any) => x.localId === localId || x.id === localId || x.userId === localId);
+      update: async (localId: unknown, changes: MockRecord) => {
+        const idx = mockStore[tableName].findIndex((x: MockRecord) => x.localId === localId || x.id === localId || x.userId === localId);
         if (idx >= 0) {
           mockStore[tableName][idx] = { ...mockStore[tableName][idx], ...changes };
           return 1;
@@ -84,8 +86,8 @@ const {
         return 0;
       },
       where: (field: string) => {
-        const queryEquals = (val: any) => {
-          const matching = mockStore[tableName].filter((x: any) => {
+        const queryEquals = (val: unknown) => {
+          const matching = mockStore[tableName].filter((x: MockRecord) => {
             if (Array.isArray(val) && field === '[turma_id+aluno_id+data+tempo+disciplina]') {
               return (
                 x.turma_id === val[0] &&
@@ -104,33 +106,33 @@ const {
           return {
             toArray: async () => matching,
             first: async () => matching[0],
-            filter: (fn: any) => ({
+            filter: (fn: (item: MockRecord) => boolean) => ({
               toArray: async () => matching.filter(fn),
             }),
           };
         };
 
-        const queryAnyOf = (vals: any[]) => {
-          const matching = mockStore[tableName].filter((x: any) => vals.includes(x[field]));
+        const queryAnyOf = (vals: unknown[]) => {
+          const matching = mockStore[tableName].filter((x: MockRecord) => vals.includes(x[field]));
           return {
             toArray: async () => matching,
           };
         };
 
-        const queryBetween = (start: any[], end: any[]) => {
+        const queryBetween = (start: unknown[], end: unknown[]) => {
           return {
             toArray: async () => {
-              return mockStore[tableName].filter((x: any) => {
+              return mockStore[tableName].filter((x: MockRecord) => {
                 const statusMatch = x.syncStatus === start[0];
-                const dateMatch = x.updatedAt < end[1];
+                const dateMatch = String(x.updatedAt) < String(end[1]);
                 return statusMatch && dateMatch;
               });
             },
           };
         };
 
-        const queryBelow = (val: any) => {
-          const matching = mockStore[tableName].filter((x: any) => x[field] < val);
+        const queryBelow = (val: unknown) => {
+          const matching = mockStore[tableName].filter((x: MockRecord) => (x[field] as number | string) < (val as number | string));
           return {
             toArray: async () => matching,
           };
@@ -146,7 +148,7 @@ const {
     };
   };
 
-  const dbInstance: any = {
+  const dbInstance = {
     turmas: createTableMock('turmas'),
     alunos: createTableMock('alunos'),
     frequencias: createTableMock('frequencias'),
@@ -157,7 +159,7 @@ const {
     userSalts: createTableMock('userSalts'),
     syncLogs: createTableMock('syncLogs'),
     syncQueue: createTableMock('syncQueue'),
-    transaction: async (mode: string, tables: any, callback: any) => {
+    transaction: async (_mode: string, _tables: unknown, callback: () => Promise<unknown>) => {
       return await callback();
     },
   };
@@ -165,7 +167,6 @@ const {
   return {
     mockDb: dbInstance,
     getMockStore: () => mockStore,
-    setMockStore: (val: any) => { mockStore = val; },
     resetMockStore: () => {
       mockStore = {
         turmas: [],
@@ -181,7 +182,6 @@ const {
       };
       autoId = 1;
     },
-    setAutoId: (val: number) => { autoId = val; }
   };
 });
 
@@ -191,7 +191,7 @@ vi.mock('../lib/db', () => {
     db: mockDb,
     now: () => new Date().toISOString(),
     OPERATIONAL_TABLE_NAMES: ['frequencias', 'conteudos', 'avaliacoes', 'notas', 'fechamentos'],
-    getOperationalTable: (name: string) => mockDb[name],
+    getOperationalTable: (name: string) => (mockDb as Record<string, unknown>)[name],
   };
 });
 
@@ -288,13 +288,13 @@ describe('offlineStorage Service', () => {
     const originalAdd = db.frequencias.add;
 
     // Fazer a primeira chamada lançar erro de cota
-    (db.frequencias.add as any) = async (item: any) => {
+    db.frequencias.add = (async (item: Parameters<typeof originalAdd>[0]) => {
       if (!hasThrown) {
         hasThrown = true;
         throw new DOMException('QuotaExceededError', 'QuotaExceededError');
       }
       return await originalAdd.call(db.frequencias, item);
-    };
+    }) as typeof originalAdd;
 
     const freq = {
       turma_id: 't-1',

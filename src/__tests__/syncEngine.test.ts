@@ -102,13 +102,14 @@ vi.mock('../lib/db', () => {
 });
 
 // ---------- Import sob teste (APÓS mocks) ----------
+import type { SyncQueueItem } from '../lib/db';
 import * as SyncEngine from '../services/syncEngine';
 import * as Queue from '../services/offlineQueue';
 import { supabase } from '../lib/supabase';
 import { pingInternet } from '../utils/network';
 
 // Helper para configurar peek com resultados sequenciais
-function setupPeek(items: (Queue.SyncQueueItem | undefined)[]) {
+function setupPeek(items: (SyncQueueItem | undefined)[]) {
   let idx = 0;
   vi.mocked(Queue.peek).mockImplementation(async () => items[idx++] || undefined);
 }
@@ -125,7 +126,7 @@ function forceUpsertError(msg: string) {
   } as unknown as ReturnType<typeof supabase.from>);
 }
 
-function makeFreqItem(id: number, payload?: Record<string, unknown>): Queue.SyncQueueItem {
+function makeFreqItem(id: number, payload?: Record<string, unknown>): SyncQueueItem {
   return {
     id,
     table: 'frequencias',
