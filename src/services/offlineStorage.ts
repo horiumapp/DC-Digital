@@ -85,7 +85,6 @@ export async function getCachedTurmas(escolaId?: string): Promise<LocalTurma[]> 
 }
 
 // ============================================================
-// ============================================================
 // Currículo BNCC (cache somente leitura)
 // ============================================================
 
@@ -104,6 +103,8 @@ export async function getCachedCurriculo(chave: CurriculoCacheKey): Promise<Loca
     .equals([chave.modalidade, chave.ano, chave.bimestre, chave.disciplina])
     .toArray();
 }
+
+// ============================================================
 // Alunos (cache somente leitura)
 // ============================================================
 

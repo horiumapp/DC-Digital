@@ -8,12 +8,21 @@ import * as OfflineStorage from '../../services/offlineStorage';
 import { getBimestrePorData } from '../../utils/dateUtils';
 
 interface CurriculoObjeto {
+  id?: string;
+  unidade_id?: string;
   descricao: string;
 }
 interface CurriculoHabilidade {
+  id?: string;
+  unidade_id?: string;
   codigo: string;
 }
 interface CurriculoUnidade {
+  id: string;
+  modalidade: string;
+  ano: string;
+  bimestre: string;
+  disciplina: string;
   nome: string;
   objetos: CurriculoObjeto[];
   habilidades: CurriculoHabilidade[];
