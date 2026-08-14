@@ -17,8 +17,8 @@ const {
   mockFrom,
   setSessionVal
 } = vi.hoisted(() => {
-  let sessionVal: any = null;
-  let authStateCallback: any = null;
+  let sessionVal: unknown = null;
+  let authStateCallback: ((event: string, session: unknown) => void) | null = null;
 
   const getSession = vi.fn(async () => ({ data: { session: sessionVal } }));
   const onAuthStateChange = vi.fn((callback) => {
@@ -45,7 +45,7 @@ const {
 
   return {
     mockCacheUser: vi.fn(async () => { }),
-    mockGetCachedUser: vi.fn(async (): Promise<Record<string, any> | null | undefined> => null),
+    mockGetCachedUser: vi.fn(async (): Promise<Record<string, unknown> | null | undefined> => null),
     mockClearAllLocalData: vi.fn(async () => { }),
     mockClearSalts: vi.fn(async () => { }),
     mockGetSession: getSession,
@@ -53,8 +53,7 @@ const {
     mockSignOut: signOut,
     mockMaybeSingle: maybeSingle,
     mockFrom: from,
-    setSessionVal: (val: any) => { sessionVal = val; },
-    getAuthStateCallback: () => authStateCallback
+    setSessionVal: (val: unknown) => { sessionVal = val; }
   };
 });
 

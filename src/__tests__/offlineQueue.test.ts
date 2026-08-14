@@ -3,7 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ---------- Mock do Dexie (IndexedDB) ----------
 // vi.mock é hoisted, então a factory inline é obrigatória
 
-let mockQueue: any[] = [];
+import type { SyncQueueItem } from '../lib/db';
+
+let mockQueue: SyncQueueItem[] = [];
 let autoId = 1;
 
 vi.mock('../lib/db', () => {
@@ -15,13 +17,13 @@ vi.mock('../lib/db', () => {
         return await callback();
       },
       syncQueue: {
-        add: async (item: any) => {
+        add: async (item: Omit<SyncQueueItem, 'id'>) => {
           const id = autoId++;
           mockQueue.push({ ...item, id });
           return id;
         },
         get: async (id: number) => mockQueue.find(i => i.id === id),
-        update: async (id: number, changes: any) => {
+        update: async (id: number, changes: Partial<SyncQueueItem>) => {
           const idx = mockQueue.findIndex(i => i.id === id);
           if (idx >= 0) mockQueue[idx] = { ...mockQueue[idx], ...changes };
         },
@@ -29,21 +31,25 @@ vi.mock('../lib/db', () => {
           mockQueue = mockQueue.filter(i => i.id !== id);
         },
         clear: async () => { mockQueue = []; },
-        where: (field: string) => ({
+        where: (field: keyof SyncQueueItem) => ({
           equals: (val: string) => ({
-            filter: (fn: (item: any) => boolean) => ({
-              first: async () => mockQueue.filter(i => i[field] === val).filter(fn)[0],
-              toArray: async () => mockQueue.filter(i => i[field] === val).filter(fn),
+            filter: (fn: (item: SyncQueueItem) => boolean) => ({
+              first: async () => mockQueue.filter(i => (i[field] as unknown) === val).filter(fn)[0],
+              toArray: async () => mockQueue.filter(i => (i[field] as unknown) === val).filter(fn),
             }),
-            count: async () => mockQueue.filter(i => i[field] === val).length,
-            toArray: async () => mockQueue.filter(i => i[field] === val),
-            sortBy: async (sortField: string) =>
+            count: async () => mockQueue.filter(i => (i[field] as unknown) === val).length,
+            toArray: async () => mockQueue.filter(i => (i[field] as unknown) === val),
+            sortBy: async (sortField: keyof SyncQueueItem) =>
               mockQueue
-                .filter(i => i[field] === val)
-                .sort((a: any, b: any) => (a[sortField] > b[sortField] ? 1 : -1)),
+                .filter(i => (i[field] as unknown) === val)
+                .sort((a, b) => {
+                  const aVal = a[sortField] ?? '';
+                  const bVal = b[sortField] ?? '';
+                  return aVal > bVal ? 1 : -1;
+                }),
           }),
           anyOf: (vals: string[]) => ({
-            count: async () => mockQueue.filter(i => vals.includes(i[field])).length,
+            count: async () => mockQueue.filter(i => vals.includes(String(i[field]))).length,
           }),
         }),
         orderBy: () => ({
@@ -52,7 +58,7 @@ vi.mock('../lib/db', () => {
       },
     },
     now: () => new Date().toISOString(),
-    hashOperation: async (_t: string, _o: string, p: any) =>
+    hashOperation: async (_t: string, _o: string, p: Record<string, unknown>) =>
       `hash_${JSON.stringify(p).slice(0, 16)}`,
   };
 });
