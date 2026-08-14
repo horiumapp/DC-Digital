@@ -20,6 +20,7 @@ import type {
   LocalHorario,
   CachedUser,
   LocalFile,
+  LocalCurriculoUnidade,
 } from '../lib/db';
 
 // ============================================================
@@ -84,6 +85,25 @@ export async function getCachedTurmas(escolaId?: string): Promise<LocalTurma[]> 
 }
 
 // ============================================================
+// ============================================================
+// Currículo BNCC (cache somente leitura)
+// ============================================================
+
+export type CurriculoCacheKey = Pick<LocalCurriculoUnidade, 'modalidade' | 'ano' | 'bimestre' | 'disciplina'>;
+
+export async function cacheCurriculo(unidades: Omit<LocalCurriculoUnidade, 'updatedAt'>[]): Promise<void> {
+  await db.curriculos.bulkPut(unidades.map(unidade => ({
+    ...unidade,
+    updatedAt: now(),
+  })));
+}
+
+export async function getCachedCurriculo(chave: CurriculoCacheKey): Promise<LocalCurriculoUnidade[]> {
+  return db.curriculos
+    .where('[modalidade+ano+bimestre+disciplina]')
+    .equals([chave.modalidade, chave.ano, chave.bimestre, chave.disciplina])
+    .toArray();
+}
 // Alunos (cache somente leitura)
 // ============================================================
 
