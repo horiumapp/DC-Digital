@@ -89,13 +89,14 @@ function checkLgpdRateLimit(): boolean {
 }
 
 /**
- * Envia uma nova solicitação de direitos LGPD.
+ * Envia uma nova solicitação de direitos LGPD via Edge Function.
  * 
- * FIX #2: Agora com rate limiting client-side (5 req/15min).
- * Para proteção server-side, configurar trigger PostgreSQL ou Edge Function.
+ * FIX #2: Rate limiting client-side (5 req/15min) como barreira de UX.
+ * Proteção real: Edge Function `lgpd-request` com rate limiting por IP
+ * + trigger PostgreSQL `trg_lgpd_rate_limit` por email.
  */
 export async function submitLgpdRequest(input: LgpdRequestInput) {
-  // FIX #2: Verificar rate limit antes de processar
+  // Barreira de UX: rate limit client-side (evita chamadas desnecessárias)
   if (!checkLgpdRateLimit()) {
     return {
       data: null,
@@ -104,7 +105,7 @@ export async function submitLgpdRequest(input: LgpdRequestInput) {
   }
 
   try {
-    // Validação de input
+    // Validação client-side (duplicada no servidor, mas evita roundtrip desnecessário)
     const nome = (input.nome || '').trim();
     const email = (input.email || '').trim().toLowerCase();
     const mensagem = (input.mensagem || '').trim();
@@ -124,22 +125,30 @@ export async function submitLgpdRequest(input: LgpdRequestInput) {
       return { data: null, error: new Error('Tipo de solicitação inválido.') };
     }
 
-    const { data, error } = await supabase
-      .from('lgpd_requests')
-      .insert({
-        nome,
-        email,
-        tipo,
-        mensagem,
-        status: 'recebida',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
+    // Chamar Edge Function com rate limiting server-side por IP
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-    if (error) throw error;
-    return { data, error: null };
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/lgpd-request`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({ nome, email, tipo, mensagem }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      // Rate limit server-side (429) ou erro de validação
+      throw new Error(result.error || 'Erro ao processar solicitação.');
+    }
+
+    return { data: result, error: null };
   } catch (error: unknown) {
     console.error('[LGPD Service] Erro ao enviar solicitação LGPD:', error);
     return { data: null, error };
