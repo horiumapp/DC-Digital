@@ -229,4 +229,28 @@ describe('syncEngine', () => {
     await SyncEngine.syncAll();
     expect(Queue.resetStuckItems).toHaveBeenCalled();
   });
+
+  it('deve processar e sincronizar item da tabela security_logs com sucesso', async () => {
+    const item = {
+      id: 5,
+      table: 'security_logs',
+      operation: 'INSERT' as const,
+      payload: JSON.stringify({
+        user_id: 'user-123',
+        action: 'LOGIN',
+        created_at: new Date().toISOString(),
+      }),
+      status: 'pending' as const,
+      retryCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      hash: 'hash-sec-log',
+    };
+    setupPeek([item]);
+
+    const result = await SyncEngine.syncAll();
+    expect(result.synced).toBe(1);
+    expect(result.failed).toBe(0);
+    expect(Queue.markDone).toHaveBeenCalledWith(5);
+  });
 });

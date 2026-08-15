@@ -21,10 +21,14 @@ const {
     conteudos: [],
     avaliacoes: [],
     notas: [],
+    horarios: [],
     fechamentos: [],
+    curriculos: [],
     userSalts: [],
     syncLogs: [],
     syncQueue: [],
+    cachedUsers: [],
+    files: [],
   };
   let autoId = 1;
 
@@ -102,6 +106,21 @@ const {
                 x.disciplina === val[4]
               );
             }
+            if (Array.isArray(val) && field === '[turma_id+data+tempo+disciplina]') {
+              return (
+                x.turma_id === val[0] &&
+                x.data === val[1] &&
+                x.tempo === val[2] &&
+                x.disciplina === val[3]
+              );
+            }
+            if (Array.isArray(val) && field === '[turma_id+disciplina+bimestre]') {
+              return (
+                x.turma_id === val[0] &&
+                x.disciplina === val[1] &&
+                x.bimestre === val[2]
+              );
+            }
             if (Array.isArray(val) && field === '[avaliacao_id+aluno_id]') {
               return x.avaliacao_id === val[0] && x.aluno_id === val[1];
             }
@@ -110,9 +129,11 @@ const {
 
           return {
             toArray: async () => matching,
-            first: async () => matching[0],
+            first: async () => matching[0] || null,
+            count: async () => matching.length,
             filter: (fn: (item: MockRecord) => boolean) => ({
               toArray: async () => matching.filter(fn),
+              first: async () => matching.filter(fn)[0] || null,
             }),
           };
         };
@@ -121,23 +142,35 @@ const {
           const matching = mockStore[tableName].filter((x: MockRecord) => vals.includes(x[field]));
           return {
             toArray: async () => matching,
+            count: async () => matching.length,
           };
         };
 
-        const queryBetween = (start: unknown[], end: unknown[]) => {
+        const queryBetween = (lower: unknown[], upper: unknown[]) => {
+          const matching = mockStore[tableName].filter((x: MockRecord) => {
+            if (field === '[syncStatus+updatedAt]') {
+              return x.syncStatus === lower[0] && String(x.updatedAt) < String(upper[1]);
+            }
+            if (field === '[turma_id+aluno_id+data+tempo+disciplina]') {
+              return (
+                x.turma_id === lower[0] &&
+                x.data === lower[2] &&
+                x.tempo === lower[3] &&
+                x.disciplina === lower[4]
+              );
+            }
+            if (field === '[turma_id+disciplina+bimestre]') {
+              return x.turma_id === lower[0] && x.disciplina === lower[1];
+            }
+            return true;
+          });
           return {
-            toArray: async () => {
-              return mockStore[tableName].filter((x: MockRecord) => {
-                const statusMatch = x.syncStatus === start[0];
-                const dateMatch = String(x.updatedAt) < String(end[1]);
-                return statusMatch && dateMatch;
-              });
-            },
+            toArray: async () => matching,
           };
         };
 
-        const queryBelow = (val: unknown) => {
-          const matching = mockStore[tableName].filter((x: MockRecord) => (x[field] as number | string) < (val as number | string));
+        const queryBelow = (val: string) => {
+          const matching = mockStore[tableName].filter((x: MockRecord) => String(x[field]) < val);
           return {
             toArray: async () => matching,
           };
@@ -164,10 +197,14 @@ const {
     conteudos: createTableMock('conteudos'),
     avaliacoes: createTableMock('avaliacoes'),
     notas: createTableMock('notas'),
+    horarios: createTableMock('horarios'),
     fechamentos: createTableMock('fechamentos'),
+    curriculos: createTableMock('curriculos'),
     userSalts: createTableMock('userSalts'),
     syncLogs: createTableMock('syncLogs'),
     syncQueue: createTableMock('syncQueue'),
+    cachedUsers: createTableMock('cachedUsers'),
+    files: createTableMock('files'),
     transaction: async (_mode: string, _tables: unknown, callback: () => Promise<unknown>) => {
       return await callback();
     },
@@ -184,10 +221,14 @@ const {
         conteudos: [],
         avaliacoes: [],
         notas: [],
+        horarios: [],
         fechamentos: [],
+        curriculos: [],
         userSalts: [],
         syncLogs: [],
         syncQueue: [],
+        cachedUsers: [],
+        files: [],
       };
       autoId = 1;
     },
@@ -229,8 +270,11 @@ import {
   cacheAlunos,
   getCachedAlunos,
   saveFrequenciaLocal,
+  saveConteudoLocal,
+  saveAvaliacaoLocal,
   deleteAvaliacaoLocal,
   clearOldSyncedData,
+  clearAllLocalData,
 } from '../services/offlineStorage';
 import { db } from '../lib/db';
 
@@ -386,5 +430,59 @@ describe('offlineStorage Service', () => {
     expect(JSON.parse(String(store.syncQueue[0].payload)).records).toEqual([
       { avaliacao_id: 'avaliacao-preservada', aluno_id: 'a3' },
     ]);
+  });
+
+  it('normaliza turma_id composto (UUID||Componente) para UUID puro em operações locais', async () => {
+    const rawTurmaId = '12345678-1234-1234-1234-1234567890ab||Matemática';
+    const expectedTid = '12345678-1234-1234-1234-1234567890ab';
+
+    await saveFrequenciaLocal({
+      turma_id: rawTurmaId,
+      aluno_id: 'aluno-1',
+      data: '2026-03-01',
+      tempo: '1',
+      status: 'P',
+      participacao: 'Presencial',
+      disciplina: 'Matemática',
+    });
+
+    await saveConteudoLocal({
+      turma_id: rawTurmaId,
+      data: '2026-03-01',
+      tempo: '1',
+      objetos: ['Geometria'],
+      habilidades: ['EF01MA01'],
+      descricao: 'Aula inaugural',
+      disciplina: 'Matemática',
+    });
+
+    await saveAvaliacaoLocal({
+      turma_id: rawTurmaId,
+      tipo: 'PROVA',
+      data: '2026-03-10',
+      instrumento: 'Escrita',
+      objetos: [{ objeto: 'Geometria', unidade: 'Unidade 1' }],
+      bimestre: '1º',
+      valor_maximo: 10,
+      disciplina: 'Matemática',
+    });
+
+    const store = getMockStore();
+    expect(store.frequencias[0].turma_id).toBe(expectedTid);
+    expect(store.conteudos[0].turma_id).toBe(expectedTid);
+    expect(store.avaliacoes[0].turma_id).toBe(expectedTid);
+  });
+
+  it('limpa todas as tabelas incluindo curriculos ao chamar clearAllLocalData', async () => {
+    const store = getMockStore();
+    store.turmas.push({ id: 't1' });
+    store.curriculos.push({ id: 'c1', modalidade: 'EF1' });
+    store.alunos.push({ id: 'a1' });
+
+    await clearAllLocalData();
+
+    expect(store.turmas).toHaveLength(0);
+    expect(store.curriculos).toHaveLength(0);
+    expect(store.alunos).toHaveLength(0);
   });
 });
