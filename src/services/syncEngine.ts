@@ -545,6 +545,9 @@ async function processItem(item: SyncQueueItem, signal?: AbortSignal): Promise<s
     case 'fechamentos':
       await syncFechamento(item.operation, payload);
       return null;
+    case 'security_logs':
+      await syncSecurityLog(payload);
+      return null;
     default:
       throw new Error(`[DEAD_LETTER] Tabela desconhecida: ${item.table}`);
   }
@@ -748,6 +751,11 @@ async function syncFechamento(operation: string, payload: Record<string, unknown
     .equals(String(sanitized.turma_id))
     .filter(f => f.disciplina === sanitized.disciplina && f.bimestre === sanitized.bimestre)
     .modify({ syncStatus: 'synced', updatedAt: now() });
+}
+
+async function syncSecurityLog(payload: Record<string, unknown>): Promise<void> {
+  const { error } = await supabase.from('security_logs').insert([payload]);
+  if (error) throw error;
 }
 
 // ============================================================

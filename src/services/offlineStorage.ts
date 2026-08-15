@@ -184,17 +184,19 @@ export async function getCachedAlunos(turmaId: string): Promise<{ alunos: LocalA
 
 export async function saveFrequenciaLocal(data: Omit<LocalFrequencia, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>): Promise<number> {
   return withQuotaRecovery(async () => {
+    const tid = getTid(data.turma_id);
+    const normalizedData = { ...data, turma_id: tid };
     // Tenta encontrar registro existente pela chave composta
     const existing = await db.frequencias
       .where('[turma_id+aluno_id+data+tempo+disciplina]')
-      .equals([data.turma_id, data.aluno_id, data.data, data.tempo, data.disciplina])
+      .equals([tid, normalizedData.aluno_id, normalizedData.data, normalizedData.tempo, normalizedData.disciplina])
       .first();
 
     const timestamp = now();
 
     if (existing && existing.localId) {
       await db.frequencias.update(existing.localId, {
-        ...data,
+        ...normalizedData,
         syncStatus: 'pending',
         updatedAt: timestamp,
         version: (existing.version || 0) + 1,
@@ -203,7 +205,7 @@ export async function saveFrequenciaLocal(data: Omit<LocalFrequencia, 'localId' 
     }
 
     return await db.frequencias.add({
-      ...data,
+      ...normalizedData,
       syncStatus: 'pending',
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -220,11 +222,12 @@ export async function saveFrequenciasBulk(
   // de uma vez, sendo a mais propensa a QuotaExceeded.
   return withQuotaRecovery(async () => {
     const timestamp = now();
+    const normalizedRecords = records.map(r => ({ ...r, turma_id: getTid(r.turma_id) }));
 
     // FIX #6: Validar invariante do batch — todos os records devem ter mesma data/tempo/disciplina.
     // Caso contrário, a otimização de busca abaixo retornaria resultados incorretos.
-    const first = records[0];
-    const invariantViolation = records.some(
+    const first = normalizedRecords[0];
+    const invariantViolation = normalizedRecords.some(
       r => r.data !== first.data || r.tempo !== first.tempo || r.disciplina !== first.disciplina
     );
     if (invariantViolation) {
@@ -245,7 +248,7 @@ export async function saveFrequenciasBulk(
     }
 
     await db.transaction('rw', db.frequencias, async () => {
-      for (const data of records) {
+      for (const data of normalizedRecords) {
         const existing = existingMap.get(data.aluno_id);
 
         if (existing && existing.localId) {
@@ -270,14 +273,16 @@ export async function saveFrequenciasBulk(
 }
 
 export async function getFrequenciasLocal(turmaId: string, disciplina: string, data: string, tempo: string): Promise<LocalFrequencia[]> {
+  const tid = getTid(turmaId);
   return db.frequencias
-    .where('turma_id').equals(turmaId)
+    .where('turma_id').equals(tid)
     .filter(f => f.disciplina === disciplina && f.data === data && f.tempo === tempo)
     .toArray();
 }
 
 export async function getAllFrequenciasLocal(turmaId: string, disciplina?: string): Promise<LocalFrequencia[]> {
-  const query = db.frequencias.where('turma_id').equals(turmaId);
+  const tid = getTid(turmaId);
+  const query = db.frequencias.where('turma_id').equals(tid);
   if (disciplina) {
     return query.filter(f => f.disciplina.toLowerCase() === disciplina.toLowerCase()).toArray();
   }
@@ -285,11 +290,12 @@ export async function getAllFrequenciasLocal(turmaId: string, disciplina?: strin
 }
 
 export async function deleteFrequenciasLocal(turmaId: string, disciplina: string, data: string, tempo: string): Promise<void> {
+  const tid = getTid(turmaId);
   const records = await db.frequencias
     .where('[turma_id+aluno_id+data+tempo+disciplina]')
     .between(
-      [turmaId, Dexie.minKey, data, tempo, disciplina],
-      [turmaId, Dexie.maxKey, data, tempo, disciplina]
+      [tid, Dexie.minKey, data, tempo, disciplina],
+      [tid, Dexie.maxKey, data, tempo, disciplina]
     )
     .toArray();
 
@@ -302,12 +308,13 @@ export async function deleteFrequenciasLocal(turmaId: string, disciplina: string
 /** Cache frequências vindas do servidor (marca como synced) */
 export async function cacheFrequencias(turmaId: string, records: Omit<LocalFrequencia, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
   if (records.length === 0) return;
+  const tid = getTid(turmaId);
   const timestamp = now();
 
   // FIX #19: Buscar todos os registros existentes da turma de uma vez
   // em vez de fazer N queries .where().first() dentro do loop (padrão N+1).
   const existingRecords = await db.frequencias
-    .where('turma_id').equals(turmaId)
+    .where('turma_id').equals(tid)
     .toArray();
 
   const existingMap = new Map<string, LocalFrequencia>();
@@ -317,7 +324,8 @@ export async function cacheFrequencias(turmaId: string, records: Omit<LocalFrequ
   }
 
   await db.transaction('rw', db.frequencias, async () => {
-    for (const data of records) {
+    for (const rawData of records) {
+      const data = { ...rawData, turma_id: tid };
       const key = `${data.aluno_id}|${data.data}|${data.tempo}|${data.disciplina}`;
       const existing = existingMap.get(key);
 
@@ -334,7 +342,7 @@ export async function cacheFrequencias(turmaId: string, records: Omit<LocalFrequ
       } else {
         await db.frequencias.add({
           ...data,
-          turma_id: turmaId,
+          turma_id: tid,
           syncStatus: 'synced',
           createdAt: timestamp,
           updatedAt: timestamp,
@@ -352,16 +360,18 @@ export async function cacheFrequencias(turmaId: string, records: Omit<LocalFrequ
 export async function saveConteudoLocal(data: Omit<LocalConteudo, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>): Promise<number> {
   // FIX #9: Envolver em withQuotaRecovery para recuperação automática quando IndexedDB estiver cheio
   return withQuotaRecovery(async () => {
+    const tid = getTid(data.turma_id);
+    const normalizedData = { ...data, turma_id: tid };
     const existing = await db.conteudos
       .where('[turma_id+data+tempo+disciplina]')
-      .equals([data.turma_id, data.data, data.tempo, data.disciplina])
+      .equals([tid, normalizedData.data, normalizedData.tempo, normalizedData.disciplina])
       .first();
 
     const timestamp = now();
 
     if (existing && existing.localId) {
       await db.conteudos.update(existing.localId, {
-        ...data,
+        ...normalizedData,
         syncStatus: 'pending',
         updatedAt: timestamp,
         version: (existing.version || 0) + 1,
@@ -370,7 +380,7 @@ export async function saveConteudoLocal(data: Omit<LocalConteudo, 'localId' | 's
     }
 
     return await db.conteudos.add({
-      ...data,
+      ...normalizedData,
       syncStatus: 'pending',
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -380,14 +390,16 @@ export async function saveConteudoLocal(data: Omit<LocalConteudo, 'localId' | 's
 }
 
 export async function getConteudoLocal(turmaId: string, disciplina: string, data: string, tempo: string): Promise<LocalConteudo | undefined> {
+  const tid = getTid(turmaId);
   return db.conteudos
     .where('[turma_id+data+tempo+disciplina]')
-    .equals([turmaId, data, tempo, disciplina])
+    .equals([tid, data, tempo, disciplina])
     .first();
 }
 
 export async function getAllConteudosLocal(turmaId: string, disciplina?: string): Promise<LocalConteudo[]> {
-  const query = db.conteudos.where('turma_id').equals(turmaId);
+  const tid = getTid(turmaId);
+  const query = db.conteudos.where('turma_id').equals(tid);
   if (disciplina) {
     return query.filter(c => c.disciplina.toLowerCase() === disciplina.toLowerCase()).toArray();
   }
@@ -395,9 +407,10 @@ export async function getAllConteudosLocal(turmaId: string, disciplina?: string)
 }
 
 export async function deleteConteudoLocal(turmaId: string, disciplina: string, data: string, tempo: string): Promise<void> {
+  const tid = getTid(turmaId);
   const record = await db.conteudos
     .where('[turma_id+data+tempo+disciplina]')
-    .equals([turmaId, data, tempo, disciplina])
+    .equals([tid, data, tempo, disciplina])
     .first();
   if (!record?.localId) return;
 
@@ -419,12 +432,13 @@ export async function deleteConteudoLocal(turmaId: string, disciplina: string, d
 
 export async function cacheConteudos(turmaId: string, records: Omit<LocalConteudo, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
   if (records.length === 0) return;
+  const tid = getTid(turmaId);
   const timestamp = now();
 
   // FIX: Buscar todos os registros existentes da turma de uma vez
   // em vez de N queries .where().first() dentro do loop (padrão N+1).
   const existingRecords = await db.conteudos
-    .where('turma_id').equals(turmaId)
+    .where('turma_id').equals(tid)
     .toArray();
 
   const existingMap = new Map<string, LocalConteudo>();
@@ -434,7 +448,8 @@ export async function cacheConteudos(turmaId: string, records: Omit<LocalConteud
   }
 
   await db.transaction('rw', db.conteudos, async () => {
-    for (const data of records) {
+    for (const rawData of records) {
+      const data = { ...rawData, turma_id: tid };
       const key = `${data.data}|${data.tempo}|${data.disciplina}`;
       const existing = existingMap.get(key);
 
@@ -450,7 +465,7 @@ export async function cacheConteudos(turmaId: string, records: Omit<LocalConteud
       } else {
         await db.conteudos.add({
           ...data,
-          turma_id: turmaId,
+          turma_id: tid,
           syncStatus: 'synced',
           createdAt: timestamp,
           updatedAt: timestamp,
@@ -468,14 +483,16 @@ export async function cacheConteudos(turmaId: string, records: Omit<LocalConteud
 export async function saveAvaliacaoLocal(data: Omit<LocalAvaliacao, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>): Promise<number> {
   // FIX #9: Envolver em withQuotaRecovery para recuperação automática quando IndexedDB estiver cheio
   return withQuotaRecovery(async () => {
+    const tid = getTid(data.turma_id);
+    const normalizedData = { ...data, turma_id: tid };
     const timestamp = now();
 
     // Se tem server ID, atualizar registro existente
-    if (data.id) {
-      const existing = await db.avaliacoes.where('id').equals(data.id).first();
+    if (normalizedData.id) {
+      const existing = await db.avaliacoes.where('id').equals(normalizedData.id).first();
       if (existing?.localId) {
         await db.avaliacoes.update(existing.localId, {
-          ...data,
+          ...normalizedData,
           syncStatus: 'pending',
           updatedAt: timestamp,
           version: (existing.version || 0) + 1,
@@ -485,7 +502,7 @@ export async function saveAvaliacaoLocal(data: Omit<LocalAvaliacao, 'localId' | 
     }
 
     return await db.avaliacoes.add({
-      ...data,
+      ...normalizedData,
       syncStatus: 'pending',
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -495,7 +512,8 @@ export async function saveAvaliacaoLocal(data: Omit<LocalAvaliacao, 'localId' | 
 }
 
 export async function getAvaliacoesLocal(turmaId: string, disciplina?: string): Promise<LocalAvaliacao[]> {
-  const query = db.avaliacoes.where('turma_id').equals(turmaId);
+  const tid = getTid(turmaId);
+  const query = db.avaliacoes.where('turma_id').equals(tid);
   if (disciplina) {
     return query.filter(a => a.disciplina.toLowerCase() === disciplina.toLowerCase()).toArray();
   }
@@ -715,11 +733,12 @@ export async function cacheHorarios(
   records: Omit<LocalHorario, 'localId' | 'syncStatus' | 'updatedAt'>[],
   disciplina?: string
 ): Promise<void> {
+  const tid = getTid(turmaId);
   // Limpa horários existentes da turma para a disciplina específica para evitar apagar de outras disciplinas
   const comp = disciplina || (records.length > 0 ? records[0].componente : null);
 
   await db.transaction('rw', db.horarios, async () => {
-    const existing = await db.horarios.where('turma_id').equals(turmaId).toArray();
+    const existing = await db.horarios.where('turma_id').equals(tid).toArray();
     const toDelete = comp 
       ? existing.filter(h => (h.componente || '').trim().toLowerCase() === comp.trim().toLowerCase()) 
       : existing;
@@ -730,7 +749,7 @@ export async function cacheHorarios(
     const timestamp = now();
     const toAdd = records.map(h => ({
       ...h,
-      turma_id: turmaId,
+      turma_id: tid,
       syncStatus: 'synced' as SyncStatus,
       updatedAt: timestamp,
     }));
@@ -741,7 +760,8 @@ export async function cacheHorarios(
 }
 
 export async function getHorariosLocal(turmaId: string): Promise<LocalHorario[]> {
-  return db.horarios.where('turma_id').equals(turmaId).toArray();
+  const tid = getTid(turmaId);
+  return db.horarios.where('turma_id').equals(tid).toArray();
 }
 
 // ============================================================
@@ -751,16 +771,18 @@ export async function getHorariosLocal(turmaId: string): Promise<LocalHorario[]>
 export async function saveFechamentoLocal(data: Omit<LocalFechamento, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>): Promise<number> {
   // FIX #9: Envolver em withQuotaRecovery para recuperação automática quando IndexedDB estiver cheio
   return withQuotaRecovery(async () => {
+    const tid = getTid(data.turma_id);
+    const normalizedData = { ...data, turma_id: tid };
     const existing = await db.fechamentos
       .where('[turma_id+disciplina+bimestre]')
-      .equals([data.turma_id, data.disciplina, data.bimestre])
+      .equals([tid, normalizedData.disciplina, normalizedData.bimestre])
       .first();
 
     const timestamp = now();
 
     if (existing?.localId) {
       await db.fechamentos.update(existing.localId, {
-        ...data,
+        ...normalizedData,
         syncStatus: 'pending',
         updatedAt: timestamp,
         version: (existing.version || 0) + 1,
@@ -769,7 +791,7 @@ export async function saveFechamentoLocal(data: Omit<LocalFechamento, 'localId' 
     }
 
     return await db.fechamentos.add({
-      ...data,
+      ...normalizedData,
       syncStatus: 'pending',
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -779,17 +801,19 @@ export async function saveFechamentoLocal(data: Omit<LocalFechamento, 'localId' 
 }
 
 export async function getFechamentosLocal(turmaId: string, disciplina: string): Promise<LocalFechamento[]> {
+  const tid = getTid(turmaId);
   return db.fechamentos
     .where('[turma_id+disciplina+bimestre]')
     .between(
-      [turmaId, disciplina, Dexie.minKey],
-      [turmaId, disciplina, Dexie.maxKey]
+      [tid, disciplina, Dexie.minKey],
+      [tid, disciplina, Dexie.maxKey]
     )
     .toArray();
 }
 
 export async function cacheFechamentos(turmaId: string, disciplina: string, records: Omit<LocalFechamento, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
   if (records.length === 0) return;
+  const tid = getTid(turmaId);
   const timestamp = now();
 
   // FIX N+1: Buscar todos os fechamentos da turma+disciplina de uma vez
@@ -797,8 +821,8 @@ export async function cacheFechamentos(turmaId: string, disciplina: string, reco
   const existingRecords = await db.fechamentos
     .where('[turma_id+disciplina+bimestre]')
     .between(
-      [turmaId, disciplina, Dexie.minKey],
-      [turmaId, disciplina, Dexie.maxKey]
+      [tid, disciplina, Dexie.minKey],
+      [tid, disciplina, Dexie.maxKey]
     )
     .toArray();
 
@@ -808,7 +832,8 @@ export async function cacheFechamentos(turmaId: string, disciplina: string, reco
   }
 
   await db.transaction('rw', db.fechamentos, async () => {
-    for (const data of records) {
+    for (const rawData of records) {
+      const data = { ...rawData, turma_id: tid };
       const existing = existingMap.get(data.bimestre);
 
       if (existing?.localId) {
@@ -991,6 +1016,7 @@ export async function clearAllLocalData(clearQueue = false, clearCrypto = false)
     db.notas.clear(),
     db.horarios.clear(),
     db.fechamentos.clear(),
+    db.curriculos.clear(),
     db.syncLogs.clear(),
     db.cachedUsers.clear(),
     db.files.clear(),

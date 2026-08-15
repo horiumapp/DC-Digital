@@ -400,6 +400,7 @@ export async function hashOperation(
     avaliacoes: ['id', 'parent_id', 'turma_id', 'disciplina', 'data', 'tipo'],
     notas: ['avaliacao_id', 'aluno_id'],
     fechamentos: ['turma_id', 'disciplina', 'bimestre'],
+    security_logs: ['user_id', 'action', 'created_at', 'entity_id'],
   };
 
   // FIX C3: Operações em lote ({ records: [...] }) eram hasheadas pelas chaves

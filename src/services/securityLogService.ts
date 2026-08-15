@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase';
-import { db, now } from '../lib/db';
+import { now } from '../lib/db';
+
+import * as Queue from './offlineQueue';
 
 export interface SecurityLogInput {
   userId?: string;
@@ -36,24 +38,21 @@ async function hashEmail(email: string): Promise<string | null> {
 async function saveSecurityLogLocally(input: SecurityLogInput, cleanMetadata: Record<string, unknown>): Promise<void> {
   try {
     const emailHash = input.userEmail ? await hashEmail(input.userEmail) : null;
-    await db.syncLogs.add({
-      timestamp: now(),
-      table: 'security_logs',
-      operation: 'INSERT',
-      status: 'success',
-      details: JSON.stringify({
-        user_id: input.userId || null,
-        user_email: emailHash,
-        action: input.action,
-        entity: input.entity || null,
-        entity_id: input.entityId || null,
-        user_agent: (navigator.userAgent || '').replace(/<[^>]*>/g, '').substring(0, 512),
-        metadata: cleanMetadata,
-      }),
-    });
-    console.info('[Security Log] Evento salvo localmente para sync posterior.');
+    const logPayload = {
+      user_id: input.userId || null,
+      user_email: emailHash,
+      action: input.action,
+      entity: input.entity || null,
+      entity_id: input.entityId || null,
+      ip: null,
+      user_agent: (navigator.userAgent || '').replace(/<[^>]*>/g, '').substring(0, 512),
+      metadata: cleanMetadata,
+      created_at: now(),
+    };
+    await Queue.enqueue('security_logs', 'INSERT', logPayload);
+    console.info('[Security Log] Evento enfileirado para sync posterior.');
   } catch (localErr) {
-    console.error('[Security Log] Falha ao salvar log localmente:', localErr);
+    console.error('[Security Log] Falha ao enfileirar log localmente:', localErr);
   }
 }
 
