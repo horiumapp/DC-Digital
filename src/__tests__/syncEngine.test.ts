@@ -253,4 +253,84 @@ describe('syncEngine', () => {
     expect(result.failed).toBe(0);
     expect(Queue.markDone).toHaveBeenCalledWith(5);
   });
+
+  it('deve sincronizar notas com avaliacao_id numérico (BIGINT) com sucesso', async () => {
+    const item = {
+      id: 6,
+      table: 'notas',
+      operation: 'UPSERT' as const,
+      payload: JSON.stringify({
+        records: [
+          {
+            avaliacao_id: '42', // BIGINT como string
+            aluno_id: 'a1a1a1a1-0000-0000-0000-000000000001',
+            valor: 8.5,
+          },
+        ],
+      }),
+      status: 'pending' as const,
+      retryCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      hash: 'hash-nota-num',
+    };
+    setupPeek([item]);
+
+    const result = await SyncEngine.syncAll();
+    expect(result.synced).toBe(1);
+    expect(result.failed).toBe(0);
+    expect(Queue.markDone).toHaveBeenCalledWith(6);
+  });
+
+  it('deve aguardar avaliação pai quando nota possui avaliacao_id temporário', async () => {
+    const item = {
+      id: 7,
+      table: 'notas',
+      operation: 'UPSERT' as const,
+      payload: JSON.stringify({
+        records: [
+          {
+            avaliacao_id: 'temp_1234567890',
+            aluno_id: 'a1a1a1a1-0000-0000-0000-000000000001',
+            valor: 9.0,
+          },
+        ],
+      }),
+      status: 'pending' as const,
+      retryCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      hash: 'hash-nota-temp',
+    };
+    setupPeek([item]);
+
+    const result = await SyncEngine.syncAll();
+    expect(result.failed).toBe(1);
+    // Erro recuperável de dependência — chama retry e NÃO fail (dead letter)
+    expect(Queue.retry).toHaveBeenCalledWith(7, expect.stringContaining('Aguardando sincronização da avaliação'));
+    expect(Queue.fail).not.toHaveBeenCalled();
+  });
+
+  it('deve processar operação de DELETE de notas com sucesso', async () => {
+    const item = {
+      id: 8,
+      table: 'notas',
+      operation: 'DELETE' as const,
+      payload: JSON.stringify({
+        avaliacao_id: 42,
+        aluno_ids: ['a1a1a1a1-0000-0000-0000-000000000001'],
+      }),
+      status: 'pending' as const,
+      retryCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      hash: 'hash-nota-del',
+    };
+    setupPeek([item]);
+
+    const result = await SyncEngine.syncAll();
+    expect(result.synced).toBe(1);
+    expect(result.failed).toBe(0);
+    expect(Queue.markDone).toHaveBeenCalledWith(8);
+  });
 });

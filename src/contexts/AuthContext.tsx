@@ -349,7 +349,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (signOutSuccess) {
-        // Limpa dados locais e cache de chaves
+        // Limpa dados locais e cache de chaves em memória
+        clearKeyCache();
         // Preserva userSalts (indexado por userId) para permitir acesso a dados offline no re-login
         await clearAllLocalData(true, false);
         sessionStorage.removeItem('activeEscolaId');
