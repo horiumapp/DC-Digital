@@ -48,15 +48,15 @@ vi.mock('../lib/supabase', () => {
   const _upsert = vi.fn(async () => ({ data: null, error: null }));
   const _from = vi.fn(() => ({
     upsert: _upsert,
-    delete: vi.fn(() => ({
-      eq: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            eq: vi.fn(async () => ({ error: null })),
-          })),
-        })),
-      })),
-    })),
+    delete: vi.fn(() => {
+      const chain: Record<string, unknown> = {};
+      const deletePromise = Promise.resolve({ error: null });
+      chain.eq = vi.fn(() => chain);
+      chain.in = vi.fn(() => chain);
+      chain.then = deletePromise.then.bind(deletePromise);
+      chain.catch = deletePromise.catch.bind(deletePromise);
+      return chain;
+    }),
     insert: vi.fn(async () => ({ data: [{ id: 'server-uuid' }], error: null })),
     select: vi.fn(() => ({
       eq: vi.fn(() => ({ single: vi.fn(async () => ({ data: null, error: null })) })),
