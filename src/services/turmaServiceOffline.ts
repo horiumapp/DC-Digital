@@ -568,19 +568,38 @@ export async function removerAvaliacao(id: string): Promise<void> {
 
 export async function salvarNotas(
   avaliacaoId: string,
-  notas: { alunoId: string; valor: string }[]
+  notas: { alunoId: string; valor: string }[],
+  alunoIdsRemovidos?: string[]
 ): Promise<void> {
-  // 1. Salvar localmente
-  const records = notas.map(n => ({
-    avaliacao_id: String(avaliacaoId),
-    aluno_id: String(n.alunoId),
-    valor: parseFloat(n.valor.replace(',', '.')),
-  }));
+  const avIdStr = String(avaliacaoId);
 
-  await OfflineStorage.saveNotasLocal(records);
+  // 1. Processar notas preenchidas
+  const preenchidas = notas.filter(n => n.valor !== undefined && n.valor !== null && n.valor.trim() !== '');
+  if (preenchidas.length > 0) {
+    const records = preenchidas.map(n => ({
+      avaliacao_id: avIdStr,
+      aluno_id: String(n.alunoId),
+      valor: parseFloat(n.valor.replace(',', '.')),
+    }));
 
-  // 2. Enfileirar (batch como um item)
-  await Queue.enqueue('notas', 'UPSERT', { records });
+    await OfflineStorage.saveNotasLocal(records);
+    await Queue.enqueue('notas', 'UPSERT', { records });
+  }
+
+  // 2. Processar notas removidas (em branco)
+  const removidos = alunoIdsRemovidos && alunoIdsRemovidos.length > 0
+    ? alunoIdsRemovidos
+    : notas.filter(n => !n.valor || n.valor.trim() === '').map(n => String(n.alunoId));
+
+  if (removidos.length > 0) {
+    await OfflineStorage.deleteNotasLocal(avIdStr, removidos);
+    if (!avIdStr.startsWith('temp_') && !avIdStr.startsWith('local_')) {
+      await Queue.enqueue('notas', 'DELETE', {
+        avaliacao_id: avIdStr,
+        aluno_ids: removidos,
+      });
+    }
+  }
 
   // 3. Sync
   if (_isOnline) {

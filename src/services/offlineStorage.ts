@@ -684,6 +684,18 @@ export async function getNotasLocal(avaliacaoIds: string[]): Promise<LocalNota[]
     .toArray();
 }
 
+export async function deleteNotasLocal(avaliacaoId: string, alunoIds: string[]): Promise<void> {
+  if (alunoIds.length === 0) return;
+  await db.transaction('rw', db.notas, async () => {
+    const existing = await db.notas.where('avaliacao_id').equals(avaliacaoId).toArray();
+    const toDelete = existing.filter(n => alunoIds.includes(n.aluno_id));
+    const ids = toDelete.map(n => n.localId).filter((id): id is number => id !== undefined);
+    if (ids.length > 0) {
+      await db.notas.bulkDelete(ids);
+    }
+  });
+}
+
 export async function cacheNotas(records: Omit<LocalNota, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
   if (records.length === 0) return;
   const timestamp = now();

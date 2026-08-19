@@ -92,7 +92,7 @@ interface TurmaContextType {
   loading: boolean;
   salvarAvaliacao: (av: Avaliacao) => Promise<string>;
   removerAvaliacao: (id: string) => Promise<void>;
-  salvarNotas: (avaliacaoId: string, notas: { alunoId: string, valor: string }[]) => Promise<void>;
+  salvarNotas: (avaliacaoId: string, notas: { alunoId: string, valor: string }[], alunoIdsRemovidos?: string[]) => Promise<void>;
   salvarFrequencia: (data: string, tempo: string, alunosFreq: Aluno[]) => Promise<void>;
   salvarConteudo: (cont: Conteudo) => Promise<void>;
   buscarFrequencia: (data: string, tempo: string) => Promise<void>;
@@ -326,7 +326,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     }
   }, [avaliacoes, verificarPeriodoFechado]);
 
-  const salvarNotas = useCallback(async (avaliacaoId: string, notas: { alunoId: string, valor: string }[]) => {
+  const salvarNotas = useCallback(async (avaliacaoId: string, notas: { alunoId: string, valor: string }[], alunoIdsRemovidos?: string[]) => {
     if (!turmaAtiva) return;
     const av = avaliacoes.find(a => String(a.id) === String(avaliacaoId));
     if (av && verificarPeriodoFechado(av.bimestre || av.data)) {
@@ -335,16 +335,26 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     }
     const rawId = getTid(turmaAtiva.id);
     try {
-      await OfflineTurmaService.salvarNotas(avaliacaoId, notas);
+      await OfflineTurmaService.salvarNotas(avaliacaoId, notas, alunoIdsRemovidos);
 
       // Atualiza o estado local dos alunos imediatamente com as novas notas
       setAlunos(prevAlunos => {
         const notasMap = new Map<string, string>();
         notas.forEach(n => notasMap.set(String(n.alunoId), n.valor));
+        const removidosSet = new Set(alunoIdsRemovidos || []);
 
         return prevAlunos.map(aluno => {
-          const novaNota = notasMap.get(String(aluno.id));
-          if (novaNota !== undefined) {
+          const alunoIdStr = String(aluno.id);
+          if (removidosSet.has(alunoIdStr)) {
+            const novasNotas = { ...(aluno.notas || {}) };
+            delete novasNotas[String(avaliacaoId)];
+            return {
+              ...aluno,
+              notas: novasNotas
+            };
+          }
+          const novaNota = notasMap.get(alunoIdStr);
+          if (novaNota !== undefined && novaNota !== '') {
             return {
               ...aluno,
               notas: {

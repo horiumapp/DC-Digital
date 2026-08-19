@@ -350,10 +350,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (signOutSuccess) {
         // Limpa dados locais e cache de chaves
-        clearKeyCache();
-        // FIX C2: Passar clearCrypto=true para limpar chaves de criptografia
-        // (userSalts) no logout, evitando herança em dispositivos compartilhados.
-        await clearAllLocalData(true, true);
+        // Preserva userSalts (indexado por userId) para permitir acesso a dados offline no re-login
+        await clearAllLocalData(true, false);
         sessionStorage.removeItem('activeEscolaId');
         sessionStorage.removeItem('activeTurno');
       }

@@ -486,9 +486,24 @@ function sanitizeNota(payload: NotaPayload): Record<string, unknown> {
   if (isNaN(valor) || valor < 0 || valor > 1000) {
     throw new Error(`Valor de nota inválido: ${payload.valor} (deve ser numérico entre 0 e 1000)`);
   }
+  const avIdStr = String(payload.avaliacao_id ?? '').trim();
+  if (!avIdStr) {
+    throw new Error(`[DEAD_LETTER] Campo 'avaliacao_id' está ausente ou vazio.`);
+  }
+
+  // avaliacao_id no Supabase PostgreSQL é BIGINT.
+  // Permite tanto ID numérico inteiro quanto IDs temporários do cliente (temp_* / local_*).
+  let parsedAvId: string | number = avIdStr;
+  if (!avIdStr.startsWith('temp_') && !avIdStr.startsWith('local_')) {
+    const num = Number(avIdStr);
+    if (!Number.isInteger(num) || num <= 0) {
+      throw new Error(`[DEAD_LETTER] Campo 'avaliacao_id' deve ser um número inteiro positivo ou ID temporário: ${avIdStr}`);
+    }
+    parsedAvId = num;
+  }
+
   return {
-    // FIX M5: assertUUID valida formato antes de enviar ao Supabase
-    avaliacao_id: assertUUID(payload.avaliacao_id, 'avaliacao_id'),
+    avaliacao_id: parsedAvId,
     aluno_id: assertUUID(payload.aluno_id, 'aluno_id'),
     valor,
   };
@@ -699,6 +714,32 @@ async function isAvaliacaoDeadLettered(tempId: string): Promise<boolean> {
 }
 
 async function syncNotas(operation: string, payload: Record<string, unknown>): Promise<void> {
+  if (operation === 'DELETE') {
+    const avId = payload.avaliacao_id;
+    if (!avId || String(avId).startsWith('temp_') || String(avId).startsWith('local_')) {
+      // Se não tem ID no servidor, nada para deletar remotamente
+      return;
+    }
+    if (Array.isArray(payload.aluno_ids) && payload.aluno_ids.length > 0) {
+      const { error } = await supabase
+        .from('notas')
+        .delete()
+        .eq('avaliacao_id', avId)
+        .in('aluno_id', payload.aluno_ids);
+      if (error) throw error;
+      return;
+    } else if (payload.aluno_id) {
+      const { error } = await supabase
+        .from('notas')
+        .delete()
+        .eq('avaliacao_id', avId)
+        .eq('aluno_id', payload.aluno_id);
+      if (error) throw error;
+      return;
+    }
+    return;
+  }
+
   // Notas sempre são upsert em batch ou individual
   const records = Array.isArray(payload.records) ? payload.records : [payload];
   const sanitizedRecords = records.map(r => sanitizeNota(r as unknown as NotaPayload));

@@ -221,9 +221,16 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
 
     const maxVal = selectedAvaliacao.valorMaximo ? Number(selectedAvaliacao.valorMaximo) : 10;
 
-    const notasToSave = Object.entries(localNotas)
-      .filter(([_, val]) => val !== '')
-      .map(([alunoId, valor]) => ({ alunoId, valor }));
+    const notasToSave: { alunoId: string; valor: string }[] = [];
+    const removidos: string[] = [];
+
+    Object.entries(localNotas).forEach(([alunoId, valor]) => {
+      if (valor !== '') {
+        notasToSave.push({ alunoId, valor });
+      } else {
+        removidos.push(alunoId);
+      }
+    });
 
     const notaInvalida = notasToSave.find(n => {
       const v = parseFloat(n.valor.replace(',', '.'));
@@ -235,7 +242,7 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
       return;
     }
 
-    await salvarNotas(selectedAvaliacao.id, notasToSave);
+    await salvarNotas(selectedAvaliacao.id, notasToSave, removidos);
     setAvaliacaoViewMode('list');
     resetForm();
   };
