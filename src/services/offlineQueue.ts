@@ -30,25 +30,23 @@ export async function enqueue(
   const hash = await hashOperation(table, operation, payload, operation === 'INSERT' ? localId : undefined);
   const timestamp = now();
 
-  // Deduplicação: substituir se já existe com mesmo hash e status pending (evita mexer em itens 'processing')
-  const existing = await db.syncQueue
-    .where('hash').equals(hash)
-    .filter(item => item.status === 'pending')
-    .first();
-
-  if (existing?.id) {
-    await db.syncQueue.update(existing.id, {
-      payload: JSON.stringify(payload),
-      updatedAt: timestamp,
-      localId,
-    });
-    return existing.id;
-  }
-
-  // FIX M2: Encapsular check de limite + insert em uma transação Dexie atômica.
-  // Sem a transação, dois enqueues simultâneos poderiam ambos passar pelo check
-  // de currentCount antes de qualquer um inserir (race condition).
+  // Deduplicação, check de limite e inserção em uma única transação Dexie atômica
+  // evitando race condition entre chamadas concorrentes.
   return await db.transaction('rw', db.syncQueue, async () => {
+    const existing = await db.syncQueue
+      .where('hash').equals(hash)
+      .filter(item => item.status === 'pending')
+      .first();
+
+    if (existing?.id) {
+      await db.syncQueue.update(existing.id, {
+        payload: JSON.stringify(payload),
+        updatedAt: timestamp,
+        localId,
+      });
+      return existing.id;
+    }
+
     const currentCount = await db.syncQueue.where('status').anyOf(['pending', 'processing']).count();
     if (currentCount >= MAX_QUEUE_SIZE) {
       throw new Error(

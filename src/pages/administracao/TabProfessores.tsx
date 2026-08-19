@@ -262,8 +262,20 @@ export default function TabProfessores() {
         console.error("Erro ao deletar:", error);
         showError("Erro ao deletar professor: " + error.message);
       } else {
+        // Revogar conta Auth correspondente se o professor tiver email cadastrado
+        if (professorParaExcluir.email) {
+          try {
+            await supabase.functions.invoke('admin-create-user', {
+              body: { action: 'delete-user', email: professorParaExcluir.email.trim().toLowerCase() },
+            });
+          } catch (e) {
+            console.warn('Erro ao remover conta Auth do professor excluído:', e);
+          }
+        }
+
         fetchProfessores();
         setProfessorParaExcluir(null);
+        showSuccess("Professor excluído com sucesso!");
       }
     }
   };

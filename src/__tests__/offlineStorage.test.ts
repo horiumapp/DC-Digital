@@ -270,7 +270,9 @@ import {
   cacheAlunos,
   getCachedAlunos,
   saveFrequenciaLocal,
+  deleteFrequenciasLocal,
   saveConteudoLocal,
+  deleteConteudoLocal,
   saveAvaliacaoLocal,
   deleteAvaliacaoLocal,
   clearOldSyncedData,
@@ -484,5 +486,81 @@ describe('offlineStorage Service', () => {
     expect(store.turmas).toHaveLength(0);
     expect(store.curriculos).toHaveLength(0);
     expect(store.alunos).toHaveLength(0);
+  });
+
+  it('purga operações pendentes de UPSERT na fila ao deletar frequência local', async () => {
+    const store = getMockStore();
+    store.frequencias.push({
+      localId: 1,
+      turma_id: 't-123',
+      aluno_id: 'a-1',
+      data: '2026-04-15',
+      tempo: '1',
+      disciplina: 'História',
+      status: 'P',
+      syncStatus: 'pending',
+    });
+
+    store.syncQueue.push({
+      id: 99,
+      table: 'frequencias',
+      operation: 'UPSERT',
+      payload: JSON.stringify({
+        records: [{
+          turma_id: 't-123',
+          aluno_id: 'a-1',
+          data: '2026-04-15',
+          tempo: '1',
+          disciplina: 'História',
+          status: 'P',
+        }],
+      }),
+      status: 'pending',
+      hash: 'h-freq-1',
+      createdAt: '2026-04-15',
+      updatedAt: '2026-04-15',
+      retryCount: 0,
+    });
+
+    await deleteFrequenciasLocal('t-123', 'História', '2026-04-15', '1');
+
+    expect(store.frequencias).toHaveLength(0);
+    expect(store.syncQueue).toHaveLength(0);
+  });
+
+  it('purga operações pendentes de UPSERT na fila ao deletar conteúdo local', async () => {
+    const store = getMockStore();
+    store.conteudos.push({
+      localId: 2,
+      turma_id: 't-123',
+      data: '2026-04-15',
+      tempo: '1',
+      disciplina: 'História',
+      descricao: 'Aula offline',
+      syncStatus: 'pending',
+    });
+
+    store.syncQueue.push({
+      id: 100,
+      table: 'conteudos',
+      operation: 'UPSERT',
+      payload: JSON.stringify({
+        turma_id: 't-123',
+        data: '2026-04-15',
+        tempo: '1',
+        disciplina: 'História',
+        descricao: 'Aula offline',
+      }),
+      status: 'pending',
+      hash: 'h-cont-1',
+      createdAt: '2026-04-15',
+      updatedAt: '2026-04-15',
+      retryCount: 0,
+    });
+
+    await deleteConteudoLocal('t-123', 'História', '2026-04-15', '1');
+
+    expect(store.conteudos).toHaveLength(0);
+    expect(store.syncQueue).toHaveLength(0);
   });
 });

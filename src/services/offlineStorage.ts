@@ -235,19 +235,19 @@ export async function saveFrequenciasBulk(
       throw new Error('saveFrequenciasBulk requer que todos os records tenham a mesma data, tempo e disciplina.');
     }
 
-    const existingRecords = await db.frequencias
-      .where('turma_id')
-      .equals(first.turma_id)
-      .filter(f => f.data === first.data && f.tempo === first.tempo && f.disciplina === first.disciplina)
-      .toArray();
-
-    const existingMap = new Map<string, LocalFrequencia>();
-    for (const r of existingRecords) {
-      const key = `${r.aluno_id}`;
-      existingMap.set(key, r);
-    }
-
     await db.transaction('rw', db.frequencias, async () => {
+      const existingRecords = await db.frequencias
+        .where('turma_id')
+        .equals(first.turma_id)
+        .filter(f => f.data === first.data && f.tempo === first.tempo && f.disciplina === first.disciplina)
+        .toArray();
+
+      const existingMap = new Map<string, LocalFrequencia>();
+      for (const r of existingRecords) {
+        const key = `${r.aluno_id}`;
+        existingMap.set(key, r);
+      }
+
       for (const data of normalizedRecords) {
         const existing = existingMap.get(data.aluno_id);
 
@@ -291,18 +291,66 @@ export async function getAllFrequenciasLocal(turmaId: string, disciplina?: strin
 
 export async function deleteFrequenciasLocal(turmaId: string, disciplina: string, data: string, tempo: string): Promise<void> {
   const tid = getTid(turmaId);
-  const records = await db.frequencias
-    .where('[turma_id+aluno_id+data+tempo+disciplina]')
-    .between(
-      [tid, Dexie.minKey, data, tempo, disciplina],
-      [tid, Dexie.maxKey, data, tempo, disciplina]
-    )
-    .toArray();
+  await db.transaction('rw', [db.frequencias, db.syncQueue], async () => {
+    const records = await db.frequencias
+      .where('[turma_id+aluno_id+data+tempo+disciplina]')
+      .between(
+        [tid, Dexie.minKey, data, tempo, disciplina],
+        [tid, Dexie.maxKey, data, tempo, disciplina]
+      )
+      .toArray();
 
-  const ids = records.map(r => r.localId).filter((id): id is number => id !== undefined);
-  if (ids.length > 0) {
-    await db.frequencias.bulkDelete(ids);
-  }
+    const ids = records.map(r => r.localId).filter((id): id is number => id !== undefined);
+    if (ids.length > 0) {
+      await db.frequencias.bulkDelete(ids);
+    }
+
+    // Purgar operações pendentes de UPSERT na fila para evitar ressuscitar frequência deletada offline
+    const pendingQueueItems = await db.syncQueue
+      .where('table').equals('frequencias')
+      .filter(item => item.status === 'pending')
+      .toArray();
+
+    for (const item of pendingQueueItems) {
+      let payload: Record<string, unknown>;
+      try {
+        payload = JSON.parse(item.payload);
+      } catch {
+        continue;
+      }
+
+      if (Array.isArray(payload.records)) {
+        const remaining = payload.records.filter((r: Record<string, unknown>) => {
+          return !(
+            getTid(String(r.turma_id)) === tid &&
+            r.data === data &&
+            r.tempo === tempo &&
+            r.disciplina === disciplina
+          );
+        });
+
+        if (remaining.length === 0) {
+          if (item.id !== undefined) await db.syncQueue.delete(item.id);
+        } else if (remaining.length !== payload.records.length) {
+          payload.records = remaining;
+          if (item.id !== undefined) {
+            await db.syncQueue.update(item.id, {
+              payload: JSON.stringify(payload),
+              updatedAt: now(),
+            });
+          }
+        }
+      } else if (
+        getTid(String(payload.turma_id)) === tid &&
+        payload.data === data &&
+        payload.tempo === tempo &&
+        payload.disciplina === disciplina &&
+        item.operation === 'UPSERT'
+      ) {
+        if (item.id !== undefined) await db.syncQueue.delete(item.id);
+      }
+    }
+  });
 }
 
 /** Cache frequências vindas do servidor (marca como synced) */
@@ -408,26 +456,48 @@ export async function getAllConteudosLocal(turmaId: string, disciplina?: string)
 
 export async function deleteConteudoLocal(turmaId: string, disciplina: string, data: string, tempo: string): Promise<void> {
   const tid = getTid(turmaId);
-  const record = await db.conteudos
-    .where('[turma_id+data+tempo+disciplina]')
-    .equals([tid, data, tempo, disciplina])
-    .first();
-  if (!record?.localId) return;
+  await db.transaction('rw', [db.conteudos, db.syncQueue], async () => {
+    const record = await db.conteudos
+      .where('[turma_id+data+tempo+disciplina]')
+      .equals([tid, data, tempo, disciplina])
+      .first();
+    if (!record?.localId) return;
 
-  // FIX C3: Apenas enfileirar DELETE se o registro JÁ FOI sincronizado com o servidor.
-  // Se syncStatus === 'pending', o registro nunca chegou ao Supabase, então não há
-  // o que deletar remotamente. Enfileirar DELETE para registros inexistentes causava
-  // erros no servidor e poluição da fila com dead letters desnecessárias.
-  if (record.syncStatus !== 'pending') {
-    await Queue.enqueue('conteudos', 'DELETE', {
-      turma_id: record.turma_id,
-      data: record.data,
-      tempo: record.tempo,
-      disciplina: record.disciplina,
-    });
-  }
+    // Purgar qualquer operação pendente de UPSERT para este conteúdo na fila
+    const pendingQueueItems = await db.syncQueue
+      .where('table').equals('conteudos')
+      .filter(item => item.status === 'pending')
+      .toArray();
 
-  await db.conteudos.delete(record.localId);
+    for (const item of pendingQueueItems) {
+      try {
+        const payload = JSON.parse(item.payload);
+        if (
+          getTid(String(payload.turma_id)) === tid &&
+          payload.data === data &&
+          payload.tempo === tempo &&
+          payload.disciplina === disciplina &&
+          item.operation === 'UPSERT'
+        ) {
+          if (item.id !== undefined) await db.syncQueue.delete(item.id);
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    // FIX C3: Apenas enfileirar DELETE se o registro JÁ FOI sincronizado com o servidor.
+    if (record.syncStatus !== 'pending') {
+      await Queue.enqueue('conteudos', 'DELETE', {
+        turma_id: record.turma_id,
+        data: record.data,
+        tempo: record.tempo,
+        disciplina: record.disciplina,
+      });
+    }
+
+    await db.conteudos.delete(record.localId);
+  });
 }
 
 export async function cacheConteudos(turmaId: string, records: Omit<LocalConteudo, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {

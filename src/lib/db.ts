@@ -420,17 +420,18 @@ export async function hashOperation(
   const fields = keyFields[table] || Object.keys(payload);
   let key = `${table}:${operation}:${fields.map(f => payload[f] ?? '').join('|')}`;
 
-  // FIX C3: DELETEs carregavam apenas { id } e colidiam no hash vazio — o último
-  // delete apagava o primeiro da fila (avaliação fantasma voltava do servidor).
-  // O id já está em keyFields de avaliacoes, mas para DELETEs de outras tabelas
-  // o id é incluído explicitamente.
+  // Se houver array de aluno_ids (ex: DELETE em lote de notas)
+  if (Array.isArray(payload.aluno_ids)) {
+    const sortedAlunos = payload.aluno_ids.map(String).sort().join(',');
+    key = `${table}:${operation}:avaliacao:${String(payload.avaliacao_id ?? '')}:aluno_ids:${sortedAlunos}`;
+  }
+
+  // FIX C3: DELETEs com id explícito
   if (operation === 'DELETE' && payload.id !== undefined) {
     key = `${table}:DELETE:id:${String(payload.id)}`;
   }
 
-  // FIX C3: INSERTs sem identidade no payload (ex: avaliação criada offline com
-  // id temp removido) usam o localId como discriminador, evitando que duas
-  // avaliações recém-criadas colidam no mesmo hash.
+  // FIX C3: INSERTs sem identidade no payload usam o localId como discriminador
   if (operation === 'INSERT' && discriminator !== undefined) {
     key = `${key}:local:${String(discriminator)}`;
   }

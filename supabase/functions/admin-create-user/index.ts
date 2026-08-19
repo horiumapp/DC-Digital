@@ -151,7 +151,80 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { nome, email, senha, cargo, escola_id } = body as Record<string, unknown>;
+    const bodyRecord = (body && typeof body === "object") ? (body as Record<string, unknown>) : {};
+
+    // 2.1 Ação de exclusão / revogação de usuário
+    if (bodyRecord.action === "delete-user") {
+      const targetEmail = typeof bodyRecord.email === "string" ? bodyRecord.email.trim().toLowerCase() : "";
+      const targetUserId = typeof bodyRecord.userId === "string" ? bodyRecord.userId.trim() : "";
+
+      if (!targetEmail && !targetUserId) {
+        return new Response(
+          JSON.stringify({ error: "Informe email ou userId para exclusão" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Buscar usuário alvo na tabela usuarios
+      let targetUserQuery = supabaseAdmin.from("usuarios").select("id, email, cargo, escola_id");
+      if (targetUserId) {
+        targetUserQuery = targetUserQuery.eq("id", targetUserId);
+      } else {
+        targetUserQuery = targetUserQuery.eq("email", targetEmail);
+      }
+      const { data: targetUserData } = await targetUserQuery.maybeSingle();
+
+      // Se for não-ADMIN, verificar se tem permissão para deletar este usuário
+      if (effectiveRole !== "ADMIN") {
+        const { data: callerData } = await supabaseAdmin
+          .from("usuarios")
+          .select("escola_id")
+          .eq("id", callerUser.id)
+          .maybeSingle();
+
+        if (!callerData?.escola_id) {
+          return new Response(
+            JSON.stringify({ error: "Seu usuário não possui escola vinculada" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Não-admin só pode deletar PROFESSOR ou ALUNO da sua própria escola
+        if (
+          targetUserData &&
+          (targetUserData.escola_id !== callerData.escola_id ||
+           !["PROFESSOR", "ALUNO"].includes(targetUserData.cargo))
+        ) {
+          return new Response(
+            JSON.stringify({ error: "Você não tem permissão para excluir este usuário" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      // Resolver ID do Auth
+      let authUserId = targetUserData?.id || targetUserId;
+      if (!authUserId && targetEmail) {
+        const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
+        const found = listData?.users?.find((u: { email?: string }) => u.email?.toLowerCase() === targetEmail);
+        if (found) authUserId = found.id;
+      }
+
+      if (authUserId) {
+        const { error: delAuthErr } = await supabaseAdmin.auth.admin.deleteUser(authUserId);
+        if (delAuthErr) {
+          console.error("Erro ao deletar de auth.users:", delAuthErr);
+        }
+        await supabaseAdmin.from("usuarios").delete().eq("id", authUserId);
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: "Conta e credenciais removidas com sucesso" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { nome, email, senha, cargo, escola_id } = bodyRecord;
 
     // FIX: Validação de tipos para evitar injeção de objetos/arrays
     if (

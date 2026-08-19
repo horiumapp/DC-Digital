@@ -249,6 +249,19 @@ export default function TabAlunos() {
       if (error) {
         showError("Erro ao excluir aluno: " + error.message);
       } else {
+        // Revogar conta Auth correspondente se o aluno tiver CPF
+        if (alunoParaExcluir.cpf) {
+          const cpfDigits = getMatriculaLogin(alunoParaExcluir.cpf);
+          const pseudoEmail = `${cpfDigits}@${ALUNO_EMAIL_DOMAIN}`;
+          try {
+            await supabase.functions.invoke('admin-create-user', {
+              body: { action: 'delete-user', email: pseudoEmail },
+            });
+          } catch (e) {
+            console.warn('Erro ao remover conta Auth do aluno excluído:', e);
+          }
+        }
+
         fetchAlunos();
         fetchEscolas();
         setAlunoParaExcluir(null);
