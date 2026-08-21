@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 import { getBimestrePorData, formatarDataParaISO } from '../utils/dateUtils';
 import { getTid } from '../utils/turmaUtils';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
+import { OfflineNoCacheError } from '../services/turmaServiceOffline';
 import { useToast } from '../components/common/Toast';
 import { useAuth } from './AuthContext';
 
@@ -17,7 +18,10 @@ export interface TurmaMetricas {
 }
 
 export interface Turma {
-  id: string | number;
+  // Q1 FIX: `id` é sempre string (UUID) — o tipo `number` era legado de dados
+  // não-normalizados. getTid() é mantido como guard de runtime para compatibilidade
+  // com registros antigos eventualmente presentes no cache local.
+  id: string;
   ensino: string;
   fase: string;
   componente: string;
@@ -31,7 +35,7 @@ export interface Turma {
 }
 
 export interface Lancamento {
-  turmaId: string | number;
+  turmaId: string;
   data: string;
   tipo: 'frequencia' | 'conteudo';
   tempo: string;
@@ -54,19 +58,19 @@ export interface ObjetoAvaliacao {
 
 export interface Avaliacao {
   id: string;
-  turmaId: string | number;
+  turmaId: string;
   tipo: string;
   data: string;
   instrumento: string;
   objetos: ObjetoAvaliacao[];
   bimestre?: string;
   valorMaximo?: number;
-  parent_id?: string | number;
+  parent_id?: string;
 }
 
 export interface Conteudo {
   id?: string;
-  turmaId: string | number;
+  turmaId: string;
   data: string;
   tempo: string;
   objetos: string[];
@@ -214,8 +218,16 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
           
           await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alumnosData, signal);
         } catch (err) {
-          console.error('Erro ao carregar dados da turma:', err);
-          showErrorRef.current('Não foi possível carregar todos os dados desta turma. Verifique sua conexão.');
+          // U1 FIX: Tratar OfflineNoCacheError com mensagem específica em vez de
+          // mensagem genérica, pois o problema é cachê vazio (primeira visita offline),
+          // não necessariamente um erro de conexão.
+          if (err instanceof OfflineNoCacheError) {
+            console.warn('[TurmaContext] Offline sem cache local:', err.message);
+            showErrorRef.current(err.message);
+          } else {
+            console.error('Erro ao carregar dados da turma:', err);
+            showErrorRef.current('Não foi possível carregar todos os dados desta turma. Verifique sua conexão.');
+          }
         } finally {
           if (!signal.aborted) setLoading(false);
         }

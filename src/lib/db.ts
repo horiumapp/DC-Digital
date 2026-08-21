@@ -33,6 +33,8 @@ export interface LocalAluno {
   cpf?: string;
   status?: string;
   turma_id: string;
+  /** Q2 FIX: escola_id adicionado para permitir isolamento por escola no modo offline */
+  escola_id?: string;
   syncStatus: SyncStatus;
   updatedAt: string;
 }
@@ -332,6 +334,26 @@ export class DCDigitalDB extends Dexie {
     this.version(6).stores({
       turmas:      'id, escola_id',
       alunos:      'id, turma_id, syncStatus',
+      frequencias: '++localId, [turma_id+aluno_id+data+tempo+disciplina], turma_id, syncStatus, updatedAt, [syncStatus+updatedAt]',
+      conteudos:   '++localId, [turma_id+data+tempo+disciplina], turma_id, syncStatus, updatedAt, [syncStatus+updatedAt]',
+      avaliacoes:  '++localId, turma_id, disciplina, syncStatus, id, updatedAt, [syncStatus+updatedAt]',
+      notas:       '++localId, avaliacao_id, [avaliacao_id+aluno_id], syncStatus, updatedAt, [syncStatus+updatedAt]',
+      horarios:    '++localId, turma_id',
+      fechamentos: '++localId, [turma_id+disciplina+bimestre], syncStatus, [syncStatus+updatedAt]',
+      curriculos:  'id, [modalidade+ano+bimestre+disciplina]',
+
+      syncQueue:   '++id, table, status, createdAt, hash',
+      syncLogs:    '++id, timestamp, table, status',
+      cachedUsers: 'id',
+      files:       '++localId, syncStatus, relatedTable, relatedId',
+      userSalts:   'userId',
+    });
+
+    // v7: Q2 FIX — Adiciona índice escola_id em alunos para permitir filtragem
+    // local por escola no modo offline, consistente com o campo escola_id do servidor.
+    this.version(7).stores({
+      turmas:      'id, escola_id',
+      alunos:      'id, turma_id, syncStatus, escola_id',
       frequencias: '++localId, [turma_id+aluno_id+data+tempo+disciplina], turma_id, syncStatus, updatedAt, [syncStatus+updatedAt]',
       conteudos:   '++localId, [turma_id+data+tempo+disciplina], turma_id, syncStatus, updatedAt, [syncStatus+updatedAt]',
       avaliacoes:  '++localId, turma_id, disciplina, syncStatus, id, updatedAt, [syncStatus+updatedAt]',

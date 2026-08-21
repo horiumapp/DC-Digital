@@ -281,14 +281,14 @@ async function _runSyncAll(): Promise<SyncResult> {
     emit('complete', result);
 
     // FIX M6: Limpeza proativa do IndexedDB após ciclo bem-sucedido.
-    // Registros já sincronizados (syncStatus='synced') com mais de 30 dias são
-    // removidos para evitar crescimento ilimitado ao longo do ano letivo.
-    // FIX M4: Limpeza de syncLogs antigos (> 30 dias) no mesmo ciclo.
+    // D2 FIX: Prazo aumentado de 30 → 60 dias para preservar histórico offline
+    // (professores podem precisar acessar dados de bimestres anteriores offline).
+    // FIX M4: Limpeza de syncLogs antigos (> 60 dias) no mesmo ciclo.
     // Ambas as limpezas são assíncronas e não-bloqueantes. Erros são silenciosos.
     if (result.synced > 0) {
       setTimeout(() => {
         import('../services/offlineStorage').then(({ clearOldSyncedData }) => {
-          clearOldSyncedData(30).then(deleted => {
+          clearOldSyncedData(60).then(deleted => {
             if (deleted > 0) {
               console.info(`[SyncEngine] Limpeza proativa: ${deleted} registros antigos removidos do IndexedDB.`);
             }
@@ -297,15 +297,15 @@ async function _runSyncAll(): Promise<SyncResult> {
           });
         });
 
-        // Limpar syncLogs com mais de 30 dias para evitar crescimento
+        // Limpar syncLogs com mais de 60 dias para evitar crescimento
         // ilimitado ao longo do ano letivo (pode acumular 10k+ entradas).
-        const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const cutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
         db.syncLogs
           .where('timestamp').below(cutoff)
           .delete()
           .then(count => {
             if (count > 0) {
-              console.info(`[SyncEngine] Limpeza de logs: ${count} entradas de syncLog removidas (> 30 dias).`);
+              console.info(`[SyncEngine] Limpeza de logs: ${count} entradas de syncLog removidas (> 60 dias).`);
             }
           })
           .catch(err => {
@@ -998,14 +998,19 @@ async function reconcileLocalRecords(): Promise<void> {
       return;
     }
 
-    const queueItems = await db.syncQueue.toArray();
+    // P1 FIX: Usar queries por tabela via índice em vez de db.syncQueue.toArray()
+    // (full scan). Com MAX_QUEUE_SIZE=5000, o toArray() poderia carregar até 5000
+    // objetos JSON em memória a cada ciclo. As queries por tabela carregam apenas
+    // os itens relevantes para cada entidade.
 
     // --- Conteudos (chave composta) ---
+    const conteudoQueueItems = await db.syncQueue.where('table').equals('conteudos').toArray();
     const conteudoKeys = new Set<string>();
-    for (const i of queueItems) {
-      if (i.table !== 'conteudos') continue;
-      const p = JSON.parse(i.payload) as Record<string, unknown>;
-      conteudoKeys.add(`${p.turma_id}|${p.data}|${p.tempo}|${p.disciplina}`);
+    for (const i of conteudoQueueItems) {
+      try {
+        const p = JSON.parse(i.payload) as Record<string, unknown>;
+        conteudoKeys.add(`${p.turma_id}|${p.data}|${p.tempo}|${p.disciplina}`);
+      } catch { continue; }
     }
     const unsyncedConteudos = await db.conteudos.filter(c => c.syncStatus !== 'synced').toArray();
     for (const c of unsyncedConteudos) {
@@ -1024,15 +1029,17 @@ async function reconcileLocalRecords(): Promise<void> {
     }
 
     // --- Frequencias (chave composta por registro, batches agrupados por dia) ---
+    const freqQueueItems = await db.syncQueue.where('table').equals('frequencias').toArray();
     const freqKeys = new Set<string>();
-    for (const i of queueItems) {
-      if (i.table !== 'frequencias') continue;
-      const p = JSON.parse(i.payload) as Record<string, unknown>;
-      const recs = Array.isArray(p.records) ? p.records : [p];
-      for (const r of recs) {
-        const rr = r as Record<string, unknown>;
-        freqKeys.add(`${rr.turma_id}|${rr.aluno_id}|${rr.data}|${rr.tempo}|${rr.disciplina}`);
-      }
+    for (const i of freqQueueItems) {
+      try {
+        const p = JSON.parse(i.payload) as Record<string, unknown>;
+        const recs = Array.isArray(p.records) ? p.records : [p];
+        for (const r of recs) {
+          const rr = r as Record<string, unknown>;
+          freqKeys.add(`${rr.turma_id}|${rr.aluno_id}|${rr.data}|${rr.tempo}|${rr.disciplina}`);
+        }
+      } catch { continue; }
     }
     const unsyncedFreqs = await db.frequencias.filter(f => f.syncStatus !== 'synced').toArray();
     const missingFreqs = unsyncedFreqs.filter(
@@ -1063,8 +1070,9 @@ async function reconcileLocalRecords(): Promise<void> {
     }
 
     // --- Avaliacoes (via localId) ---
+    const avaliacaoQueueItems = await db.syncQueue.where('table').equals('avaliacoes').toArray();
     const avaliacaoQueueIds = new Set(
-      queueItems.filter(i => i.table === 'avaliacoes').map(i => i.localId).filter(Boolean)
+      avaliacaoQueueItems.map(i => i.localId).filter(Boolean)
     );
     const unsyncedAvs = await db.avaliacoes.filter(a => a.syncStatus !== 'synced').toArray();
     for (const a of unsyncedAvs) {
@@ -1085,15 +1093,23 @@ async function reconcileLocalRecords(): Promise<void> {
     }
 
     // --- Notas ---
+    // D1 FIX: Carrega itens de notas via índice (P1) e inclui items com status
+    // 'error' não-dead-letter no set de chaves (D1). Sem isso, uma nota com item
+    // de erro na fila seria reenfileirada desnecessariamente na reconciliação,
+    // podendo criar operações duplicadas no servidor.
+    const notaQueueItems = await db.syncQueue.where('table').equals('notas').toArray();
     const notaKeys = new Set<string>();
-    for (const i of queueItems) {
-      if (i.table !== 'notas') continue;
-      const p = JSON.parse(i.payload) as Record<string, unknown>;
-      const recs = Array.isArray(p.records) ? p.records : [p];
-      for (const r of recs) {
-        const rr = r as Record<string, unknown>;
-        notaKeys.add(`${rr.avaliacao_id}|${rr.aluno_id}`);
-      }
+    for (const i of notaQueueItems) {
+      // Incluir todos os status (pending, processing, error) — inclusive error
+      // não-dead-letter — para evitar reenfileirar notas que já têm item na fila.
+      try {
+        const p = JSON.parse(i.payload) as Record<string, unknown>;
+        const recs = Array.isArray(p.records) ? p.records : [p];
+        for (const r of recs) {
+          const rr = r as Record<string, unknown>;
+          notaKeys.add(`${rr.avaliacao_id}|${rr.aluno_id}`);
+        }
+      } catch { continue; }
     }
     const unsyncedNotas = await db.notas.filter(n => n.syncStatus !== 'synced').toArray();
     const missingNotas = unsyncedNotas.filter(n => !notaKeys.has(`${n.avaliacao_id}|${n.aluno_id}`));
@@ -1124,11 +1140,13 @@ async function reconcileLocalRecords(): Promise<void> {
     }
 
     // --- Fechamentos (chave composta) ---
+    const fechamentoQueueItems = await db.syncQueue.where('table').equals('fechamentos').toArray();
     const fechamentoKeys = new Set<string>();
-    for (const i of queueItems) {
-      if (i.table !== 'fechamentos') continue;
-      const p = JSON.parse(i.payload) as Record<string, unknown>;
-      fechamentoKeys.add(`${p.turma_id}|${p.disciplina}|${p.bimestre}`);
+    for (const i of fechamentoQueueItems) {
+      try {
+        const p = JSON.parse(i.payload) as Record<string, unknown>;
+        fechamentoKeys.add(`${p.turma_id}|${p.disciplina}|${p.bimestre}`);
+      } catch { continue; }
     }
     const unsyncedFechamentos = await db.fechamentos.filter(f => f.syncStatus !== 'synced').toArray();
     for (const f of unsyncedFechamentos) {

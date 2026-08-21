@@ -29,7 +29,7 @@ interface CurriculoUnidade {
 }
 
 interface ObjetoConhecimentoTabProps {
-  turmaAtiva: { id: string | number; nome?: string; ensino?: string; fase?: string; componente?: string } | null;
+  turmaAtiva: { id: string; nome?: string; ensino?: string; fase?: string; componente?: string } | null;
   selectedDate: string;
   tempoAula: string;
   setTempoAula: (v: string) => void;
@@ -214,7 +214,7 @@ export default function ObjetoConhecimentoTab({
         : objetoConhecimento;
 
       await salvarConteudo({
-        turmaId: turmaAtiva?.id || 0,
+        turmaId: String(turmaAtiva?.id || ''),
         data: selectedDate,
         tempo: tempoAula,
         objetos: [objParaSalvar],

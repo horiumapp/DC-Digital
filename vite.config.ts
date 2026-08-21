@@ -32,6 +32,13 @@ export default defineConfig(() => {
             /^\/auth\//,       // Não cachear rotas de auth
             /^\/api\//,        // Não cachear APIs
             /^\/rest\/v1\//,   // Não cachear API REST do Supabase
+            // P3 FIX: Não interceptar callbacks de autenticação PKCE do Supabase.
+            // O SW interceptando ?code= ou ?token_hash= pode servir o index.html do cache
+            // antes que o código seja trocado por sessão, quebrando o fluxo de login/
+            // redefinição de senha. Esses parâmetros chegam via redirect do Supabase Auth.
+            /[?&]code=/,            // OAuth/PKCE authorization code
+            /[?&]token_hash=/,      // Email confirmation e password recovery
+            /^\/redefinir-senha/,   // Rota de redefinição de senha (sempre usa tokens)
             /\.(?:js|css|woff2?|png|jpg|jpeg|svg|gif|webp|ico|json|txt|map)$/,  // Não interceptar assets estáticos
           ],
           // Runtime caching strategies

@@ -44,7 +44,10 @@ async function withQuotaRecovery<T>(operation: () => Promise<T>): Promise<T> {
         const deleted = await clearOldSyncedData(30); // Limpa registros >30 dias
         console.log(`[offlineStorage] Limpeza emergencial: ${deleted} registros removidos`);
         return await operation(); // Retenta após limpeza
-      } catch {
+      } catch (cleanupErr) {
+        // D4 FIX: Registrar o erro da limpeza para diagnóstico antes de tentar
+        // a remoção de arquivos como segunda alternativa.
+        console.warn('[offlineStorage] Limpeza de dados antigos falhou:', cleanupErr);
         try {
           const oldFiles = await db.files.where('syncStatus').equals('synced').toArray();
           if (oldFiles.length > 0) {
@@ -140,6 +143,8 @@ export async function cacheAlunos(alunos: Omit<LocalAluno, 'syncStatus' | 'updat
     const record = {
       ...a,
       turma_id: getTid(a.turma_id),
+      // Q2 FIX: preservar escola_id no cache para permitir isolamento offline por escola
+      escola_id: a.escola_id,
       syncStatus: 'synced' as SyncStatus,
       updatedAt: now(),
     };

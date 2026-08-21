@@ -141,15 +141,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // FIX M2: Executar ping e leitura de cache em PARALELO para eliminar o
       // atraso sequencial de até 3s. Antes: ping(3s) → cache → Supabase.
-      // Agora: ping + cache em paralelo → Supabase (apenas se online).
+      // Agora: ping + cache + escola_id em paralelo (P2 FIX).
       // SEGURANÇA: A role NUNCA é sobrescrita pelo servidor — app_metadata (JWT)
       // é a fonte definitiva, pois é assinada pelo backend.
-      const [cacheResult, isReallyOnline] = await Promise.all([
+      // P2 FIX: Iniciar a busca de escola_id em paralelo com ping e cache.
+      // Se estiver offline, o fetch falhará silenciosamente (.catch) e usamos
+      // o valor do cache. Isso elimina a latência sequencial de ~200-500ms.
+      const [cacheResult, isReallyOnline, userDataResult] = await Promise.all([
         getCachedUser(authUser.id).catch((err: unknown) => {
           console.error('[AuthContext] Erro ao carregar usuário cacheado:', err);
           return undefined;
         }),
         pingInternet(3000),
+        // Busca escola_id em paralelo — silencia erros de rede (offline)
+        Promise.resolve(
+          supabase
+            .from('usuarios')
+            .select('escola_id')
+            .eq('id', authUser.id)
+            .maybeSingle()
+        ).catch(() => ({ data: null, error: null })),
       ]);
       if (isCancelled()) return;
 
@@ -161,23 +172,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       const cached = cacheResult;
 
-      if (isReallyOnline) {
-        try {
-          const { data: userData, error } = await supabase
-            .from('usuarios')
-            .select('escola_id')
-            .eq('id', authUser.id)
-            .maybeSingle();
-          
-          if (isCancelled()) return;
-          if (!error && userData) {
-            if (userData.escola_id) {
-              escolaId = userData.escola_id;
-            }
-          }
-        } catch (err: unknown) {
-          console.error('[AuthContext] Falha ao buscar dados complementares do usuário no DB:', err);
-        }
+      // P2 FIX: Usar o resultado da busca paralela apenas se online e sem erro.
+      // Se offline, o resultado é { data: null, error: null } (silenciado pelo .catch).
+      if (isReallyOnline && userDataResult && !userDataResult.error && userDataResult.data?.escola_id) {
+        escolaId = userDataResult.data.escola_id;
       }
 
       // FIX #1: Se não temos role (nem do JWT, nem do servidor), negar acesso

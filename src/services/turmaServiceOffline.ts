@@ -19,6 +19,32 @@ import * as SyncEngine from './syncEngine';
 import { getTid, normalizarDataISO } from '../utils/turmaUtils';
 
 // ============================================================
+// Erro tipado: offline sem cache local
+// ============================================================
+
+/**
+ * U1 FIX: Lançado quando o dispositivo está offline e não há dados locais
+ * em cache para a entidade solicitada. Permite que o componente exiba uma
+ * mensagem contextualizada em vez de apenas um estado vazio sem explicacao.
+ *
+ * Exemplo de tratamento no componente:
+ *   } catch (err) {
+ *     if (err instanceof OfflineNoCacheError) {
+ *       showToast({ type: 'warning', message: err.message });
+ *     }
+ *   }
+ */
+export class OfflineNoCacheError extends Error {
+  constructor(entity: string) {
+    super(
+      `Você está offline e não há dados de ${entity} no dispositivo. ` +
+      'Conecte-se à internet para carregar os dados.'
+    );
+    this.name = 'OfflineNoCacheError';
+  }
+}
+
+// ============================================================
 // Flag de conectividade (atualizada externamente pelo OfflineContext)
 // ============================================================
 let _isOnline = navigator.onLine;
@@ -67,6 +93,8 @@ export async function fetchAlunos(turmaId: string | number): Promise<Aluno[]> {
       nome: a.nome,
       cpf: a.cpf,
       turma_id: tid,
+      // Q2 FIX: incluir escola_id no cache para isolamento offline por escola
+      escola_id: (a as unknown as Record<string, unknown>).escola_id as string | undefined,
     })));
     return result;
   } catch {
@@ -79,6 +107,13 @@ export async function fetchAlunos(turmaId: string | number): Promise<Aluno[]> {
       console.error('[turmaServiceOffline] Chave de criptografia perdida — dados de alunos offline inacessíveis. Reconecte à internet para re-sincronizar.');
     }
 
+    // U1 FIX: Quando offline e sem cache local (primeira visita à turma),
+    // lançar erro tipado para que o componente possa exibir mensagem
+    // contextualizada em vez de uma lista vazia sem explicação.
+    if (!_isOnline && local.length === 0 && !decryptionFailed) {
+      throw new OfflineNoCacheError('alunos desta turma');
+    }
+
     // FIX P1-#6: Stale-while-revalidate — retorna dados locais imediatamente
     // e tenta revalidar em background se online (erro pode ser intermitente)
     if (_isOnline && !decryptionFailed) {
@@ -89,6 +124,7 @@ export async function fetchAlunos(turmaId: string | number): Promise<Aluno[]> {
             nome: a.nome,
             cpf: a.cpf,
             turma_id: tid,
+            escola_id: (a as unknown as Record<string, unknown>).escola_id as string | undefined,
           })));
           console.info('[turmaServiceOffline] Cache de alunos revalidado em background.');
         } catch (cacheErr) {
@@ -186,7 +222,7 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
         objetos: local.objetos,
         bimestre: local.bimestre,
         valorMaximo: local.valor_maximo,
-        parent_id: local.parent_id,
+        parent_id: local.parent_id !== undefined ? String(local.parent_id) : undefined,
       };
 
       const idToCheck = String(formatted.id);
@@ -283,7 +319,7 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
       objetos: av.objetos,
       bimestre: av.bimestre,
       valorMaximo: av.valor_maximo,
-      parent_id: av.parent_id,
+      parent_id: av.parent_id !== undefined ? String(av.parent_id) : undefined,
     }));
 
     const avIds = avaliacoes.map(a => a.id);
