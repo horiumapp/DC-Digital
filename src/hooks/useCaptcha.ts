@@ -1,22 +1,14 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
 /**
- * FIX S1: Caracteres usados no CAPTCHA — exclui O, I, 0, 1 para evitar
- * ambiguidade visual entre letra e número. Resultado: 31 chars possíveis.
- * Código de 6 chars = 31^6 ≈ 887 milhões de combinações
- * (vs. 4 dígitos numéricos = apenas 9.000 anteriores).
- */
-const CAPTCHA_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const CAPTCHA_LENGTH = 6;
-
-/**
- * Gera um código alfanumérico criptograficamente seguro.
- * Usa crypto.getRandomValues() — nunca Math.random().
+ * Gera um código numérico de 4 dígitos (ex: "4829")
+ * utilizando crypto.getRandomValues().
  */
 function generateCaptchaCode(): string {
-  const arr = new Uint8Array(CAPTCHA_LENGTH);
+  const arr = new Uint32Array(1);
   crypto.getRandomValues(arr);
-  return Array.from(arr, byte => CAPTCHA_CHARS[byte % CAPTCHA_CHARS.length]).join('');
+  const num = 1000 + (arr[0] % 9000);
+  return num.toString();
 }
 
 export function useCaptcha() {
