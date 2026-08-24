@@ -302,17 +302,15 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
         bimestre: av.bimestre || getBimestrePorData(av.data)
       };
 
+      // FIX R3: Primeiro buscar dados consistentes do servidor/cache (inclui notas),
+      // depois garantir que a avaliação recém-salva esteja no estado — evita o flash
+      // causado pelo padrão anterior de update otimista + re-fetch que sobrescrevia.
+      await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunosRef.current);
       setAvaliacoes(prev => {
-        const index = prev.findIndex(a => a.id === av.id || a.id === createdId);
-        if (index >= 0) {
-          const updated = [...prev];
-          updated[index] = avaliacaoSalva;
-          return updated;
-        }
+        const exists = prev.some(a => a.id === avaliacaoSalva.id);
+        if (exists) return prev;
         return [...prev, avaliacaoSalva];
       });
-
-      await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunosRef.current);
       showSuccessRef.current('Avaliação salva com sucesso!');
       return createdId;
     } catch (err) {

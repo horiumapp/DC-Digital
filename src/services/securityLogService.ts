@@ -17,14 +17,21 @@ export interface SecurityLogInput {
  * Em vez de guardar o email em texto plano no audit log, guardamos apenas o hash,
  * que ainda permite correlacionar eventos do mesmo usuário sem expor PII.
  * Retorna null se a API de criptografia não estiver disponível.
+ *
+ * FIX S4: Salt fixo de aplicação para resistência a rainbow table/pré-computação.
+ * Não é HMAC verdadeiro (requer chave secreta no servidor), mas aumenta
+ * significativamente o custo de ataque para domínios de email previsíveis.
+ * Prefixo 's1:' permite distinguir hashes salted de hashes legados no banco.
  */
+const EMAIL_HASH_SALT = 'dc-digital-audit-v1';
+
 async function hashEmail(email: string): Promise<string | null> {
   try {
     const encoder = new TextEncoder();
-    const data = encoder.encode(email.toLowerCase().trim());
+    const data = encoder.encode(EMAIL_HASH_SALT + email.toLowerCase().trim());
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return 's1:' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   } catch {
     return null;
   }

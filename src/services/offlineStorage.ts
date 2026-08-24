@@ -622,7 +622,9 @@ export async function deleteAvaliacaoLocal(id: string): Promise<void> {
     const notaIds = notas.map(nota => nota.localId).filter((localId): localId is number => localId !== undefined);
     if (notaIds.length > 0) await db.notas.bulkDelete(notaIds);
 
-    const queueItems = await db.syncQueue.toArray();
+    // FIX C3: Filtrar por tabela em vez de carregar toda a fila (até 5000 itens).
+    // Apenas itens de 'avaliacoes' e 'notas' são relevantes para esta operação.
+    const queueItems = await db.syncQueue.where('table').anyOf(['avaliacoes', 'notas']).toArray();
     for (const item of queueItems) {
       let payload: Record<string, unknown>;
       try {

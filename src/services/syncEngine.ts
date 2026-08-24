@@ -175,8 +175,7 @@ async function _runSyncAll(): Promise<SyncResult> {
     await Queue.resetStuckItems();
     await autoRepairDeadLetters();
     await Queue.retryAllErrors();
-    // FIX H5b: Reenfileirar registros locais que ficaram sem item na fila
-    await reconcileLocalRecords();
+    // FIX H5b: Reconciliação movida para após o loop de processamento (FIX C1).
 
     // Processar fila em ordem FIFO
     let item = await Queue.peek();
@@ -276,6 +275,13 @@ async function _runSyncAll(): Promise<SyncResult> {
 
     // FIX P2-#7: Calcular itens restantes após o ciclo
     result.remaining = await Queue.getPendingCount();
+
+    // FIX C1/H5b: Reconciliação de registros locais sem item na fila.
+    // Executada APENAS quando a fila está vazia para evitar timing issue
+    // entre markDone e markLocalRecordSynced que causava reenfileiramento duplicado.
+    if (result.remaining === 0) {
+      await reconcileLocalRecords();
+    }
 
     setState(result.failed > 0 ? 'ERROR' : 'IDLE');
     emit('complete', result);
@@ -762,9 +768,23 @@ async function syncNotas(operation: string, payload: Record<string, unknown>): P
     .upsert(sanitizedRecords, { onConflict: 'avaliacao_id,aluno_id' });
   if (error) throw error;
 
-  // Atualizar syncStatus local de notas para 'synced'
+  // FIX D3/H5a: Marcar como 'synced' APENAS as notas que foram efetivamente
+  // enviadas (chave composta avaliacao_id+aluno_id), e não todas as notas
+  // da avaliação. Sem isso, uma nota modificada durante o sync seria
+  // promovida a 'synced' sem nunca chegar ao servidor — perda silenciosa.
+  const syncedNoteKeys = new Set(
+    sanitizedRecords.map(r => `${String(r.avaliacao_id)}|${String(r.aluno_id)}`)
+  );
   const avaliacaoIds = [...new Set(sanitizedRecords.map(r => String(r.avaliacao_id)))];
-  await db.notas.where('avaliacao_id').anyOf(avaliacaoIds).modify({ syncStatus: 'synced', updatedAt: now() });
+  const localNotas = await db.notas.where('avaliacao_id').anyOf(avaliacaoIds).toArray();
+  await db.transaction('rw', db.notas, async () => {
+    for (const nota of localNotas) {
+      const noteKey = `${String(nota.avaliacao_id)}|${String(nota.aluno_id)}`;
+      if (syncedNoteKeys.has(noteKey) && nota.localId) {
+        await db.notas.update(nota.localId, { syncStatus: 'synced', updatedAt: now() });
+      }
+    }
+  });
 }
 
 async function syncFechamento(operation: string, payload: Record<string, unknown>): Promise<void> {
@@ -907,7 +927,13 @@ async function autoRepairDeadLetters(): Promise<void> {
     const queueItems = await db.syncQueue
       .where('status').anyOf(['error', 'pending'])
       .toArray();
-    const allLocalAvaliacoes = typeof db.avaliacoes?.toArray === 'function' ? await db.avaliacoes.toArray() : [];
+    // FIX P2: Carregar apenas avaliações que já têm serverId ou ID não-temporário,
+    // em vez de toda a tabela. Apenas essas são úteis para o mapeamento de reparo.
+    const allLocalAvaliacoes = typeof db.avaliacoes?.filter === 'function'
+      ? await db.avaliacoes.filter(av =>
+          !!(av.serverId || (av.id && !String(av.id).startsWith('temp_') && !String(av.id).startsWith('local_')))
+        ).toArray()
+      : [];
 
     // Mapeamento de IDs temporários para o serverId / UUID real da avaliação
     const tempToRealMap = new Map<string, string>();
@@ -1012,7 +1038,8 @@ async function reconcileLocalRecords(): Promise<void> {
         conteudoKeys.add(`${p.turma_id}|${p.data}|${p.tempo}|${p.disciplina}`);
       } catch { continue; }
     }
-    const unsyncedConteudos = await db.conteudos.filter(c => c.syncStatus !== 'synced').toArray();
+    // FIX P1: Usar índice syncStatus em vez de filter() JavaScript (full scan)
+    const unsyncedConteudos = await db.conteudos.where('syncStatus').anyOf(['pending', 'error']).toArray();
     for (const c of unsyncedConteudos) {
       const key = `${c.turma_id}|${c.data}|${c.tempo}|${c.disciplina}`;
       if (conteudoKeys.has(key)) continue;
@@ -1041,7 +1068,8 @@ async function reconcileLocalRecords(): Promise<void> {
         }
       } catch { continue; }
     }
-    const unsyncedFreqs = await db.frequencias.filter(f => f.syncStatus !== 'synced').toArray();
+    // FIX P1: Usar índice syncStatus em vez de filter() JavaScript (full scan)
+    const unsyncedFreqs = await db.frequencias.where('syncStatus').anyOf(['pending', 'error']).toArray();
     const missingFreqs = unsyncedFreqs.filter(
       f => !freqKeys.has(`${f.turma_id}|${f.aluno_id}|${f.data}|${f.tempo}|${f.disciplina}`)
     );
@@ -1074,7 +1102,8 @@ async function reconcileLocalRecords(): Promise<void> {
     const avaliacaoQueueIds = new Set(
       avaliacaoQueueItems.map(i => i.localId).filter(Boolean)
     );
-    const unsyncedAvs = await db.avaliacoes.filter(a => a.syncStatus !== 'synced').toArray();
+    // FIX P1: Usar índice syncStatus em vez de filter() JavaScript (full scan)
+    const unsyncedAvs = await db.avaliacoes.where('syncStatus').anyOf(['pending', 'error']).toArray();
     for (const a of unsyncedAvs) {
       if (a.localId && avaliacaoQueueIds.has(a.localId)) continue;
       await Queue.enqueue('avaliacoes', a.id && !String(a.id).startsWith('temp_') ? 'UPDATE' : 'INSERT', {
@@ -1111,7 +1140,8 @@ async function reconcileLocalRecords(): Promise<void> {
         }
       } catch { continue; }
     }
-    const unsyncedNotas = await db.notas.filter(n => n.syncStatus !== 'synced').toArray();
+    // FIX P1: Usar índice syncStatus em vez de filter() JavaScript (full scan)
+    const unsyncedNotas = await db.notas.where('syncStatus').anyOf(['pending', 'error']).toArray();
     const missingNotas = unsyncedNotas.filter(n => !notaKeys.has(`${n.avaliacao_id}|${n.aluno_id}`));
     // Evitar reenfileirar notas cuja avaliação ainda não sincronizou (ids temporários).
     const resolvableAvIds = new Set<string>();
@@ -1148,7 +1178,8 @@ async function reconcileLocalRecords(): Promise<void> {
         fechamentoKeys.add(`${p.turma_id}|${p.disciplina}|${p.bimestre}`);
       } catch { continue; }
     }
-    const unsyncedFechamentos = await db.fechamentos.filter(f => f.syncStatus !== 'synced').toArray();
+    // FIX P1: Usar índice syncStatus em vez de filter() JavaScript (full scan)
+    const unsyncedFechamentos = await db.fechamentos.where('syncStatus').anyOf(['pending', 'error']).toArray();
     for (const f of unsyncedFechamentos) {
       const key = `${f.turma_id}|${f.disciplina}|${f.bimestre}`;
       if (fechamentoKeys.has(key)) continue;
@@ -1227,10 +1258,11 @@ export async function retryErrors(): Promise<number> {
   // FIX H5c: ação explícita do usuário — zera o backoff e tenta novamente todos
   // os itens não-dead-letter.
   const count = await Queue.retryAllErrors(true);
+  // FIX R1: Apenas agendar sync quando há itens recuperados. Antes, syncAll()
+  // era chamado quando count === 0, causando execução redundante de
+  // autoRepairDeadLetters() e retryAllErrors() dentro de _runSyncAll().
   if (count > 0) {
     scheduleSync();
-  } else {
-    syncAll();
   }
   return count;
 }
