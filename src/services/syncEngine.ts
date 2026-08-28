@@ -1144,11 +1144,16 @@ async function reconcileLocalRecords(): Promise<void> {
     const unsyncedNotas = await db.notas.where('syncStatus').anyOf(['pending', 'error']).toArray();
     const missingNotas = unsyncedNotas.filter(n => !notaKeys.has(`${n.avaliacao_id}|${n.aluno_id}`));
     // Evitar reenfileirar notas cuja avaliação ainda não sincronizou (ids temporários).
+    // FIX SYNC-02/P-04: Buscar apenas as avaliações referenciadas pelas notas pendentes,
+    // em vez de carregar toda a tabela avaliacoes (toArray) na memória.
     const resolvableAvIds = new Set<string>();
-    const allLocalAvs = await db.avaliacoes.toArray();
-    for (const av of allLocalAvs) {
-      if (av.serverId) resolvableAvIds.add(String(av.serverId));
-      if (av.id && !String(av.id).startsWith('temp_') && !String(av.id).startsWith('local_')) resolvableAvIds.add(String(av.id));
+    if (missingNotas.length > 0) {
+      const neededAvIds = [...new Set(missingNotas.map(n => n.avaliacao_id))];
+      const referencedAvs = await db.avaliacoes.where('id').anyOf(neededAvIds).toArray();
+      for (const av of referencedAvs) {
+        if (av.serverId) resolvableAvIds.add(String(av.serverId));
+        if (av.id && !String(av.id).startsWith('temp_') && !String(av.id).startsWith('local_')) resolvableAvIds.add(String(av.id));
+      }
     }
     const byAvaliacao = new Map<string, LocalNota[]>();
     for (const n of missingNotas) {
