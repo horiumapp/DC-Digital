@@ -189,11 +189,18 @@ Deno.serve(async (req: Request) => {
           );
         }
 
+        // SEGURANÇA: Não-admin NÃO pode excluir usuário inexistente ou não mapeado na tabela usuarios
+        if (!targetUserData) {
+          return new Response(
+            JSON.stringify({ error: "Usuário não encontrado na base institucional" }),
+            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         // Não-admin só pode deletar PROFESSOR ou ALUNO da sua própria escola
         if (
-          targetUserData &&
-          (targetUserData.escola_id !== callerData.escola_id ||
-           !["PROFESSOR", "ALUNO"].includes(targetUserData.cargo))
+          targetUserData.escola_id !== callerData.escola_id ||
+          !["PROFESSOR", "ALUNO"].includes(targetUserData.cargo)
         ) {
           return new Response(
             JSON.stringify({ error: "Você não tem permissão para excluir este usuário" }),
@@ -210,13 +217,18 @@ Deno.serve(async (req: Request) => {
         if (found) authUserId = found.id;
       }
 
-      if (authUserId) {
-        const { error: delAuthErr } = await supabaseAdmin.auth.admin.deleteUser(authUserId);
-        if (delAuthErr) {
-          console.error("Erro ao deletar de auth.users:", delAuthErr);
-        }
-        await supabaseAdmin.from("usuarios").delete().eq("id", authUserId);
+      if (!authUserId) {
+        return new Response(
+          JSON.stringify({ error: "Usuário não encontrado para exclusão" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
+
+      const { error: delAuthErr } = await supabaseAdmin.auth.admin.deleteUser(authUserId);
+      if (delAuthErr) {
+        console.error("Erro ao deletar de auth.users:", delAuthErr);
+      }
+      await supabaseAdmin.from("usuarios").delete().eq("id", authUserId);
 
       return new Response(
         JSON.stringify({ success: true, message: "Conta e credenciais removidas com sucesso" }),
