@@ -252,7 +252,10 @@ export default function TabProfessores() {
   };
 
   const confirmDeleteProfessor = async () => {
-    if (professorParaExcluir) {
+    if (!professorParaExcluir) return;
+
+    if (user?.role === 'ADMIN') {
+      // ADMIN: Exclusão mestre do professor em todo o sistema
       const { error } = await supabase
         .from('professores')
         .delete()
@@ -275,8 +278,35 @@ export default function TabProfessores() {
 
         fetchProfessores();
         setProfessorParaExcluir(null);
-        showSuccess("Professor excluído com sucesso!");
+        showSuccess("Professor excluído com sucesso do sistema!");
       }
+    } else if (selectedEscola?.id) {
+      // NÃO-ADMIN (GESTOR / SECRETARIO): Remove a alocação e horários do professor apenas nesta escola
+      // Preserva o cadastro global e os vínculos com outras escolas da rede municipal
+      const { error: alocError } = await supabase
+        .from('professor_alocacoes')
+        .delete()
+        .eq('professor_id', professorParaExcluir.id)
+        .eq('escola_id', selectedEscola.id);
+
+      if (alocError) {
+        console.error("Erro ao desvincular professor da escola:", alocError);
+        showError("Erro ao desvincular professor: " + alocError.message);
+        return;
+      }
+
+      // Remover também horários do professor vinculados a esta escola
+      await supabase
+        .from('professor_horarios')
+        .delete()
+        .eq('professor_id', professorParaExcluir.id)
+        .eq('escola_id', selectedEscola.id);
+
+      fetchProfessores();
+      setProfessorParaExcluir(null);
+      showSuccess(`Professor(a) desvinculado(a) da unidade ${selectedEscola.nome} com sucesso!`);
+    } else {
+      showWarning("Selecione uma escola para desvincular o professor.");
     }
   };
 
@@ -662,8 +692,14 @@ export default function TabProfessores() {
         isOpen={!!professorParaExcluir}
         onClose={() => setProfessorParaExcluir(null)}
         onConfirm={confirmDeleteProfessor}
-        title="Excluir Professor"
-        message={<>Tem certeza que deseja excluir o(a) professor(a) <strong>{professorParaExcluir?.nome}</strong>? Esta ação não pode ser desfeita.</>}
+        title={user?.role === 'ADMIN' ? "Excluir Professor do Sistema" : "Desvincular Professor da Escola"}
+        message={
+          user?.role === 'ADMIN' ? (
+            <>Tem certeza que deseja excluir permanentemente o(a) professor(a) <strong>{professorParaExcluir?.nome}</strong> do sistema? Todas as alocações e horários em todas as escolas serão removidos.</>
+          ) : (
+            <>Tem certeza que deseja desvincular o(a) professor(a) <strong>{professorParaExcluir?.nome}</strong> da escola <strong>{selectedEscola?.nome}</strong>? As aulas e alocações nesta unidade serão removidas, preservando o cadastro nas demais escolas.</>
+          )
+        }
       />
     </div>
   );
