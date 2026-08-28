@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
+import { sanitizeFormulaValue } from '../utils/sanitizeUtils';
 
 interface DataExportButtonProps {
   getData: () => Promise<unknown>;
@@ -14,9 +15,10 @@ export default function DataExportButton({ getData, fileName = 'meus_dados_priva
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const data = await getData();
+      const rawData = await getData();
+      const sanitizedData = sanitizeFormulaValue(rawData);
       const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-        JSON.stringify(data, null, 2)
+        JSON.stringify(sanitizedData, null, 2)
       )}`;
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute('href', jsonString);
