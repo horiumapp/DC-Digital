@@ -256,10 +256,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       _isFetchingRef.current = true;
       setLoading(true);
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        await fetchUserData(session);
+        const timeoutPromise = new Promise<{ data: { session: null }; error: Error }>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('SESSION_TIMEOUT')), 5000);
+        });
+        const result = await Promise.race([
+          supabase.auth.getSession(),
+          timeoutPromise,
+        ]);
+        if (timeoutId) clearTimeout(timeoutId);
+        await fetchUserData(result?.data?.session ?? null);
       } catch (err) {
+        if (timeoutId) clearTimeout(timeoutId);
         // Se getSession() falhar, fetchUserData não foi chamado — garantir loading=false
         console.error('[AuthContext] Erro ao obter sessão no refreshUser:', err);
         // FIX M6: setLoading(false) apenas aqui se fetchUserData não foi chamado.
@@ -273,10 +282,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // expor para closure abaixo
     refreshUserRef.current = handleRefreshUser;
 
-    // Busca a sessão assim que inicializa
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      fetchUserData(session);
-    });
+    // Busca a sessão assim que inicializa com proteção contra timeout e erros de rede/502/CORS
+    const initSession = async () => {
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      try {
+        // Timeout de 5s para evitar que a UI fique presa em "Carregando..."
+        // caso o Supabase esteja instável (502, CORS, retry loop de refresh token ou sem internet).
+        const timeoutPromise = new Promise<{ data: { session: null }; error: Error }>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('SESSION_TIMEOUT')), 5000);
+        });
+
+        const result = await Promise.race([
+          supabase.auth.getSession(),
+          timeoutPromise,
+        ]);
+
+        if (timeoutId) clearTimeout(timeoutId);
+
+        if (result?.error) {
+          console.warn('[AuthContext] Erro ao obter sessão inicial:', result.error);
+          // Se o token de atualização falhou por invalidação, limpa localmente para evitar retry loop no próximo reload
+          const errMsg = result.error.message?.toLowerCase() || '';
+          if (errMsg.includes('refresh token') || (result.error as { code?: string }).code === 'validation_failed') {
+            await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+          }
+          await fetchUserData(null);
+          return;
+        }
+
+        await fetchUserData(result?.data?.session ?? null);
+      } catch (err) {
+        if (timeoutId) clearTimeout(timeoutId);
+        console.warn('[AuthContext] Falha ou timeout ao verificar sessão inicial do Supabase:', err);
+        // Em caso de falha de rede/502/timeout, prosseguir para liberar a UI do estado de loading
+        await fetchUserData(null);
+      }
+    };
+
+    initSession();
 
     // Escuta TODOS os eventos de sessão explicitamente para segurança
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {

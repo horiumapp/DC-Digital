@@ -20,7 +20,7 @@ const {
   let sessionVal: unknown = null;
   let authStateCallback: ((event: string, session: unknown) => void) | null = null;
 
-  const getSession = vi.fn(async () => ({ data: { session: sessionVal } }));
+  const getSession = vi.fn(async (): Promise<{ data: { session: unknown }; error?: { message?: string; code?: string } | null }> => ({ data: { session: sessionVal }, error: null }));
   const onAuthStateChange = vi.fn((callback) => {
     authStateCallback = callback;
     return {
@@ -283,4 +283,42 @@ describe('AuthContext', () => {
 
     window.confirm = originalConfirm;
   });
+
+  it('deve se recuperar graciosamente e finalizar loading se getSession falhar com erro de rede ou 502', async () => {
+    mockGetSession.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    );
+
+    // Deve sair do estado de loading e mostrar Não autenticado
+    await waitFor(() => {
+      expect(screen.queryByTestId('loading-fallback')).toBeNull();
+    });
+
+    expect(screen.getByText('Não autenticado')).toBeDefined();
+  });
+
+  it('deve limpar token corrompido e finalizar loading se getSession retornar erro de refresh token', async () => {
+    mockGetSession.mockResolvedValueOnce({
+      data: { session: null },
+      error: { message: 'Refresh token is not valid', code: 'validation_failed' },
+    });
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('loading-fallback')).toBeNull();
+    });
+
+    expect(mockSignOut).toHaveBeenCalledWith({ scope: 'local' });
+    expect(screen.getByText('Não autenticado')).toBeDefined();
+  });
 });
+
