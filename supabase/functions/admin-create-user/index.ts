@@ -4,22 +4,26 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// FIX: Origens permitidas — suporta variável de ambiente ALLOWED_ORIGINS, domínios de desenvolvimento e previews do Vercel.
+// FIX: Origens permitidas — suporta variável de ambiente ALLOWED_ORIGINS, domínios de desenvolvimento e previews oficiais do Vercel.
 const ENV_ALLOWED_ORIGINS = Deno.env.get("ALLOWED_ORIGINS");
 const STATIC_ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:5173",
   "http://127.0.0.1:3000",
   "http://127.0.0.1:5173",
+  "https://ddigital-lbr.vercel.app",
   "https://dc-digital.vercel.app",
 ];
 const ALLOWED_ORIGINS = ENV_ALLOWED_ORIGINS
   ? ENV_ALLOWED_ORIGINS.split(",").map((o) => o.trim())
   : STATIC_ALLOWED_ORIGINS;
 
+// Subdomínios oficiais na Vercel (produção e branch previews legítimos deste projeto)
+const ALLOWED_VERCEL_REGEX = /^https:\/\/(dc-digital|ddigital-lbr)(-[a-z0-9-]+)?\.vercel\.app$/;
+
 function getCorsHeaders(req: Request): Record<string, string> | null {
   const origin = req.headers.get("Origin") || "";
-  const isAllowed = ALLOWED_ORIGINS.includes(origin) || /^https:\/\/.*\.vercel\.app$/.test(origin);
+  const isAllowed = ALLOWED_ORIGINS.includes(origin) || ALLOWED_VERCEL_REGEX.test(origin);
 
   if (!isAllowed && origin) {
     return null; // Origem não permitida — será rejeitada
@@ -395,6 +399,19 @@ Deno.serve(async (req: Request) => {
 
     if (updateError) {
       console.error("Erro ao fazer upsert em usuarios:", updateError);
+    }
+
+    // 8.1 Se for conta de ALUNO criada com pseudo-e-mail, vincular alunos.usuario_id diretamente
+    if (cargoTrimmed === "ALUNO" && emailTrimmed.endsWith("@aluno.dcdigital.local")) {
+      const cpfDigits = emailTrimmed.split("@")[0];
+      const { error: linkAlunoError } = await supabaseAdmin
+        .from("alunos")
+        .update({ usuario_id: newUser.user.id })
+        .eq("cpf", cpfDigits);
+
+      if (linkAlunoError) {
+        console.warn("[admin-create-user] Aviso ao vincular usuario_id em alunos:", linkAlunoError.message);
+      }
     }
 
     // 9. Retornar sucesso
