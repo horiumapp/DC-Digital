@@ -27,14 +27,20 @@ DROP POLICY IF EXISTS "admin_delete_fechamentos" ON public.fechamentos_bimestres
 CREATE POLICY "staff_delete_fechamentos" ON public.fechamentos_bimestres
   FOR DELETE
   USING (
-    (SELECT public.get_user_role()) IN ('ADMIN', 'GESTOR', 'SECRETARIO')
-    AND public.p_acesso_por_turma(fechamentos_bimestres.turma_id)
+    (SELECT public.get_user_role()) = 'ADMIN'
+    OR (
+      (SELECT public.get_user_role()) IN ('GESTOR', 'SECRETARIO')
+      AND EXISTS (
+        SELECT 1 FROM public.turmas t
+        WHERE t.id = fechamentos_bimestres.turma_id
+          AND t.escola_id = public.get_user_escola_id()
+      )
+    )
   );
 
 COMMENT ON POLICY "staff_delete_fechamentos" ON public.fechamentos_bimestres IS
-  'SEC-02 FIX: Apenas ADMIN, GESTOR e SECRETARIO podem reabrir bimestres (DELETE). '
-  'Antes, p_acesso_por_turma() era suficiente sozinha, permitindo que ALUNO e PROFESSOR '
-  'da turma executassem DELETE via REST direto, ignorando o gate do frontend.';
+  'SEC-02 FIX: Apenas ADMIN, GESTOR e SECRETARIO da escola da turma podem reabrir bimestres (DELETE). '
+  'Alunos e professores não possuem permissão de exclusão nesta tabela.';
 
 -- =============================================================================
 -- SEC-03: Trigger de integridade temporal — impedir mutações em bimestres fechados
