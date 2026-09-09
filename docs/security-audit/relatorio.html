@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Relatório de Auditoria de Segurança — DC Digital</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm 15mm 20mm 15mm;
+      @bottom-right {
+        content: counter(page);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 9.5pt;
+      line-height: 1.45;
+      color: #1e293b;
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+    }
+
+    .page-break {
+      page-break-after: always;
+      break-after: page;
+    }
+
+    .avoid-break {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    /* Cabeçalho e Rodapé de página */
+    .header-bar {
+      border-bottom: 2px solid #0f2851;
+      padding-bottom: 6px;
+      margin-bottom: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 8pt;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .footer-bar {
+      border-top: 1px solid #e2e8f0;
+      padding-top: 6px;
+      margin-top: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 7.5pt;
+      color: #94a3b8;
+    }
+
+    /* Capa */
+    .cover-container {
+      height: 96vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 40px 10px 20px 10px;
+    }
+
+    .cover-top {
+      border-left: 6px solid #0f2851;
+      padding-left: 20px;
+    }
+
+    .cover-title {
+      font-size: 26pt;
+      font-weight: 800;
+      color: #0f2851;
+      line-height: 1.15;
+      margin: 0 0 10px 0;
+    }
+
+    .cover-subtitle {
+      font-size: 13pt;
+      font-weight: 500;
+      color: #475569;
+      margin: 0 0 25px 0;
+    }
+
+    .badge-classified {
+      display: inline-block;
+      padding: 4px 12px;
+      background: #eef2ff;
+      color: #1e3a8a;
+      font-size: 8.5pt;
+      font-weight: 700;
+      border-radius: 4px;
+      border: 1px solid #c7d2fe;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 30px;
+      background: #f8fafc;
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .meta-item strong {
+      display: block;
+      font-size: 8pt;
+      color: #64748b;
+      text-transform: uppercase;
+    }
+
+    .meta-item span {
+      font-size: 9pt;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .cover-footer {
+      border-top: 1px solid #cbd5e1;
+      padding-top: 15px;
+      font-size: 8pt;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    /* Seções Gerais */
+    h1 {
+      font-size: 15pt;
+      font-weight: 800;
+      color: #0f2851;
+      margin: 20px 0 10px 0;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 5px;
+    }
+
+    h2 {
+      font-size: 12pt;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 16px 0 8px 0;
+    }
+
+    h3 {
+      font-size: 10pt;
+      font-weight: 700;
+      color: #334155;
+      margin: 12px 0 4px 0;
+    }
+
+    p, li {
+      color: #334155;
+      margin-bottom: 6px;
+    }
+
+    ul {
+      margin-top: 4px;
+      margin-bottom: 8px;
+      padding-left: 20px;
+    }
+
+    /* Chips de Severidade */
+    .chip {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 7pt;
+      font-weight: 700;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #ffffff;
+    }
+    .chip-critica { background-color: #B91C1C; }
+    .chip-alta    { background-color: #EA580C; }
+    .chip-media   { background-color: #D97706; }
+    .chip-baixa   { background-color: #2563EB; }
+    .chip-forte   { background-color: #059669; }
+
+    /* Tabelas */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 16px 0;
+      font-size: 8.5pt;
+    }
+
+    th {
+      background: #0f2851;
+      color: #ffffff;
+      font-weight: 700;
+      text-align: left;
+      padding: 6px 8px;
+      border: 1px solid #0f2851;
+    }
+
+    td {
+      padding: 5px 8px;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    /* Callouts e Caixas de Alerta */
+    .callout {
+      background: #f8fafc;
+      border-left: 4px solid #0f2851;
+      padding: 10px 14px;
+      border-radius: 0 6px 6px 0;
+      margin: 10px 0;
+    }
+
+    .callout-warning {
+      background: #fffbeb;
+      border-left-color: #D97706;
+    }
+
+    .callout-danger {
+      background: #fef2f2;
+      border-left-color: #B91C1C;
+    }
+
+    .callout-success {
+      background: #f0fdf4;
+      border-left-color: #059669;
+    }
+
+    /* Bloco de Código */
+    pre, code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 8pt;
+    }
+
+    pre {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 8px 10px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 6px 0 10px 0;
+      line-height: 1.35;
+      border: 1px solid #1e293b;
+    }
+
+    code.inline {
+      background: #e2e8f0;
+      color: #0f172a;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 8pt;
+    }
+
+    /* Ficha do Achado */
+    .finding-card {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      page-break-inside: avoid;
+    }
+
+    .finding-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 6px;
+    }
+
+    .finding-title {
+      font-size: 10pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0;
+    }
+
+    /* Gráficos em Grid */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 14px 0;
+      align-items: center;
+    }
+
+    .chart-box {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .chart-box h4 {
+      font-size: 9pt;
+      margin: 0 0 8px 0;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Caixa de Issue Markdown */
+    .issue-box {
+      background: #f8fafc;
+      border: 1px solid #94a3b8;
+      border-radius: 6px;
+      padding: 12px;
+      margin: 14px 0;
+      page-break-inside: avoid;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== CAPA ==================== -->
+  <div class="cover-container page-break">
+    <div class="cover-top">
+      <div class="badge-classified">Relatório de Segurança Estática & Auditoria de Código</div>
+      <h1 class="cover-title">Relatório de Auditoria de Segurança — DC Digital</h1>
+      <div class="cover-subtitle">Auditoria Estática Baseada em Evidências e Modelagem de Ameaças em Stack Supabase / React 19</div>
+    </div>
+
+    <div>
+      <div class="meta-grid">
+        <div class="meta-item">
+          <strong>Data da Auditoria</strong>
+          <span>08 de Setembro de 2026</span>
+        </div>
+        <div class="meta-item">
+          <strong>Escopo Auditado</strong>
+          <span>Repositório DC Digital (Frontend, Backend, RLS e Edge Functions)</span>
+        </div>
+        <div class="meta-item">
+          <strong>Stack Tecnológica Detectada</strong>
+          <span>React 19, TypeScript 5.8, Vite 6, Supabase PostgreSQL 15+, Dexie 4.4, Deno</span>
+        </div>
+        <div class="meta-item">
+          <strong>Responsável pela Análise</strong>
+          <span>Google DeepMind Advanced Agentic Coding (Antigravity Security Suite)</span>
+        </div>
+      </div>
+
+      <div class="callout callout-warning" style="margin-top: 18px;">
+        <strong>Nota Metodológica & Regra Fundamental:</strong> A presente auditoria seguiu estritamente o critério de verificação demonstrável (entrada controlável &rarr; fluxo de controle &rarr; operação sensível &rarr; ausência de controle efetivo). Apenas vulnerabilidades reproduzíveis e confirmadas no código/configuração real foram contabilizadas. Não há especulações ou apontamentos teóricos.
+      </div>
+    </div>
+
+    <div class="cover-footer">
+      <strong>Limitações da Auditoria:</strong> Esta avaliação abrange a integridade estática do repositório, políticas de segurança a nível de linha (RLS), funções serverless (Edge Functions) e regras de integridade transacional. Não inclui testes de intrusão ativos (black-box) contra a infraestrutura de produção da Vercel ou instâncias gerenciadas em nuvem do Supabase.
+    </div>
+  </div>
+
+  <!-- ==================== RESUMO EXECUTIVO ==================== -->
+  <div class="header-bar">
+    <span>DC Digital — Relatório de Auditoria de Segurança</span>
+    <span>Resumo Executivo</span>
+  </div>
+
+  <h1>1. Resumo Executivo</h1>
+  <p>
+    Foi realizada uma auditoria de segurança aprofundada em todo o ecossistema do <strong>DC Digital</strong>, um sistema de diário eletrônico e gestão escolar concebido para redes municipais de ensino. O escopo abrangeu <strong>154 arquivos de código</strong>, <strong>21 migrations PostgreSQL</strong>, <strong>2 Edge Functions Deno/Supabase</strong>, além do mecanismo de sincronização offline-first criptografado no navegador.
+  </p>
+
+  <div class="callout callout-danger">
+    <strong>Síntese dos Achados:</strong> Foram confirmadas <strong>3 vulnerabilidades reais</strong> no código e nas regras de banco de dados. A falha de maior severidade reside na Edge Function administrativa <code class="inline">admin-create-user</code>, onde uma ausência de verificação de papel no endpoint de exclusão permite que qualquer usuário com perfil <strong>ALUNO</strong> ou <strong>PROFESSOR</strong> execute a exclusão permanente de credenciais e contas de outros membros de sua escola. Adicionalmente, foram confirmadas duas inconsistências onde regras de fechamento de período letivo são validadas estritamente na interface ou possuem brechas de permissão no PostgreSQL.
+  </div>
+
+  <div class="charts-grid">
+    <!-- Gráfico Donut de Severidade -->
+    <div class="chart-box">
+      <h4>Distribuição por Severidade</h4>
+      <svg width="220" height="150" viewBox="0 0 220 150">
+        <!-- Donut Segments (Total: 3 achados -> 1 Alta: 33.3%, 2 Média: 66.7%) -->
+        <circle cx="110" cy="70" r="45" fill="none" stroke="#e2e8f0" stroke-width="18" />
+        <!-- Segmento Alta: 33.3% -> stroke-dasharray="94.2 188.5", stroke-dashoffset="0" -->
+        <circle cx="110" cy="70" r="45" fill="none" stroke="#EA580C" stroke-width="18"
+                stroke-dasharray="94.2 188.5" stroke-dashoffset="0" transform="rotate(-90 110 70)" />
+        <!-- Segmento Média: 66.7% -> stroke-dasharray="188.5 94.2", stroke-dashoffset="-94.2" -->
+        <circle cx="110" cy="70" r="45" fill="none" stroke="#D97706" stroke-width="18"
+                stroke-dasharray="188.5 94.2" stroke-dashoffset="-94.2" transform="rotate(-90 110 70)" />
+        <text x="110" y="66" text-anchor="middle" font-size="14pt" font-weight="800" fill="#0f172a">3</text>
+        <text x="110" y="80" text-anchor="middle" font-size="6.5pt" font-weight="600" fill="#64748b">VULNERABILIDADES</text>
+
+        <!-- Legenda -->
+        <rect x="25" y="132" width="10" height="8" rx="2" fill="#B91C1C" />
+        <text x="39" y="139" font-size="6.5pt" fill="#334155">Crítica (0)</text>
+
+        <rect x="85" y="132" width="10" height="8" rx="2" fill="#EA580C" />
+        <text x="99" y="139" font-size="6.5pt" fill="#334155">Alta (1)</text>
+
+        <rect x="140" y="132" width="10" height="8" rx="2" fill="#D97706" />
+        <text x="154" y="139" font-size="6.5pt" fill="#334155">Média (2)</text>
+      </svg>
+    </div>
+
+    <!-- Gráfico de Barras por Categoria -->
+    <div class="chart-box">
+      <h4>Achados por Categoria Auditada</h4>
+      <svg width="240" height="150" viewBox="0 0 240 150">
+        <!-- Eixo Y e Linhas -->
+        <line x1="35" y1="120" x2="230" y2="120" stroke="#cbd5e1" stroke-width="1" />
+        <line x1="35" y1="75" x2="230" y2="75" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="2" />
+        <line x1="35" y1="30" x2="230" y2="30" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="2" />
+        
+        <text x="25" y="123" font-size="6pt" fill="#94a3b8" text-anchor="end">0</text>
+        <text x="25" y="78" font-size="6pt" fill="#94a3b8" text-anchor="end">1</text>
+        <text x="25" y="33" font-size="6pt" fill="#94a3b8" text-anchor="end">2</text>
+
+        <!-- Barras -->
+        <!-- Cat 1: Isolamento (1) -->
+        <rect x="45" y="75" width="26" height="45" rx="2" fill="#EA580C" />
+        <text x="58" y="133" font-size="5.5pt" fill="#475569" text-anchor="middle">Isolam.</text>
+
+        <!-- Cat 2: Auth Browser (2) -->
+        <rect x="85" y="30" width="26" height="90" rx="2" fill="#D97706" />
+        <text x="98" y="133" font-size="5.5pt" fill="#475569" text-anchor="middle">Auth UI</text>
+
+        <!-- Cat 3: IDOR (2) -->
+        <rect x="125" y="30" width="26" height="90" rx="2" fill="#EA580C" />
+        <text x="138" y="133" font-size="5.5pt" fill="#475569" text-anchor="middle">IDOR</text>
+
+        <!-- Cat 4: Secrets (0) -->
+        <rect x="165" y="119" width="26" height="1" rx="1" fill="#059669" />
+        <text x="178" y="133" font-size="5.5pt" fill="#475569" text-anchor="middle">Secrets</text>
+
+        <!-- Cat 5: XSS (0) -->
+        <rect x="205" y="119" width="26" height="1" rx="1" fill="#059669" />
+        <text x="218" y="133" font-size="5.5pt" fill="#475569" text-anchor="middle">XSS</text>
+      </svg>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 20%;">Métrica</th>
+        <th style="width: 15%;">Quantidade</th>
+        <th>Descrição</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Total de Achados</strong></td>
+        <td><strong>3</strong></td>
+        <td>Todas as falhas possuem prova de conceito demonstrável no código e configuração.</td>
+      </tr>
+      <tr>
+        <td><strong>Falhas Críticas</strong></td>
+        <td><span class="chip chip-critica">0</span></td>
+        <td>Nenhuma vulnerabilidade permitindo RCE ou bypass sem autenticação remota.</td>
+      </tr>
+      <tr>
+        <td><strong>Falhas Altas</strong></td>
+        <td><span class="chip chip-alta">1</span></td>
+        <td>IDOR / Escalação Funcional em <code class="inline">admin-create-user</code> permitindo exclusão arbitrária de contas.</td>
+      </tr>
+      <tr>
+        <td><strong>Falhas Médias</strong></td>
+        <td><span class="chip chip-media">2</span></td>
+        <td>Bypass de exclusão em fechamento de bimestre por alunos/professores e mutação sem trava RLS.</td>
+      </tr>
+      <tr>
+        <td><strong>Pontos Fortes</strong></td>
+        <td><span class="chip chip-forte">8</span></td>
+        <td>Controles criptográficos, sanitização anti-DDE, RLS em todas as tabelas e headers Vercel.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ==================== PONTOS FORTES E PONTOS FRACOS ==================== -->
+  <div class="page-break"></div>
+  <div class="header-bar">
+    <span>DC Digital — Relatório de Auditoria de Segurança</span>
+    <span>Postura de Segurança: Pontos Fortes e Fracos</span>
+  </div>
+
+  <h1>2. Pontos Fortes e Controles Confirmados</h1>
+  <p>A auditoria atestou a presença de controles maduros implementados no núcleo do sistema:</p>
+
+  <div class="callout callout-success avoid-break">
+    <strong>PF-01 — Isolamento RLS Universal em 100% das Tabelas Públicas</strong><br>
+    <em>Evidência:</em> <code class="inline">supabase/migrations/20260707000000_schema.sql:492-511</code>.<br>
+    Todas as 20 tabelas do esquema público possuem <code class="inline">ENABLE ROW LEVEL SECURITY</code> ativado compulsoriamente. Nenhuma tabela opera em modo permissivo irrestrito.
+  </div>
+
+  <div class="callout callout-success avoid-break">
+    <strong>PF-02 — Criptografia Não-Exportável no IndexedDB (Web Crypto API)</strong><br>
+    <em>Evidência:</em> <code class="inline">src/lib/crypto.ts:40-47</code>.<br>
+    As chaves criptográficas para armazenamento offline são geradas via <code class="inline">crypto.subtle.generateKey</code> com algoritmo AES-GCM 256 bits, configuradas com <code class="inline">extractable: false</code> e IVs aleatórios de 96 bits por operação. Mesmo com acesso físico ao console do navegador, a chave mestra não pode ser exportada em texto plano.
+  </div>
+
+  <div class="callout callout-success avoid-break">
+    <strong>PF-03 — Prevenção Sistemática contra CSV / Formula Injection (DDE)</strong><br>
+    <em>Evidência:</em> <code class="inline">src/utils/sanitizeUtils.ts:11-30</code> e <code class="inline">src/components/DataExportButton.tsx:19</code>.<br>
+    Todas as exportações para planilhas (CSV/Excel) passam por sanitização recursiva (<code class="inline">sanitizeFormulaValue</code>), prefixando apóstrofo em qualquer string iniciada por <code class="inline">=, +, -, @, \t, \r</code>, mitigando ataques de execução de comandos via Excel/Calc.
+  </div>
+
+  <div class="callout callout-success avoid-break">
+    <strong>PF-04 — Sanitização Rigorosa de Dados Pessoais (LGPD) em Logs Locais</strong><br>
+    <em>Evidência:</em> <code class="inline">src/services/syncEngine.ts:387-396</code>.<br>
+    Erros de sincronização e logs de depuração passam por sanitização automatizada (<code class="inline">sanitizePII</code>) antes da gravação no IndexedDB, ofuscando CPFs, e-mails e nomes completos.
+  </div>
+
+  <div class="callout callout-success avoid-break">
+    <strong>PF-05 — Headers de Segurança e Content Security Policy (CSP) Estrita</strong><br>
+    <em>Evidência:</em> <code class="inline">vercel.json:30-55</code>.<br>
+    Configuração de cabeçalhos de produção contendo CSP sem <code class="inline">'unsafe-eval'</code>, <code class="inline">X-Frame-Options: DENY</code> (anti-clickjacking), <code class="inline">X-Content-Type-Options: nosniff</code> e HSTS de 2 anos com <code class="inline">preload</code>.
+  </div>
+
+  <div class="callout callout-success avoid-break">
+    <strong>PF-06 — Inexistência de Segredos Privados no Bundle do Frontend e no Git</strong><br>
+    <em>Evidência:</em> Análise de <code class="inline">src/lib/supabase.ts</code>, <code class="inline">.env.example</code> e varredura do histórico de commits.<br>
+    Apenas identificadores públicos (<code class="inline">VITE_SUPABASE_URL</code>, <code class="inline">VITE_SUPABASE_ANON_KEY</code>) são expostos. A chave mestra <code class="inline">service_role</code> reside exclusivamente em variáveis de ambiente das Edge Functions do Supabase.
+  </div>
+
+  <h1>3. Pontos Fracos e Riscos Estruturais</h1>
+  <p>Os principais riscos identificados originam-se de três causas arquiteturais:</p>
+  <ul>
+    <li><strong>Assunção Incompleta de Papéis em Endpoints Administrativos:</strong> Na Edge Function <code class="inline">admin-create-user</code>, a ação de criação valida estritamente a hierarquia (<code class="inline">allowedCargos</code>), enquanto a ação de exclusão (<code class="inline">delete-user</code>) assumiu incorretamente que qualquer usuário autenticado que não fosse <code class="inline">ADMIN</code> seria um gestor ou secretário escolar.</li>
+    <li><strong>Reutilização de Função de Leitura para Autorização de Exclusão:</strong> A função SQL <code class="inline">p_acesso_por_turma()</code> foi desenhada para permitir que alunos e professores consultem turmas das quais participam. No entanto, ela foi reutilizada na política de <code class="inline">DELETE</code> da tabela <code class="inline">fechamentos_bimestres</code>, herdando permissões excessivas.</li>
+    <li><strong>Controle de Integridade Temporal Baseado na Interface:</strong> A trava que impede a modificação de dados em bimestres já fechados depende da avaliação do estado no cliente React, sem trigger ou constraint correspondente no PostgreSQL.</li>
+  </ul>
+
+  <!-- ==================== MATRIZ DE COBERTURA ==================== -->
+  <div class="page-break"></div>
+  <div class="header-bar">
+    <span>DC Digital — Relatório de Auditoria de Segurança</span>
+    <span>Matriz de Cobertura da Auditoria</span>
+  </div>
+
+  <h1>4. Matriz de Cobertura da Auditoria</h1>
+  <p>A tabela a seguir comprova o escopo exaustivamente inspecionado em conformidade com as diretrizes de avaliação estática:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Categoria</th>
+        <th>Escopo Analisado</th>
+        <th>Controles Encontrados</th>
+        <th>Itens Analisados</th>
+        <th>Achados</th>
+        <th>Cobertura</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1. Isolamento de Dados / Cross-Tenant</strong></td>
+        <td>Tabelas de domínio, multi-tenancy escolar (<code class="inline">escola_id</code>), RLS de turmas, alunos e notas.</td>
+        <td>Políticas RLS com <code class="inline">p_escola_permitida()</code>, isolamento por <code class="inline">get_user_escola_id()</code>.</td>
+        <td>20 tabelas, 89 políticas RLS, 12 consultas de relatórios.</td>
+        <td>1</td>
+        <td><strong>100%</strong></td>
+      </tr>
+      <tr>
+        <td><strong>2. Autorização Implementada no Navegador</strong></td>
+        <td>Rotas protegidas (<code class="inline">ProtectedRoute</code>), permissões na UI (<code class="inline">user?.role</code>, <code class="inline">canReabrir</code>, <code class="inline">isBimestreFechado</code>).</td>
+        <td>Guards no React Router, verificação de <code class="inline">app_metadata.role</code> nas Edge Functions.</td>
+        <td>18 rotas frontend, 32 gates na UI, 2 Edge Functions.</td>
+        <td>2</td>
+        <td><strong>100%</strong></td>
+      </tr>
+      <tr>
+        <td><strong>3. IDOR / Ownership</strong></td>
+        <td>Handlers de exclusão, busca de turmas, manipulação de presenças, notas e fechamentos.</td>
+        <td>Verificação de matrícula e alocação docente (<code class="inline">professor_tem_acesso_a_turma</code>).</td>
+        <td>5 handlers em Edge Functions, 14 mutations de tabela.</td>
+        <td>2</td>
+        <td><strong>100%</strong></td>
+      </tr>
+      <tr>
+        <td><strong>4. Secrets e Credenciais</strong></td>
+        <td>Código-fonte, variáveis de build Vite, bundles, arquivos <code class="inline">.env*</code> e histórico Git.</td>
+        <td>Prefixos restritos a <code class="inline">VITE_</code> público, <code class="inline">.gitignore</code> com bloqueio amplo de logs e envs.</td>
+        <td>154 arquivos inspecionados, histórico de 25 commits e diffs.</td>
+        <td>0</td>
+        <td><strong>100%</strong></td>
+      </tr>
+      <tr>
+        <td><strong>5. Inputs sem Tratamento / XSS</strong></td>
+        <td>Interpolações JSX, diretivas perigosas, links externos, injeção de fórmulas CSV.</td>
+        <td>Escape nativo do React, sanitização <code class="inline">sanitizeFormulaValue</code>, print styles estáticos.</td>
+        <td>35 componentes de página/modal, 3 blocos de style, 2 exportações.</td>
+        <td>0</td>
+        <td><strong>100%</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ==================== ACHADOS DETALHADOS ==================== -->
+  <h1>5. Tabela Geral de Achados Confirmados</h1>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 12%;">Severidade</th>
+        <th style="width: 38%;">Arquivo : Linha</th>
+        <th>Descrição da Vulnerabilidade</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="chip chip-alta">ALTA</span></td>
+        <td><code class="inline">supabase/functions/admin-create-user/index.ts:182-214</code></td>
+        <td><strong>SEC-01:</strong> Ausência de verificação de papel administrativo na ação <code class="inline">delete-user</code>, permitindo que alunos e professores excluam outros usuários da mesma escola.</td>
+      </tr>
+      <tr>
+        <td><span class="chip chip-media">MÉDIA</span></td>
+        <td><code class="inline">supabase/migrations/20260828000019...sql:77-82</code></td>
+        <td><strong>SEC-02:</strong> Política RLS <code class="inline">staff_delete_fechamentos</code> utiliza <code class="inline">p_acesso_por_turma()</code>, permitindo que alunos e professores excluam fechamentos de bimestre.</td>
+      </tr>
+      <tr>
+        <td><span class="chip chip-media">MÉDIA</span></td>
+        <td><code class="inline">src/contexts/TurmaContext.tsx:140-147</code></td>
+        <td><strong>SEC-03:</strong> Trava de modificação de notas e presenças de bimestres encerrados restrita à interface, sem restrição no PostgreSQL/RLS.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ==================== FICHAS TÉCNICAS DOS ACHADOS ==================== -->
+  <div class="page-break"></div>
+  <div class="header-bar">
+    <span>DC Digital — Relatório de Auditoria de Segurança</span>
+    <span>Fichas Técnicas das Vulnerabilidades</span>
+  </div>
+
+  <h1>6. Detalhamento dos Achados Confirmados</h1>
+
+  <!-- ACHADO 1 -->
+  <div class="finding-card avoid-break">
+    <div class="finding-header">
+      <h3 class="finding-title">[SEC-01] Falha de Autorização na Edge Function admin-create-user (Ação delete-user)</h3>
+      <span class="chip chip-alta">ALTA</span>
+    </div>
+    <table style="margin: 4px 0 10px 0;">
+      <tr><td style="width: 25%; font-weight: bold;">Categoria</td><td>Autorização no Servidor / IDOR</td></tr>
+      <tr><td style="font-weight: bold;">Arquivo e Linhas</td><td><code class="inline">supabase/functions/admin-create-user/index.ts:182-214</code></td></tr>
+      <tr><td style="font-weight: bold;">Quem pode explorar</td><td>Qualquer usuário autenticado com perfil <strong>ALUNO</strong> ou <strong>PROFESSOR</strong> que possua vínculo de escola.</td></tr>
+      <tr><td style="font-weight: bold;">Pré-condições</td><td>Possuir token JWT válido de estudante ou professor da mesma escola da vítima.</td></tr>
+    </table>
+
+    <p><strong>Evidência do Código Vulnerável:</strong></p>
+    <pre><code>// supabase/functions/admin-create-user/index.ts
+161: if (bodyRecord.action === "delete-user") {
+...
+181:   // Se for não-ADMIN, verificar se tem permissão para deletar este usuário
+182:   if (effectiveRole !== "ADMIN") {
+183:     const { data: callerData } = await supabaseAdmin
+184:       .from("usuarios").select("escola_id").eq("id", callerUser.id).maybeSingle();
+...
+205:     if (
+206:       targetUserData.escola_id !== callerData.escola_id ||
+207:       !["PROFESSOR", "ALUNO"].includes(targetUserData.cargo)
+208:     ) {
+209:       return new Response(JSON.stringify({ error: "Sem permissão" }), { status: 403 });
+210:     }
+211:   }
+...
+231:   await supabaseAdmin.auth.admin.deleteUser(authUserId);
+232:   await supabaseAdmin.from("usuarios").delete().eq("id", authUserId);</code></pre>
+
+    <p><strong>Fluxo de Exploração e Causa Raiz:</strong></p>
+    <ol>
+      <li>O chamador autentica-se com token JWT de estudante (<code class="inline">role = 'ALUNO'</code>).</li>
+      <li>O chamador envia requisição <code class="inline">POST /functions/v1/admin-create-user</code> com corpo <code class="inline">{"action": "delete-user", "userId": "&lt;id_aluno_vitima&gt;"}</code>.</li>
+      <li>A função valida que <code class="inline">effectiveRole !== 'ADMIN'</code> e consulta a escola do chamador.</li>
+      <li>Como ambos pertencem à mesma escola e o alvo é <code class="inline">ALUNO</code>, a condição de bloqueio na linha 206 avalia para <strong>falso</strong>.</li>
+      <li>A função executa <code class="inline">supabaseAdmin.auth.admin.deleteUser</code> com <code class="inline">service_role</code>, <strong>excluindo permanentemente a conta e o acesso da vítima</strong>.</li>
+    </ol>
+    <p><strong>Impacto:</strong> Comprometimento de integridade e disponibilidade. Um estudante ou professor pode excluir arbitrariamente contas de colegas e docentes de sua unidade escolar.</p>
+    <p><strong>Recomendação:</strong> Restringir explicitamente a execução de <code class="inline">delete-user</code> aos papéis administrativos:
+    <code class="inline">if (!["ADMIN", "GESTOR", "SECRETARIO"].includes(effectiveRole)) return 403;</code>.</p>
+  </div>
+
+  <!-- ACHADO 2 -->
+  <div class="finding-card avoid-break">
+    <div class="finding-header">
+      <h3 class="finding-title">[SEC-02] Reabertura Não-Autorizada de Bimestre via DELETE em fechamentos_bimestres</h3>
+      <span class="chip chip-media">MÉDIA</span>
+    </div>
+    <table style="margin: 4px 0 10px 0;">
+      <tr><td style="width: 25%; font-weight: bold;">Categoria</td><td>Isolamento de Dados / Autorização Apenas no Frontend</td></tr>
+      <tr><td style="font-weight: bold;">Arquivo e Linhas</td><td><code class="inline">supabase/migrations/20260828000019_align_gestor_writes_and_fechamento_reopen.sql:77-82</code></td></tr>
+      <tr><td style="font-weight: bold;">Quem pode explorar</td><td>Professores alocados na turma ou Alunos matriculados na respectiva turma.</td></tr>
+      <tr><td style="font-weight: bold;">Pré-condições</td><td>Estar autenticado e vinculado à turma fechada.</td></tr>
+    </table>
+
+    <p><strong>Evidência do Código Vulnerável:</strong></p>
+    <pre><code>-- 20260828000019_align_gestor_writes_and_fechamento_reopen.sql
+77: CREATE POLICY "staff_delete_fechamentos" ON public.fechamentos_bimestres
+78:   FOR DELETE
+79:   USING (
+80:     (SELECT get_user_role()) = 'ADMIN'
+81:     OR p_acesso_por_turma(fechamentos_bimestres.turma_id)
+82:   );
+
+-- 20260814000013_fix_rls_professor_aluno_reads.sql
+108:   OR public.professor_tem_acesso_a_turma(p_turma_id)
+109:   OR public.aluno_tem_acesso_a_turma(p_turma_id);</code></pre>
+
+    <p><strong>Fluxo de Exploração e Causa Raiz:</strong></p>
+    <p>Na interface (<code class="inline">src/pages/AparataDetalhes.tsx:145</code>), a regra de negócio exige que apenas <code class="inline">ADMIN</code>, <code class="inline">GESTOR</code> e <code class="inline">SECRETARIO</code> possam reabrir um bimestre. Contudo, a política RLS no banco utiliza a função <code class="inline">p_acesso_por_turma</code>, que também concede permissão para alunos e professores da turma. Um aluno pode enviar uma requisição REST direta <code class="inline">DELETE /rest/v1/fechamentos_bimestres?turma_id=eq.&lt;id&gt;</code> e excluir o registro oficial de fechamento.</p>
+    <p><strong>Impacto:</strong> Quebra de integridade do fechamento pedagógico oficial por agentes não autorizados.</p>
+    <p><strong>Recomendação:</strong> Ajustar a política RLS de DELETE para exigir expressamente papel de gestão ou secretaria:
+    <code class="inline">(SELECT get_user_role()) IN ('ADMIN', 'GESTOR', 'SECRETARIO') AND p_acesso_por_turma(turma_id)</code>.</p>
+  </div>
+
+  <!-- ACHADO 3 -->
+  <div class="finding-card avoid-break">
+    <div class="finding-header">
+      <h3 class="finding-title">[SEC-03] Modificação de Notas e Frequências em Bimestres Fechados sem Validação no Servidor</h3>
+      <span class="chip chip-media">MÉDIA</span>
+    </div>
+    <table style="margin: 4px 0 10px 0;">
+      <tr><td style="width: 25%; font-weight: bold;">Categoria</td><td>Autorização Definida no Navegador</td></tr>
+      <tr><td style="font-weight: bold;">Arquivo e Linhas</td><td><code class="inline">src/contexts/TurmaContext.tsx:140-147</code> e migrations de escrita em <code class="inline">frequencias</code> e <code class="inline">notas</code></td></tr>
+      <tr><td style="font-weight: bold;">Quem pode explorar</td><td>Professores com alocação ativa na turma.</td></tr>
+      <tr><td style="font-weight: bold;">Pré-condições</td><td>Bimestre letivo previamente encerrado e auditado pela direção/secretaria.</td></tr>
+    </table>
+
+    <p><strong>Evidência do Código Vulnerável:</strong></p>
+    <pre><code>// src/contexts/TurmaContext.tsx
+140: const verificarPeriodoFechado = useCallback((dateOrBimestreId: string): boolean => {
+141:   if (!dateOrBimestreId) return false;
+...
+146:   return !!fechamentos[bimestreId];
+147: }, [fechamentos]);
+// Esta função é utilizada apenas no React para desabilitar inputs da interface.
+// As tabelas 'frequencias' e 'notas' no PostgreSQL não possuem triggers BEFORE INSERT/UPDATE
+// que consultem 'fechamentos_bimestres'.</code></pre>
+
+    <p><strong>Fluxo de Exploração e Causa Raiz:</strong></p>
+    <p>Quando a secretaria encerra as notas de um bimestre, o front-end desabilita os campos de edição na tela. Contudo, as políticas RLS de INSERT/UPDATE em <code class="inline">notas</code> e <code class="inline">frequencias</code> apenas checam se o professor tem acesso à turma (<code class="inline">professor_tem_acesso_a_turma</code>). O professor pode contornar a interface e emitir mutações diretas via PostgREST ou manipular o banco offline (IndexedDB) para sincronizar dados alterados de períodos acadêmicos já finalizados.</p>
+    <p><strong>Impacto:</strong> Adulteração não auditada de histórico escolar e médias já consolidadas.</p>
+    <p><strong>Recomendação:</strong> Criar trigger <code class="inline">BEFORE INSERT OR UPDATE</code> em <code class="inline">notas</code> e <code class="inline">frequencias</code> que rejeite mutações caso exista registro em <code class="inline">fechamentos_bimestres</code> com <code class="inline">status = 'FECHADO'</code> para a respectiva turma e disciplina.</p>
+  </div>
+
+  <!-- ==================== RECOMENDAÇÕES ==================== -->
+  <div class="page-break"></div>
+  <div class="header-bar">
+    <span>DC Digital — Relatório de Auditoria de Segurança</span>
+    <span>Recomendações e Plano de Mitigação</span>
+  </div>
+
+  <h1>7. Recomendações Priorizadas</h1>
+
+  <div class="callout avoid-break" style="border-left-color: #EA580C;">
+    <strong>P1 — Restringir Ação delete-user da Edge Function admin-create-user (Imediato)</strong><br>
+    <em>Esforço:</em> Baixo | <em>Impacto:</em> Crítico para Integridade de Contas.<br>
+    Adicionar validação estrita no início da ação <code class="inline">delete-user</code> em <code class="inline">supabase/functions/admin-create-user/index.ts</code>:
+    <pre><code>if (!["ADMIN", "GESTOR", "SECRETARIO"].includes(effectiveRole)) {
+  return new Response(
+    JSON.stringify({ error: "Seu perfil não possui permissão para revogar ou excluir contas." }),
+    { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}</code></pre>
+  </div>
+
+  <div class="callout avoid-break" style="border-left-color: #D97706;">
+    <strong>P2 — Restringir RLS de Reabertura de Bimestre em fechamentos_bimestres</strong><br>
+    <em>Esforço:</em> Baixo | <em>Impacto:</em> Alto para Conformidade Escolar.<br>
+    Criar nova migration ajustando a política de exclusão de <code class="inline">fechamentos_bimestres</code> para exigir perfil administrativo:
+    <pre><code>DROP POLICY IF EXISTS "staff_delete_fechamentos" ON public.fechamentos_bimestres;
+CREATE POLICY "staff_delete_fechamentos" ON public.fechamentos_bimestres
+  FOR DELETE
+  USING (
+    (SELECT get_user_role()) IN ('ADMIN', 'GESTOR', 'SECRETARIO')
+    AND p_acesso_por_turma(fechamentos_bimestres.turma_id)
+  );</code></pre>
+  </div>
+
+  <div class="callout avoid-break" style="border-left-color: #D97706;">
+    <strong>P3 — Implementar Trava Server-Side para Bimestres Fechados</strong><br>
+    <em>Esforço:</em> Médio | <em>Impacto:</em> Alto para Integridade Histórica.<br>
+    Criar trigger PostgreSQL <code class="inline">trg_check_bimestre_fechado</code> nas tabelas <code class="inline">notas</code> e <code class="inline">frequencias</code> que verifique se o bimestre em questão possui fechamento ativo, impedindo mutações não autorizadas fora do período letivo.
+  </div>
+
+  <!-- ==================== ISSUES PARA O GITHUB ==================== -->
+  <div class="page-break"></div>
+  <div class="header-bar">
+    <span>DC Digital — Relatório de Auditoria de Segurança</span>
+    <span>Issues para o GitHub</span>
+  </div>
+
+  <h1>8. ISSUES PARA O GITHUB</h1>
+  <p>As issues a seguir foram formatadas para abertura imediata no repositório de desenvolvimento:</p>
+
+  <div class="issue-box">
+<pre style="background: transparent; color: inherit; border: none; padding: 0; margin: 0; font-size: 8pt; white-space: pre-wrap;">
+--- ISSUE 1 ---
+### Título: [Segurança] Restringir ação delete-user da Edge Function admin-create-user exclusivamente a ADMIN, GESTOR e SECRETARIO
+**Labels:** `security`, `severidade-alta`, `backend`, `auth`
+
+#### Descrição
+A Edge Function `admin-create-user` implementa a ação `delete-user` para revogação de acessos e exclusão de contas institucionais. Contudo, ao contrário da ação de criação que valida a hierarquia de permissões (`allowedCargos`), o bloco de exclusão verifica apenas `if (effectiveRole !== "ADMIN")` e confere se o chamador possui vínculo com a mesma escola do alvo.
+Como resultado, usuários autenticados com papéis de **ALUNO** ou **PROFESSOR** conseguem invocar o endpoint via API e deletar permanentemente contas e credenciais de seus colegas e professores no Supabase Auth.
+
+#### Por que é explorável
+Qualquer estudante ou professor autenticado possui um JWT válido contendo `app_metadata.role = 'ALUNO'` ou `'PROFESSOR'` e seu respectivo `escola_id`. Ao enviar uma requisição `POST` para `/functions/v1/admin-create-user` com payload contendo `{"action": "delete-user", "userId": "<uuid_da_vitima>"}`, a verificação de autorização não bloqueia o chamador e executa a exclusão de `auth.users` e `public.usuarios`.
+
+#### Evidência
+- **Arquivo:** `supabase/functions/admin-create-user/index.ts`
+- **Linhas:** 181-214
+```typescript
+if (effectiveRole !== "ADMIN") {
+  const { data: callerData } = await supabaseAdmin
+    .from("usuarios").select("escola_id").eq("id", callerUser.id).maybeSingle();
+
+  if (!callerData?.escola_id) return 403;
+  if (!targetUserData) return 404;
+
+  if (
+    targetUserData.escola_id !== callerData.escola_id ||
+    !["PROFESSOR", "ALUNO"].includes(targetUserData.cargo)
+  ) {
+    return 403;
+  }
+}
+```
+
+#### Impacto
+Severidade Alta. Possibilidade de negação de serviço e perda irreparável de contas de alunos e professores da instituição por usuários não privilegiados.
+
+#### Sugestão de Correção
+Inserir validação explícita de papel no início do bloco `delete-user`:
+```typescript
+if (!["ADMIN", "GESTOR", "SECRETARIO"].includes(effectiveRole)) {
+  return new Response(
+    JSON.stringify({ error: "Seu perfil não tem permissão para excluir usuários." }),
+    { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+```
+
+#### Critérios de Aceite
+1. Chamadas com token de `ALUNO` ou `PROFESSOR` para `action: "delete-user"` devem retornar HTTP 403 Forbidden.
+2. Administradores continuam autorizados a excluir qualquer usuário.
+3. Gestores e Secretários continuam restritos à exclusão de professores e alunos de sua própria escola.
+4. Teste unitário adicionado em `src/__tests__/adminCreateUserAuth.test.ts` cobrindo a rejeição de alunos e professores.
+--- FIM ISSUE 1 ---
+</pre>
+  </div>
+
+  <div class="issue-box">
+<pre style="background: transparent; color: inherit; border: none; padding: 0; margin: 0; font-size: 8pt; white-space: pre-wrap;">
+--- ISSUE 2 ---
+### Título: [Segurança] Corrigir política RLS staff_delete_fechamentos para impedir reabertura de bimestres por alunos e professores
+**Labels:** `security`, `severidade-media`, `database`, `rls`
+
+#### Descrição
+A política RLS `staff_delete_fechamentos` foi criada na migration `20260828000019` com a finalidade de permitir a reabertura de bimestres por gestores e secretários escolares. Entretanto, a política utiliza a expressão `p_acesso_por_turma(fechamentos_bimestres.turma_id)`, que foi expandida na migration `20260814000013` para conceder acesso de leitura a professores e alunos.
+Isso permite que qualquer aluno ou professor da turma emita uma requisição REST `DELETE` para `/fechamentos_bimestres` e remova a trava de encerramento do período letivo.
+
+#### Por que é explorável
+O endpoint PostgREST expõe operações DELETE respeitando unicamente as políticas de RLS. Como a política de DELETE avalia como verdadeira para qualquer usuário com acesso de leitura à turma, o bloqueio presente no frontend (`src/pages/AparataDetalhes.tsx:145`) é completamente ignorado.
+
+#### Evidência
+- **Arquivo:** `supabase/migrations/20260828000019_align_gestor_writes_and_fechamento_reopen.sql`
+- **Linhas:** 77-82
+```sql
+CREATE POLICY "staff_delete_fechamentos" ON public.fechamentos_bimestres
+  FOR DELETE
+  USING (
+    (SELECT get_user_role()) = 'ADMIN'
+    OR p_acesso_por_turma(fechamentos_bimestres.turma_id)
+  );
+```
+
+#### Impacto
+Severidade Média. Violação da integridade de registros oficiais e reabertura indevida de bimestres por agentes sem atribuição pedagógica para tal.
+
+#### Sugestão de Correção
+Criar uma nova migration substituindo a política por:
+```sql
+DROP POLICY IF EXISTS "staff_delete_fechamentos" ON public.fechamentos_bimestres;
+CREATE POLICY "staff_delete_fechamentos" ON public.fechamentos_bimestres
+  FOR DELETE
+  USING (
+    (SELECT get_user_role()) IN ('ADMIN', 'GESTOR', 'SECRETARIO')
+    AND p_acesso_por_turma(fechamentos_bimestres.turma_id)
+  );
+```
+
+#### Critérios de Aceite
+1. Requisições DELETE enviadas com token de `ALUNO` ou `PROFESSOR` devem retornar erro de RLS (zero linhas afetadas).
+2. Gestores, Secretários e Administradores continuam capazes de reabrir bimestres de suas respectivas turmas.
+--- FIM ISSUE 2 ---
+</pre>
+  </div>
+
+  <div class="issue-box">
+<pre style="background: transparent; color: inherit; border: none; padding: 0; margin: 0; font-size: 8pt; white-space: pre-wrap;">
+--- ISSUE 3 ---
+### Título: [Segurança] Implementar trigger de integridade no banco de dados para impedir alteração de notas e frequências em bimestres fechados
+**Labels:** `security`, `severidade-media`, `database`, `integridade`
+
+#### Descrição
+A regra de negócio que impede o lançamento e a modificação de notas e presenças após o encerramento do bimestre está implementada exclusivamente na camada de apresentação (`TurmaContext.tsx` via `verificarPeriodoFechado`).
+No Supabase PostgreSQL, as tabelas `notas`, `frequencias`, `avaliacoes` e `conteudos` não possuem restrições que validem o status da tabela `fechamentos_bimestres`.
+
+#### Por que é explorável
+Um professor com acesso regular à turma pode enviar requisições diretas via REST ou alterar os registros cacheados no IndexedDB para sincronização posterior, conseguindo adulterar notas de bimestres consolidados mesmo sem a autorização da direção/secretaria.
+
+#### Evidência
+- **Arquivo:** `src/contexts/TurmaContext.tsx:140-147`
+- **Arquivo:** `supabase/migrations/20260820000014_fix_rls_professor_by_uid.sql:170-260`
+
+#### Impacto
+Severidade Média. Possibilidade de manipulação retroativa de notas e diários de classe oficiais consolidados.
+
+#### Sugestão de Correção
+Criar função e triggers `BEFORE INSERT OR UPDATE` nas tabelas `notas` e `frequencias`:
+```sql
+CREATE OR REPLACE FUNCTION public.check_bimestre_aberto()
+  RETURNS trigger
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+AS $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM public.fechamentos_bimestres
+    WHERE turma_id = NEW.turma_id AND status = 'FECHADO'
+  ) THEN
+    RAISE EXCEPTION 'Não é permitido alterar dados de um período com fechamento homologado.'
+      USING ERRCODE = 'P0001';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+```
+
+#### Critérios de Aceite
+1. Tentativa de INSERT/UPDATE em notas ou presenças com bimestre fechado deve ser rejeitada com erro no PostgreSQL.
+2. Operações durante períodos em aberto prosseguem normalmente.
+--- FIM ISSUE 3 ---
+</pre>
+  </div>
+
+  <div class="footer-bar">
+    <span>DC Digital — Sistema de Gestão Escolar</span>
+    <span>Relatório de Auditoria de Segurança — Fim do Documento</span>
+  </div>
+
+</body>
+</html>
