@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, BookOpen, Folder } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
@@ -8,10 +8,17 @@ import { useTurmaProgress } from '../hooks/useTurmaProgress';
 import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
 
 export default function Diario() {
-  const { turmaAtiva, lancamentos, avaliacoes, alunos, horarioTurma, fechamentos } = useTurma();
+  const { turmaAtiva, lancamentos, avaliacoes, alunos, horarioTurma, fechamentos, verificarPeriodoFechado } = useTurma();
   const year = APP_CONFIG.YEAR;
 
   const periodosLetivos = APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE'));
+
+  const checarFechado = useCallback((periodoId: string) => {
+    if (verificarPeriodoFechado) {
+      return verificarPeriodoFechado(periodoId);
+    }
+    return !!fechamentos[periodoId];
+  }, [verificarPeriodoFechado, fechamentos]);
 
   const periodosVisiveis = useMemo(() => {
     const hoje = new Date();
@@ -29,7 +36,7 @@ export default function Diario() {
       // Regra 2: Se não for o primeiro bimestre, o anterior precisa estar fechado na Aparata!
       if (i > 0) {
         const bimestreAnterior = periodosLetivos[i - 1];
-        const isAnteriorFechado = !!fechamentos[bimestreAnterior.id];
+        const isAnteriorFechado = checarFechado(bimestreAnterior.id);
 
         // Se o anterior não está fechado, impede a visualização deste e dos próximos
         if (!isAnteriorFechado) break;
@@ -39,22 +46,78 @@ export default function Diario() {
     }
 
     return resultado.length > 0 ? resultado : [periodosLetivos[0]];
-  }, [periodosLetivos, fechamentos]);
+  }, [periodosLetivos, checarFechado]);
 
-  // Define o período inicial como o mais recente/atual (último da lista de visíveis)
-  const initialPeriodoId = periodosVisiveis[periodosVisiveis.length - 1]?.id || '1. BIMESTRE';
-  const [periodoSelecionadoId, setPeriodoSelecionadoId] = useState(initialPeriodoId);
-  const periodoSelecionado = periodosVisiveis.find(p => p.id === periodoSelecionadoId) || periodosVisiveis[periodosVisiveis.length - 1];
+  // Função para identificar o período letivo aberto prioritário:
+  // 1. Período aberto que engloba o dia de hoje
+  // 2. Período aberto mais recente entre os visíveis
+  // 3. Último período visível como fallback
+  const obterPeriodoAberto = useCallback((visiveis: typeof periodosLetivos) => {
+    if (!visiveis || visiveis.length === 0) return periodosLetivos[0];
+    const hoje = new Date();
 
-  // Garante que o calendário inicie em um mês válido para o bimestre carregado
-  const [currentMonth, setCurrentMonth] = useState(() => {
-    const minM = periodoSelecionado ? parseInt(periodoSelecionado.dataInicio.split('-')[1], 10) - 1 : 1;
-    const maxM = periodoSelecionado ? parseInt(periodoSelecionado.dataFim.split('-')[1], 10) - 1 : 11;
+    const abertoHoje = visiveis.find(p => {
+      if (checarFechado(p.id)) return false;
+      const [anoI, mesI, diaI] = p.dataInicio.split('-').map(Number);
+      const [anoF, mesF, diaF] = p.dataFim.split('-').map(Number);
+      const inicio = new Date(anoI, mesI - 1, diaI, 0, 0, 0);
+      const fim = new Date(anoF, mesF - 1, diaF, 23, 59, 59, 999);
+      return hoje >= inicio && hoje <= fim;
+    });
+    if (abertoHoje) return abertoHoje;
+
+    const abertoMaisRecente = [...visiveis].reverse().find(p => !checarFechado(p.id));
+    if (abertoMaisRecente) return abertoMaisRecente;
+
+    return visiveis[visiveis.length - 1];
+  }, [periodosLetivos, checarFechado]);
+
+  // Garante que o calendário inicie em um mês válido para o período selecionado
+  const obterMesValido = useCallback((p?: { dataInicio: string; dataFim: string } | null) => {
+    if (!p) return new Date().getMonth();
+    const minM = parseInt(p.dataInicio.split('-')[1], 10) - 1;
+    const maxM = parseInt(p.dataFim.split('-')[1], 10) - 1;
     const actualMonth = new Date().getMonth();
     return (actualMonth >= minM && actualMonth <= maxM) ? actualMonth : minM;
+  }, []);
+
+  const [periodoSelecionadoId, setPeriodoSelecionadoId] = useState<string>(() => {
+    const inicial = obterPeriodoAberto(periodosVisiveis);
+    return inicial?.id || '1. BIMESTRE';
   });
 
-  const isAparataFechada = !!fechamentos[periodoSelecionadoId];
+  const periodoSelecionado = useMemo(() => {
+    return periodosVisiveis.find(p => p.id === periodoSelecionadoId) || periodosVisiveis[periodosVisiveis.length - 1];
+  }, [periodosVisiveis, periodoSelecionadoId]);
+
+  const [currentMonth, setCurrentMonth] = useState<number>(() => {
+    return obterMesValido(periodoSelecionado);
+  });
+
+  const [usuarioAlterouManualmente, setUsuarioAlterouManualmente] = useState(false);
+  const lastTurmaIdRef = useRef<string | null>(null);
+
+  // Redefine a escolha manual se o usuário alternar para outra turma
+  useEffect(() => {
+    const currentTurmaId = turmaAtiva ? String(turmaAtiva.id) : null;
+    if (currentTurmaId !== lastTurmaIdRef.current) {
+      lastTurmaIdRef.current = currentTurmaId;
+      setUsuarioAlterouManualmente(false);
+    }
+  }, [turmaAtiva]);
+
+  // Ao entrar na turma e carregar os fechamentos, posiciona automaticamente no período aberto
+  useEffect(() => {
+    if (!usuarioAlterouManualmente && turmaAtiva) {
+      const periodoAberto = obterPeriodoAberto(periodosVisiveis);
+      if (periodoAberto && periodoAberto.id !== periodoSelecionadoId) {
+        setPeriodoSelecionadoId(periodoAberto.id);
+        setCurrentMonth(obterMesValido(periodoAberto));
+      }
+    }
+  }, [periodosVisiveis, fechamentos, usuarioAlterouManualmente, turmaAtiva, obterPeriodoAberto, obterMesValido, periodoSelecionadoId]);
+
+  const isAparataFechada = checarFechado(periodoSelecionadoId);
 
   const { pFreq, pObj, pAvaliacoes, pNotas, barColor } = useTurmaProgress(
     turmaAtiva, 
@@ -113,11 +176,11 @@ export default function Diario() {
                 value={periodoSelecionadoId}
                 onChange={(e) => {
                   const newId = e.target.value;
+                  setUsuarioAlterouManualmente(true);
                   setPeriodoSelecionadoId(newId);
                   const selectedPeriod = periodosVisiveis.find(p => p.id === newId);
                   if (selectedPeriod) {
-                    const month = parseInt(selectedPeriod.dataInicio.split('-')[1], 10) - 1;
-                    setCurrentMonth(month);
+                    setCurrentMonth(obterMesValido(selectedPeriod));
                   }
                 }}
                 className="w-full border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-700 dark:text-slate-100 px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] cursor-pointer font-bold text-[#0f2851]"
