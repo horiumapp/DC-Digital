@@ -5,7 +5,8 @@ import {
   normalizeAno,
   normalizeBimestre,
   getModalidadeForAno,
-  cleanContentText
+  cleanContentText,
+  exportCurriculoToCsv
 } from '../utils/curriculoParser';
 
 describe('curriculoParser', () => {
@@ -94,6 +95,84 @@ describe('curriculoParser', () => {
       const result = parseCurriculoText('');
       expect(result.records.length).toBe(0);
       expect(result.avisos.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('exportCurriculoToCsv', () => {
+    it('deve exportar lista de unidades para CSV formatado com BOM UTF-8', () => {
+      const mockUnidades = [
+        {
+          modalidade: 'Fundamental Anos Finais (6° ao 9° ANO)',
+          ano: '6º Ano',
+          disciplina: 'História',
+          bimestre: '1º Bimestre',
+          objetos: [
+            { descricao: 'Introdução ao estudo da História' },
+            { descricao: 'Fontes históricas' }
+          ]
+        },
+        {
+          modalidade: 'Fundamental Anos Finais (6° ao 9° ANO)',
+          ano: '6º Ano',
+          disciplina: 'Geografia',
+          bimestre: '1º Bimestre',
+          objetos: [
+            'O espaço geográfico'
+          ]
+        }
+      ];
+
+      const csv = exportCurriculoToCsv(mockUnidades);
+      expect(csv.startsWith('\uFEFF')).toBe(true);
+      expect(csv).toContain('Modalidade;Ano;Disciplina;Bimestre;Conteúdo');
+      expect(csv).toContain('6º Ano;História;1º Bimestre;Introdução ao estudo da História');
+      expect(csv).toContain('6º Ano;História;1º Bimestre;Fontes históricas');
+      expect(csv).toContain('6º Ano;Geografia;1º Bimestre;O espaço geográfico');
+    });
+
+    it('deve realizar round-trip (exportar para CSV e depois ler com parseCurriculoText)', () => {
+      const original = [
+        {
+          modalidade: 'Fundamental Anos Iniciais (1° ao 5° ANO)',
+          ano: '1º Ano',
+          disciplina: 'Matemática',
+          bimestre: '1º Bimestre',
+          objetos: [
+            { descricao: 'Contagem de objetos' },
+            { descricao: 'Números de 0 a 10' }
+          ]
+        }
+      ];
+
+      const exportedCsv = exportCurriculoToCsv(original);
+      const parsed = parseCurriculoText(exportedCsv);
+
+      expect(parsed.records.length).toBe(1);
+      expect(parsed.records[0].ano).toBe('1º Ano');
+      expect(parsed.records[0].disciplina).toBe('Matemática');
+      expect(parsed.records[0].bimestre).toBe('1º Bimestre');
+      expect(parsed.records[0].objetos).toEqual([
+        'Contagem de objetos',
+        'Números de 0 a 10'
+      ]);
+    });
+
+    it('deve proteger contra formula injection em campos iniciando com = ou +', () => {
+      const malicious = [
+        {
+          modalidade: 'Fundamental Anos Iniciais (1° ao 5° ANO)',
+          ano: '1º Ano',
+          disciplina: 'Matemática',
+          bimestre: '1º Bimestre',
+          objetos: [
+            { descricao: '=cmd|"/C calc"!A0' }
+          ]
+        }
+      ];
+
+      const csv = exportCurriculoToCsv(malicious);
+      // Deve ter sido sanitizado prefixando apóstrofo
+      expect(csv).toContain("'=cmd");
     });
   });
 });

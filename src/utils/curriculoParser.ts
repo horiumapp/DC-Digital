@@ -1,3 +1,5 @@
+import { sanitizeFormulaValue } from './sanitizeUtils';
+
 export interface ParsedCurriculoItem {
   modalidade: string;
   ano: string;
@@ -317,4 +319,62 @@ function parseMatrixFormat(lines: string[], avisos: string[]): CurriculoParseRes
     bimestresEncontrados: [...new Set(records.map(r => r.bimestre))],
     avisos
   };
+}
+
+export interface CurriculoExportSource {
+  modalidade: string;
+  ano: string;
+  disciplina: string;
+  bimestre: string;
+  nome?: string;
+  objetos?: Array<{ id?: string; descricao?: string } | string>;
+}
+
+function escapeCsvCell(val: string): string {
+  const sanitized = sanitizeFormulaValue(val || '');
+  if (sanitized.includes(';') || sanitized.includes('"') || sanitized.includes('\n') || sanitized.includes('\r')) {
+    return `"${sanitized.replace(/"/g, '""')}"`;
+  }
+  return sanitized;
+}
+
+/**
+ * Converte uma lista de unidades curriculares em conteúdo CSV (delimitado por ;)
+ * com BOM UTF-8 (\uFEFF) para compatibilidade nativa com Microsoft Excel.
+ */
+export function exportCurriculoToCsv(unidades: CurriculoExportSource[]): string {
+  const header = ['Modalidade', 'Ano', 'Disciplina', 'Bimestre', 'Conteúdo'].join(';');
+  const rows: string[] = [header];
+
+  for (const u of unidades) {
+    const objs = u.objetos || [];
+    for (const o of objs) {
+      const desc = typeof o === 'string' ? o : (o.descricao || '');
+      if (!desc.trim()) continue;
+      rows.push([
+        escapeCsvCell(u.modalidade),
+        escapeCsvCell(u.ano),
+        escapeCsvCell(u.disciplina),
+        escapeCsvCell(u.bimestre),
+        escapeCsvCell(desc.trim())
+      ].join(';'));
+    }
+  }
+
+  return '\uFEFF' + rows.join('\r\n');
+}
+
+/**
+ * Dispara o download de um arquivo CSV diretamente no navegador.
+ */
+export function downloadCsvFile(content: string, filename: string): void {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }

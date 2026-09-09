@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, BookOpen, Filter, Check, RotateCcw, Pencil, Upload } from 'lucide-react';
+import { Plus, Trash2, Save, BookOpen, Filter, Check, RotateCcw, Pencil, Upload, Download } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/common/Toast';
 import ConfirmActionModal from '../components/ConfirmActionModal';
 import ImportarCurriculoModal from '../components/curriculo/ImportarCurriculoModal';
+import { exportCurriculoToCsv, downloadCsvFile } from '../utils/curriculoParser';
 
 interface Unidade {
   id: string;
@@ -219,6 +220,22 @@ export default function Curriculo() {
     }
   }
 
+  function handleExport() {
+    if (unidades.length === 0) {
+      showWarning('Nenhum currículo disponível para exportar.');
+      return;
+    }
+
+    const csvContent = exportCurriculoToCsv(unidades);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const fileName = filterAno || filterDisciplina 
+      ? `curriculo_${(filterAno || 'todos').replace(/\s+/g, '_')}_${(filterDisciplina || 'todas').replace(/\s+/g, '_')}_${dateStr}.csv`
+      : `curriculo_bncc_completo_${dateStr}.csv`;
+
+    downloadCsvFile(csvContent, fileName);
+    showSuccess(`Currículo exportado com sucesso (${unidades.length} registros)!`);
+  }
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -227,6 +244,15 @@ export default function Curriculo() {
           <p className="text-slate-500 mt-1">Configure o referencial de Conteúdo ministrado.</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={handleExport}
+            disabled={unidades.length === 0}
+            className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-5 py-3 rounded-2xl font-bold text-xs transition-all shadow-sm active:scale-95 border border-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Exportar currículos listados para planilha CSV"
+          >
+            <Download className="w-4 h-4 text-emerald-600" />
+            Exportar CSV
+          </button>
           <button
             onClick={() => setIsImportModalOpen(true)}
             className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 px-5 py-3 rounded-2xl font-bold text-xs transition-all shadow-sm active:scale-95 border border-blue-200"
