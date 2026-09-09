@@ -37,6 +37,8 @@ interface OfflineContextType {
   syncNow: () => Promise<void>;
   /** Tentar novamente itens com erro */
   retryErrors: () => Promise<number>;
+  /** Tentar novamente itens da dead letter queue */
+  retryDeadLetters: () => Promise<number>;
   /** Descartar itens mortos da fila */
   discardDeadLetters: () => Promise<void>;
 }
@@ -59,6 +61,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     lastError,
     syncNow,
     retryErrors,
+    retryDeadLetters,
     discardDeadLetters,
   } = useSyncStatus(isOnline);
 
@@ -129,6 +132,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         lastError,
         syncNow,
         retryErrors,
+        retryDeadLetters,
         discardDeadLetters,
       }}
     >

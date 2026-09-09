@@ -397,20 +397,41 @@ export async function fetchFechamentos(turmaId: string | number, disciplina: str
   const tid = getTid(turmaId);
   try {
     if (!_isOnline) throw new Error('Offline');
-    const result = await TurmaService.fetchFechamentos(turmaId, disciplina);
-    // Cache
-    const records = Object.entries(result).map(([bimestre, isFechado]) => ({
+    const rawRecords = await TurmaService.fetchFechamentosRaw(turmaId, disciplina);
+    // Cache: salvar registros reais sem duplicar aliases no IndexedDB
+    const records = rawRecords.map(f => ({
       turma_id: tid,
       disciplina,
-      bimestre,
-      status: isFechado ? 'FECHADO' : 'ABERTO',
+      bimestre: f.bimestre,
+      status: (f.status === 'FECHADO' ? 'FECHADO' : 'ABERTO') as 'FECHADO' | 'ABERTO',
     }));
     await OfflineStorage.cacheFechamentos(tid, disciplina, records);
-    return result;
+    
+    const map: Record<string, boolean> = {};
+    rawRecords.forEach(f => {
+      const isFechado = f.status === 'FECHADO';
+      map[f.bimestre] = isFechado;
+      const match = f.bimestre.match(/^[1-4]/);
+      if (match) {
+        const n = match[0];
+        map[`${n}. BIMESTRE`] = isFechado;
+        map[`${n}º Bimestre`] = isFechado;
+      }
+    });
+    return map;
   } catch {
     const local = await OfflineStorage.getFechamentosLocal(tid, disciplina);
     const map: Record<string, boolean> = {};
-    local.forEach(f => { map[f.bimestre] = f.status === 'FECHADO'; });
+    local.forEach(f => {
+      const isFechado = f.status === 'FECHADO';
+      map[f.bimestre] = isFechado;
+      const match = f.bimestre.match(/^[1-4]/);
+      if (match) {
+        const n = match[0];
+        map[`${n}. BIMESTRE`] = isFechado;
+        map[`${n}º Bimestre`] = isFechado;
+      }
+    });
     return map;
   }
 }

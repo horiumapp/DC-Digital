@@ -1286,3 +1286,13 @@ export async function retryErrors(): Promise<number> {
   }
   return count;
 }
+
+/** Tenta reprocessar itens marcados como dead letter após intervenção ou correção */
+export async function retryDeadLetters(): Promise<number> {
+  await autoRepairDeadLetters();
+  const count = await Queue.retryDeadLetterItems();
+  if (count > 0) {
+    scheduleSync();
+  }
+  return count;
+}

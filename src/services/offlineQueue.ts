@@ -234,6 +234,32 @@ export async function discardDeadLetterItems(): Promise<number> {
 }
 
 /**
+ * Força a re-tentativa de itens marcados como dead letter (ação explícita do usuário).
+ * Reseta o status para 'pending', zerando o retryCount e o erro.
+ * Retorna a quantidade de itens re-enfileirados.
+ */
+export async function retryDeadLetterItems(): Promise<number> {
+  const deadItems = await getDeadLetterItems();
+  const timestamp = now();
+  let count = 0;
+
+  for (const item of deadItems) {
+    if (item.id) {
+      await db.syncQueue.update(item.id, {
+        status: 'pending' as QueueStatus,
+        retryCount: 0,
+        lastError: undefined,
+        updatedAt: timestamp,
+        retryAfter: undefined,
+      });
+      count++;
+    }
+  }
+
+  return count;
+}
+
+/**
  * Reseta itens em 'processing' travados (mais de 60s) para 'pending'.
  * Útil para recovery após crash/reload.
  */

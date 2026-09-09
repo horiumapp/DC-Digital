@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef, useMemo } from 'react';
 
-import { getBimestrePorData, formatarDataParaISO } from '../utils/dateUtils';
+import { getBimestrePorData, getPeriodoInfoPorData, getBimestreNumero, formatarDataParaISO } from '../utils/dateUtils';
 import { getTid } from '../utils/turmaUtils';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
 import { OfflineNoCacheError } from '../services/turmaServiceOffline';
@@ -139,11 +139,33 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const verificarPeriodoFechado = useCallback((dateOrBimestreId: string): boolean => {
     if (!dateOrBimestreId) return false;
-    let bimestreId = dateOrBimestreId;
+    
+    // 1. Verificação direta na chave recebida
+    if (fechamentos[dateOrBimestreId]) return true;
+
+    // 2. Se for data, obter informações do período letivo
     if (dateOrBimestreId.includes('-') || dateOrBimestreId.includes('/')) {
-      bimestreId = getBimestrePorData(dateOrBimestreId);
+      const periodo = getPeriodoInfoPorData(dateOrBimestreId);
+      if (periodo) {
+        if (fechamentos[periodo.id] || fechamentos[periodo.nome] || fechamentos[periodo.label]) {
+          return true;
+        }
+      }
     }
-    return !!fechamentos[bimestreId];
+
+    // 3. Normalização pelo número do bimestre (ex: '1. BIMESTRE', '1º Bimestre', 1)
+    const num = getBimestreNumero(dateOrBimestreId);
+    if (num !== null) {
+      if (
+        fechamentos[`${num}. BIMESTRE`] ||
+        fechamentos[`${num}º Bimestre`] ||
+        fechamentos[String(num)]
+      ) {
+        return true;
+      }
+    }
+
+    return false;
   }, [fechamentos]);
 
   const fetchAvaliacoesInterno = useCallback(async (turmaId: string | number, disciplina: string, contextAlunos: Aluno[], signal?: AbortSignal) => {

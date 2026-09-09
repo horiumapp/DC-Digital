@@ -29,6 +29,8 @@ interface SyncStatusResult {
   syncNow: () => Promise<void>;
   /** Tenta reprocessar itens com erro */
   retryErrors: () => Promise<number>;
+  /** Tenta reprocessar itens da dead letter queue após correção */
+  retryDeadLetters: () => Promise<number>;
   /** Descarta itens irrecuperáveis da dead letter queue */
   discardDeadLetters: () => Promise<void>;
 }
@@ -128,6 +130,16 @@ export function useSyncStatus(isOnline: boolean): SyncStatusResult {
     return retriedCount;
   }, [isOnline, updateCounts]);
 
+  const retryDeadLetters = useCallback(async (): Promise<number> => {
+    const retriedCount = await SyncEngine.retryDeadLetters();
+    if (retriedCount > 0) {
+      setLastError(null);
+      setConnectionState(isOnline ? 'ONLINE' : 'OFFLINE');
+    }
+    await updateCounts();
+    return retriedCount;
+  }, [isOnline, updateCounts]);
+
   const discardDeadLetters = useCallback(async () => {
     await discardDeadLetterItems();
     await updateCounts();
@@ -143,6 +155,7 @@ export function useSyncStatus(isOnline: boolean): SyncStatusResult {
     lastError,
     syncNow,
     retryErrors,
+    retryDeadLetters,
     discardDeadLetters,
   };
 }
