@@ -36,22 +36,28 @@ export const BIMESTRES_PADRAO = [
   "4º Bimestre"
 ];
 
+function cleanHeaderString(c: string): string {
+  return (c || '')
+    .trim()
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\uFFFD\u00A0]/g, ' ')
+    .trim();
+}
+
 /**
  * Normaliza o nome da disciplina para um dos padrões do sistema.
  */
 export function normalizeDisciplina(raw: string): string {
-  const s = (raw || '')
-    .trim()
-    .toUpperCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+  const s = cleanHeaderString(raw);
 
-  if (s.includes('PORTUGU')) return 'Português';
+  if (s.includes('PORTUG')) return 'Português';
   if (s.includes('MATEM')) return 'Matemática';
   if (s.includes('HIST')) return 'História';
   if (s.includes('GEOG')) return 'Geografia';
   if (s.includes('ARTE')) return 'Artes';
-  if (s.includes('CIENC')) return 'Ciências';
+  if (s.includes('CIENC') || s.includes('CINC')) return 'Ciências';
   if (s.includes('FISIC')) return 'Educação Física';
   if (s.includes('RELIG')) return 'Ensino Religioso';
   if (s.includes('ESPANH')) return 'Espanhol';
@@ -96,22 +102,22 @@ export function getModalidadeForAno(ano: string): string {
  */
 export function cleanContentText(str: string): string {
   return (str || '')
-    .replace(/^[\s\-–—•*.\d)]+/, '')
+    .replace(/^[\s\-–—•*.\d)\uFFFD]+/, '')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
 function isSubjectHeaderCell(c: string): boolean {
-  if (!c || c.length > 35) return false;
-  const s = c.trim().toUpperCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  return /^(GEOGRAFIA|HISTORIA|MATEMATICA|PORTUGUES|ARTES|CIENCIAS|EDUCACAO\s+FISICA|ENSINO\s+RELIGIOSO|ESPANHOL|INGLES)(\s+\d*º?\s*ANO)?$/i.test(s);
+  if (!c || c.length > 40) return false;
+  const s = cleanHeaderString(c);
+  return /^(GEOGRAFIA|HIST|MATEM|PORTUG|ARTES|CIENC|CINC|EDUCA.*FISIC|ENSINO\s+RELIGIOSO|ESPANHOL|INGL)/i.test(s);
 }
 
 function isBimestreHeaderRow(line: string): boolean {
   const cells = line.split(/[\t;]/).map(c => c.trim()).filter(Boolean);
   if (cells.length === 0) return false;
-  const bimCells = cells.filter(c => /^[1-4]?º?\s*BIMESTRE/i.test(c));
-  return bimCells.length >= 2 || /^[1-4]?º?\s*BIMESTRE/i.test(cells[0]);
+  const bimCells = cells.filter(c => /BIMESTRE/i.test(c));
+  return bimCells.length >= 2 || /BIMESTRE/i.test(cells[0]);
 }
 
 /**

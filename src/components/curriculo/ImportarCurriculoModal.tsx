@@ -48,23 +48,43 @@ export default function ImportarCurriculoModal({
 
   if (!isOpen) return null;
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setFileName(file.name);
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
+    try {
+      const readWithEncoding = (encoding: string): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (event) => resolve((event.target?.result as string) || '');
+          reader.onerror = reject;
+          reader.readAsText(file, encoding);
+        });
+      };
+
+      // Tenta ler como UTF-8 primeiro
+      let content = await readWithEncoding('UTF-8');
+
+      // Se houver caractere de substituição (\uFFFD), o arquivo está em ANSI/Windows-1252/Latin1
+      if (content.includes('\uFFFD')) {
+        const latin1Content = await readWithEncoding('ISO-8859-1');
+        if (!latin1Content.includes('\uFFFD') || parseCurriculoText(latin1Content).records.length > parseCurriculoText(content).records.length) {
+          content = latin1Content;
+        }
+      }
+
       setFileText(content || '');
       const parsed = parseCurriculoText(content || '');
       setParseResult(parsed);
+
       if (parsed.records.length === 0) {
         showWarning('Nenhum conteúdo curricular foi detectado no arquivo.');
       }
-    };
-    // Tenta ler com UTF-8
-    reader.readAsText(file, 'UTF-8');
+    } catch (err) {
+      console.error('Erro ao ler arquivo:', err);
+      showError('Erro ao ler o arquivo selecionado.');
+    }
   }
 
   function handleParseManualText() {
