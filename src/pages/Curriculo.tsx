@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, BookOpen, Filter, Check, RotateCcw, Pencil } from 'lucide-react';
+import { Plus, Trash2, Save, BookOpen, Filter, Check, RotateCcw, Pencil, Upload } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/common/Toast';
 import ConfirmActionModal from '../components/ConfirmActionModal';
+import ImportarCurriculoModal from '../components/curriculo/ImportarCurriculoModal';
 
 interface Unidade {
   id: string;
@@ -65,6 +66,7 @@ export default function Curriculo() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const fetchUnidades = React.useCallback(async () => {
     setLoading(true);
@@ -223,6 +225,15 @@ export default function Curriculo() {
         <div>
           <h1 className="text-3xl font-black text-[#0f2851] tracking-tight">Gestão Curricular (BNCC)</h1>
           <p className="text-slate-500 mt-1">Configure o referencial de Conteúdo ministrado.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 px-5 py-3 rounded-2xl font-bold text-xs transition-all shadow-sm active:scale-95 border border-blue-200"
+          >
+            <Upload className="w-4 h-4 text-blue-600" />
+            Importar TXT / Planilha
+          </button>
         </div>
       </div>
 
@@ -470,6 +481,11 @@ export default function Curriculo() {
         title="Excluir Registro Curricular"
         message="Tem certeza que deseja excluir este registro curricular? Esta ação não pode ser desfeita."
         loading={deleting}
+      />
+      <ImportarCurriculoModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={() => fetchUnidades()}
       />
     </div>
   );
