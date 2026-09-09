@@ -108,24 +108,26 @@ describe('Recuperação de Itens da Dead Letter Queue (offlineQueue.ts)', () => 
     mockQueue = [
       {
         id: 87,
+        hash: 'hash-87',
         table: 'frequencias',
         operation: 'UPSERT',
         payload: JSON.stringify({ turma_id: 'turma-1', data: '2026-07-21', disciplina: 'Matemática' }),
         status: 'error',
-        retries: 5,
+        retryCount: 5,
         lastError: '[DEAD_LETTER] Operação bloqueada: o período letivo desta turma e disciplina já foi fechado...',
         createdAt: new Date().toISOString(),
-        scheduledFor: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       },
       {
         id: 88,
+        hash: 'hash-88',
         table: 'notas',
         operation: 'UPSERT',
         payload: JSON.stringify({ turma_id: 'turma-1', bimestre: '3º Bimestre' }),
         status: 'pending',
-        retries: 0,
+        retryCount: 0,
         createdAt: new Date().toISOString(),
-        scheduledFor: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       },
     ];
 
