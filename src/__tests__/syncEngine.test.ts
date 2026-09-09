@@ -66,7 +66,14 @@ vi.mock('../lib/supabase', () => {
     })),
   }));
 
-  return { supabase: { from: _from } };
+  return {
+    supabase: {
+      from: _from,
+      auth: {
+        refreshSession: vi.fn(async () => ({ data: { session: null }, error: null })),
+      },
+    },
+  };
 });
 
 // ---------- Mock db (inline para hoisting) ----------
@@ -115,10 +122,14 @@ function setupPeek(items: (SyncQueueItem | undefined)[]) {
 }
 
 // Helper para forçar upsert a falhar
-function forceUpsertError(msg: string) {
+function forceUpsertError(msg: string, code?: string) {
   const fromMock = vi.mocked(supabase.from);
   fromMock.mockReturnValueOnce({
-    upsert: vi.fn(async () => { throw new Error(msg); }),
+    upsert: vi.fn(async () => {
+      const err = new Error(msg);
+      if (code) (err as unknown as { code: string }).code = code;
+      throw err;
+    }),
     delete: vi.fn(() => ({ eq: vi.fn(() => ({ eq: vi.fn(() => ({ eq: vi.fn(() => ({ eq: vi.fn(async () => ({ error: null })) })) })) })) })),
     insert: vi.fn(async () => ({ data: [{ id: 'x' }], error: null })),
     select: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn(async () => ({ data: null, error: null })) })) })),
@@ -208,6 +219,18 @@ describe('syncEngine', () => {
     expect(result.failed).toBe(1);
     expect(Queue.retry).toHaveBeenCalled();
     expect(Queue.fail).not.toHaveBeenCalled();
+  });
+
+  it('deve chamar retry (e não dead letter) para erro de token JWT expirado (PGRST301)', async () => {
+    const item = makeFreqItem(99);
+    setupPeek([item]);
+    forceUpsertError('JWT expired', 'PGRST301');
+
+    const result = await SyncEngine.syncAll();
+    expect(result.failed).toBe(1);
+    expect(Queue.retry).toHaveBeenCalled();
+    expect(Queue.fail).not.toHaveBeenCalled();
+    expect(result.errors[0]).not.toContain('DEAD_LETTER');
   });
 
   it('deve tratar payload JSON corrompido como dead letter', async () => {
