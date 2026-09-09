@@ -187,7 +187,7 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
       }
     }
     setLoading(false);
-  }, [user?.email, fetchData]);
+  }, [user?.email, user?.id, fetchData]);
 
    
   useEffect(() => {
