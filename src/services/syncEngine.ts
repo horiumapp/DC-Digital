@@ -370,6 +370,7 @@ function isNonRecoverableError(errorMsg: string, errorCode?: string): boolean {
     '23514', // check_violation
     '42501', // insufficient_privilege
     '22P02', // invalid_text_representation
+    'P0001', // raise_exception (ex: trigger de bimestre fechado, validações server-side)
     'PGRST116', // Resource Not Found (RLS bloqueando GET de recurso específico)
   ]);
 

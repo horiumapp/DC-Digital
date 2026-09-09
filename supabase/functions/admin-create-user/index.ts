@@ -159,6 +159,16 @@ Deno.serve(async (req: Request) => {
 
     // 2.1 Ação de exclusão / revogação de usuário
     if (bodyRecord.action === "delete-user") {
+      // SEC-01 FIX: Apenas papéis administrativos podem excluir usuários.
+      // Antes, qualquer ALUNO/PROFESSOR autenticado da mesma escola podia
+      // invocar este endpoint e deletar contas de colegas permanentemente.
+      if (!["ADMIN", "GESTOR", "SECRETARIO"].includes(effectiveRole as string)) {
+        return new Response(
+          JSON.stringify({ error: "Seu perfil não possui permissão para excluir contas de usuários." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const targetEmail = typeof bodyRecord.email === "string" ? bodyRecord.email.trim().toLowerCase() : "";
       const targetUserId = typeof bodyRecord.userId === "string" ? bodyRecord.userId.trim() : "";
 
