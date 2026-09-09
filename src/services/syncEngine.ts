@@ -247,6 +247,20 @@ async function _runSyncAll(): Promise<SyncResult> {
           result.errors.push(`${item.table}/${item.operation}: ${errorMsg}`);
           emit('itemFailed', { table: item.table, error: errorMsg });
 
+          // Se for erro de autenticação ou token JWT expirado (PGRST301),
+          // tentar renovar a sessão do usuário e pausar o ciclo corrente
+          // para não queimar tentativas de retry nem descartar dados legítimos.
+          const isAuthError = errorCode === 'PGRST301' || errorMsg.toLowerCase().includes('jwt expired') || errorMsg.toLowerCase().includes('token is expired');
+          if (isAuthError) {
+            try {
+              console.info('[SyncEngine] JWT expirado (PGRST301) detectado durante sync. Tentando renovar sessão...');
+              await supabase.auth?.refreshSession?.();
+            } catch (authErr) {
+              console.warn('[SyncEngine] Não foi possível renovar sessão automaticamente:', authErr);
+            }
+            break; // Parar o ciclo atual até haver autenticação válida
+          }
+
           // FIX P0-#3: Erros de dependência (avaliação pai pendente) NÃO devem
           // bloquear a fila inteira. Outros itens independentes podem ser sincronizados
           // enquanto a dependência é resolvida em ciclos futuros.
@@ -349,6 +363,7 @@ function isNonRecoverableError(errorMsg: string, errorCode?: string): boolean {
   const msg = errorMsg.toLowerCase();
 
   // Códigos de erro do PostgREST/Postgres (fonte: https://postgrest.org/en/stable/references/errors.html)
+  // NOTA: 'PGRST301' (JWT expired) NÃO deve entrar em dead-letter permanente, pois é recuperável após refresh de sessão.
   const deadLetterCodes = new Set([
     '23503', // foreign_key_violation
     '23505', // unique_violation
@@ -356,7 +371,6 @@ function isNonRecoverableError(errorMsg: string, errorCode?: string): boolean {
     '42501', // insufficient_privilege
     '22P02', // invalid_text_representation
     'PGRST116', // Resource Not Found (RLS bloqueando GET de recurso específico)
-    'PGRST301', // JWT expired (não recuperável sem relogin)
   ]);
 
   if (errorCode && deadLetterCodes.has(errorCode)) return true;

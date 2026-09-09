@@ -128,6 +128,20 @@ describe('Security Hardening — Aluno Anti-Spoofing RLS Rules', () => {
     expect(evaluateAlunoAcessoTurma('turma-uuid-9999', ALUNO_VITIMA, jwtLegitimoEmail, 'ALUNO')).toBe(true);
   });
 
+  it('deve autorizar o aluno mesmo quando o CPF no banco possui pontuação e máscara', () => {
+    const alunoComMascara: AlunoRecord = {
+      id: 'aluno-uuid-mask',
+      usuario_id: null,
+      cpf: '111.222.333-44',
+      turma_id: 'turma-uuid-9999',
+    };
+    const jwtLegitimo: AuthJwt = {
+      uid: 'outro-uuid-mask',
+      email: '11122233344@aluno.dcdigital.local',
+    };
+    expect(evaluateAlunoAcessoTurma('turma-uuid-9999', alunoComMascara, jwtLegitimo, 'ALUNO')).toBe(true);
+  });
+
   it('BLOQUEIO APT: deve REJEITAR acesso de atacante que forjou CPF da vítima em user_metadata', () => {
     // Atacante possui conta de aluno legítima, mas manipulou seu user_metadata com o CPF da vítima
     const jwtAtacante: AuthJwt = {

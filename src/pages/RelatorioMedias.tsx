@@ -98,7 +98,7 @@ export default function RelatorioMedias() {
         const { data: profs, error: profError } = await supabase
           .from('professores')
           .select('id, disciplinas')
-          .ilike('email', `%${emailLimpo}%`);
+          .or(`usuario_id.eq.${user.id},email.ilike.${emailLimpo}`);
 
         if (profError) throw profError;
         if (profs && profs.length > 0) {

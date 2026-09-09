@@ -404,13 +404,26 @@ Deno.serve(async (req: Request) => {
     // 8.1 Se for conta de ALUNO criada com pseudo-e-mail, vincular alunos.usuario_id diretamente
     if (cargoTrimmed === "ALUNO" && emailTrimmed.endsWith("@aluno.dcdigital.local")) {
       const cpfDigits = emailTrimmed.split("@")[0];
+      const cpfFormatted = cpfDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
       const { error: linkAlunoError } = await supabaseAdmin
         .from("alunos")
         .update({ usuario_id: newUser.user.id })
-        .eq("cpf", cpfDigits);
+        .or(`cpf.eq.${cpfDigits},cpf.eq.${cpfFormatted}`);
 
       if (linkAlunoError) {
         console.warn("[admin-create-user] Aviso ao vincular usuario_id em alunos:", linkAlunoError.message);
+      }
+    }
+
+    // 8.2 Se for conta de PROFESSOR, vincular professores.usuario_id diretamente
+    if (cargoTrimmed === "PROFESSOR") {
+      const { error: linkProfError } = await supabaseAdmin
+        .from("professores")
+        .update({ usuario_id: newUser.user.id })
+        .ilike("email", emailTrimmed);
+
+      if (linkProfError) {
+        console.warn("[admin-create-user] Aviso ao vincular usuario_id em professores:", linkProfError.message);
       }
     }
 

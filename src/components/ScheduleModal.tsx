@@ -137,11 +137,11 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
       if (!navigator.onLine) throw new Error('Offline');
       const emailLimpo = user.email.trim();
       
-      // 1. Achar todos os IDs de professor vinculados a este e-mail
+      // 1. Achar todos os IDs de professor vinculados a este e-mail ou usuario_id
       const { data: profs } = await supabase
         .from('professores')
         .select('id')
-        .ilike('email', `%${emailLimpo}%`);
+        .or(`usuario_id.eq.${user.id},email.ilike.${emailLimpo}`);
 
       if (profs && profs.length > 0) {
         const profIds = profs.map(p => p.id);
