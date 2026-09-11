@@ -216,9 +216,6 @@ export default function Diario() {
                 <span className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs font-bold text-slate-600 dark:text-slate-200">
                   <span className="w-4 h-4 rounded-full bg-red-500"></span> Pendente
                 </span>
-                <span className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs font-bold text-slate-600 dark:text-slate-200">
-                  <span className="w-4 h-4 rounded-full bg-blue-500"></span> Hoje
-                </span>
               </div>
             </div>
           </div>

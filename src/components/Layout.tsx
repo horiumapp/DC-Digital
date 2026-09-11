@@ -102,12 +102,14 @@ export default function Layout() {
               )}
             </div>
           )}
-          <Link
-            to="/estatisticas"
-            className="px-6 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95"
-          >
-            Estatísticas
-          </Link>
+          {hasAdminAccess && (
+            <Link
+              to="/estatisticas"
+              className="px-6 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95"
+            >
+              Estatísticas
+            </Link>
+          )}
           
           <div className="relative" ref={relatoriosRef}>
             <button
@@ -236,9 +238,11 @@ export default function Layout() {
               <Shield className="w-4 h-4 text-blue-600" />
               Privacidade
             </Link>
-            <Link to="/estatisticas" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold">
-              Estatísticas
-            </Link>
+            {hasAdminAccess && (
+              <Link to="/estatisticas" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold">
+                Estatísticas
+              </Link>
+            )}
             
             <div className="font-bold text-[#0f2851] px-4 py-2 mt-2">Relatórios</div>
             <Link to="/relatorio-conteudos" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 rounded-xl ml-4">Conteúdos</Link>
