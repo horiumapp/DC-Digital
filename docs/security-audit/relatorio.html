@@ -323,7 +323,7 @@
       border-radius: 6px;
       padding: 12px;
       margin: 14px 0;
-      page-break-inside: avoid;
+      page-break-inside: auto;
     }
   </style>
 </head>
@@ -395,8 +395,8 @@
         <!-- Segmento Média: 66.7% -> stroke-dasharray="188.5 94.2", stroke-dashoffset="-94.2" -->
         <circle cx="110" cy="70" r="45" fill="none" stroke="#D97706" stroke-width="18"
                 stroke-dasharray="188.5 94.2" stroke-dashoffset="-94.2" transform="rotate(-90 110 70)" />
-        <text x="110" y="66" text-anchor="middle" font-size="14pt" font-weight="800" fill="#0f172a">3</text>
-        <text x="110" y="80" text-anchor="middle" font-size="6.5pt" font-weight="600" fill="#64748b">VULNERABILIDADES</text>
+        <text x="110" y="65" text-anchor="middle" font-size="15pt" font-weight="800" fill="#0f172a">3</text>
+        <text x="110" y="78" text-anchor="middle" font-size="5.2pt" font-weight="700" letter-spacing="0.5px" fill="#64748b">ACHADOS</text>
 
         <!-- Legenda -->
         <rect x="25" y="132" width="10" height="8" rx="2" fill="#B91C1C" />
@@ -530,6 +530,13 @@
     Apenas identificadores públicos (<code class="inline">VITE_SUPABASE_URL</code>, <code class="inline">VITE_SUPABASE_ANON_KEY</code>) são expostos. A chave mestra <code class="inline">service_role</code> reside exclusivamente em variáveis de ambiente das Edge Functions do Supabase.
   </div>
 
+  <!-- ==================== PONTOS FRACOS E MATRIZ DE COBERTURA ==================== -->
+  <div class="page-break"></div>
+  <div class="header-bar">
+    <span>DC Digital — Relatório de Auditoria de Segurança</span>
+    <span>Postura e Cobertura da Auditoria</span>
+  </div>
+
   <h1>3. Pontos Fracos e Riscos Estruturais</h1>
   <p>Os principais riscos identificados originam-se de três causas arquiteturais:</p>
   <ul>
@@ -539,12 +546,6 @@
   </ul>
 
   <!-- ==================== MATRIZ DE COBERTURA ==================== -->
-  <div class="page-break"></div>
-  <div class="header-bar">
-    <span>DC Digital — Relatório de Auditoria de Segurança</span>
-    <span>Matriz de Cobertura da Auditoria</span>
-  </div>
-
   <h1>4. Matriz de Cobertura da Auditoria</h1>
   <p>A tabela a seguir comprova o escopo exaustivamente inspecionado em conformidade com as diretrizes de avaliação estática:</p>
 
