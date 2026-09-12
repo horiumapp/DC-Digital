@@ -20,6 +20,8 @@ diario-eslint.json
 
 # Debug and temp files
 .gemini/
+.audit_venv/
+scratch/
 # Metadata e arquivos de configuração locais
 # FIX #21: garantir que metadata.json nunca seja commitado acidentalmente
 metadata.json
