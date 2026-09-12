@@ -14,8 +14,8 @@ export default function Administracao() {
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   return (
-    <div className="relative z-10 p-8 max-w-7xl mx-auto space-y-6">
-      <div className="max-w-[1400px] mx-auto p-4 space-y-8">
+    <div className="relative z-10 px-4 py-6 sm:p-8 max-w-7xl mx-auto space-y-6">
+      <div className="max-w-[1400px] mx-auto space-y-6">
         {/* Header Section */}
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Painel Administrativo</h1>
@@ -27,7 +27,7 @@ export default function Administracao() {
         </div>
 
         {/* Tabs */}
-        <div className="flex bg-slate-50/50 p-1.5 rounded-xl border border-slate-200">
+        <div className="overflow-x-auto pb-1"><div className="flex min-w-max bg-slate-50/50 p-1.5 rounded-xl border border-slate-200">
           {user?.role === 'ADMIN' && (
             <button
               onClick={() => setActiveTab('escolas')}
@@ -64,7 +64,7 @@ export default function Administracao() {
               className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'usuarios' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
             >
               <Users className="w-5 h-5" />
-              Usuários
+              UsuÃ¡rios
             </button>
           )}
           {user?.role === 'ADMIN' && (
@@ -76,7 +76,7 @@ export default function Administracao() {
               LGPD
             </button>
           )}
-        </div>
+        </div></div>
 
         {/* Content Area */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -91,3 +91,6 @@ export default function Administracao() {
     </div>
   );
 }
+
+
+

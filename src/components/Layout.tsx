@@ -1,268 +1,52 @@
-import { useState, useEffect, useRef } from 'react';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { User, Home, LogOut, ChevronDown, Menu, X, Shield, AlertTriangle } from 'lucide-react';
+import { useState } from 'react';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { BarChart3, BookOpenCheck, CalendarDays, ClipboardCheck, FileBarChart, GraduationCap, Home, LogOut, Menu, Shield, Users, X } from 'lucide-react';
 import ScheduleModal from './ScheduleModal';
-import Background from './Background';
 import ConnectionStatus from './common/ConnectionStatus';
 import PrivacyLinksFooter from './PrivacyLinksFooter';
 import { useAuth } from '../contexts/AuthContext';
 import { useOffline } from '../contexts/OfflineContext';
 import { ADMIN_ROLES } from '../constants/authConstants';
 
+type Item = { label: string; to: string; icon: typeof Home; end?: boolean };
+const reports: Item[] = [
+  { label: 'Conteúdos ministrados', to: '/relatorio-conteudos', icon: BookOpenCheck },
+  { label: 'Frequência da turma', to: '/relatorio-frequencia', icon: ClipboardCheck },
+  { label: 'Médias do componente', to: '/relatorio-medias', icon: BarChart3 },
+  { label: 'Notas da turma', to: '/relatorio-notas', icon: FileBarChart },
+];
+
 export default function Layout() {
-  const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { deadLetterCount } = useOffline();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const canManage = !!user && ADMIN_ROLES.includes(user.role);
+  const close = () => setMenuOpen(false);
+  const navClass = ({ isActive }: { isActive: boolean }) => `dd-nav-item ${isActive ? 'dd-nav-item-active' : ''}`;
+  const work: Item[] = [
+    { label: 'Visão geral', to: '/turmas', icon: Home, end: true },
+    { label: 'Minhas turmas', to: '/turmas', icon: Users },
+    { label: 'Diário de classe', to: '/diario', icon: BookOpenCheck },
+    { label: 'Frequência e notas', to: '/frequencia', icon: ClipboardCheck },
+  ];
+  const management: Item[] = canManage ? [
+    { label: 'Gestão escolar', to: '/administracao', icon: GraduationCap },
+    { label: 'Currículo BNCC', to: '/curriculo', icon: BookOpenCheck },
+    { label: 'Pendências', to: '/estatisticas', icon: BarChart3 },
+  ] : [];
+  const renderNav = () => <nav className="space-y-6" aria-label="Navegação principal">
+    <section><p className="dd-nav-label">Trabalho</p>{work.map(({label,to,icon:Icon,end}) => <NavLink key={label} to={to} end={end} onClick={close} className={navClass}><Icon aria-hidden="true"/><span>{label}</span></NavLink>)}</section>
+    {management.length > 0 && <section><p className="dd-nav-label">Gestão</p>{management.map(({label,to,icon:Icon}) => <NavLink key={to} to={to} onClick={close} className={navClass}><Icon aria-hidden="true"/><span>{label}</span></NavLink>)}</section>}
+    <section><p className="dd-nav-label">Consultas</p><details><summary className="dd-nav-item cursor-pointer list-none"><FileBarChart aria-hidden="true"/><span>Relatórios</span></summary><div className="ml-5 border-l border-slate-200 pl-3 dark:border-slate-700">{reports.map(({label,to}) => <NavLink key={to} to={to} onClick={close} className={({isActive}) => `block rounded-md px-3 py-2 text-sm ${isActive ? 'font-semibold text-primary' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`}>{label}</NavLink>)}</div></details><NavLink to="/minha-privacidade" onClick={close} className={navClass}><Shield aria-hidden="true"/><span>Privacidade e LGPD</span></NavLink></section>
+  </nav>;
 
-  // FIX: Usar ADMIN_ROLES em vez de apenas 'ADMIN' para alinhar o menu
-  // de navegação com as rotas protegidas (GESTOR e SECRETARIO também têm acesso).
-  const hasAdminAccess = user ? ADMIN_ROLES.includes(user.role) : false;
-  const nameDisplay = user?.name || 'Visitante';
-  const titleDisplay = user?.title || 'Convidado';
-
-  const _isDiario = location.pathname === '/diario';
-  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
-  const [isRelatoriosOpen, setIsRelatoriosOpen] = useState(false);
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const relatoriosRef = useRef<HTMLDivElement>(null);
-  const adminRef = useRef<HTMLDivElement>(null);
-
-  // Fechar dropdown ao clicar fora
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (relatoriosRef.current && !relatoriosRef.current.contains(e.target as Node)) {
-        setIsRelatoriosOpen(false);
-      }
-      if (adminRef.current && !adminRef.current.contains(e.target as Node)) {
-        setIsAdminOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // BUG-08 FIX: removido o useEffect que forçava a remoção da classe dark,
-  // pois conflitava com o suporte a dark mode do CSS. O tema é controlado
-  // pelo sistema operacional / preferências do usuário.
-  
-
-  return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-200 relative flex flex-col justify-between">
-      <Background />
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center justify-between sticky top-0 z-50 shadow-sm transition-colors duration-200">
-        {/* Logo e Toggle - Esquerda */}
-        <div className="flex-1 flex items-center gap-3">
-          <button 
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
-            aria-label={isMobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
-          >
-            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-          <Link to="/turmas" className="flex items-center space-x-3 group">
-            <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain transition-transform group-hover:scale-105" />
-            <span className="text-xl font-bold text-[#0f2851] tracking-tight hidden xl:block">Diário Digital</span>
-          </Link>
-        </div>
-
-        {/* Navegação - Centro */}
-        <nav className="hidden lg:flex items-center justify-center space-x-3 flex-[2]">
-          {hasAdminAccess && (
-            <div className="relative" ref={adminRef}>
-              <button
-                onClick={() => setIsAdminOpen(prev => !prev)}
-                aria-expanded={isAdminOpen}
-                aria-haspopup="true"
-                className="px-6 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold flex items-center space-x-2 hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95"
-              >
-                <span>Administração</span>
-                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isAdminOpen ? 'rotate-180' : ''}`} />
-              </button>
-              {isAdminOpen && (
-                <div className="absolute left-1/2 -translate-x-1/2 mt-3 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl z-50 border border-slate-100 dark:border-slate-700 p-1 animate-in">
-                  <div className="py-2">
-                    <Link
-                      to="/administracao"
-                      onClick={() => setIsAdminOpen(false)}
-                      className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors rounded-xl"
-                    >
-                      Gestão Escolar
-                    </Link>
-                    <Link
-                      to="/curriculo"
-                      onClick={() => setIsAdminOpen(false)}
-                      className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors rounded-xl"
-                    >
-                      Currículo (BNCC)
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          {hasAdminAccess && (
-            <Link
-              to="/estatisticas"
-              className="px-6 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95"
-            >
-              Estatísticas
-            </Link>
-          )}
-          
-          <div className="relative" ref={relatoriosRef}>
-            <button
-              onClick={() => setIsRelatoriosOpen(prev => !prev)}
-              aria-expanded={isRelatoriosOpen}
-              aria-haspopup="true"
-              className="px-6 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold flex items-center space-x-2 hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95"
-            >
-              <span>Relatórios</span>
-              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isRelatoriosOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {/* Dropdown menu */}
-            {isRelatoriosOpen && (
-              <div
-                role="menu"
-                className="absolute left-1/2 -translate-x-1/2 mt-3 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl z-50 border border-slate-100 dark:border-slate-700 p-1 animate-in"
-              >
-                <div className="py-2">
-                  <Link
-                    to="/relatorio-conteudos"
-                    role="menuitem"
-                    onClick={() => setIsRelatoriosOpen(false)}
-                    className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors rounded-xl"
-                  >
-                    Conteúdos Ministrados
-                  </Link>
-                  <Link
-                    to="/relatorio-frequencia"
-                    role="menuitem"
-                    onClick={() => setIsRelatoriosOpen(false)}
-                    className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors rounded-xl"
-                  >
-                    Frequências da Turma
-                  </Link>
-                  <Link
-                    to="/relatorio-medias"
-                    role="menuitem"
-                    onClick={() => setIsRelatoriosOpen(false)}
-                    className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors rounded-xl"
-                  >
-                    Médias do Componente
-                  </Link>
-                  <Link
-                    to="/relatorio-notas"
-                    role="menuitem"
-                    onClick={() => setIsRelatoriosOpen(false)}
-                    className="flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors rounded-xl"
-                  >
-                    Notas da Turma
-                  </Link>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {user?.role !== 'ADMIN' && (
-            <button
-              onClick={() => setIsScheduleModalOpen(true)}
-              className="px-6 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95"
-            >
-              Horários
-            </button>
-          )}
-        </nav>
-
-        {/* Ações do Usuário - Direita */}
-        <div className="flex-1 flex items-center justify-end space-x-4">
-          <div className="bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-lg hidden sm:flex items-center space-x-3 border border-slate-200 dark:border-slate-700">
-            <User className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-            <div className="text-sm min-w-fit">
-              <span className="font-bold text-slate-800 dark:text-slate-100 uppercase whitespace-nowrap leading-tight">
-                {nameDisplay}
-              </span>
-              <span className="text-slate-500 dark:text-slate-400 text-xs block">
-                {titleDisplay}
-              </span>
-            </div>
-          </div>
-          <Link to="/turmas" className="flex items-center space-x-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-3 rounded-xl text-sm font-bold hover:bg-[#e0e7ff] transition-all shadow-sm active:scale-95" aria-label="Ir para o início">
-            <Home className="w-4 h-4" />
-            <span className="hidden md:inline">Início</span>
-          </Link>
-          <Link to="/minha-privacidade" className="flex items-center justify-center bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-white px-4 py-3 rounded-xl text-sm font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-all shadow-md active:scale-95" title="Centro de Privacidade" aria-label="Centro de Privacidade">
-            <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          </Link>
-          <button
-            onClick={async () => { await logout(); navigate('/'); }}
-            className="flex items-center space-x-2 bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-all shadow-md hover:shadow-lg active:scale-95 cursor-pointer"
-            aria-label="Sair do sistema"
-          >
-            <span className="hidden md:inline">Sair</span>
-            <LogOut className="w-4 h-4 text-red-500" />
-          </button>
-        </div>
-      </header>
-
-      <ConnectionStatus />
-
-      {/* FIX: Alerta proativo quando há itens na Dead Letter Queue */}
-      {deadLetterCount > 0 && (
-        <div className="bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800 px-4 py-2.5 flex items-center justify-center gap-2 text-sm">
-          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-          <span className="text-amber-800 dark:text-amber-200 font-medium">
-            {deadLetterCount} registro(s) não puderam ser sincronizados.
-            <span className="hidden sm:inline"> Verifique o status de conexão ou entre em contato com o suporte.</span>
-          </span>
-        </div>
-      )}
-
-      <main className="flex-1">
-        <Outlet />
-      </main>
-
-      <PrivacyLinksFooter />
-
-      {/* Navegação Móvel Overlay */}
-      {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}>
-          <div className="fixed top-16 left-0 w-64 h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-xl p-4 flex flex-col gap-2 animate-in slide-in-from-left" onClick={e => e.stopPropagation()}>
-            {hasAdminAccess && (
-              <Link to="/administracao" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold">
-                Administração
-              </Link>
-            )}
-            <Link to="/minha-privacidade" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold flex items-center gap-2">
-              <Shield className="w-4 h-4 text-blue-600" />
-              Privacidade
-            </Link>
-            {hasAdminAccess && (
-              <Link to="/estatisticas" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold">
-                Estatísticas
-              </Link>
-            )}
-            
-            <div className="font-bold text-[#0f2851] px-4 py-2 mt-2">Relatórios</div>
-            <Link to="/relatorio-conteudos" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 rounded-xl ml-4">Conteúdos</Link>
-            <Link to="/relatorio-frequencia" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 rounded-xl ml-4">Frequências</Link>
-            <Link to="/relatorio-medias" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 rounded-xl ml-4">Médias</Link>
-            <Link to="/relatorio-notas" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 rounded-xl ml-4">Notas</Link>
-
-            {user?.role !== 'ADMIN' && (
-              <button onClick={() => { setIsMobileMenuOpen(false); setIsScheduleModalOpen(true); }} className="mt-4 px-4 py-3 bg-[#eef2ff] border border-blue-100 text-[#0f2851] rounded-xl text-sm font-bold text-left">
-                Meus Horários
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      <ScheduleModal
-        isOpen={isScheduleModalOpen}
-        onClose={() => setIsScheduleModalOpen(false)}
-      />
-    </div>
-  );
+  return <div className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
+    <aside className="dd-sidebar hidden lg:flex"><Link to="/turmas" className="dd-brand" aria-label="Diário Digital, ir para visão geral"><img src="/logo.png" alt="" className="h-10 w-10 object-contain"/><span><strong>Diário</strong><small>Digital</small></span></Link><div className="flex-1 overflow-y-auto">{renderNav()}</div><div className="border-t border-slate-200 pt-4 dark:border-slate-800"><p className="truncate text-sm font-semibold">{user?.name || 'Usuário'}</p><p className="mb-3 text-xs text-slate-500">{user?.title || user?.role}</p><button onClick={async()=>{await logout();navigate('/')}} className="dd-nav-item w-full text-left text-red-700"><LogOut aria-hidden="true"/><span>Sair</span></button></div></aside>
+    <div className="lg:pl-72"><header className="dd-topbar"><div className="flex items-center gap-3"><button onClick={()=>setMenuOpen(true)} className="dd-icon-button lg:hidden" aria-label="Abrir menu"><Menu aria-hidden="true"/></button><Link to="/turmas" className="flex items-center gap-2 lg:hidden"><img src="/logo.png" alt="" className="h-8 w-8 object-contain"/><b className="text-primary">Diário Digital</b></Link><p className="hidden text-sm text-slate-500 md:block">{canManage ? 'Ambiente de gestão escolar' : 'Ambiente de trabalho docente'}</p></div><div className="flex gap-2">{user?.role !== 'ADMIN' && <button onClick={()=>setScheduleOpen(true)} className="dd-secondary-button hidden sm:inline-flex"><CalendarDays aria-hidden="true"/>Horários</button>}<NavLink to="/minha-privacidade" className="dd-icon-button" aria-label="Central de privacidade"><Shield aria-hidden="true"/></NavLink></div></header><ConnectionStatus/>{deadLetterCount > 0 && <div className="dd-sync-alert">Há {deadLetterCount} registro(s) aguardando sincronização. Verifique a conexão antes de encerrar a sessão.</div>}<main className="min-h-[calc(100vh-4rem)] pb-20 lg:pb-0"><Outlet/></main><PrivacyLinksFooter className="hidden lg:flex"/></div>
+    {menuOpen && <div className="fixed inset-0 z-[60] bg-slate-950/40 lg:hidden" onClick={close}><aside className="h-full w-[min(20rem,86vw)] overflow-y-auto bg-white p-5 shadow-2xl dark:bg-slate-900" onClick={e=>e.stopPropagation()}><div className="mb-8 flex justify-end"><button className="dd-icon-button" onClick={close} aria-label="Fechar menu"><X aria-hidden="true"/></button></div>{renderNav()}</aside></div>}
+    <nav className="dd-mobile-nav lg:hidden" aria-label="Ações principais"><NavLink to="/turmas" end><Home aria-hidden="true"/><span>Início</span></NavLink><NavLink to="/diario"><BookOpenCheck aria-hidden="true"/><span>Diário</span></NavLink><NavLink to="/frequencia"><ClipboardCheck aria-hidden="true"/><span>Frequência</span></NavLink>{canManage ? <NavLink to="/administracao"><GraduationCap aria-hidden="true"/><span>Gestão</span></NavLink> : <button onClick={()=>setScheduleOpen(true)}><CalendarDays aria-hidden="true"/><span>Horários</span></button>}</nav><ScheduleModal isOpen={scheduleOpen} onClose={()=>setScheduleOpen(false)}/>
+  </div>;
 }
+
