@@ -47,7 +47,7 @@ export default function TabTurmas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-selecionar escola se for Gestor ou Secretário
+  // Auto-selecionar escola se for Gestor ou SecretÃ¡rio
   useEffect(() => {
     if ((user?.role === 'GESTOR' || user?.role === 'SECRETARIO') && user.escola_id && escolas.length > 0 && !selectedEscola) {
       const minhaEscola = escolas.find(e => e.id === user.escola_id);
@@ -170,21 +170,21 @@ export default function TabTurmas() {
       t.turno.toLowerCase().includes(buscaTurma.toLowerCase()) ||
       (t.escolas?.nome && t.escolas.nome.toLowerCase().includes(buscaTurma.toLowerCase()));
     
-    // Se houver uma escola selecionada, o filtro de escola é obrigatório
+    // Se houver uma escola selecionada, o filtro de escola Ã© obrigatÃ³rio
     const matchesEscola = selectedEscola ? t.escola_id === selectedEscola.id : true;
     
     return matchesBusca && matchesEscola;
   });
 
-  // Agrupar turmas por turno para melhor visualização
+  // Agrupar turmas por turno para melhor visualizaÃ§Ã£o
   const turmasPorTurno = turmasFiltradas.reduce((acc: Record<string, TurmaRow[]>, t) => {
-    const turno = t.turno || 'Não Definido';
+    const turno = t.turno || 'NÃ£o Definido';
     if (!acc[turno]) acc[turno] = [];
     acc[turno].push(t);
     return acc;
   }, {});
 
-  const ordensTurno = ['Manhã', 'Tarde', 'Noite', 'Integral'];
+  const ordensTurno = ['ManhÃ£', 'Tarde', 'Noite', 'Integral'];
   const turnosOrdenados = Object.keys(turmasPorTurno).sort((a, b) => {
     return ordensTurno.indexOf(a) - ordensTurno.indexOf(b);
   });
@@ -208,7 +208,7 @@ export default function TabTurmas() {
               Gerenciamento de Turmas
             </h2>
             <p className="text-xs text-slate-500 mt-0.5 font-medium">
-              Selecione uma escola para gerenciar suas turmas e horários.
+              Selecione uma escola para gerenciar suas turmas e horÃ¡rios.
             </p>
           </div>
           <div className="relative w-full sm:w-64">
@@ -226,7 +226,7 @@ export default function TabTurmas() {
         </div>
       ) : (
         <div className="flex flex-col">
-          {/* Banner Azul (Estilo Referência) */}
+          {/* Banner Azul (Estilo ReferÃªncia) */}
           <div className="bg-[#0f2851] p-8 pt-10 pb-12 relative overflow-hidden">
             {/* Background Icon Decor */}
             <Users className="absolute -right-8 -bottom-8 w-48 h-48 text-white/5 pointer-events-none rotate-12" />
@@ -247,7 +247,7 @@ export default function TabTurmas() {
                     <h1 className="text-2xl font-black text-white tracking-widest uppercase">TURMAS</h1>
                   </div>
                   <p className="text-blue-100/80 text-sm mt-1 font-semibold italic">
-                    Quais turmas desta unidade precisam de atenção?
+                    Quais turmas desta unidade precisam de atenÃ§Ã£o?
                   </p>
                 </div>
               </div>
@@ -274,12 +274,12 @@ export default function TabTurmas() {
             </div>
           </div>
 
-          {/* Barra de Pesquisa e Botão (Estilo Referência) */}
+          {/* Barra de Pesquisa e BotÃ£o (Estilo ReferÃªncia) */}
           <div className="px-8 -mt-6 relative z-20">
             <div className="bg-white p-5 rounded-2xl shadow-xl shadow-blue-900/5 border border-slate-100 flex flex-col sm:flex-row items-end gap-4">
               <div className="flex-1 space-y-1.5 w-full">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                  IDENTIFICAÇÃO DA TURMA
+                  IDENTIFICAÃ‡ÃƒO DA TURMA
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -289,7 +289,7 @@ export default function TabTurmas() {
                     type="text"
                     value={buscaTurma}
                     onChange={(e) => setBuscaTurma(e.target.value)}
-                    placeholder="Ex: 1º Ano A"
+                    placeholder="Ex: 1Âº Ano A"
                     className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-xl text-base placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851]"
                   />
                 </div>
@@ -389,8 +389,8 @@ export default function TabTurmas() {
                         key={turma.id} 
                         className="group bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 flex flex-col relative"
                       >
-                        {/* Botões de Ação (Hover Only) */}
-                        <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* BotÃµes de AÃ§Ã£o (Hover Only) */}
+                        <div className="absolute top-4 right-4 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           <button 
                             onClick={() => handleEditTurma(turma)}
                             className="p-2 bg-slate-50 text-slate-400 hover:text-[#0f2851] hover:bg-[#eef2ff] rounded-lg transition-colors"
@@ -448,7 +448,7 @@ export default function TabTurmas() {
         }}
         onSave={(data) => {
           handleSaveTurma(data);
-          fetchEscolas(); // Atualiza a contagem nos cards se necessário em background
+          fetchEscolas(); // Atualiza a contagem nos cards se necessÃ¡rio em background
         }}
         turmaParaEditar={turmaParaEditar}
         fixedEscolaId={selectedEscola?.id}
@@ -461,7 +461,7 @@ export default function TabTurmas() {
         title="Excluir Turma"
         message={
           <>
-            Tem certeza que deseja excluir a turma <strong>{turmaParaExcluir?.nome}</strong> da escola <strong>{turmaParaExcluir?.escolas?.nome || 'N/A'}</strong>? Esta ação não pode ser desfeita.
+            Tem certeza que deseja excluir a turma <strong>{turmaParaExcluir?.nome}</strong> da escola <strong>{turmaParaExcluir?.escolas?.nome || 'N/A'}</strong>? Esta aÃ§Ã£o nÃ£o pode ser desfeita.
           </>
         }
       />

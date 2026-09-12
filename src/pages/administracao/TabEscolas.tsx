@@ -139,7 +139,7 @@ export default function TabEscolas() {
 
   if (_user?.role !== 'ADMIN') return null;
 
-  // Se uma escola está selecionada, mostrar os detalhes dela
+  // Se uma escola estÃ¡ selecionada, mostrar os detalhes dela
   if (escolaSelecionada) {
     return (
       <EscolaDetalhes
@@ -166,7 +166,7 @@ export default function TabEscolas() {
             Gerenciamento de Escolas
           </h2>
           <p className="text-xs text-slate-500 mt-0.5 font-medium">
-            Administre as unidades escolares do município.
+            Administre as unidades escolares do municÃ­pio.
           </p>
         </div>
 
@@ -206,7 +206,7 @@ export default function TabEscolas() {
                 className="group relative flex flex-col bg-white border border-slate-200 rounded-2xl p-5 text-left hover:border-blue-300 hover:shadow-xl hover:shadow-blue-600/5 transition-all duration-300 transform hover:-translate-y-1 overflow-hidden cursor-pointer"
               >
                 {/* Actions (Top Right - Hover Only) */}
-                <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all translate-y-[-10px] group-hover:translate-y-0 duration-300 z-10">
+                <div className="absolute top-3 right-3 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-y-[-10px] group-hover:translate-y-0 duration-300 z-10">
                   <button 
                     onClick={(e) => { e.stopPropagation(); handleEditEscola(escola); }}
                     className="p-2 bg-white/80 backdrop-blur-sm text-slate-400 hover:text-[#0f2851] shadow-sm border border-slate-100 rounded-lg transition-colors"
@@ -269,7 +269,7 @@ export default function TabEscolas() {
                 <div className="space-y-2 mt-auto text-slate-500">
                   <div className="flex items-start gap-2">
                     <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <span className="text-[11px] font-medium leading-tight line-clamp-2">{escola.distrito || 'Endereço não cadastrado'}</span>
+                    <span className="text-[11px] font-medium leading-tight line-clamp-2">{escola.distrito || 'EndereÃ§o nÃ£o cadastrado'}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -310,7 +310,7 @@ export default function TabEscolas() {
         title="Excluir Escola"
         message={
           <>
-            Tem certeza que deseja excluir a escola <strong>{escolaParaExcluir?.nome}</strong>? Esta ação não pode ser desfeita.
+            Tem certeza que deseja excluir a escola <strong>{escolaParaExcluir?.nome}</strong>? Esta aÃ§Ã£o nÃ£o pode ser desfeita.
           </>
         }
       />

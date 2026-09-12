@@ -46,7 +46,7 @@ export default function TabUsuarios() {
       if (usuData) setUsuarios(usuData);
     } catch (err: unknown) {
       console.error(err);
-      showError('Erro ao carregar usuários.');
+      showError('Erro ao carregar usuÃ¡rios.');
     } finally {
       setLoading(false);
     }
@@ -88,7 +88,7 @@ export default function TabUsuarios() {
         <div>
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             <Users className="w-5 h-5 text-[#0f2851]" />
-            Usuários de Acesso
+            UsuÃ¡rios de Acesso
           </h2>
           <p className="text-xs text-slate-500 mt-0.5 font-medium">
             Gerencie e visualize as contas de acesso ao sistema agrupadas por perfil.
@@ -134,7 +134,7 @@ export default function TabUsuarios() {
         ) : usuariosFiltrados.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
             <Users className="w-12 h-12 text-slate-200" />
-            <p className="font-medium">Nenhum usuário encontrado com este filtro.</p>
+            <p className="font-medium">Nenhum usuÃ¡rio encontrado com este filtro.</p>
           </div>
         ) : (
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -142,11 +142,11 @@ export default function TabUsuarios() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-xs font-black text-slate-500 uppercase tracking-wider">
-                    <th className="px-6 py-4">Usuário</th>
+                    <th className="px-6 py-4">UsuÃ¡rio</th>
                     <th className="px-6 py-4">Contato / E-mail</th>
                     <th className="px-6 py-4">Perfil</th>
                     <th className="px-6 py-4">Escola Vinculada</th>
-                    <th className="px-6 py-4">Data de Criação</th>
+                    <th className="px-6 py-4">Data de CriaÃ§Ã£o</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
