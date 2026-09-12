@@ -609,30 +609,45 @@
   </table>
 
   <!-- ==================== ACHADOS DETALHADOS ==================== -->
-  <h1>5. Tabela Geral de Achados Confirmados</h1>
+  <h1>5. Tabela Geral de Achados e Status de Mitigação</h1>
   <table>
     <thead>
       <tr>
+        <th style="width: 10%;">ID</th>
         <th style="width: 12%;">Severidade</th>
-        <th style="width: 38%;">Arquivo : Linha</th>
-        <th>Descrição da Vulnerabilidade</th>
+        <th style="width: 32%;">Arquivo : Linha</th>
+        <th style="width: 28%;">Descrição da Vulnerabilidade</th>
+        <th style="width: 18%;">Status / Evidência</th>
       </tr>
     </thead>
     <tbody>
       <tr>
+        <td><strong>SEC-01</strong></td>
         <td><span class="chip chip-alta">ALTA</span></td>
-        <td><code class="inline">supabase/functions/admin-create-user/index.ts:182-214</code></td>
-        <td><strong>SEC-01:</strong> Ausência de verificação de papel administrativo na ação <code class="inline">delete-user</code>, permitindo que alunos e professores excluam outros usuários da mesma escola.</td>
+        <td><code class="inline">supabase/functions/admin-create-user/index.ts:162-170</code></td>
+        <td>Ausência de verificação de papel administrativo na ação <code class="inline">delete-user</code>.</td>
+        <td><span class="chip chip-forte">RESOLVIDO</span><br><small>Trava estrita para ADMIN, GESTOR e SECRETARIO.</small></td>
       </tr>
       <tr>
+        <td><strong>SEC-02</strong></td>
         <td><span class="chip chip-media">MÉDIA</span></td>
-        <td><code class="inline">supabase/migrations/20260828000019...sql:77-82</code></td>
-        <td><strong>SEC-02:</strong> Política RLS <code class="inline">staff_delete_fechamentos</code> utiliza <code class="inline">p_acesso_por_turma()</code>, permitindo que alunos e professores excluam fechamentos de bimestre.</td>
+        <td><code class="inline">supabase/migrations/20260909000022...sql:24-44</code></td>
+        <td>Política RLS <code class="inline">staff_delete_fechamentos</code> permitia reabertura por alunos e professores.</td>
+        <td><span class="chip chip-forte">RESOLVIDO</span><br><small>RLS atualizado na migration 20260909000022.</small></td>
       </tr>
       <tr>
+        <td><strong>SEC-03</strong></td>
         <td><span class="chip chip-media">MÉDIA</span></td>
-        <td><code class="inline">src/contexts/TurmaContext.tsx:140-147</code></td>
-        <td><strong>SEC-03:</strong> Trava de modificação de notas e presenças de bimestres encerrados restrita à interface, sem restrição no PostgreSQL/RLS.</td>
+        <td><code class="inline">supabase/migrations/20260909000022...sql:50-145</code></td>
+        <td>Trava de notas e frequências em bimestres fechados restrita à interface React.</td>
+        <td><span class="chip chip-forte">RESOLVIDO</span><br><small>Triggers PostgreSQL de integridade temporal ativas.</small></td>
+      </tr>
+      <tr>
+        <td><strong>SEC-04</strong></td>
+        <td><span class="chip chip-baixa">BAIXA</span></td>
+        <td><code class="inline">src/pages/RecuperarSenha.tsx:40-100</code></td>
+        <td>Falta de rate limiting client-side, cooldown e lockout no fluxo de recuperação de senha.</td>
+        <td><span class="chip chip-forte">RESOLVIDO</span><br><small>Cooldown de 60s, lockout de 300s e testes unitários.</small></td>
       </tr>
     </tbody>
   </table>
@@ -755,6 +770,26 @@
     <p><strong>Recomendação:</strong> Criar trigger <code class="inline">BEFORE INSERT OR UPDATE</code> em <code class="inline">notas</code> e <code class="inline">frequencias</code> que rejeite mutações caso exista registro em <code class="inline">fechamentos_bimestres</code> com <code class="inline">status = 'FECHADO'</code> para a respectiva turma e disciplina.</p>
   </div>
 
+  <!-- ACHADO 4 -->
+  <div class="finding-card avoid-break">
+    <div class="finding-header">
+      <h3 class="finding-title">[SEC-04] Ausência de Rate Limiting e Lockout na Recuperação de Senha</h3>
+      <span class="chip chip-baixa">BAIXA</span>
+    </div>
+    <table style="margin: 4px 0 10px 0;">
+      <tr><td style="width: 25%; font-weight: bold;">Categoria</td><td>Proteção contra Abuso & Enumeração / Defesa em Profundidade</td></tr>
+      <tr><td style="font-weight: bold;">Arquivo e Linhas</td><td><code class="inline">src/pages/RecuperarSenha.tsx:40-100</code></td></tr>
+      <tr><td style="font-weight: bold;">Quem pode explorar</td><td>Qualquer usuário anônimo ou script automatizado na Internet.</td></tr>
+      <tr><td style="font-weight: bold;">Pré-condições</td><td>Acesso público à rota <code class="inline">/recuperar-senha</code>.</td></tr>
+      <tr><td style="font-weight: bold;">Status de Resolução</td><td><span class="chip chip-forte">RESOLVIDO</span> (Cooldown de 60s, lockout de 300s e anti-enumeração implementados).</td></tr>
+    </table>
+
+    <p><strong>Evidência e Análise do Código:</strong></p>
+    <p>O endpoint de recuperação de senha disparava requisições diretas ao Supabase sem controle de cooldown ou contagem de tentativas no cliente, permitindo submissões sucessivas imediatas e potencial enumeração de contas através de mensagens de erro.</p>
+    <p><strong>Impacto:</strong> Baixo / Defesa em profundidade. Risco de fadiga de e-mails, spam contra caixas postais de servidores escolares e enumeração de usuários.</p>
+    <p><strong>Correção Aplicada:</strong> Implementado temporizador de cooldown de 60s, lockout temporário de 300s após 3 tentativas consecutivas com persistência local e feedback padronizado neutro. Suíte de testes unitários adicionada em <code class="inline">src/__tests__/recuperarSenhaHardening.test.tsx</code>.</p>
+  </div>
+
   <!-- ==================== RECOMENDAÇÕES ==================== -->
   <div class="page-break"></div>
   <div class="header-bar">
@@ -762,28 +797,9 @@
     <span>Recomendações e Plano de Mitigação</span>
   </div>
 
-  <h1>7. Recomendações Priorizadas</h1>
+  <h1>7. Recomendações Priorizadas & Status de Execução</h1>
 
   <div class="callout avoid-break" style="border-left-color: #EA580C;">
-    <strong>P1 — Restringir Ação delete-user da Edge Function admin-create-user (Imediato)</strong><br>
-    <em>Esforço:</em> Baixo | <em>Impacto:</em> Crítico para Integridade de Contas.<br>
-    Adicionar validação estrita no início da ação <code class="inline">delete-user</code> em <code class="inline">supabase/functions/admin-create-user/index.ts</code>:
-    <pre><code>if (!["ADMIN", "GESTOR", "SECRETARIO"].includes(effectiveRole)) {
-  return new Response(
-    JSON.stringify({ error: "Seu perfil não possui permissão para revogar ou excluir contas." }),
-    { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
-}</code></pre>
-  </div>
-
-  <div class="callout avoid-break" style="border-left-color: #D97706;">
-    <strong>P2 — Restringir RLS de Reabertura de Bimestre em fechamentos_bimestres</strong><br>
-    <em>Esforço:</em> Baixo | <em>Impacto:</em> Alto para Conformidade Escolar.<br>
-    Criar nova migration ajustando a política de exclusão de <code class="inline">fechamentos_bimestres</code> para exigir perfil administrativo:
-    <pre><code>DROP POLICY IF EXISTS "staff_delete_fechamentos" ON public.fechamentos_bimestres;
-CREATE POLICY "staff_delete_fechamentos" ON public.fechamentos_bimestres
-  FOR DELETE
-  USING (
     (SELECT get_user_role()) IN ('ADMIN', 'GESTOR', 'SECRETARIO')
     AND p_acesso_por_turma(fechamentos_bimestres.turma_id)
   );</code></pre>
