@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import LoadingFallback from '../components/common/LoadingFallback';
-import { cacheUser, getCachedUser, clearAllLocalData, getPendingCount } from '../services/offlineStorage';
+import { cacheUser, getCachedUser, clearAllLocalData, getLocalPendingCount } from '../services/offlineStorage';
 import { syncAll } from '../services/syncEngine';
 import { clearKeyCache } from '../lib/crypto';
 import { pingInternet } from '../utils/network';
@@ -229,8 +229,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           alocacoes,
           professorDisciplinas,
         });
+
+        // FIX C1: Isolamento cross-user em dispositivos compartilhados.
+        // Se um usuário diferente fizer login neste navegador, limpa o cache local
+        // de dados operacionais (alunos, turmas, notas, etc.) do usuário anterior.
+        const lastUserId = localStorage.getItem('dc_last_user_id');
+        if (lastUserId && lastUserId !== authUser.id) {
+          console.info('[AuthContext] Usuário diferente detectado. Limpando cache do usuário anterior.');
+          await clearAllLocalData(false, false);
+        }
+        localStorage.setItem('dc_last_user_id', authUser.id);
       } catch (err) {
-        console.error('[AuthContext] Erro ao salvar usuário no cache:', err);
+        console.error('[AuthContext] Erro ao salvar usuário no cache / isolar dados:', err);
       }
 
       } finally {
@@ -369,7 +379,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      const pending = await getPendingCount();
+      const pending = await getLocalPendingCount();
       if (pending > 0) {
         // FIX: Substituir window.confirm() bloqueante por modal React
         const confirmed = await askConfirmation('pending', pending);
@@ -396,6 +406,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await clearAllLocalData(true, false);
         sessionStorage.removeItem('activeEscolaId');
         sessionStorage.removeItem('activeTurno');
+        localStorage.removeItem('dc_last_user_id');
       }
 
       setUser(null);
@@ -421,7 +432,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     icon: <AlertTriangle className="w-6 h-6" />,
   } : {
     title: 'Sem conexão com a internet',
-    message: 'Não foi possível desconectar do servidor. Deseja limpar os dados locais mesmo assim?',
+    message: (
+      <span>
+        Não foi possível desconectar do servidor porque você está offline.
+        Ao sair e limpar os dados locais, qualquer dado não sincronizado será <strong>perdido permanentemente</strong> e o acesso offline neste dispositivo será encerrado.
+        Deseja limpar os dados locais e sair mesmo assim?
+      </span>
+    ),
     confirmLabel: 'Limpar e sair',
     icon: <WifiOff className="w-6 h-6" />,
   };

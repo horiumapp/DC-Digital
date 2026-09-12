@@ -1007,8 +1007,8 @@ export async function getPendingFiles(): Promise<LocalFile[]> {
 // Utilitários globais
 // ============================================================
 
-/** Retorna contagem de registros pendentes de sincronização em todas as tabelas */
-export async function getPendingCount(): Promise<number> {
+/** Retorna contagem de registros pendentes de sincronização em todas as tabelas locais */
+export async function getLocalPendingCount(): Promise<number> {
   const [freq, cont, aval, notas, fech] = await Promise.all([
     db.frequencias.where('syncStatus').equals('pending').count(),
     db.conteudos.where('syncStatus').equals('pending').count(),
@@ -1018,6 +1018,11 @@ export async function getPendingCount(): Promise<number> {
   ]);
   return freq + cont + aval + notas + fech;
 }
+
+/**
+ * @deprecated Use getLocalPendingCount() para evitar confusão com offlineQueue.getPendingCount() (que conta itens na syncQueue).
+ */
+export const getPendingCount = getLocalPendingCount;
 
 /** Retorna contagem de itens na fila de sync */
 export async function getQueueCount(): Promise<number> {

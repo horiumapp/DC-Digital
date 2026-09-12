@@ -15,6 +15,7 @@ import { TurmaService } from './turmaService';
 import * as OfflineStorage from './offlineStorage';
 import * as Queue from './offlineQueue';
 import * as SyncEngine from './syncEngine';
+import { db } from '../lib/db';
 
 import { getTid, normalizarDataISO } from '../utils/turmaUtils';
 
@@ -516,20 +517,26 @@ export async function salvarFrequencia(
     disciplina,
   }));
 
-  await OfflineStorage.saveFrequenciasBulk(records);
+  // FIX A1: Salvar localmente + enfileirar em transação atômica Dexie.
+  // Sem isso, um crash/reload entre o write local e o enqueue causaria
+  // registros com syncStatus='pending' mas sem item na fila de sync
+  // (perda silenciosa — reconciliação só roda quando fila está vazia).
+  await db.transaction('rw', [db.frequencias, db.syncQueue], async () => {
+    await OfflineStorage.saveFrequenciasBulk(records);
 
-  // 2. Enfileirar para sync (batch como um único item)
-  const upserts = records.map(r => ({
-    turma_id: r.turma_id,
-    aluno_id: r.aluno_id,
-    data: r.data,
-    tempo: r.tempo,
-    status: r.status,
-    participacao: r.participacao,
-    disciplina: r.disciplina,
-  }));
+    // Enfileirar para sync (batch como um único item)
+    const upserts = records.map(r => ({
+      turma_id: r.turma_id,
+      aluno_id: r.aluno_id,
+      data: r.data,
+      tempo: r.tempo,
+      status: r.status,
+      participacao: r.participacao,
+      disciplina: r.disciplina,
+    }));
 
-  await Queue.enqueue('frequencias', 'UPSERT', { records: upserts });
+    await Queue.enqueue('frequencias', 'UPSERT', { records: upserts });
+  });
 
   // 3. Se online, tentar sincronizar imediatamente
   if (_isOnline) {
@@ -555,13 +562,13 @@ export async function salvarConteudo(
     disciplina,
   };
 
-  // 1. Salvar localmente
-  await OfflineStorage.saveConteudoLocal(payload);
+  // FIX A1: Salvar + enfileirar em transação atômica
+  await db.transaction('rw', [db.conteudos, db.syncQueue], async () => {
+    await OfflineStorage.saveConteudoLocal(payload);
+    await Queue.enqueue('conteudos', 'UPSERT', payload);
+  });
 
-  // 2. Enfileirar
-  await Queue.enqueue('conteudos', 'UPSERT', payload);
-
-  // 3. Sync
+  // Sync
   if (_isOnline) {
     SyncEngine.scheduleSync();
   }
@@ -596,13 +603,14 @@ export async function salvarAvaliacao(
     ...(av.id && av.id.startsWith('temp_') ? { clientTempId: av.id } : {}),
   };
 
-  // 1. Salvar localmente
-  const localId = await OfflineStorage.saveAvaliacaoLocal(localPayload);
+  // FIX A1: Salvar + enfileirar em transação atômica
+  const localId = await db.transaction('rw', [db.avaliacoes, db.syncQueue], async () => {
+    const lid = await OfflineStorage.saveAvaliacaoLocal(localPayload);
+    await Queue.enqueue('avaliacoes', av.id && !av.id.startsWith('temp_') ? 'UPDATE' : 'INSERT', payload, lid);
+    return lid;
+  });
 
-  // 2. Enfileirar
-  await Queue.enqueue('avaliacoes', av.id && !av.id.startsWith('temp_') ? 'UPDATE' : 'INSERT', payload, localId);
-
-  // 3. Sync
+  // Sync
   if (_isOnline) {
     SyncEngine.scheduleSync();
   }
@@ -630,35 +638,39 @@ export async function salvarNotas(
 ): Promise<void> {
   const avIdStr = String(avaliacaoId);
 
-  // 1. Processar notas preenchidas
+  // Preparar listas fora da transação (leitura pura)
   const preenchidas = notas.filter(n => n.valor !== undefined && n.valor !== null && n.valor.trim() !== '');
-  if (preenchidas.length > 0) {
-    const records = preenchidas.map(n => ({
-      avaliacao_id: avIdStr,
-      aluno_id: String(n.alunoId),
-      valor: parseFloat(n.valor.replace(',', '.')),
-    }));
-
-    await OfflineStorage.saveNotasLocal(records);
-    await Queue.enqueue('notas', 'UPSERT', { records });
-  }
-
-  // 2. Processar notas removidas (em branco)
   const removidos = alunoIdsRemovidos && alunoIdsRemovidos.length > 0
     ? alunoIdsRemovidos
     : notas.filter(n => !n.valor || n.valor.trim() === '').map(n => String(n.alunoId));
 
-  if (removidos.length > 0) {
-    await OfflineStorage.deleteNotasLocal(avIdStr, removidos);
-    if (!avIdStr.startsWith('temp_') && !avIdStr.startsWith('local_')) {
-      await Queue.enqueue('notas', 'DELETE', {
+  // FIX A1: Salvar + enfileirar em transação atômica
+  await db.transaction('rw', [db.notas, db.syncQueue], async () => {
+    // Processar notas preenchidas
+    if (preenchidas.length > 0) {
+      const records = preenchidas.map(n => ({
         avaliacao_id: avIdStr,
-        aluno_ids: removidos,
-      });
-    }
-  }
+        aluno_id: String(n.alunoId),
+        valor: parseFloat(n.valor.replace(',', '.')),
+      }));
 
-  // 3. Sync
+      await OfflineStorage.saveNotasLocal(records);
+      await Queue.enqueue('notas', 'UPSERT', { records });
+    }
+
+    // Processar notas removidas (em branco)
+    if (removidos.length > 0) {
+      await OfflineStorage.deleteNotasLocal(avIdStr, removidos);
+      if (!avIdStr.startsWith('temp_') && !avIdStr.startsWith('local_')) {
+        await Queue.enqueue('notas', 'DELETE', {
+          avaliacao_id: avIdStr,
+          aluno_ids: removidos,
+        });
+      }
+    }
+  });
+
+  // Sync
   if (_isOnline) {
     SyncEngine.scheduleSync();
   }
@@ -742,11 +754,11 @@ export async function salvarFechamento(
     usuario_fechamento_id: userId,
   };
 
-  // 1. Salvar localmente
-  await OfflineStorage.saveFechamentoLocal(payload);
-
-  // 2. Enfileirar
-  await Queue.enqueue('fechamentos', status === 'ABERTO' ? 'DELETE' : 'UPSERT', payload);
+  // FIX A1: Salvar + enfileirar em transação atômica
+  await db.transaction('rw', [db.fechamentos, db.syncQueue], async () => {
+    await OfflineStorage.saveFechamentoLocal(payload);
+    await Queue.enqueue('fechamentos', status === 'ABERTO' ? 'DELETE' : 'UPSERT', payload);
+  });
 
   if (_isOnline) {
     SyncEngine.scheduleSync();

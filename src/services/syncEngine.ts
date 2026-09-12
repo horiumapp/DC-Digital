@@ -440,6 +440,12 @@ interface FechamentoPayload {
   status?: string; usuario_fechamento_id?: string;
 }
 
+interface SecurityLogPayload {
+  user_id?: unknown; user_email?: unknown; action?: unknown;
+  entity?: unknown; entity_id?: unknown; ip?: unknown;
+  user_agent?: unknown; metadata?: unknown; created_at?: unknown;
+}
+
 // ============================================================
 // Sanitização e Validação de Payloads (Segurança / Integridade)
 // ============================================================
@@ -542,6 +548,66 @@ function sanitizeFechamento(payload: FechamentoPayload): Record<string, unknown>
     // Validar UUID se presente
     sanitized.usuario_fechamento_id = assertUUID(payload.usuario_fechamento_id, 'usuario_fechamento_id');
   }
+  return sanitized;
+}
+
+/**
+ * FIX C2: Sanitiza payload de security_logs antes de enviar ao Supabase.
+ * Antes, o payload era enviado direto da fila sem validação — um atacante
+ * que manipulasse o IndexedDB via DevTools poderia injetar campos arbitrários.
+ */
+function sanitizeSecurityLog(payload: SecurityLogPayload): Record<string, unknown> {
+  const ALLOWED_ACTIONS = ['LOGIN', 'LOGIN_FAILED', 'PERSONAL_DATA_CHANGE', 'DATA_EXPORT', 'DATA_DELETION', 'PERMISSION_CHANGE', 'ADMIN_ACCESS'];
+  const action = String(payload.action || '');
+  if (!ALLOWED_ACTIONS.includes(action)) {
+    throw new Error(`[DEAD_LETTER] Ação de security log inválida: ${action}`);
+  }
+
+  const sanitized: Record<string, unknown> = {
+    action,
+    created_at: payload.created_at ? String(payload.created_at) : now(),
+    ip: null, // IP resolvido server-side
+  };
+
+  // user_id: UUID ou null
+  if (payload.user_id) {
+    try {
+      sanitized.user_id = assertUUID(payload.user_id, 'user_id');
+    } catch {
+      sanitized.user_id = null; // Não bloquear log por user_id inválido
+    }
+  } else {
+    sanitized.user_id = null;
+  }
+
+  // user_email: hash SHA-256 ou null (nunca email em texto plano)
+  sanitized.user_email = payload.user_email ? String(payload.user_email).substring(0, 256) : null;
+
+  // entity/entity_id: strings limitadas
+  sanitized.entity = payload.entity ? String(payload.entity).substring(0, 100) : null;
+  sanitized.entity_id = payload.entity_id ? String(payload.entity_id).substring(0, 100) : null;
+
+  // user_agent: sanitizar HTML e truncar
+  sanitized.user_agent = payload.user_agent
+    ? String(payload.user_agent).replace(/<[^>]*>/g, '').substring(0, 512)
+    : null;
+
+  // metadata: objeto JSON limitado (sem campos sensíveis)
+  if (payload.metadata && typeof payload.metadata === 'object') {
+    const meta = { ...(payload.metadata as Record<string, unknown>) };
+    const sensitiveKeys = ['password', 'senha', 'token', 'access_token', 'jwt', 'secret'];
+    for (const key of Object.keys(meta)) {
+      if (sensitiveKeys.some(sk => key.toLowerCase().includes(sk))) {
+        meta[key] = '[REDACTED]';
+      }
+    }
+    // Limitar tamanho total do JSON de metadata
+    const metaStr = JSON.stringify(meta);
+    sanitized.metadata = metaStr.length > 4096 ? { _truncated: true } : meta;
+  } else {
+    sanitized.metadata = null;
+  }
+
   return sanitized;
 }
 
@@ -830,7 +896,9 @@ async function syncFechamento(operation: string, payload: Record<string, unknown
 }
 
 async function syncSecurityLog(payload: Record<string, unknown>): Promise<void> {
-  const { error } = await supabase.from('security_logs').insert([payload]);
+  // FIX C2: Sanitizar payload antes de enviar (antes era enviado direto da fila)
+  const sanitized = sanitizeSecurityLog(payload as unknown as SecurityLogPayload);
+  const { error } = await supabase.from('security_logs').insert([sanitized]);
   if (error) throw error;
 }
 
@@ -878,7 +946,9 @@ async function updateTempAvaliacaoId(localId: number, serverId: string): Promise
     }
 
     // 3. Atualizar payloads das operações pendentes/erros de notas e avaliações na fila (syncQueue)
-    const queueItems = await db.syncQueue.toArray();
+    // FIX A3: Filtrar por tabela em vez de carregar toda a fila (até 5000 itens).
+    // Apenas itens de 'notas' e 'avaliacoes' precisam de atualização de ID temporário.
+    const queueItems = await db.syncQueue.where('table').anyOf(['notas', 'avaliacoes']).toArray();
     for (const item of queueItems) {
       let payloadChanged = false;
       let payloadObj: Record<string, unknown>;

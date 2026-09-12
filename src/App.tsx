@@ -1,5 +1,6 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Outlet, Link } from 'react-router-dom';
+import { getSavedConsent } from './utils/lgpdConsent';
 import Layout from './components/Layout';
 // Importamos o Fallback e os Providers de forma direta, pois são a base
 import LoadingFallback from './components/common/LoadingFallback';
@@ -75,6 +76,8 @@ function StaffProvidersWrapper() {
 }
 
 export default function App() {
+  const [showCookieBanner] = useState(() => !getSavedConsent());
+
   if (!isSupabaseConfigured) {
     return <MissingEnvScreen />;
   }
@@ -138,7 +141,7 @@ export default function App() {
                 {/* Rota 404 — Página não encontrada (FIX #17: redireciona por role) */}
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
-              <CookieBanner />
+              {showCookieBanner && <CookieBanner />}
             </Suspense>
           </Router>
         </AuthProvider>

@@ -15,6 +15,7 @@ interface AlunoData {
   escola_nome: string;
   escola_inep: string;
   escola_diretor: string;
+  escola_secretario?: string;
   escola_endereco: string;
   turma_nome: string;
   turma_turno: string;
@@ -118,7 +119,7 @@ export default function PortalAluno() {
       return;
     }
 
-    const escolaData = (Array.isArray(alunoEncontrado.escolas) ? alunoEncontrado.escolas[0] : alunoEncontrado.escolas) as { nome?: string; logo_url?: string; inep?: string; diretor?: string; distrito?: string } | null;
+    const escolaData = (Array.isArray(alunoEncontrado.escolas) ? alunoEncontrado.escolas[0] : alunoEncontrado.escolas) as { id?: string; nome?: string; logo_url?: string; inep?: string; diretor?: string; distrito?: string; secretario?: string } | null;
     const turmaData = (Array.isArray(alunoEncontrado.turmas) ? alunoEncontrado.turmas[0] : alunoEncontrado.turmas) as { nome?: string; turno?: string; escola_id?: string; ensino?: string; ano_letivo?: string | number } | null;
 
     // Buscar colegas para calcular o número de chamada (por ordem alfabética)
@@ -133,12 +134,86 @@ export default function PortalAluno() {
     // Determinar Modalidade de Ensino pelo campo ensino da tabela turmas
     const modalidade = turmaData?.ensino || 'ENSINO FUNDAMENTAL I (EF1) 1º AO 5º ANO';
 
+    // Buscar Secretário(a) da escola de forma segura e resiliente
+    let secretarioNome = '';
+    const escolaId = alunoEncontrado.escola_id || escolaData?.id;
+
+    if (escolaId) {
+      // 1. Tentar via função segura RPC get_secretario_escola
+      try {
+        const { data: secRpc, error: rpcErr } = await supabase
+          .rpc('get_secretario_escola', { p_escola_id: escolaId });
+        if (!rpcErr && secRpc && typeof secRpc === 'string') {
+          secretarioNome = secRpc.trim();
+        }
+      } catch {
+        // Fallback silencioso
+      }
+
+      // 2. Se não encontrou via RPC, buscar diretamente em usuarios pelo perfil SECRETARIO
+      if (!secretarioNome) {
+        try {
+          const { data: secUsers, error: secErr } = await supabase
+            .from('usuarios')
+            .select('nome_completo')
+            .eq('escola_id', escolaId)
+            .eq('cargo', 'SECRETARIO')
+            .order('criado_em', { ascending: true })
+            .limit(1);
+
+          if (!secErr && secUsers && secUsers.length > 0 && secUsers[0].nome_completo) {
+            secretarioNome = secUsers[0].nome_completo.trim();
+          }
+        } catch {
+          // Fallback silencioso
+        }
+      }
+
+      // 3. Fallback se escolaData possuir campo secretario
+      if (!secretarioNome && escolaData?.secretario) {
+        secretarioNome = escolaData.secretario.trim();
+      }
+    }
+
+    // Buscar Diretor(a) / Gestor(a) se não preenchido em escolaData.diretor
+    let diretorNome = escolaData?.diretor?.trim() || '';
+    if (!diretorNome && escolaId) {
+      try {
+        const { data: dirRpc } = await supabase
+          .rpc('get_diretor_escola', { p_escola_id: escolaId });
+        if (dirRpc && typeof dirRpc === 'string') {
+          diretorNome = dirRpc.trim();
+        }
+      } catch {
+        // Fallback silencioso
+      }
+
+      if (!diretorNome) {
+        try {
+          const { data: gestorUsers } = await supabase
+            .from('usuarios')
+            .select('nome_completo')
+            .eq('escola_id', escolaId)
+            .eq('cargo', 'GESTOR')
+            .order('criado_em', { ascending: true })
+            .limit(1);
+
+          if (gestorUsers && gestorUsers.length > 0 && gestorUsers[0].nome_completo) {
+            diretorNome = gestorUsers[0].nome_completo.trim();
+          }
+        } catch {
+          // Fallback silencioso
+        }
+      }
+    }
+
     setAlunoData({
       id: alunoEncontrado.id,
       nome: alunoEncontrado.nome,
       escola_nome: escolaData?.nome || 'N/D',
       escola_inep: escolaData?.inep || '---',
-      escola_diretor: escolaData?.diretor || '---',
+      escola_diretor: diretorNome || '---',
+      escola_secretario: secretarioNome || '',
       escola_endereco: escolaData?.distrito || '---',
       turma_nome: turmaData?.nome || 'Sem turma',
       turma_turno: turmaData?.turno || '',

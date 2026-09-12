@@ -8,6 +8,7 @@ interface AlunoData {
   escola_nome: string;
   escola_inep: string;
   escola_diretor: string;
+  escola_secretario?: string;
   escola_endereco: string;
   turma_nome: string;
   turma_turno: string;
@@ -95,7 +96,7 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
               </div>
             </div>
 
-            <div className="h-16 w-[1px] bg-black/20" />
+            <div className="self-stretch w-[1px] bg-black/20 my-1" />
 
             {/* Lado Direito: Escola */}
             <div className="flex items-center gap-4 flex-1 justify-end">
@@ -103,6 +104,9 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
                 <p><strong className="text-[9px]">ESCOLA:</strong> {alunoData.escola_nome}</p>
                 <p><strong className="text-[9px]">ENDEREÇO:</strong> {alunoData.escola_endereco}</p>
                 <p><strong className="text-[9px]">DIRETOR(A):</strong> {alunoData.escola_diretor}</p>
+                {alunoData.escola_secretario && (
+                  <p><strong className="text-[9px]">SECRETÁRIO(A):</strong> {alunoData.escola_secretario}</p>
+                )}
                 <p><strong className="text-[9px]">DATA EMISSÃO:</strong> {new Date().toLocaleDateString('pt-BR')}</p>
               </div>
               {alunoData.escola_logo_url && (
@@ -273,7 +277,7 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
             <p className="text-[7px] text-slate-500 uppercase">DIRETOR(A)</p>
           </div>
           <div className="text-center pt-2 border-t border-black">
-            <p className="text-[8px] font-bold uppercase mb-0.5">SECRETÁRIO(A)</p>
+            <p className="text-[8px] font-bold uppercase mb-0.5">{alunoData.escola_secretario || 'SECRETÁRIO(A)'}</p>
             <p className="text-[7px] text-slate-500 uppercase">SECRETÁRIO(A) ESCOLAR</p>
           </div>
         </div>

@@ -5,7 +5,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import * as SyncEngine from '../services/syncEngine';
-import { getPendingCount } from '../services/offlineStorage';
+import { getLocalPendingCount } from '../services/offlineStorage';
 import type { SyncQueueItem } from '../lib/db';
 
 export type ConnectionState = 'ONLINE' | 'OFFLINE' | 'SYNCING' | 'ERROR';
@@ -49,7 +49,7 @@ export function useSyncStatus(isOnline: boolean): SyncStatusResult {
   const updateCounts = useCallback(async () => {
     try {
       const [count, deadLetters] = await Promise.all([
-        getPendingCount(),
+        getLocalPendingCount(),
         getDeadLetterItems(),
       ]);
       setPendingCount(count);
