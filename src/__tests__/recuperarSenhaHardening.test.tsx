@@ -51,7 +51,7 @@ describe('RecuperarSenha Security Hardening', () => {
     vi.mocked(supabase.auth.resetPasswordForEmail).mockResolvedValueOnce({
       data: {},
       error: null,
-    } as unknown as ReturnType<typeof supabase.auth.resetPasswordForEmail>);
+    } as unknown as Awaited<ReturnType<typeof supabase.auth.resetPasswordForEmail>>);
 
     render(
       <MemoryRouter>
@@ -92,7 +92,7 @@ describe('RecuperarSenha Security Hardening', () => {
     vi.mocked(supabase.auth.resetPasswordForEmail).mockResolvedValueOnce({
       data: {},
       error: null,
-    } as unknown as ReturnType<typeof supabase.auth.resetPasswordForEmail>);
+    } as unknown as Awaited<ReturnType<typeof supabase.auth.resetPasswordForEmail>>);
 
     render(
       <MemoryRouter>
