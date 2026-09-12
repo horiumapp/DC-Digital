@@ -123,9 +123,6 @@ export default function App() {
                       <Route path="/relatorio-conteudos" element={<RouteErrorBoundary><RelatorioConteudos /></RouteErrorBoundary>} />
                       <Route path="/relatorio-frequencia" element={<RouteErrorBoundary><RelatorioFrequencia /></RouteErrorBoundary>} />
                       <Route path="/frequencia" element={<RouteErrorBoundary><Frequencia /></RouteErrorBoundary>} />
-                      <Route path="/estatisticas" element={<RouteErrorBoundary><Estatisticas /></RouteErrorBoundary>} />
-                      <Route path="/pendencias-lancamento" element={<RouteErrorBoundary><PendenciasLancamento /></RouteErrorBoundary>} />
-                      <Route path="/pendencias-frequencia" element={<RouteErrorBoundary><PendenciasFrequencia /></RouteErrorBoundary>} />
                       <Route path="/aparata" element={<RouteErrorBoundary><Aparata /></RouteErrorBoundary>} />
                       <Route path="/aparata-detalhes" element={<RouteErrorBoundary><AparataDetalhes /></RouteErrorBoundary>} />
                       
@@ -133,6 +130,9 @@ export default function App() {
                       <Route element={<ProtectedRoute allowedRoles={ADMIN_ROLES} />}>
                         <Route path="/administracao" element={<RouteErrorBoundary><Administracao /></RouteErrorBoundary>} />
                         <Route path="/curriculo" element={<RouteErrorBoundary><Curriculo /></RouteErrorBoundary>} />
+                        <Route path="/estatisticas" element={<RouteErrorBoundary><Estatisticas /></RouteErrorBoundary>} />
+                        <Route path="/pendencias-lancamento" element={<RouteErrorBoundary><PendenciasLancamento /></RouteErrorBoundary>} />
+                        <Route path="/pendencias-frequencia" element={<RouteErrorBoundary><PendenciasFrequencia /></RouteErrorBoundary>} />
                       </Route>
                     </Route>
                   </Route>
