@@ -27,6 +27,7 @@ export default function FrequenciaTab({
   const [studentData, setStudentData] = useState<Aluno[]>([]);
   const [isLaunching, setIsLaunching] = useState(false);
   const [showDeleteFreqModal, setShowDeleteFreqModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const isLancado = lancamentos.some(l => 
     l.data === selectedDate && 
@@ -43,14 +44,14 @@ export default function FrequenciaTab({
     validateCaptcha
   } = useCaptcha();
 
-  // Carregar frequência do banco quando a data ou o tempo mudar
+  // Carregar frequÃªncia do banco quando a data ou o tempo mudar
   useEffect(() => {
     if (turmaAtiva && selectedDate && tempoAula) {
       buscarFrequencia(selectedDate, tempoAula);
     }
   }, [selectedDate, tempoAula, turmaAtiva, buscarFrequencia]);
 
-  // Sincronizar o estado local com os alunos do contexto (que agora vêm do banco)
+  // Sincronizar o estado local com os alunos do contexto (que agora vÃªm do banco)
    
   useEffect(() => {
     setStudentData(alunos.map(a => ({ ...a })));
@@ -72,6 +73,12 @@ export default function FrequenciaTab({
     setStudentData(prev => prev.map(s => s.id === id ? { ...s, part } : s));
   };
 
+  const markAllPresent = () => {
+    setStudentData(prev => prev.map(student => ({ ...student, freq: 'P', part: student.part || 'Presencial' })));
+  };
+
+  const visibleStudents = studentData.filter(student => student.nome.toLocaleLowerCase().includes(searchTerm.toLocaleLowerCase()) || student.matricula?.includes(searchTerm));
+
   const handleConfirm = async () => {
     if (validateCaptcha()) {
       if (turmaAtiva) {
@@ -81,7 +88,7 @@ export default function FrequenciaTab({
         generateNewCaptcha();
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // Auto-advance para o próximo tempo pendente (ou próximo tempo sequencial)
+        // Auto-advance para o prÃ³ximo tempo pendente (ou prÃ³ximo tempo sequencial)
         const nextPendingTempo = disponiveisTempos.find(t => 
           t !== tempoAula && !lancamentos.some(l => l.data === selectedDate && l.tempo === t && l.tipo === 'frequencia')
         );
@@ -95,7 +102,7 @@ export default function FrequenciaTab({
         }
       }
     } else {
-      showToastError('Código incorreto. Tente novamente.');
+      showToastError('CÃ³digo incorreto. Tente novamente.');
     }
   };
 
@@ -109,8 +116,8 @@ export default function FrequenciaTab({
   return (
     <div className="animate-in fade-in slide-in-from-top-4 duration-300">
       
-      <div className="flex items-end gap-4 mb-6">
-        <div className="w-64">
+      <div className="flex flex-col items-stretch gap-3 mb-6 sm:flex-row sm:items-end">
+        <div className="w-full sm:w-64">
           <label className="block text-sm text-slate-600 mb-1">Tempo da aula</label>
           <select
             className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500"
@@ -128,7 +135,7 @@ export default function FrequenciaTab({
             disabled={disabled}
             className={`bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            Efetuar lançamento
+            Efetuar lanÃ§amento
           </button>
         )}
       </div>
@@ -137,7 +144,7 @@ export default function FrequenciaTab({
         <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium text-slate-800">Alunos</h3>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3">
               {isLancado && (
                 <button
                   onClick={() => !disabled && setShowDeleteFreqModal(true)}
@@ -145,11 +152,11 @@ export default function FrequenciaTab({
                   className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-red-700 transition h-[38px] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Trash2 className="w-4 h-4" />
-                  Excluir frequência
+                  Excluir frequÃªncia
                 </button>
               )}
               <div className="flex items-center gap-2 border border-slate-200 rounded-lg px-4 py-2 bg-white">
-                <span className="text-sm text-slate-600">Frequência(s) lançada(s):</span>
+                <span className="text-sm text-slate-600">FrequÃªncia(s) lanÃ§ada(s):</span>
                 <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white">
                   <Check className="w-4 h-4" />
                 </div>
@@ -157,10 +164,10 @@ export default function FrequenciaTab({
               <div className="border border-slate-200 rounded-lg px-4 py-2 bg-white flex items-center gap-3">
                 <span className="text-sm text-slate-600">Legenda</span>
                 <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1 text-xs"><span className="w-4 h-4 rounded-full bg-slate-400"></span> Sem frequência</span>
+                  <span className="flex items-center gap-1 text-xs"><span className="w-4 h-4 rounded-full bg-slate-400"></span> Sem frequÃªncia</span>
                   <span className="flex items-center gap-1 text-xs"><span className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center font-bold text-[10px]">F</span> Falta</span>
                   <span className="flex items-center gap-1 text-xs"><span className="w-4 h-4 rounded-full bg-amber-400 text-white flex items-center justify-center font-bold text-[10px]">FJ</span> Falta Justificada</span>
-                  <span className="flex items-center gap-1 text-xs"><span className="w-4 h-4 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-[10px]">P</span> Presença</span>
+                  <span className="flex items-center gap-1 text-xs"><span className="w-4 h-4 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-[10px]">P</span> PresenÃ§a</span>
                 </div>
               </div>
             </div>
@@ -175,23 +182,23 @@ export default function FrequenciaTab({
             />
           </div>
 
-          <div className="border border-slate-200 rounded-lg overflow-hidden">
+          <div className="overflow-x-auto border border-slate-200 rounded-lg">
             <table className="w-full text-sm text-left">
               <thead className="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
                 <tr>
-                  <th className="px-4 py-3 w-16">Nº</th>
+                  <th className="px-4 py-3 w-16">NÂº</th>
                   <th className="px-4 py-3">Aluno</th>
                   <th className="px-4 py-3 text-center w-32">{tempoAula}</th>
-                  <th className="px-4 py-3 text-center w-64">Participação</th>
+                  <th className="px-4 py-3 text-center w-64">ParticipaÃ§Ã£o</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {studentData.map((aluno, index) => (
+                {visibleStudents.map((aluno, index) => (
                   <tr key={aluno.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}>
                     <td className="px-4 py-3 text-slate-500 font-bold tabular-nums">{String(index + 1).padStart(2, '0')}</td>
                     <td className="px-4 py-3">
                       <p className="text-sm font-medium text-slate-700">{aluno.nome}</p>
-                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mt-1">Matrícula: {aluno.matricula}</p>
+                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mt-1">MatrÃ­cula: {aluno.matricula}</p>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <button
@@ -231,7 +238,7 @@ export default function FrequenciaTab({
 
           <div className="flex items-center justify-between text-sm text-slate-600">
             <div className="flex items-center gap-2">
-              <span>Mostrando de 1 até {studentData.length} de {studentData.length} registros</span>
+              <span>Mostrando de 1 atÃ© {studentData.length} de {studentData.length} registros</span>
               <div className="flex items-center gap-2 ml-4">
                 <span>Mostrar</span>
                 <select className="border border-slate-300 rounded px-2 py-1">
@@ -292,11 +299,11 @@ export default function FrequenciaTab({
                 <Trash2 className="w-5 h-5 text-red-600" />
               </div>
               <div className="flex-1">
-                <h3 className="text-base font-semibold text-slate-800 mb-1">Excluir frequência</h3>
+                <h3 className="text-base font-semibold text-slate-800 mb-1">Excluir frequÃªncia</h3>
                 <p className="text-sm text-slate-600">
-                  Tem certeza que deseja excluir a frequência lançada para o dia <strong>{selectedDate}</strong>, tempo <strong>{tempoAula}</strong>?
+                  Tem certeza que deseja excluir a frequÃªncia lanÃ§ada para o dia <strong>{selectedDate}</strong>, tempo <strong>{tempoAula}</strong>?
                 </p>
-                <p className="text-xs text-red-600 mt-2 font-medium">Esta ação não pode ser desfeita.</p>
+                <p className="text-xs text-red-600 mt-2 font-medium">Esta aÃ§Ã£o nÃ£o pode ser desfeita.</p>
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 mt-6">

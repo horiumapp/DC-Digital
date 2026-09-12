@@ -30,15 +30,15 @@ export default function Diario() {
       const [ano, mes, dia] = p.dataInicio.split('-').map(Number);
       const dataInicio = new Date(ano, mes - 1, dia);
 
-      // Regra 1: O bimestre já começou no calendário anual?
+      // Regra 1: O bimestre jÃ¡ comeÃ§ou no calendÃ¡rio anual?
       if (dataInicio > hoje) break;
 
-      // Regra 2: Se não for o primeiro bimestre, o anterior precisa estar fechado na Aparata!
+      // Regra 2: Se nÃ£o for o primeiro bimestre, o anterior precisa estar fechado na Aparata!
       if (i > 0) {
         const bimestreAnterior = periodosLetivos[i - 1];
         const isAnteriorFechado = checarFechado(bimestreAnterior.id);
 
-        // Se o anterior não está fechado, impede a visualização deste e dos próximos
+        // Se o anterior nÃ£o estÃ¡ fechado, impede a visualizaÃ§Ã£o deste e dos prÃ³ximos
         if (!isAnteriorFechado) break;
       }
 
@@ -48,10 +48,10 @@ export default function Diario() {
     return resultado.length > 0 ? resultado : [periodosLetivos[0]];
   }, [periodosLetivos, checarFechado]);
 
-  // Função para identificar o período letivo aberto prioritário:
-  // 1. Período aberto que engloba o dia de hoje
-  // 2. Período aberto mais recente entre os visíveis
-  // 3. Último período visível como fallback
+  // FunÃ§Ã£o para identificar o perÃ­odo letivo aberto prioritÃ¡rio:
+  // 1. PerÃ­odo aberto que engloba o dia de hoje
+  // 2. PerÃ­odo aberto mais recente entre os visÃ­veis
+  // 3. Ãšltimo perÃ­odo visÃ­vel como fallback
   const obterPeriodoAberto = useCallback((visiveis: typeof periodosLetivos) => {
     if (!visiveis || visiveis.length === 0) return periodosLetivos[0];
     const hoje = new Date();
@@ -72,7 +72,7 @@ export default function Diario() {
     return visiveis[visiveis.length - 1];
   }, [periodosLetivos, checarFechado]);
 
-  // Garante que o calendário inicie em um mês válido para o período selecionado
+  // Garante que o calendÃ¡rio inicie em um mÃªs vÃ¡lido para o perÃ­odo selecionado
   const obterMesValido = useCallback((p?: { dataInicio: string; dataFim: string } | null) => {
     if (!p) return new Date().getMonth();
     const minM = parseInt(p.dataInicio.split('-')[1], 10) - 1;
@@ -97,7 +97,7 @@ export default function Diario() {
   const [usuarioAlterouManualmente, setUsuarioAlterouManualmente] = useState(false);
   const lastTurmaIdRef = useRef<string | null>(null);
 
-  // Redefine a escolha manual se o usuário alternar para outra turma
+  // Redefine a escolha manual se o usuÃ¡rio alternar para outra turma
   useEffect(() => {
     const currentTurmaId = turmaAtiva ? String(turmaAtiva.id) : null;
     if (currentTurmaId !== lastTurmaIdRef.current) {
@@ -106,7 +106,7 @@ export default function Diario() {
     }
   }, [turmaAtiva]);
 
-  // Ao entrar na turma e carregar os fechamentos, posiciona automaticamente no período aberto
+  // Ao entrar na turma e carregar os fechamentos, posiciona automaticamente no perÃ­odo aberto
   useEffect(() => {
     if (!usuarioAlterouManualmente && turmaAtiva) {
       const periodoAberto = obterPeriodoAberto(periodosVisiveis);
@@ -136,7 +136,7 @@ export default function Diario() {
             <BookOpen className="w-8 h-8" />
           </div>
           <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Nenhuma turma selecionada</h2>
-          <p className="text-slate-600 dark:text-slate-400 mb-6">Por favor, volte à lista de turmas e selecione um diário para visualizar.</p>
+          <p className="text-slate-600 dark:text-slate-400 mb-6">Por favor, volte Ã  lista de turmas e selecione um diÃ¡rio para visualizar.</p>
           <Link to="/turmas" className="inline-flex flex-1 items-center justify-center gap-2 w-full px-6 py-3 bg-[#0f2851] text-white font-bold rounded-xl hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20">
             <ArrowLeft className="w-5 h-5" />
             Voltar para Turmas
@@ -148,10 +148,10 @@ export default function Diario() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 relative">
-      <div className="relative z-10 p-8 max-w-7xl mx-auto space-y-6">
-        <div className="max-w-[1400px] mx-auto p-4 space-y-4">
+      <div className="relative z-10 mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-8 sm:py-8">
+        <div className="mx-auto max-w-[1400px] space-y-4">
         {/* Secondary Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <Link to="/turmas" className="flex items-center gap-1 px-4 py-2 bg-[#eef2ff] text-[#0f2851] text-sm font-bold rounded-xl border border-blue-100 hover:bg-[#e0e7ff] transition">
               <ArrowLeft className="w-4 h-4" /> 
@@ -171,7 +171,7 @@ export default function Diario() {
 
           <div className="flex flex-col lg:flex-row gap-8 mt-6">
             <div className="w-full lg:w-[340px] shrink-0">
-              <label className="text-sm font-bold text-slate-500 dark:text-slate-300 mb-1 block">Período letivo</label>
+              <label className="text-sm font-bold text-slate-500 dark:text-slate-300 mb-1 block">PerÃ­odo letivo</label>
               <select 
                 value={periodoSelecionadoId}
                 onChange={(e) => {
@@ -199,16 +199,16 @@ export default function Diario() {
               <label className="text-sm font-bold text-slate-500 dark:text-slate-300 mb-1 block">Legenda</label>
               <div className="flex flex-wrap gap-2">
                 <span className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs font-bold text-slate-600 dark:text-slate-200">
-                  <span className="w-4 h-4 rounded bg-blue-500 text-white flex items-center justify-center text-[10px]">F</span> Frequência
+                  <span className="w-4 h-4 rounded bg-blue-500 text-white flex items-center justify-center text-[10px]">F</span> FrequÃªncia
                 </span>
                 <span className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs font-bold text-slate-600 dark:text-slate-200">
-                  <span className="w-4 h-4 rounded bg-blue-400 text-white flex items-center justify-center text-[10px]">A</span> Avaliação
+                  <span className="w-4 h-4 rounded bg-blue-400 text-white flex items-center justify-center text-[10px]">A</span> AvaliaÃ§Ã£o
                 </span>
                 <span className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs font-bold text-slate-600 dark:text-slate-200">
-                  <span className="w-4 h-4 rounded bg-blue-700 text-white flex items-center justify-center text-[10px]">CM</span> Conteúdo Ministrado
+                  <span className="w-4 h-4 rounded bg-blue-700 text-white flex items-center justify-center text-[10px]">CM</span> ConteÃºdo Ministrado
                 </span>
                 <span className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs font-bold text-slate-600 dark:text-slate-200">
-                  <span className="w-4 h-4 rounded-full bg-emerald-500"></span> Concluído
+                  <span className="w-4 h-4 rounded-full bg-emerald-500"></span> ConcluÃ­do
                 </span>
                 <span className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs font-bold text-slate-600 dark:text-slate-200">
                   <span className="w-4 h-4 rounded-full bg-amber-400"></span> Iniciado
@@ -225,13 +225,13 @@ export default function Diario() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-4 space-y-6">
             <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm transition-all">
-              <h4 className="text-base font-bold text-slate-700 mb-6 uppercase tracking-tight">Lançamentos da Turma</h4>
+              <h4 className="text-base font-bold text-slate-700 mb-6 uppercase tracking-tight">LanÃ§amentos da Turma</h4>
               
               <div className="space-y-4">
-                {/* Frequência */}
+                {/* FrequÃªncia */}
                 <div>
                   <div className="flex justify-between text-[12px] font-bold text-slate-500 mb-1.5 uppercase">
-                    <span>Frequências</span> <span>{pFreq}%</span>
+                    <span>FrequÃªncias</span> <span>{pFreq}%</span>
                   </div>
                   <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                     <div className={`h-full ${barColor(pFreq)} transition-all duration-1000`} style={{ width: `${pFreq}%` }}></div>
@@ -248,10 +248,10 @@ export default function Diario() {
                   </div>
                 </div>
 
-                {/* Avaliações */}
+                {/* AvaliaÃ§Ãµes */}
                 <div>
                   <div className="flex justify-between text-[12px] font-bold text-slate-500 mb-1.5 uppercase">
-                    <span>Avaliações</span> <span>{pAvaliacoes}%</span>
+                    <span>AvaliaÃ§Ãµes</span> <span>{pAvaliacoes}%</span>
                   </div>
                   <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                     <div className={`h-full ${barColor(pAvaliacoes)} transition-all duration-1000`} style={{ width: `${pAvaliacoes}%` }}></div>
@@ -280,14 +280,14 @@ export default function Diario() {
               </div>
               <div className="p-4 space-y-4">
                 <div className="flex justify-between items-center text-[12px] font-bold text-slate-500 uppercase">
-                  <span>Situação</span>
+                  <span>SituaÃ§Ã£o</span>
                   <span className={`px-2.5 py-1 rounded-full text-[10px] text-white ${isAparataFechada ? 'bg-red-500' : 'bg-emerald-500'}`}>
                     {isAparataFechada ? 'FECHADO' : 'ABERTO'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-[12px] font-bold text-slate-500 uppercase">
-                  <span>Sincronização</span>
-                  <span className="bg-red-500 text-white px-2.5 py-1 rounded-full text-[10px]">NÃO</span>
+                  <span>SincronizaÃ§Ã£o</span>
+                  <span className="bg-red-500 text-white px-2.5 py-1 rounded-full text-[10px]">NÃƒO</span>
                 </div>
               </div>
             </div>
@@ -300,8 +300,8 @@ export default function Diario() {
               <div className="bg-[#fcf3f3] border border-[#f5c6c6] p-6 rounded-xl text-[#842029]">
                 <h3 className="text-lg font-bold mb-4">Aparata Fechada</h3>
                 <div className="space-y-2 text-sm">
-                  <p>- Para realizar lançamentos, solicite reabertura de aparata ao gestor da escola;</p>
-                  <p>- Visualização somente através dos relatórios</p>
+                  <p>- Para realizar lanÃ§amentos, solicite reabertura de aparata ao gestor da escola;</p>
+                  <p>- VisualizaÃ§Ã£o somente atravÃ©s dos relatÃ³rios</p>
                 </div>
               </div>
             ) : (

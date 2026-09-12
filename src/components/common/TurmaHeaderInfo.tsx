@@ -8,7 +8,7 @@ interface TurmaHeaderInfoProps {
 
 const TurmaHeaderInfo = React.memo(function TurmaHeaderInfo({ turmaAtiva }: TurmaHeaderInfoProps) {
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <div className="flex items-center gap-3 bg-[#eef2ff]/40 p-4 rounded-2xl border border-blue-50">
         <div className="w-10 h-10 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#0f2851]">
           <GraduationCap className="w-5 h-5" />
