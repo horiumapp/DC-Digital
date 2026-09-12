@@ -800,15 +800,27 @@
   <h1>7. Recomendações Priorizadas & Status de Execução</h1>
 
   <div class="callout avoid-break" style="border-left-color: #EA580C;">
-    (SELECT get_user_role()) IN ('ADMIN', 'GESTOR', 'SECRETARIO')
-    AND p_acesso_por_turma(fechamentos_bimestres.turma_id)
-  );</code></pre>
+    <strong>P1 — Restringir Ação delete-user da Edge Function admin-create-user (Concluído)</strong><br>
+    <em>Esforço:</em> Baixo | <em>Impacto:</em> Crítico para Integridade de Contas | <em>Status:</em> <span class="chip chip-forte">CONCLUÍDO</span><br>
+    Validação estrita de papéis implementada na Edge Function <code class="inline">admin-create-user/index.ts:162-170</code>, exigindo papel de <code class="inline">ADMIN</code>, <code class="inline">GESTOR</code> ou <code class="inline">SECRETARIO</code>.
   </div>
 
   <div class="callout avoid-break" style="border-left-color: #D97706;">
-    <strong>P3 — Implementar Trava Server-Side para Bimestres Fechados</strong><br>
-    <em>Esforço:</em> Médio | <em>Impacto:</em> Alto para Integridade Histórica.<br>
-    Criar trigger PostgreSQL <code class="inline">trg_check_bimestre_fechado</code> nas tabelas <code class="inline">notas</code> e <code class="inline">frequencias</code> que verifique se o bimestre em questão possui fechamento ativo, impedindo mutações não autorizadas fora do período letivo.
+    <strong>P2 — Restringir RLS de Reabertura de Bimestre em fechamentos_bimestres (Concluído)</strong><br>
+    <em>Esforço:</em> Baixo | <em>Impacto:</em> Alto para Conformidade Escolar | <em>Status:</em> <span class="chip chip-forte">CONCLUÍDO</span><br>
+    Política RLS ajustada na migration <code class="inline">20260909000022_security_fix_fechamento_rls_and_triggers.sql:24-44</code>, impedindo exclusão de fechamentos por alunos e professores.
+  </div>
+
+  <div class="callout avoid-break" style="border-left-color: #D97706;">
+    <strong>P3 — Implementar Trava Server-Side para Bimestres Fechados (Concluído)</strong><br>
+    <em>Esforço:</em> Médio | <em>Impacto:</em> Alto para Integridade Histórica | <em>Status:</em> <span class="chip chip-forte">CONCLUÍDO</span><br>
+    Triggers PostgreSQL <code class="inline">trg_check_bimestre_aberto_frequencias</code> e <code class="inline">trg_check_bimestre_aberto_notas</code> implementadas na migration <code class="inline">20260909000022:50-145</code>.
+  </div>
+
+  <div class="callout avoid-break" style="border-left-color: #2563EB;">
+    <strong>P4 — Implementar Cooldown e Lockout em RecuperarSenha (Concluído)</strong><br>
+    <em>Esforço:</em> Baixo | <em>Impacto:</em> Médio para Prevenção a Abuso e Enumeração | <em>Status:</em> <span class="chip chip-forte">CONCLUÍDO</span><br>
+    Implementado cooldown de 60 segundos com bloqueio temporário de 5 minutos após 3 envios consecutivos e mensagem de retorno neutra em <code class="inline">src/pages/RecuperarSenha.tsx</code>. Testes automatizados criados em <code class="inline">src/__tests__/recuperarSenhaHardening.test.tsx</code>.
   </div>
 
   <!-- ==================== ISSUES PARA O GITHUB ==================== -->
