@@ -75,8 +75,8 @@ describe('RecuperarSenha Security Hardening', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/Se o e-mail informado estiver cadastrado no sistema/i)).toBeInTheDocument();
-      expect(screen.getByText(/Próximo reenvio disponível em/i)).toBeInTheDocument();
+      expect(screen.getByText(/Se o e-mail informado estiver cadastrado no sistema/i)).toBeDefined();
+      expect(screen.getByText(/Próximo reenvio disponível em/i)).toBeDefined();
     });
 
     // Deve registrar a tentativa no localStorage
@@ -122,9 +122,9 @@ describe('RecuperarSenha Security Hardening', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/Proteção contra tentativas repetidas/i)).toBeInTheDocument();
+    expect(screen.getByText(/Proteção contra tentativas repetidas/i)).toBeDefined();
     const submitBtn = screen.getByRole('button');
-    expect(submitBtn).toBeDisabled();
-    expect(submitBtn).toHaveTextContent(/Aguarde/i);
+    expect(submitBtn.hasAttribute('disabled')).toBe(true);
+    expect(submitBtn.textContent).toContain('Aguarde');
   });
 });
