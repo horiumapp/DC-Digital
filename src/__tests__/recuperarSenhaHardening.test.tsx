@@ -1,6 +1,7 @@
+// @vitest-environment happy-dom
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import RecuperarSenha from '../pages/RecuperarSenha';
 import { supabase } from '../lib/supabase';
@@ -20,11 +21,12 @@ vi.mock('../components/Background', () => ({
 describe('RecuperarSenha Security Hardening', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
+    window.localStorage.clear();
   });
 
   afterEach(() => {
-    localStorage.clear();
+    cleanup();
+    window.localStorage.clear();
   });
 
   it('deve rejeitar submissão com e-mail inválido sem invocar o Supabase', async () => {
@@ -78,14 +80,14 @@ describe('RecuperarSenha Security Hardening', () => {
     });
 
     // Deve registrar a tentativa no localStorage
-    expect(localStorage.getItem('dc_pwd_reset_attempts')).toBe('1');
-    expect(localStorage.getItem('dc_pwd_reset_cooldown_until')).toBeTruthy();
+    expect(window.localStorage.getItem('dc_pwd_reset_attempts')).toBe('1');
+    expect(window.localStorage.getItem('dc_pwd_reset_cooldown_until')).toBeTruthy();
   });
 
   it('deve ativar lockout de segurança após 3 tentativas consecutivas', async () => {
     // Simular que o usuário já efetuou 2 tentativas recentes
-    localStorage.setItem('dc_pwd_reset_attempts', '2');
-    localStorage.setItem('dc_pwd_reset_time', Date.now().toString());
+    window.localStorage.setItem('dc_pwd_reset_attempts', '2');
+    window.localStorage.setItem('dc_pwd_reset_time', Date.now().toString());
 
     vi.mocked(supabase.auth.resetPasswordForEmail).mockResolvedValueOnce({
       data: {},
@@ -105,14 +107,14 @@ describe('RecuperarSenha Security Hardening', () => {
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
-      expect(localStorage.getItem('dc_pwd_reset_attempts')).toBe('3');
-      expect(localStorage.getItem('dc_pwd_reset_lockout_until')).toBeTruthy();
+      expect(window.localStorage.getItem('dc_pwd_reset_attempts')).toBe('3');
+      expect(window.localStorage.getItem('dc_pwd_reset_lockout_until')).toBeTruthy();
     });
   });
 
   it('deve bloquear formulário e desabilitar botão quando em lockout ativo', () => {
     const futureLockout = Date.now() + 180 * 1000; // 3 minutos no futuro
-    localStorage.setItem('dc_pwd_reset_lockout_until', futureLockout.toString());
+    window.localStorage.setItem('dc_pwd_reset_lockout_until', futureLockout.toString());
 
     render(
       <MemoryRouter>
