@@ -135,11 +135,12 @@ export default function PortalAluno() {
     const modalidade = turmaData?.ensino || 'ENSINO FUNDAMENTAL I (EF1) 1º AO 5º ANO';
 
     // Buscar Secretário(a) da escola de forma segura e resiliente
-    let secretarioNome = '';
+    // 1. Prioriza o secretário registrado diretamente no cadastro da escola
+    let secretarioNome = escolaData?.secretario?.trim() || '';
     const escolaId = alunoEncontrado.escola_id || escolaData?.id;
 
-    if (escolaId) {
-      // 1. Tentar via função segura RPC get_secretario_escola
+    if (!secretarioNome && escolaId) {
+      // 2. Se não houver campo direto, tenta via função segura RPC get_secretario_escola
       try {
         const { data: secRpc, error: rpcErr } = await supabase
           .rpc('get_secretario_escola', { p_escola_id: escolaId });
@@ -150,7 +151,7 @@ export default function PortalAluno() {
         // Fallback silencioso
       }
 
-      // 2. Se não encontrou via RPC, buscar diretamente em usuarios pelo perfil SECRETARIO
+      // 3. Fallback: buscar diretamente em usuarios pelo perfil SECRETARIO
       if (!secretarioNome) {
         try {
           const { data: secUsers, error: secErr } = await supabase
@@ -167,11 +168,6 @@ export default function PortalAluno() {
         } catch {
           // Fallback silencioso
         }
-      }
-
-      // 3. Fallback se escolaData possuir campo secretario
-      if (!secretarioNome && escolaData?.secretario) {
-        secretarioNome = escolaData.secretario.trim();
       }
     }
 
