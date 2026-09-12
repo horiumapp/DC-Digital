@@ -984,6 +984,40 @@ $$;
 </pre>
   </div>
 
+  <div class="issue-box">
+<pre style="background: transparent; color: inherit; border: none; padding: 0; margin: 0; font-size: 8pt; white-space: pre-wrap;">
+--- ISSUE 4 ---
+### Título: [Segurança] Implementar rate limiting client-side, lockout e resposta neutra anti-enumeração em RecuperarSenha
+**Labels:** `security`, `severidade-baixa`, `frontend`, `auth`
+
+#### Descrição
+A tela de recuperação de senha (`src/pages/RecuperarSenha.tsx`) permitia envios consecutivos sem controle de repetição client-side ou delay após solicitações. Além disso, variações em retornos poderiam abrir brechas para enumeração de contas válidas.
+
+#### Por que é explorável
+Scripts automatizados na internet podiam invocar o formulário em repetição rápida, sobrecarregando a cota de e-mails transacionais do provedor e gerando spam em caixas de entrada institucionais.
+
+#### Evidência
+- **Arquivo:** `src/pages/RecuperarSenha.tsx`
+- **Linhas:** 40-100
+- **Teste Unitário:** `src/__tests__/recuperarSenhaHardening.test.tsx`
+
+#### Impacto
+Severidade Baixa. Fadiga de e-mails e potencial enumeração de contas.
+
+#### Correção Aplicada
+1. Cooldown de 60 segundos com contador regressivo na interface.
+2. Lockout temporário de 300 segundos (5 minutos) com persistência em storage local após 3 tentativas consecutivas.
+3. Resposta neutra: *"Se o e-mail informado estiver cadastrado no sistema, enviamos um link seguro de recuperação..."*.
+4. Suíte de testes automatizados adicionada em `src/__tests__/recuperarSenhaHardening.test.tsx`.
+
+#### Critérios de Aceite
+1. O formulário bloqueia envios consecutivos respeitando o cooldown de 60 segundos.
+2. Ao atingir 3 envios consecutivos, aplica lockout de 5 minutos com banner de proteção.
+3. Testes unitários cobrindo o fluxo com 100% de aprovação no Vitest.
+--- FIM ISSUE 4 ---
+</pre>
+  </div>
+
   <div class="footer-bar">
     <span>DC Digital — Sistema de Gestão Escolar</span>
     <span>Relatório de Auditoria de Segurança — Fim do Documento</span>
