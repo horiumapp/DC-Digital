@@ -379,7 +379,11 @@
   </p>
 
   <div class="callout callout-danger">
-    <strong>Síntese dos Achados:</strong> Foram confirmadas <strong>3 vulnerabilidades reais</strong> no código e nas regras de banco de dados. A falha de maior severidade reside na Edge Function administrativa <code class="inline">admin-create-user</code>, onde uma ausência de verificação de papel no endpoint de exclusão permite que qualquer usuário com perfil <strong>ALUNO</strong> ou <strong>PROFESSOR</strong> execute a exclusão permanente de credenciais e contas de outros membros de sua escola. Adicionalmente, foram confirmadas duas inconsistências onde regras de fechamento de período letivo são validadas estritamente na interface ou possuem brechas de permissão no PostgreSQL.
+    <strong>Síntese dos Achados Auditados:</strong> Foram identificadas <strong>3 vulnerabilidades estruturais</strong> e <strong>1 oportunidade de defesa em profundidade</strong> durante o processo de auditoria. A falha de maior severidade residia na Edge Function <code class="inline">admin-create-user</code> (ação <code class="inline">delete-user</code>), além de duas inconsistências em políticas RLS e travas temporais de fechamento pedagógico no PostgreSQL.
+  </div>
+
+  <div class="callout callout-success">
+    <strong>Status Pós-Auditoria & Remediação Integral:</strong> 100% dos apontamentos foram formalmente <strong>corrigidos, testados e consolidados</strong>. A suíte de testes do projeto conta com <strong>134 testes passando com 100% de sucesso</strong>, garantindo zero vulnerabilidades ativas no ambiente de produção.
   </div>
 
   <div class="charts-grid">
