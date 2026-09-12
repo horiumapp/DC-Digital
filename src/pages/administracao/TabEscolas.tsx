@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Plus, Edit2, Trash2, Building2, MapPin, User } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Building2, MapPin, User, UserCheck } from 'lucide-react';
 import NovaEscolaModal from '../../components/NovaEscolaModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import EscolaDetalhes from './EscolaDetalhes';
@@ -14,6 +14,7 @@ export interface EscolaRow {
   distrito?: string;
   inep?: string;
   diretor?: string;
+  secretario?: string;
   status?: string;
   logo_url?: string;
 }
@@ -23,6 +24,7 @@ export interface EscolaFormData {
   localizacao?: string;
   inep?: string;
   gestor?: string;
+  secretario?: string;
   ativo?: boolean;
   logo_url?: string;
 }
@@ -64,6 +66,7 @@ export default function TabEscolas() {
           distrito: novaEscola.localizacao,
           inep: novaEscola.inep,
           diretor: novaEscola.gestor,
+          secretario: novaEscola.secretario || null,
           status: novaEscola.ativo ? 'Ativa' : 'Inativa',
           logo_url: novaEscola.logo_url
         })
@@ -85,6 +88,7 @@ export default function TabEscolas() {
           distrito: novaEscola.localizacao,
           inep: novaEscola.inep,
           diretor: novaEscola.gestor,
+          secretario: novaEscola.secretario || null,
           status: novaEscola.ativo ? 'Ativa' : 'Inativa',
           logo_url: novaEscola.logo_url
         }]);
@@ -106,6 +110,7 @@ export default function TabEscolas() {
       ...escola,
       localizacao: escola.distrito,
       gestor: escola.diretor,
+      secretario: escola.secretario,
       ativo: escola.status === 'Ativa',
       logo_url: escola.logo_url
     };
@@ -128,7 +133,8 @@ export default function TabEscolas() {
   const escolasFiltradas = escolas.filter(e => 
     e.nome.toLowerCase().includes(buscaEscola.toLowerCase()) || 
     (e.inep && e.inep.includes(buscaEscola)) ||
-    (e.diretor && e.diretor.toLowerCase().includes(buscaEscola.toLowerCase()))
+    (e.diretor && e.diretor.toLowerCase().includes(buscaEscola.toLowerCase())) ||
+    (e.secretario && e.secretario.toLowerCase().includes(buscaEscola.toLowerCase()))
   );
 
   if (_user?.role !== 'ADMIN') return null;
@@ -269,6 +275,12 @@ export default function TabEscolas() {
                     <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <span className="text-[11px] font-bold text-slate-600 truncate">{escola.diretor || 'Diretor N/D'}</span>
                   </div>
+                  {escola.secretario && (
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="text-[11px] font-medium text-slate-600 truncate">Sec: {escola.secretario}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))
