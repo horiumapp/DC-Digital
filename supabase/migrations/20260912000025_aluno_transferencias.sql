@@ -37,8 +37,8 @@ BEGIN
   END IF;
   SELECT * INTO v_aluno FROM public.alunos WHERE id = p_aluno_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Aluno não encontrado'; END IF;
-  IF v_role = 'GESTOR' AND v_aluno.escola_id <> public.get_user_escola_id() THEN
-    RAISE EXCEPTION 'O gestor só pode transferir alunos da sua escola de origem';
+  IF v_role IN ('GESTOR', 'SECRETARIO') AND v_aluno.escola_id <> public.get_user_escola_id() THEN
+    RAISE EXCEPTION 'Gestor e Secretário só podem transferir alunos da própria escola de origem';
   END IF;
   SELECT * INTO v_origem FROM public.turmas WHERE id = v_aluno.turma_id;
   SELECT * INTO v_destino FROM public.turmas WHERE id = p_turma_destino_id;
@@ -64,4 +64,4 @@ REVOKE ALL ON FUNCTION public.transferir_aluno(uuid, uuid, date, text) FROM PUBL
 GRANT EXECUTE ON FUNCTION public.transferir_aluno(uuid, uuid, date, text) TO authenticated;
 
 CREATE POLICY "transferencias_select_autorizado" ON public.aluno_transferencias FOR SELECT TO authenticated
-USING (public.get_user_role() IN ('ADMIN', 'SECRETARIO') OR (public.get_user_role() = 'GESTOR' AND escola_origem_id = public.get_user_escola_id()));
+USING (public.get_user_role() = 'ADMIN' OR (public.get_user_role() IN ('GESTOR', 'SECRETARIO') AND escola_origem_id = public.get_user_escola_id()));
