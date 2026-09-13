@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Edit2, Trash2, Building2, Users, GraduationCap, ChevronRight, ArrowLeft, ArrowRightLeft } from 'lucide-react';
+import { Search, Edit2, Trash2, Building2, Users, GraduationCap, ChevronRight, ArrowLeft, ArrowRightLeft, KeyRound } from 'lucide-react';
 import RemanejarAlunoModal from '../../components/RemanejarAlunoModal';
 import NovoAlunoModal from '../../components/NovoAlunoModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
@@ -236,6 +236,14 @@ export default function TabAlunos() {
     }
   };
 
+  const handleResetSenhaAluno = async (aluno: AlunoRow) => {
+    if (!aluno.cpf) { showWarning('Cadastre o CPF antes de criar o acesso do aluno.'); return; }
+    const senha = gerarSenhaTemporaria();
+    const email = `${getMatriculaLogin(aluno.cpf)}@${ALUNO_EMAIL_DOMAIN}`;
+    const { data, error } = await supabase.functions.invoke('admin-create-user', { body: { action: 'reset-student-password', email, senha } });
+    if (error || data?.error) { showError(data?.error || error?.message || 'Não foi possível redefinir a senha.'); return; }
+    showSuccess(`Nova senha temporária de ${aluno.nome}: ${senha}. Anote-a agora; ela não será exibida novamente.`);
+  };
   const handleEditAluno = (aluno: AlunoRow) => {
     setAlunoParaEditar(aluno);
     setIsNovoAlunoModalOpen(true);
@@ -608,6 +616,7 @@ export default function TabAlunos() {
                                           </td>
                                           <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-1">
+                                              <button onClick={() => handleResetSenhaAluno(aluno)} className="p-2 text-slate-400 hover:text-violet-700 hover:bg-violet-50 rounded-lg transition-colors" title="Redefinir senha do portal"><KeyRound className="w-4 h-4" /></button>
                                               <button onClick={() => setAlunoParaRemanejar(aluno)} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100 transition-colors" title="Remanejar aluno">
                                                 <ArrowRightLeft className="w-4 h-4" /><span className="hidden xl:inline">Remanejar</span>
                                               </button>
@@ -713,6 +722,7 @@ export default function TabAlunos() {
                             </td>
                             <td className="px-6 py-4 text-right">
                               <div className="flex items-center justify-end gap-1">
+                                              <button onClick={() => handleResetSenhaAluno(aluno)} className="p-2 text-slate-400 hover:text-violet-700 hover:bg-violet-50 rounded-lg transition-colors" title="Redefinir senha do portal"><KeyRound className="w-4 h-4" /></button>
                                               <button onClick={() => setAlunoParaRemanejar(aluno)} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100 transition-colors" title="Remanejar aluno">
                                                 <ArrowRightLeft className="w-4 h-4" /><span className="hidden xl:inline">Remanejar</span>
                                               </button>
