@@ -45,24 +45,24 @@ export default function Layout() {
     }
 
     const hoje = new Date();
-    const proximaAula = new Date(hoje);
+    const ultimaAula = new Date(hoje);
     let encontrouAula = false;
     for (let deslocamento = 0; deslocamento <= 7; deslocamento += 1) {
       const candidata = new Date(hoje);
-      candidata.setDate(hoje.getDate() + deslocamento);
+      candidata.setDate(hoje.getDate() - deslocamento);
       if (diasComAula.includes(candidata.getDay())) {
-        proximaAula.setTime(candidata.getTime());
+        ultimaAula.setTime(candidata.getTime());
         encontrouAula = true;
-        if (deslocamento > 0) showInfo(`Não há aula hoje. Abrindo a frequência da próxima aula: ${candidata.toLocaleDateString('pt-BR')}.`);
+        if (deslocamento > 0) showInfo(`Não há aula hoje. Abrindo a última aula prevista: ${candidata.toLocaleDateString('pt-BR')}.`);
         break;
       }
     }
     if (!encontrouAula) {
-      showWarning('Não foi possível localizar um próximo dia de aula para esta turma.');
+      showWarning('Não foi possível localizar o último dia de aula para esta turma.');
       return;
     }
 
-    const data = `${proximaAula.getFullYear()}-${String(proximaAula.getMonth() + 1).padStart(2, '0')}-${String(proximaAula.getDate()).padStart(2, '0')}`;
+    const data = `${ultimaAula.getFullYear()}-${String(ultimaAula.getMonth() + 1).padStart(2, '0')}-${String(ultimaAula.getDate()).padStart(2, '0')}`;
     navigate(`/frequencia?date=${data}&turmaId=${encodeURIComponent(String(turmaAtiva.id))}`);
   };
   const navClass = ({ isActive }: { isActive: boolean }) => `dd-nav-item ${isActive ? 'dd-nav-item-active' : ''}`;
