@@ -227,6 +227,11 @@ export default function MinhaPrivacidade() {
       return;
     }
 
+    if (password === currentPassword) {
+      setPasswordError('A nova senha deve ser diferente da senha atual.');
+      return;
+    }
+
     const forcaError = validarForcaSenha(password);
     if (forcaError) {
       setPasswordError(forcaError);

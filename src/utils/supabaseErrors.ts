@@ -19,8 +19,11 @@ export function translateSupabaseError(errorMsg: string | undefined): string {
   if (code.includes('password should be at least 6 characters')) {
     return 'A senha deve conter no mínimo 6 caracteres.';
   }
-  if (code.includes('weak_password') || code.includes('password is too weak')) {
-    return 'Esta senha é muito fraca ou já foi exposta em vazamentos. Tente uma combinação mais forte.';
+  if (code.includes('weak_password') || code.includes('password is too weak') || code.includes('password is known to be leaked') || code.includes('password has been found in a data leak')) {
+    return 'Esta senha é muito fraca ou já foi exposta em vazamentos. Escolha uma senha mais forte e diferente.';
+  }
+  if (code.includes('same as the old password') || code.includes('different from the old password') || code.includes('same password')) {
+    return 'A nova senha deve ser diferente da senha atual.';
   }
   if (code.includes('password') && code.includes('confirmation') && code.includes('match')) {
     return 'As senhas não coincidem. Verifique e tente novamente.';
