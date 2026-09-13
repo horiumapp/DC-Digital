@@ -248,6 +248,7 @@ export default function TabAlunos() {
 
   const handleResetSenhaAluno = async (aluno: AlunoRow) => {
     if (!aluno.cpf) { showWarning('Cadastre o CPF antes de criar o acesso do aluno.'); return; }
+    if (!aluno.escola_id) { showError('Não foi possível identificar a escola do aluno.'); return; }
     const senha = gerarSenhaTemporaria();
     const email = `${getMatriculaLogin(aluno.cpf)}@${ALUNO_EMAIL_DOMAIN}`;
     const { data, error } = await supabase.functions.invoke('admin-create-user', { body: { action: 'reset-student-password', email, senha } });
@@ -255,6 +256,24 @@ export default function TabAlunos() {
       let message = data?.error || error?.message || 'Não foi possível redefinir a senha.';
       if (error && 'context' in error && error.context) {
         try { const response = await error.context.json(); message = response?.error || message; } catch { /* usa a mensagem padrão */ }
+      }
+
+      // Alunos antigos podem já ter CPF, mas não possuir conta no Auth. Neste caso,
+      // a mesma ação de "redefinir" conclui o cadastro da conta de acesso.
+      if (message === 'Conta de aluno não encontrada.') {
+        const { data: createData, error: createError } = await supabase.functions.invoke('admin-create-user', {
+          body: { nome: aluno.nome, email, senha, cargo: 'ALUNO', escola_id: aluno.escola_id },
+        });
+
+        if (!createError && !createData?.error) {
+          showSuccess(`Conta do portal criada para ${aluno.nome}. Senha temporária: ${senha}. Anote-a agora; ela não será exibida novamente.`);
+          return;
+        }
+
+        message = createData?.error || createError?.message || 'Não foi possível criar a conta do aluno.';
+        if (createError && 'context' in createError && createError.context) {
+          try { const response = await createError.context.json(); message = response?.error || message; } catch { /* usa a mensagem padrão */ }
+        }
       }
       showError(message);
       return;
