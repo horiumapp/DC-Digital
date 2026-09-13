@@ -183,7 +183,7 @@ export default function Diario() {
                     setCurrentMonth(obterMesValido(selectedPeriod));
                   }
                 }}
-                className="w-full border border-slate-300 dark:border-slate-600 rounded-xl text-[11px] sm:text-sm tracking-tight bg-white dark:bg-slate-700 dark:text-slate-100 px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] cursor-pointer font-bold text-[#0f2851]"
+                className="w-full border border-slate-300 dark:border-slate-600 rounded-xl text-[13px] sm:text-sm tracking-tight bg-white dark:bg-slate-700 dark:text-slate-100 px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] cursor-pointer font-bold text-[#0f2851]"
               >
                 {periodosVisiveis.map(p => {
                   const format = (d: string) => d.split('-').reverse().join('/');
