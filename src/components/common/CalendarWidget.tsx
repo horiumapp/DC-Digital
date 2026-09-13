@@ -124,7 +124,8 @@ export default function CalendarWidget({
       <div className="dd-calendar-grid grid grid-cols-7 border-l border-slate-200">
         {/* Weekday Headers */}
         {weekDays.map((day) => (
-          <div key={day} className="dd-calendar-weekday text-center py-4 text-sm font-semibold text-slate-800 border-b border-r border-slate-200">`n            <span className="dd-calendar-weekday-full">{day}</span><span className="dd-calendar-weekday-short">{day.slice(0, 3)}</span>
+          <div key={day} className="dd-calendar-weekday text-center py-4 text-sm font-semibold text-slate-800 border-b border-r border-slate-200">
+            <span className="dd-calendar-weekday-full">{day}</span><span className="dd-calendar-weekday-short">{day.slice(0, 3)}</span>
           </div>
         ))}
 
