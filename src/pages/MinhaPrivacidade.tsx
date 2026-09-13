@@ -448,7 +448,6 @@ export default function MinhaPrivacidade() {
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Senha Atual</label>
               <div className="relative">
                 <input type={showCurrentPassword ? 'text' : 'password'}
-                type="password"
                 required
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
@@ -472,7 +471,6 @@ export default function MinhaPrivacidade() {
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Nova Senha</label>
               <div className="relative">
                 <input type={showPassword ? 'text' : 'password'}
-                type="password"
                 required
                 minLength={8}
                 value={password}
@@ -497,7 +495,6 @@ export default function MinhaPrivacidade() {
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Confirmar Nova Senha</label>
               <div className="relative">
                 <input type={showConfirmPassword ? 'text' : 'password'}
-                type="password"
                 required
                 minLength={8}
                 value={confirmPassword}
