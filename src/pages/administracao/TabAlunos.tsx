@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Edit2, Trash2, Building2, Users, GraduationCap, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Search, Edit2, Trash2, Building2, Users, GraduationCap, ChevronRight, ArrowLeft, ArrowRightLeft } from 'lucide-react';
+import RemanejarAlunoModal from '../../components/RemanejarAlunoModal';
 import NovoAlunoModal from '../../components/NovoAlunoModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import { formatMatricula, getMatriculaLogin, formatCpfObscured, gerarSenhaTemporaria } from '../../utils/formatters';
@@ -47,6 +48,7 @@ export default function TabAlunos() {
   const [isNovoAlunoModalOpen, setIsNovoAlunoModalOpen] = useState(false);
   const [alunoParaEditar, setAlunoParaEditar] = useState<AlunoRow | null>(null);
   const [alunoParaExcluir, setAlunoParaExcluir] = useState<AlunoRow | null>(null);
+  const [alunoParaRemanejar, setAlunoParaRemanejar] = useState<AlunoRow | null>(null);
   const [alunos, setAlunos] = useState<AlunoRow[]>([]);
   const [escolas, setEscolas] = useState<EscolaItem[]>([]);
   const [selectedEscola, setSelectedEscola] = useState<EscolaItem | null>(null);
@@ -747,7 +749,7 @@ export default function TabAlunos() {
         fixedEscolaId={selectedEscola?.id}
       />
 
-      <ConfirmActionModal
+      <RemanejarAlunoModal aluno={alunoParaRemanejar} onClose={() => setAlunoParaRemanejar(null)} onSuccess={() => { fetchAlunos(); fetchEscolas(); }} />      <ConfirmActionModal
         isOpen={!!alunoParaExcluir}
         onClose={() => setAlunoParaExcluir(null)}
         onConfirm={confirmDeleteAluno}
