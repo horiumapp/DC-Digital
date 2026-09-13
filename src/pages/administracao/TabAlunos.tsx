@@ -5,11 +5,12 @@ import { Search, Edit2, Trash2, Building2, Users, GraduationCap, ChevronRight, A
 import RemanejarAlunoModal from '../../components/RemanejarAlunoModal';
 import NovoAlunoModal from '../../components/NovoAlunoModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
-import { formatMatricula, getMatriculaLogin, formatCpfObscured, gerarSenhaTemporaria } from '../../utils/formatters';
+import { formatMatricula, getMatriculaLogin, formatCpfObscured } from '../../utils/formatters';
 
 import { useToast } from '../../components/common/Toast';
 
 const ALUNO_EMAIL_DOMAIN = 'aluno.dcdigital.local';
+const ALUNO_SENHA_TEMPORARIA = '@aluno123';
 
 export interface AlunoRow {
   id: string;
@@ -174,7 +175,7 @@ export default function TabAlunos() {
           const pseudoEmail = `${cpfDigits}@${ALUNO_EMAIL_DOMAIN}`;
           const cpfAnterior = getMatriculaLogin(alunoParaEditar.cpf || '');
           if (cpfAnterior !== cpfDigits) {
-            const senhaTemporaria = gerarSenhaTemporaria();
+            const senhaTemporaria = ALUNO_SENHA_TEMPORARIA;
             const { data: authData, error: authError } = await supabase.functions.invoke('admin-create-user', {
               body: { nome: novoAluno.nome, email: pseudoEmail, senha: senhaTemporaria, cargo: 'ALUNO', escola_id: novoAluno.escola_id },
             });
@@ -212,8 +213,8 @@ export default function TabAlunos() {
           const pseudoEmail = `${cpfDigits}@${ALUNO_EMAIL_DOMAIN}`;
           
           try {
-            // FIX C2: senha temporária aleatória forte — nunca mais "Aluno2026"
-            const senhaTemporaria = gerarSenhaTemporaria();
+            // Senha temporária padrão do portal do aluno.
+            const senhaTemporaria = ALUNO_SENHA_TEMPORARIA;
             const { data: authData, error: authError } = await supabase.functions.invoke('admin-create-user', {
               body: {
                 nome: novoAluno.nome,
@@ -249,7 +250,7 @@ export default function TabAlunos() {
   const handleResetSenhaAluno = async (aluno: AlunoRow) => {
     if (!aluno.cpf) { showWarning('Cadastre o CPF antes de criar o acesso do aluno.'); return; }
     if (!aluno.escola_id) { showError('Não foi possível identificar a escola do aluno.'); return; }
-    const senha = gerarSenhaTemporaria();
+    const senha = ALUNO_SENHA_TEMPORARIA;
     const email = `${getMatriculaLogin(aluno.cpf)}@${ALUNO_EMAIL_DOMAIN}`;
     const { data, error } = await supabase.functions.invoke('admin-create-user', { body: { action: 'reset-student-password', email, senha } });
     if (error || data?.error) {
