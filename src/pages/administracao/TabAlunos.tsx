@@ -241,7 +241,14 @@ export default function TabAlunos() {
     const senha = gerarSenhaTemporaria();
     const email = `${getMatriculaLogin(aluno.cpf)}@${ALUNO_EMAIL_DOMAIN}`;
     const { data, error } = await supabase.functions.invoke('admin-create-user', { body: { action: 'reset-student-password', email, senha } });
-    if (error || data?.error) { showError(data?.error || error?.message || 'Não foi possível redefinir a senha.'); return; }
+    if (error || data?.error) {
+      let message = data?.error || error?.message || 'Não foi possível redefinir a senha.';
+      if (error && 'context' in error && error.context) {
+        try { const response = await error.context.json(); message = response?.error || message; } catch { /* usa a mensagem padrão */ }
+      }
+      showError(message);
+      return;
+    }
     showSuccess(`Nova senha temporária de ${aluno.nome}: ${senha}. Anote-a agora; ela não será exibida novamente.`);
   };
   const handleEditAluno = (aluno: AlunoRow) => {
