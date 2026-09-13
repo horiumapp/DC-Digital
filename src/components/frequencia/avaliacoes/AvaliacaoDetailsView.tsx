@@ -86,7 +86,6 @@ const AvaliacaoDetailsView = React.memo(function AvaliacaoDetailsView({
         Voltar para a listagem
       </button>
     </div>
-    </div>
   );
 });
 
