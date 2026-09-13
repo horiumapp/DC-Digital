@@ -370,8 +370,8 @@ export default function Turmas() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 relative">
       <div className="relative z-10">
-        <div className="px-6 py-4 flex items-center justify-between border-b border-blue-50/50 bg-white/50">
-          <div className="flex items-center gap-3">
+        <div className="px-4 py-4 sm:px-6 flex flex-col gap-3 border-b border-slate-200 bg-white/95 sm:flex-row sm:items-center sm:justify-between dark:bg-slate-900 dark:border-slate-800">
+          <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-xl font-semibold text-[#0f2851]">Turmas e Componentes</h1>
             <span className="bg-emerald-100 text-emerald-700 text-[12px] font-bold px-3 py-1 rounded-full border border-emerald-200">Ano: {APP_CONFIG.YEAR}</span>
           </div>
@@ -386,10 +386,10 @@ export default function Turmas() {
           )}
         </div>
 
-        <main className="px-6 pb-12">
-          <div className="bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden max-w-[1500px] mx-auto">
+        <main className="px-4 pb-12 sm:px-6">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden max-w-[1500px] mx-auto dark:bg-slate-900 dark:border-slate-800">
             {/* Info Strip */}
-            <div className="p-6 bg-blue-50/30 dark:bg-slate-800/50 grid grid-cols-1 md:grid-cols-3 gap-6 border-b border-slate-100 dark:border-slate-800">
+            <div className="p-4 sm:p-6 bg-blue-50/30 dark:bg-slate-800/50 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-[#eef2ff] dark:bg-slate-700 rounded-full flex items-center justify-center text-[#0f2851] dark:text-blue-400">
                   <GraduationCap className="w-6 h-6" />
@@ -426,7 +426,7 @@ export default function Turmas() {
             </div>
 
             {/* Search Bar */}
-            <div className="px-6 py-4 border-b border-slate-100">
+            <div className="px-4 py-4 sm:px-6 border-b border-slate-100 dark:border-slate-800">
               <div className="relative max-w-full">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Search className="h-5 w-5 text-slate-400" />

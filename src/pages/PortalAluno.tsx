@@ -314,7 +314,7 @@ export default function PortalAluno() {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <header className="bg-[#0f2851] text-white shadow-lg">
-        <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
               <GraduationCap className="w-6 h-6" />
@@ -349,11 +349,11 @@ export default function PortalAluno() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+      <main className="max-w-5xl mx-auto px-4 py-6 sm:px-6 sm:py-8 space-y-5 sm:space-y-6">
         {/* Info Card */}
         {alunoData && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm sm:p-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-1">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aluno</span>
                 <p className="text-sm font-bold text-slate-800">{alunoData.nome}</p>
