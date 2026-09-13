@@ -332,8 +332,8 @@ export default function RelatorioFrequencia() {
           </div>
         </div>
 
-        <main className="p-8 flex flex-col items-center gap-8">
-          <div className="w-full max-w-[1400px] bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+        <main className="px-4 py-6 sm:p-8 flex flex-col items-center gap-6 sm:gap-8">
+          <div className="w-full max-w-[1400px] bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="p-6 border-b border-slate-100">
               <h2 className="text-lg font-bold text-[#0f2851]">Pesquisa</h2>
             </div>
@@ -398,7 +398,7 @@ export default function RelatorioFrequencia() {
             </div>
           </div>
 
-          <div className="w-full max-w-[1400px] bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+          <div className="w-full max-w-[1400px] bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="flex border-b border-slate-100 bg-[#f8fafc]">
               {['Alunos', 'Com faltas importadas', 'Saíram da Turma', 'Com Faltas Justificadas'].map(tab => (
                 <button

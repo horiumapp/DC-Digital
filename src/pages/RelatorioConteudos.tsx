@@ -317,8 +317,8 @@ export default function RelatorioConteudos() {
         </div>
       </div>
 
-      <main className="p-8 flex justify-center">
-        <div className="w-full max-w-[1400px] space-y-8">
+      <main className="px-4 py-6 sm:p-8 flex justify-center">
+        <div className="w-full max-w-[1400px] space-y-6 sm:space-y-8">
 
           {/* Main Card: Turmas */}
           <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">

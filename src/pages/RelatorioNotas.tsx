@@ -267,8 +267,8 @@ export default function RelatorioNotas() {
       </div>
 
       {/* MainContent */}
-      <main className="p-8 flex justify-center">
-        <div className="w-full max-w-7xl bg-white rounded-xl shadow-lg border border-slate-200 min-h-[600px] overflow-hidden">
+      <main className="px-4 py-6 sm:p-8 flex justify-center">
+        <div className="w-full max-w-7xl bg-white rounded-xl shadow-sm border border-slate-200 min-h-[600px] overflow-hidden">
           {/* Card Header Area */}
           <div className="p-6 pb-0 flex justify-between items-start">
             <h3 className="text-xl font-semibold text-[#0f2851]">Pesquisa</h3>

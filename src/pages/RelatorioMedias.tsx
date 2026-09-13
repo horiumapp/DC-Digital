@@ -245,7 +245,7 @@ export default function RelatorioMedias() {
         </section>
 
       {/* MainContent */}
-      <main className="p-6 max-w-[1400px] mx-auto">
+      <main className="mx-auto max-w-[1400px] px-4 py-6 sm:p-6">
         {/* SearchCard */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6">
           <div className="p-6">

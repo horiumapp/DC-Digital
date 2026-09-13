@@ -280,13 +280,13 @@ export default function MinhaPrivacidade() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 p-6 md:p-12 relative flex flex-col justify-between">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-4 py-6 sm:p-8 lg:p-12 relative flex flex-col justify-between">
       <Background />
       <div className="absolute inset-0 bg-gradient-to-b from-white/80 to-slate-50/40 dark:from-slate-900/80 dark:to-slate-900/40 pointer-events-none" />
 
       <div className="max-w-4xl mx-auto w-full relative z-10 mb-8 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+        <div className="flex flex-col items-start justify-between gap-4 bg-white dark:bg-slate-800 p-5 sm:flex-row sm:items-center sm:p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex items-center gap-4">
             <Link
               to={backUrl}
@@ -313,7 +313,7 @@ export default function MinhaPrivacidade() {
         {/* Grid de Seções */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Dados Pessoais Cadastrados */}
-          <div className="md:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 space-y-4">
+          <div className="md:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
             <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
               <User className="w-5 h-5 text-[#0f2851] dark:text-blue-400" />
               Dados Cadastrados no Sistema
@@ -367,7 +367,7 @@ export default function MinhaPrivacidade() {
           </div>
 
           {/* Ações Rápidas de Privacidade */}
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-between gap-6">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-between gap-6">
             <div className="space-y-4">
               <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
                 <ShieldCheck className="w-5 h-5 text-[#0f2851] dark:text-blue-400" />
@@ -414,7 +414,7 @@ export default function MinhaPrivacidade() {
         </div>
 
         {/* Alterar Senha (Segurança) */}
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 space-y-4">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
           <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
             <KeyRound className="w-5 h-5 text-[#0f2851] dark:text-blue-400" />
             Alterar Senha de Acesso
@@ -497,7 +497,7 @@ export default function MinhaPrivacidade() {
         </div>
 
         {/* Gerenciamento de Consentimentos */}
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 space-y-4">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
           <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
             <Shield className="w-5 h-5 text-[#0f2851] dark:text-blue-400" />
             Controle de Consentimentos
