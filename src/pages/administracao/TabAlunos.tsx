@@ -168,14 +168,24 @@ export default function TabAlunos() {
       if (error) {
         showError("Erro ao editar aluno: " + error.message);
       } else {
-        // Sincronizar escola_id na tabela usuarios (para transferências)
+        // Ao incluir ou alterar CPF, cria a conta do portal se ela ainda não existia.
         if (novoAluno.cpf) {
           const cpfDigits = getMatriculaLogin(novoAluno.cpf);
           const pseudoEmail = `${cpfDigits}@${ALUNO_EMAIL_DOMAIN}`;
-          await supabase
-            .from('usuarios')
-            .update({ escola_id: novoAluno.escola_id })
-            .eq('email', pseudoEmail);
+          const cpfAnterior = getMatriculaLogin(alunoParaEditar.cpf || '');
+          if (cpfAnterior !== cpfDigits) {
+            const senhaTemporaria = gerarSenhaTemporaria();
+            const { data: authData, error: authError } = await supabase.functions.invoke('admin-create-user', {
+              body: { nome: novoAluno.nome, email: pseudoEmail, senha: senhaTemporaria, cargo: 'ALUNO', escola_id: novoAluno.escola_id },
+            });
+            if (authError || authData?.error) {
+              showWarning(`Dados atualizados, mas a conta do portal não foi criada: ${authData?.error || authError?.message || 'erro desconhecido'}`);
+            } else {
+              showSuccess(`Conta do portal criada. Senha temporária: ${senhaTemporaria}`);
+            }
+          } else {
+            await supabase.from('usuarios').update({ escola_id: novoAluno.escola_id }).eq('email', pseudoEmail);
+          }
         }
         
         fetchAlunos();
