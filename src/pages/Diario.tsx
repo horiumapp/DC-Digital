@@ -189,11 +189,16 @@ export default function Diario() {
                   const format = (d: string) => d.split('-').reverse().join('/');
                   return (
                     <option key={p.id} value={p.id}>
-                      {p.nome} ({format(p.dataInicio)} - {format(p.dataFim)})
+                      {p.nome} · {format(p.dataInicio).slice(0, 5)} a {format(p.dataFim).slice(0, 5)}
                     </option>
                   );
                 })}
               </select>
+              {periodoSelecionado && (
+                <p className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-300" aria-live="polite">
+                  De {periodoSelecionado.dataInicio.split('-').reverse().join('/')} até {periodoSelecionado.dataFim.split('-').reverse().join('/')}
+                </p>
+              )}
             </div>
             <div className="flex-1">
               <label className="text-sm font-bold text-slate-500 dark:text-slate-300 mb-1 block">Legenda</label>
