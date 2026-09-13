@@ -54,7 +54,9 @@ BEGIN
   VALUES (v_aluno.id, v_aluno.escola_id, v_aluno.turma_id, v_destino.escola_id, v_destino.id, COALESCE(p_data_transferencia, current_date), nullif(trim(p_motivo), ''))
   RETURNING id INTO v_transferencia_id;
   UPDATE public.alunos SET escola_id = v_destino.escola_id, turma_id = v_destino.id WHERE id = v_aluno.id;
-  UPDATE public.usuarios SET escola_id = v_destino.escola_id WHERE id = v_aluno.id;
+  UPDATE public.usuarios SET escola_id = v_destino.escola_id
+  WHERE v_aluno.cpf IS NOT NULL
+    AND email = regexp_replace(v_aluno.cpf, '\D', '', 'g') || '@aluno.dcdigital.local';
   RETURN v_transferencia_id;
 END;
 $$;
