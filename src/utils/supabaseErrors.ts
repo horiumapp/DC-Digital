@@ -1,7 +1,7 @@
 export function translateSupabaseError(errorOrMsg: unknown): string {
   if (!errorOrMsg) return 'Ocorreu um erro inesperado.';
 
-  let raw = '';
+  let raw: string;
   if (typeof errorOrMsg === 'string') {
     raw = errorOrMsg;
   } else if (typeof errorOrMsg === 'object' && errorOrMsg !== null) {
