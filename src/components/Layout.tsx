@@ -6,6 +6,7 @@ import ConnectionStatus from './common/ConnectionStatus';
 import PrivacyLinksFooter from './PrivacyLinksFooter';
 import { useAuth } from '../contexts/AuthContext';
 import { useTurma } from '../contexts/TurmaContext';
+import { useToast } from './common/Toast';
 import { useOffline } from '../contexts/OfflineContext';
 import { ADMIN_ROLES } from '../constants/authConstants';
 
@@ -20,7 +21,8 @@ const reports: Item[] = [
 export default function Layout() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { turmaAtiva } = useTurma();
+  const { turmaAtiva, horarioTurma } = useTurma();
+  const { showInfo, showWarning } = useToast();
   const { deadLetterCount } = useOffline();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -28,11 +30,39 @@ export default function Layout() {
   const close = () => setMenuOpen(false);
   const openQuickAttendance = () => {
     if (!turmaAtiva) {
+      showInfo('Selecione uma turma antes de registrar a frequência.');
       navigate('/turmas');
       return;
     }
+
+    const diasComAula = [...new Set(
+      horarioTurma.length > 0 ? horarioTurma.map(horario => Number(horario.dia_semana)) : turmaAtiva.diasDeAula
+    )];
+    if (diasComAula.length === 0) {
+      showWarning('Não há horários cadastrados para esta turma. Cadastre os horários antes de lançar a frequência.');
+      setScheduleOpen(true);
+      return;
+    }
+
     const hoje = new Date();
-    const data = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+    const proximaAula = new Date(hoje);
+    let encontrouAula = false;
+    for (let deslocamento = 0; deslocamento <= 7; deslocamento += 1) {
+      const candidata = new Date(hoje);
+      candidata.setDate(hoje.getDate() + deslocamento);
+      if (diasComAula.includes(candidata.getDay())) {
+        proximaAula.setTime(candidata.getTime());
+        encontrouAula = true;
+        if (deslocamento > 0) showInfo(`Não há aula hoje. Abrindo a frequência da próxima aula: ${candidata.toLocaleDateString('pt-BR')}.`);
+        break;
+      }
+    }
+    if (!encontrouAula) {
+      showWarning('Não foi possível localizar um próximo dia de aula para esta turma.');
+      return;
+    }
+
+    const data = `${proximaAula.getFullYear()}-${String(proximaAula.getMonth() + 1).padStart(2, '0')}-${String(proximaAula.getDate()).padStart(2, '0')}`;
     navigate(`/frequencia?date=${data}&turmaId=${encodeURIComponent(String(turmaAtiva.id))}`);
   };
   const navClass = ({ isActive }: { isActive: boolean }) => `dd-nav-item ${isActive ? 'dd-nav-item-active' : ''}`;
