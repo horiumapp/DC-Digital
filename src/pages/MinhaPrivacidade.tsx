@@ -446,7 +446,7 @@ export default function MinhaPrivacidade() {
           <form onSubmit={handlePasswordChange} className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl pt-2">
             <div className="space-y-1 sm:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Senha Atual</label>
-              <div className="relative">
+              <div className="relative max-w-sm">
                 <input type={showCurrentPassword ? 'text' : 'password'}
                 required
                 value={currentPassword}
