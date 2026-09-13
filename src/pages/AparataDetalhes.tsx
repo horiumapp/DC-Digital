@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
 import { useAuth } from '../contexts/AuthContext';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
+import { supabase } from '../lib/supabase';
 import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
 import { APP_CONFIG, getBimestreAtual } from '../config/appConfig';
 
@@ -27,8 +28,15 @@ export default function AparataDetalhes() {
       if (!turmaAtiva) return;
       try {
         const rawId = turmaAtiva.id.toString().split('||')[0];
-        const frequencias = await OfflineTurmaService.fetchAllFrequencias(rawId, turmaAtiva.componente);
+        const frequenciasAtuais = await OfflineTurmaService.fetchAllFrequencias(rawId, turmaAtiva.componente);
         const alunosDaTurma = new Set(alunos.map(aluno => String(aluno.id)));
+        // Histórico permanece na turma de origem; para o aparata, consolidamos por aluno.
+        const { data: frequenciasHistoricas } = await supabase
+          .from('frequencias')
+          .select('data, aluno_id, status, disciplina')
+          .in('aluno_id', [...alunosDaTurma])
+          .eq('disciplina', turmaAtiva.componente);
+        const frequencias = frequenciasHistoricas || frequenciasAtuais;
         const map: Record<string, number> = {};
         const pStart = new Date(bimestreInfo.dataInicio + 'T00:00:00');
         const pEnd = new Date(bimestreInfo.dataFim + 'T23:59:59');
