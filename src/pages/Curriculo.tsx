@@ -237,13 +237,13 @@ export default function Curriculo() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+    <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-8 sm:py-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-[#0f2851] tracking-tight">Gestão Curricular (BNCC)</h1>
           <p className="text-slate-500 mt-1">Configure o referencial de Conteúdo ministrado.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={handleExport}
             disabled={unidades.length === 0}
@@ -266,7 +266,7 @@ export default function Curriculo() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Formulário de Cadastro */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-6 space-y-6 sticky top-24">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-6 lg:sticky lg:top-24 dark:bg-slate-900 dark:border-slate-800">
             <div className="flex items-center gap-3 text-[#0f2851]">
               <div className="p-2 bg-blue-50 rounded-xl">
                 {editingId ? <Pencil className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
@@ -387,7 +387,7 @@ export default function Curriculo() {
 
         {/* Listagem e Filtros */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-4 flex flex-wrap items-center gap-4">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-wrap items-center gap-3 dark:bg-slate-900 dark:border-slate-800">
             <div className="flex items-center gap-2 text-slate-400 px-2 border-r border-slate-100">
               <Filter className="w-4 h-4" />
               <span className="text-xs font-bold uppercase">Filtros</span>
@@ -452,7 +452,7 @@ export default function Curriculo() {
               </div>
             ) : (
               unidades.map(unidade => (
-                <div key={unidade.id} className="group bg-white rounded-3xl p-6 border border-slate-100 hover:border-blue-100 hover:shadow-xl hover:shadow-blue-900/5 transition-all">
+                <div key={unidade.id} className="group bg-white rounded-xl p-5 border border-slate-200 hover:border-blue-200 hover:shadow-sm transition-all dark:bg-slate-900 dark:border-slate-800">
                   <div className="flex items-start justify-between">
                     <div className="space-y-3 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
