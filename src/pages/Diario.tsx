@@ -183,22 +183,18 @@ export default function Diario() {
                     setCurrentMonth(obterMesValido(selectedPeriod));
                   }
                 }}
-                className="w-full border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-700 dark:text-slate-100 px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] cursor-pointer font-bold text-[#0f2851]"
+                className="w-full border border-slate-300 dark:border-slate-600 rounded-xl text-[11px] sm:text-sm tracking-tight bg-white dark:bg-slate-700 dark:text-slate-100 px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] cursor-pointer font-bold text-[#0f2851]"
               >
                 {periodosVisiveis.map(p => {
                   const format = (d: string) => d.split('-').reverse().join('/');
                   return (
                     <option key={p.id} value={p.id}>
-                      {p.nome} · {format(p.dataInicio).slice(0, 5)} a {format(p.dataFim).slice(0, 5)}
+                      {p.nome} ({format(p.dataInicio)} - {format(p.dataFim)})
                     </option>
                   );
                 })}
               </select>
-              {periodoSelecionado && (
-                <p className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-300" aria-live="polite">
-                  De {periodoSelecionado.dataInicio.split('-').reverse().join('/')} até {periodoSelecionado.dataFim.split('-').reverse().join('/')}
-                </p>
-              )}
+
             </div>
             <div className="flex-1">
               <label className="text-sm font-bold text-slate-500 dark:text-slate-300 mb-1 block">Legenda</label>
