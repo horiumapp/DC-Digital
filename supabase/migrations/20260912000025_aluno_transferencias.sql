@@ -44,6 +44,9 @@ BEGIN
   SELECT * INTO v_destino FROM public.turmas WHERE id = p_turma_destino_id;
   IF NOT FOUND THEN RAISE EXCEPTION 'Turma de destino não encontrada'; END IF;
   IF v_origem.id = v_destino.id THEN RAISE EXCEPTION 'A turma de destino deve ser diferente da turma atual'; END IF;
+  IF v_role IN ('GESTOR', 'SECRETARIO') AND (v_destino.escola_id <> v_aluno.escola_id OR v_destino.escola_id <> public.get_user_escola_id()) THEN
+    RAISE EXCEPTION 'Gestor e Secretário só podem remanejar alunos entre turmas da própria escola';
+  END IF;
   IF v_origem.ano_letivo <> v_destino.ano_letivo THEN RAISE EXCEPTION 'A turma de destino deve pertencer ao mesmo ano letivo'; END IF;
   v_serie_origem := substring(v_origem.nome FROM '^\s*([0-9]+[º°ª]?)');
   v_serie_destino := substring(v_destino.nome FROM '^\s*([0-9]+[º°ª]?)');
