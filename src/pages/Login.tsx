@@ -18,7 +18,7 @@ export default function Login() {
   const successMessage = location.state?.successMessage;
   const { user } = useAuth();
 
-  // Redireciona automaticamente se o usuÃ¡rio jÃ¡ estiver logado
+  // Redireciona automaticamente se o usuário já estiver logado
   useEffect(() => {
     if (user) {
       navigate(user.role === 'ALUNO' ? '/portal-aluno' : '/turmas', { replace: true });
@@ -29,11 +29,11 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [loginMode, setLoginMode] = useState<'servidor' | 'aluno'>('servidor');
 
-  // UX LOCAL (nÃ£o Ã© defesa de seguranÃ§a real): contador de tentativas persistido em
-  // localStorage para exibir o timer de lockout ao usuÃ¡rio mesmo trocando de aba.
-  // A proteÃ§Ã£o real vem do rate limiting server-side do Supabase Auth.
-  // NOTA: este valor pode ser apagado via DevTools â€” intencionalmente aceitÃ¡vel,
-  // pois o bloqueio real estÃ¡ no servidor.
+  // UX LOCAL (não é defesa de segurança real): contador de tentativas persistido em
+  // localStorage para exibir o timer de lockout ao usuário mesmo trocando de aba.
+  // A proteção real vem do rate limiting server-side do Supabase Auth.
+  // NOTA: este valor pode ser apagado via DevTools — intencionalmente aceitável,
+  // pois o bloqueio real está no servidor.
   const [failedAttempts, setFailedAttempts] = useState(() => {
     const stored = localStorage.getItem('dc_failed_attempts');
     return stored ? parseInt(stored, 10) : 0;
@@ -87,7 +87,7 @@ export default function Login() {
 
     if (showCaptcha) {
       if (!captcha.validateCaptcha()) {
-        setError('CÃ³digo de verificaÃ§Ã£o (Captcha) incorreto.');
+        setError('Código de verificação (Captcha) incorreto.');
         captcha.generateNewCaptcha();
         return;
       }
@@ -103,13 +103,13 @@ export default function Login() {
     if (loginMode === 'aluno') {
       const matricula = (formData.get('matricula') as string).trim().replace(/\D/g, '');
       if (!matricula || matricula.length !== 11) {
-        setError('Informe o CPF completo (11 dÃ­gitos).');
+        setError('Informe o CPF completo (11 dígitos).');
         setIsLoading(false);
         return;
       }
       // FIX #8: Validar CPF matematicamente antes de enviar ao servidor
       if (!validarCPF(matricula)) {
-        setError('CPF invÃ¡lido. Verifique os dÃ­gitos informados.');
+        setError('CPF inválido. Verifique os dígitos informados.');
         setIsLoading(false);
         return;
       }
@@ -140,7 +140,7 @@ export default function Login() {
       localStorage.setItem('dc_failed_attempts', '0');
       localStorage.removeItem('dc_lockout_until');
 
-      // Redirecionar baseado na role real do usuÃ¡rio, ou fallback para o loginMode
+      // Redirecionar baseado na role real do usuário, ou fallback para o loginMode
       const role = signInData?.user?.app_metadata?.role;
       if (role === 'ALUNO') {
         navigate('/portal-aluno');
@@ -171,7 +171,7 @@ export default function Login() {
           captcha.generateNewCaptcha();
         }
         if (loginMode === 'aluno' && errMsg.includes('Invalid login')) {
-          setError('MatrÃ­cula ou senha incorreta. Verifique seus dados.');
+          setError('Matrícula ou senha incorreta. Verifique seus dados.');
         } else {
           setError(translateSupabaseError(errMsg));
         }
@@ -190,9 +190,9 @@ export default function Login() {
         <section className="dd-auth-card bg-white p-8 md:p-10 border rounded-2xl">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-6">
-              <img src="/logo.png" alt="Logo DiÃ¡rio Digital" className="h-20 w-auto object-contain" />
+              <img src="/logo.png" alt="Logo Diário Digital" className="h-20 w-auto object-contain" />
             </div>
-            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">DiÃ¡rio Digital</h1>
+            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Diário Digital</h1>
             <p className="text-slate-500 mt-2 text-sm">Entre com suas credenciais de acesso</p>
           </div>
 
@@ -252,7 +252,7 @@ export default function Login() {
               </div>
             ) : (
               <div className="space-y-2">
-                <label htmlFor="matricula" className="block text-sm font-bold text-slate-700 uppercase tracking-wide">MatrÃ­cula do Aluno</label>
+                <label htmlFor="matricula" className="block text-sm font-bold text-slate-700 uppercase tracking-wide">Matrícula do Aluno</label>
                 <input 
                   type="text" 
                   id="matricula" 
@@ -263,7 +263,7 @@ export default function Login() {
                   autoComplete="username"
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30"
                 />
-                <p className="text-[10px] text-slate-400 font-medium">Digite os 11 dÃ­gitos da MatrÃ­cula para acessar.</p>
+                <p className="text-[10px] text-slate-400 font-medium">Digite os 11 dígitos da Matrícula para acessar.</p>
               </div>
             )}
 
@@ -273,7 +273,7 @@ export default function Login() {
                 type="password" 
                 id="password" 
                 name="password" 
-                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" 
+                placeholder="••••••••" 
                 required 
                 minLength={8}
                 autoComplete="current-password"
@@ -294,30 +294,30 @@ export default function Login() {
             {showCaptcha && (
               <div className="space-y-2 border border-slate-100 p-4 rounded-xl bg-slate-50/50">
                 <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide">
-                  CÃ³digo de VerificaÃ§Ã£o
+                  Código de Verificação
                 </label>
                 <div className="flex gap-3 items-center">
                   <div 
                     onClick={captcha.generateNewCaptcha}
                     className="cursor-pointer select-none bg-slate-200 text-slate-700 px-4 py-2.5 rounded-lg font-mono font-bold tracking-widest text-lg border border-slate-300 shadow-inner hover:bg-slate-300 transition-all flex items-center justify-center min-w-[80px]"
-                    title="Clique para gerar outro cÃ³digo"
+                    title="Clique para gerar outro código"
                   >
                     {captcha.generatedCaptcha}
                   </div>
                   <input
                     type="text"
                     required
-                    placeholder="Digite o cÃ³digo"
+                    placeholder="Digite o código"
                     value={captcha.captchaInput}
                     onChange={(e) => captcha.setCaptchaInput(e.target.value)}
                     className="flex-1 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-white"
                   />
                 </div>
                 <p className="text-[10px] text-slate-400 font-medium">
-                  Clique no cÃ³digo cinza se precisar recarregÃ¡-lo.
+                  Clique no código cinza se precisar recarregá-lo.
                 </p>
                 {captcha.captchaError && (
-                  <p className="text-xs text-red-600 font-bold mt-1">CÃ³digo incorreto. Tente novamente.</p>
+                  <p className="text-xs text-red-600 font-bold mt-1">Código incorreto. Tente novamente.</p>
                 )}
               </div>
             )}
