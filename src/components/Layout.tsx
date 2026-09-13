@@ -9,6 +9,7 @@ import { useTurma } from '../contexts/TurmaContext';
 import { useToast } from './common/Toast';
 import { useOffline } from '../contexts/OfflineContext';
 import { ADMIN_ROLES } from '../constants/authConstants';
+import { APP_CONFIG } from '../config/appConfig';
 
 type Item = { label: string; to: string; icon: typeof Home; end?: boolean };
 const reports: Item[] = [
@@ -21,7 +22,7 @@ const reports: Item[] = [
 export default function Layout() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { turmaAtiva, horarioTurma } = useTurma();
+  const { turmaAtiva, horarioTurma, verificarPeriodoFechado } = useTurma();
   const { showInfo, showWarning } = useToast();
   const { deadLetterCount } = useOffline();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -45,24 +46,43 @@ export default function Layout() {
     }
 
     const hoje = new Date();
-    const ultimaAula = new Date(hoje);
+    hoje.setHours(23, 59, 59, 999);
+    const bimestres = APP_CONFIG.PERIODOS.filter(periodo => periodo.id.includes('BIMESTRE'));
+    const periodosDisponiveis = [] as typeof bimestres;
+    for (let indice = 0; indice < bimestres.length; indice += 1) {
+      const periodo = bimestres[indice];
+      const [ano, mes, dia] = periodo.dataInicio.split('-').map(Number);
+      if (new Date(ano, mes - 1, dia) > hoje) break;
+      if (indice > 0 && !verificarPeriodoFechado(bimestres[indice - 1].id)) break;
+      periodosDisponiveis.push(periodo);
+    }
+    const periodoAberto = [...periodosDisponiveis].reverse().find(periodo => !verificarPeriodoFechado(periodo.id));
+    if (!periodoAberto) {
+      showWarning('Não há bimestre aberto para esta turma.');
+      return;
+    }
+
+    const [anoInicio, mesInicio, diaInicio] = periodoAberto.dataInicio.split('-').map(Number);
+    const [anoFim, mesFim, diaFim] = periodoAberto.dataFim.split('-').map(Number);
+    const inicioPeriodo = new Date(anoInicio, mesInicio - 1, diaInicio);
+    const fimPeriodo = new Date(anoFim, mesFim - 1, diaFim, 23, 59, 59, 999);
+    const limiteBusca = hoje < fimPeriodo ? hoje : fimPeriodo;
+    const ultimaAula = new Date(limiteBusca);
     let encontrouAula = false;
-    for (let deslocamento = 0; deslocamento <= 7; deslocamento += 1) {
-      const candidata = new Date(hoje);
-      candidata.setDate(hoje.getDate() - deslocamento);
+    for (let candidata = new Date(limiteBusca); candidata >= inicioPeriodo; candidata.setDate(candidata.getDate() - 1)) {
       if (diasComAula.includes(candidata.getDay())) {
         ultimaAula.setTime(candidata.getTime());
         encontrouAula = true;
-        if (deslocamento > 0) showInfo(`Não há aula hoje. Abrindo a última aula prevista: ${candidata.toLocaleDateString('pt-BR')}.`);
         break;
       }
     }
     if (!encontrouAula) {
-      showWarning('Não foi possível localizar o último dia de aula para esta turma.');
+      showWarning(`Não há dia de aula no período ${periodoAberto.nome} para esta turma.`);
       return;
     }
 
     const data = `${ultimaAula.getFullYear()}-${String(ultimaAula.getMonth() + 1).padStart(2, '0')}-${String(ultimaAula.getDate()).padStart(2, '0')}`;
+    showInfo(`Abrindo a última aula do ${periodoAberto.nome}: ${ultimaAula.toLocaleDateString('pt-BR')}.`);
     navigate(`/frequencia?date=${data}&turmaId=${encodeURIComponent(String(turmaAtiva.id))}`);
   };
   const navClass = ({ isActive }: { isActive: boolean }) => `dd-nav-item ${isActive ? 'dd-nav-item-active' : ''}`;
