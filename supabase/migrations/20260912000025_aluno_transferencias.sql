@@ -60,6 +60,22 @@ BEGIN
   RETURN v_t.id;
 END $$;
 
+
+CREATE OR REPLACE FUNCTION public.remanejar_aluno(p_aluno_id uuid, p_turma_destino_id uuid, p_motivo text DEFAULT NULL)
+RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE v_aluno public.alunos%ROWTYPE; v_origem public.turmas%ROWTYPE; v_destino public.turmas%ROWTYPE; v_role text:=public.get_user_role(); v_id uuid;
+BEGIN
+  IF v_role NOT IN ('ADMIN','GESTOR','SECRETARIO') THEN RAISE EXCEPTION 'Sem permissão para remanejar alunos'; END IF;
+  SELECT * INTO v_aluno FROM public.alunos WHERE id=p_aluno_id FOR UPDATE; IF NOT FOUND OR v_aluno.turma_id IS NULL THEN RAISE EXCEPTION 'Aluno sem matrícula ativa'; END IF;
+  SELECT * INTO v_origem FROM public.turmas WHERE id=v_aluno.turma_id; SELECT * INTO v_destino FROM public.turmas WHERE id=p_turma_destino_id;
+  IF NOT FOUND OR v_origem.id=v_destino.id THEN RAISE EXCEPTION 'Selecione uma turma de destino diferente'; END IF;
+  IF v_role IN ('GESTOR','SECRETARIO') AND v_origem.escola_id <> public.get_user_escola_id() THEN RAISE EXCEPTION 'Você só pode remanejar alunos da própria escola'; END IF;
+  IF v_origem.escola_id <> v_destino.escola_id OR v_origem.ano_letivo <> v_destino.ano_letivo OR public.serie_da_turma(v_origem.id) IS NULL OR public.serie_da_turma(v_origem.id) <> public.serie_da_turma(v_destino.id) THEN RAISE EXCEPTION 'O remanejamento exige turma da mesma escola, série e ano letivo'; END IF;
+  INSERT INTO public.aluno_transferencias(aluno_id,escola_origem_id,turma_origem_id,escola_destino_id,turma_destino_id,data_transferencia,motivo,status)
+  VALUES(v_aluno.id,v_origem.escola_id,v_origem.id,v_destino.escola_id,v_destino.id,current_date,nullif(trim(p_motivo),''),'RECEBIDA') RETURNING id INTO v_id;
+  UPDATE public.alunos SET turma_id=v_destino.id WHERE id=v_aluno.id; RETURN v_id;
+END $$;
+GRANT EXECUTE ON FUNCTION public.remanejar_aluno(uuid,uuid,text) TO authenticated;
 CREATE POLICY "transferencias_historico" ON public.aluno_transferencias FOR SELECT TO authenticated USING (
   public.get_user_role()='ADMIN' OR (public.get_user_role()='SECRETARIO' AND (escola_origem_id=public.get_user_escola_id() OR escola_destino_id=public.get_user_escola_id()))
 );
