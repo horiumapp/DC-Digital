@@ -15,8 +15,8 @@ const TurmaHeaderInfo = React.memo(function TurmaHeaderInfo({ turmaAtiva }: Turm
         </div>
         <div>
           <p className="text-xs font-bold text-slate-400 dark:text-slate-300 uppercase">Professor</p>
-          <p className="text-sm font-bold text-slate-800 dark:text-slate-100" title={turmaAtiva.professor}>
-            {turmaAtiva.professor.length > 20 ? turmaAtiva.professor.substring(0, 18) + '...' : turmaAtiva.professor}
+          <p className="text-sm font-bold text-slate-800 dark:text-slate-100" title={turmaAtiva.professor.toUpperCase()}>
+            {(turmaAtiva.professor.length > 20 ? turmaAtiva.professor.substring(0, 18) + '...' : turmaAtiva.professor).toUpperCase()}
           </p>
         </div>
       </div>
@@ -37,7 +37,7 @@ const TurmaHeaderInfo = React.memo(function TurmaHeaderInfo({ turmaAtiva }: Turm
         </div>
         <div>
           <p className="text-xs font-bold text-slate-400 dark:text-slate-300 uppercase">Turno</p>
-          <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{turmaAtiva.turno}</p>
+          <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{turmaAtiva.turno?.toUpperCase()}</p>
         </div>
       </div>
       
