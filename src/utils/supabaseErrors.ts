@@ -1,7 +1,17 @@
-export function translateSupabaseError(errorMsg: string | undefined): string {
-  if (!errorMsg) return 'Ocorreu um erro inesperado.';
+export function translateSupabaseError(errorOrMsg: unknown): string {
+  if (!errorOrMsg) return 'Ocorreu um erro inesperado.';
 
-  const code = errorMsg.toLowerCase();
+  let raw = '';
+  if (typeof errorOrMsg === 'string') {
+    raw = errorOrMsg;
+  } else if (typeof errorOrMsg === 'object' && errorOrMsg !== null) {
+    const errObj = errorOrMsg as { message?: string; code?: string; error_code?: string };
+    raw = [errObj.code, errObj.error_code, errObj.message].filter(Boolean).join(' ');
+  } else {
+    raw = String(errorOrMsg);
+  }
+
+  const code = raw.toLowerCase();
 
   // ---- Rate Limiting ----
   if (
@@ -12,21 +22,50 @@ export function translateSupabaseError(errorMsg: string | undefined): string {
     return 'Limite de tentativas excedido. Aguarde alguns minutos antes de tentar novamente.';
   }
 
-  // ---- Cadastro ----
-  if (code.includes('user already registered') || code.includes('already been registered')) {
-    return 'Este e-mail já está cadastrado no sistema. Tente fazer o login.';
+  // ---- Senha Atual & Alteração de Senha ----
+  if (
+    code.includes('current_password_invalid') ||
+    code.includes('current_password_mismatch') ||
+    code.includes('current password required') ||
+    code.includes('current_password_required') ||
+    code.includes('current password')
+  ) {
+    return 'Senha atual incorreta. Verifique os dados e tente novamente.';
   }
-  if (code.includes('password should be at least 6 characters')) {
-    return 'A senha deve conter no mínimo 6 caracteres.';
-  }
-  if (code.includes('weak_password') || code.includes('password is too weak') || code.includes('password is known to be leaked') || code.includes('password has been found in a data leak') || code.includes('breach') || code.includes('leak') || code.includes('pwned') || code.includes('compromised') || code.includes('unsafe password')) {
-    return 'Esta senha é muito fraca ou já foi exposta em vazamentos. Escolha uma senha mais forte e diferente.';
+  if (code.includes('reauthentication_needed') || code.includes('reauthentication')) {
+    return 'Sua sessão precisa ser revalidada. Saia e entre novamente no sistema antes de alterar a senha.';
   }
   if (code.includes('same as the old password') || code.includes('different from the old password') || code.includes('same password')) {
     return 'A nova senha deve ser diferente da senha atual.';
   }
   if (code.includes('password') && code.includes('confirmation') && code.includes('match')) {
     return 'As senhas não coincidem. Verifique e tente novamente.';
+  }
+  if (code.includes('password should be at least 6 characters')) {
+    return 'A senha deve conter no mínimo 6 caracteres.';
+  }
+  if (
+    code.includes('weak_password') ||
+    code.includes('password is too weak') ||
+    code.includes('password is known to be weak') ||
+    code.includes('easy to guess') ||
+    code.includes('password is known to be leaked') ||
+    code.includes('password has been found in a data leak') ||
+    code.includes('breach') ||
+    code.includes('leak') ||
+    code.includes('pwned') ||
+    code.includes('compromised') ||
+    code.includes('unsafe password')
+  ) {
+    return 'Esta senha é muito fraca, fácil de adivinhar ou já foi exposta em vazamentos. Escolha uma senha mais forte e diferente.';
+  }
+  if (code.includes('should contain at least one character') || code.includes('character of each')) {
+    return 'A senha não atende aos requisitos de complexidade exigidos (letras maiúsculas, minúsculas, números e símbolos).';
+  }
+
+  // ---- Cadastro ----
+  if (code.includes('user already registered') || code.includes('already been registered')) {
+    return 'Este e-mail já está cadastrado no sistema. Tente fazer o login.';
   }
 
   // ---- Login ----
