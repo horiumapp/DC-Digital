@@ -157,6 +157,30 @@ Deno.serve(async (req: Request) => {
 
     const bodyRecord = (body && typeof body === "object") ? (body as Record<string, unknown>) : {};
 
+    // 2.1 Redefinição segura de senha de aluno
+    if (bodyRecord.action === "reset-student-password") {
+      if (!["ADMIN", "GESTOR", "SECRETARIO"].includes(effectiveRole as string)) {
+        return new Response(JSON.stringify({ error: "Sem permissão para redefinir senhas." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const targetEmail = typeof bodyRecord.email === "string" ? bodyRecord.email.trim().toLowerCase() : "";
+      const novaSenha = typeof bodyRecord.senha === "string" ? bodyRecord.senha : "";
+      if (!EMAIL_REGEX.test(targetEmail) || novaSenha.length < 10) {
+        return new Response(JSON.stringify({ error: "Dados inválidos para redefinição." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data: target } = await supabaseAdmin.from("usuarios").select("id,cargo,escola_id").eq("email", targetEmail).maybeSingle();
+      if (!target || target.cargo !== "ALUNO") {
+        return new Response(JSON.stringify({ error: "Conta de aluno não encontrada." }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (effectiveRole !== "ADMIN") {
+        const { data: caller } = await supabaseAdmin.from("usuarios").select("escola_id").eq("id", callerUser.id).maybeSingle();
+        if (!caller?.escola_id || caller.escola_id !== target.escola_id) {
+          return new Response(JSON.stringify({ error: "Você só pode redefinir senhas de alunos da própria escola." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
+      const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(target.id, { password: novaSenha });
+      if (passwordError) throw passwordError;
+      return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     // 2.1 Ação de exclusão / revogação de usuário
     if (bodyRecord.action === "delete-user") {
       // SEC-01 FIX: Apenas papéis administrativos podem excluir usuários.
