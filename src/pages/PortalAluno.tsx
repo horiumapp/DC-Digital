@@ -356,7 +356,7 @@ export default function PortalAluno() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-1">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aluno</span>
-                <p className="text-sm font-bold text-slate-800">{alunoData.nome}</p>
+                <p className="text-sm font-bold text-slate-800 uppercase">{alunoData.nome}</p>
               </div>
               <div className="space-y-1">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Escola</span>
