@@ -254,7 +254,10 @@ export default function MinhaPrivacidade() {
         return;
       }
 
-      const { error } = await supabase.auth.updateUser({ password });
+      const { error } = await supabase.auth.updateUser({
+        password,
+        current_password: currentPassword,
+      });
 
       if (error) throw error;
 
@@ -272,8 +275,7 @@ export default function MinhaPrivacidade() {
       setPassword('');
       setConfirmPassword('');
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      setPasswordError(translateSupabaseError(errMsg));
+      setPasswordError(translateSupabaseError(err));
     } finally {
       setPasswordLoading(false);
     }
