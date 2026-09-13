@@ -607,7 +607,7 @@ export default function TabAlunos() {
                                             </span>
                                           </td>
                                           <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200">
+                                            <div className="flex items-center justify-end gap-1">
                                               <button onClick={() => setAlunoParaRemanejar(aluno)} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100 transition-colors" title="Remanejar aluno">
                                                 <ArrowRightLeft className="w-4 h-4" /><span className="hidden xl:inline">Remanejar</span>
                                               </button>
@@ -712,7 +712,7 @@ export default function TabAlunos() {
                               </span>
                             </td>
                             <td className="px-6 py-4 text-right">
-                              <div className="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200">
+                              <div className="flex items-center justify-end gap-1">
                                               <button onClick={() => setAlunoParaRemanejar(aluno)} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100 transition-colors" title="Remanejar aluno">
                                                 <ArrowRightLeft className="w-4 h-4" /><span className="hidden xl:inline">Remanejar</span>
                                               </button>
