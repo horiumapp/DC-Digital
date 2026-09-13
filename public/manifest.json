@@ -5,7 +5,7 @@
   "start_url": "/turmas",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "theme_color": "#0f2851",
   "background_color": "#f8fafc",
   "lang": "pt-BR",
