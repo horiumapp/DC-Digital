@@ -143,7 +143,7 @@ export default function FrequenciaTab({
       {isLaunching && (
         <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-slate-800">Alunos</h3>
+            <div className="flex items-center gap-3"><h3 className="text-lg font-medium text-slate-800">Alunos</h3>{!disabled && <button onClick={markAllPresent} className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-100">Marcar todos presentes</button>}</div>
             <div className="flex flex-wrap items-center gap-3">
               {isLancado && (
                 <button
@@ -177,7 +177,9 @@ export default function FrequenciaTab({
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Pesquisar"
+              placeholder="Pesquisar aluno ou matrícula"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
               className="w-full border border-blue-100 rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#0f2851] bg-white shadow-sm"
             />
           </div>
