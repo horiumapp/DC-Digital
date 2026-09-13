@@ -37,7 +37,7 @@ export default class RouteErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="flex items-center justify-center p-6 min-h-[60vh]">
-          <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 text-center max-w-md w-full">
+          <div className="bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 text-center max-w-md w-full">
             <div className="text-5xl mb-4">⚠️</div>
             <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">
               Erro nesta página
@@ -50,7 +50,7 @@ export default class RouteErrorBoundary extends Component<Props, State> {
                 {this.state.error.message}
               </pre>
             )}
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={this.handleReset}
                 className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition active:scale-95"

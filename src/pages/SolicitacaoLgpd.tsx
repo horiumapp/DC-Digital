@@ -87,12 +87,12 @@ export default function SolicitacaoLgpd() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 p-6 md:p-12 relative flex flex-col justify-between">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-4 py-6 sm:p-8 lg:p-12 relative flex flex-col justify-between">
       <Background />
       <div className="absolute inset-0 bg-gradient-to-b from-white/80 to-slate-50/40 dark:from-slate-900/80 dark:to-slate-900/40 pointer-events-none" />
 
-      <div className="max-w-2xl mx-auto bg-white dark:bg-slate-800 p-8 md:p-10 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 relative z-10 w-full mb-8">
-        <div className="flex items-center gap-4 mb-6">
+      <div className="max-w-2xl mx-auto bg-white dark:bg-slate-800 p-5 sm:p-8 md:p-10 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 relative z-10 w-full mb-8">
+        <div className="flex items-start gap-3 sm:items-center sm:gap-4 mb-6">
           <Link
             to={user ? (user.role === 'ALUNO' ? '/portal-aluno' : '/turmas') : '/'}
             className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 transition-all active:scale-95 flex items-center justify-center"
