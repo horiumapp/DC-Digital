@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, BookOpen, Building2, Edit2, Check, Loader2, LogIn } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { X, BookOpen, Building2, Edit2, Check, Loader2, LogIn, RotateCw, Maximize2 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,6 +30,50 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
   const [professorDisciplinas, setProfessorDisciplinas] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const { user } = useAuth();
+
+  const toggleOrientation = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        const el = document.documentElement;
+        if (el.requestFullscreen) {
+          await el.requestFullscreen();
+        }
+        if (window.screen.orientation && 'lock' in window.screen.orientation) {
+          await (window.screen.orientation as any).lock('landscape').catch(() => {});
+        }
+      } else {
+        if (window.screen.orientation && 'unlock' in window.screen.orientation) {
+          (window.screen.orientation as any).unlock();
+        }
+        if (document.exitFullscreen) {
+          await document.exitFullscreen().catch(() => {});
+        }
+      }
+    } catch {
+      // Falha silenciosa em navegadores sem suporte
+    }
+  }, []);
+
+  const handleClose = useCallback(() => {
+    if (document.fullscreenElement) {
+      if (window.screen.orientation && 'unlock' in window.screen.orientation) {
+        (window.screen.orientation as any).unlock();
+      }
+      document.exitFullscreen().catch(() => {});
+    }
+    onClose();
+  }, [onClose]);
+
+  useEffect(() => {
+    return () => {
+      if (document.fullscreenElement) {
+        if (window.screen.orientation && 'unlock' in window.screen.orientation) {
+          (window.screen.orientation as any).unlock();
+        }
+        document.exitFullscreen().catch(() => {});
+      }
+    };
+  }, []);
 
   const canEdit = ['ADMIN', 'GESTOR', 'SECRETARIO'].includes(user?.role || '');
 
@@ -284,76 +328,101 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl flex flex-col max-h-[95vh] animate-in zoom-in-95 duration-200 overflow-hidden border border-slate-200">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl flex flex-col h-[96vh] sm:h-auto sm:max-h-[92vh] animate-in zoom-in-95 duration-200 overflow-hidden border border-slate-200">
         
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-white">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center shadow-inner">
-              <LogIn className="w-6 h-6" />
+        <div className="flex items-center justify-between p-3.5 sm:p-6 border-b border-slate-100 bg-white shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center shadow-inner shrink-0">
+              <LogIn className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-slate-800 tracking-tight">QUADRO DE HORÁRIOS</h2>
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">Gestão de Tempos e Turmas</p>
+              <h2 className="text-base sm:text-xl font-black text-slate-800 tracking-tight leading-tight">QUADRO DE HORÁRIOS</h2>
+              <p className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">Gestão de Tempos e Turmas</p>
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {canEdit && (
               !isEditing ? (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-[#0f2851] hover:bg-[#1a3a6d] text-white rounded-xl text-sm font-bold uppercase tracking-widest transition-all shadow-lg shadow-[#0f2851]/20 active:scale-95"
+                  className="flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-6 py-2 sm:py-2.5 bg-[#0f2851] hover:bg-[#1a3a6d] text-white rounded-xl text-xs sm:text-sm font-bold uppercase tracking-widest transition-all shadow-lg shadow-[#0f2851]/20 active:scale-95"
                 >
-                  <Edit2 className="w-4 h-4" />
-                  Editar Grade
+                  <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Editar Grade</span>
+                  <span className="sm:hidden">Editar</span>
                 </button>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <button
                     onClick={() => setIsEditing(false)}
-                    className="px-6 py-2.5 text-slate-500 hover:text-slate-700 text-sm font-black uppercase tracking-widest transition-colors"
+                    className="px-3 sm:px-6 py-2 sm:py-2.5 text-slate-500 hover:text-slate-700 text-xs sm:text-sm font-black uppercase tracking-widest transition-colors"
                   >
                     Cancelar
                   </button>
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-600/20 active:scale-95 disabled:opacity-50"
+                    className="flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-6 py-2 sm:py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-600/20 active:scale-95 disabled:opacity-50"
                   >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                    Salvar Grade
+                    <span className="hidden sm:inline">Salvar Grade</span>
+                    <span className="sm:hidden">Salvar</span>
                   </button>
                 </div>
               )
             )}
-            <div className="w-px h-8 bg-slate-100 mx-2" />
             <button
-              onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-all"
+              onClick={toggleOrientation}
+              className="md:hidden p-2 text-[#0f2851] bg-[#eef2ff] hover:bg-[#e0e7ff] rounded-xl transition-all"
+              title="Girar para modo paisagem"
+              aria-label="Girar tela"
             >
-              <X className="w-6 h-6" />
+              <RotateCw className="w-4 h-4" />
+            </button>
+            <div className="w-px h-6 sm:h-8 bg-slate-100 mx-1 sm:mx-2" />
+            <button
+              onClick={handleClose}
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-all"
+              aria-label="Fechar"
+            >
+              <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           </div>
         </div>
 
+        {/* Mobile Orientation Hint Banner */}
+        <div className="md:hidden bg-blue-50/90 border-b border-blue-100 px-3.5 py-2 flex items-center justify-between text-xs text-[#0f2851] font-medium shrink-0">
+          <div className="flex items-center gap-1.5">
+            <RotateCw className="w-3 h-3 text-blue-600 shrink-0" />
+            <span>Gire o celular na horizontal ou deslize</span>
+          </div>
+          <button
+            onClick={toggleOrientation}
+            className="text-[9px] font-extrabold uppercase bg-white border border-blue-200 px-2 py-0.5 rounded-md text-blue-700 shadow-xs flex items-center gap-1 active:scale-95 shrink-0"
+          >
+            <Maximize2 className="w-2.5 h-2.5" /> Girar
+          </button>
+        </div>
+
         {/* Table Content */}
-        <div className="flex-1 overflow-auto p-0 relative min-h-[500px]">
+        <div className="flex-1 overflow-auto p-0 relative min-h-[260px] sm:min-h-[480px]">
           {loading ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[1px] z-50">
               <Loader2 className="w-12 h-12 text-[#0f2851] animate-spin mb-4" />
               <p className="text-slate-500 font-bold text-xs uppercase tracking-[0.2em]">Carregando Grade...</p>
             </div>
           ) : (
-            <table className="w-full border-separate border-spacing-0 table-fixed">
-              <thead className="bg-slate-50/80 backdrop-blur-md sticky top-0 z-10">
+            <table className="min-w-[720px] sm:min-w-full w-full border-separate border-spacing-0 table-fixed">
+              <thead className="bg-slate-50/90 backdrop-blur-md sticky top-0 z-10">
                 <tr>
-                  <th className="w-16 border-b border-r border-slate-100 p-4 text-center font-black text-slate-300 text-[10px] uppercase tracking-widest">
+                  <th className="w-12 sm:w-16 border-b border-r border-slate-100 p-2 sm:p-4 text-center font-black text-slate-400 text-[10px] uppercase tracking-widest">
                     Tempo
                   </th>
                   {DIAS.map(dia => (
-                    <th key={dia} className="border-b border-r border-slate-100 p-4 text-left font-black text-slate-400 text-[10px] uppercase tracking-widest last:border-r-0">
+                    <th key={dia} className="border-b border-r border-slate-100 p-2.5 sm:p-4 text-left font-black text-slate-500 text-[10px] uppercase tracking-widest last:border-r-0">
                       {dia}
                     </th>
                   ))}
@@ -361,9 +430,9 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
               </thead>
               <tbody className="bg-white">
                 {SLOTS.map((slot) => (
-                  <tr key={slot} className="group transition-colors h-24">
-                    <td className="border-r border-b border-slate-50 bg-slate-50/30 p-4 text-center">
-                      <span className="text-2xl font-black text-slate-200 tabular-nums leading-none">
+                  <tr key={slot} className="group transition-colors h-20 sm:h-24">
+                    <td className="border-r border-b border-slate-50 bg-slate-50/30 p-2 sm:p-4 text-center">
+                      <span className="text-lg sm:text-2xl font-black text-slate-300 tabular-nums leading-none">
                         {slot.toString().padStart(2, '0')}
                       </span>
                     </td>
@@ -383,7 +452,7 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
                               <select
                                 value={cellData?.id || ''}
                                 onChange={(e) => handleTurmaSelect(diaIdx, slot, e.target.value)}
-                                className="w-full bg-white border border-slate-200 rounded-lg p-2 text-[10px] font-bold text-slate-600 focus:outline-none focus:border-[#0f2851] transition-all cursor-pointer"
+                                className="w-full bg-white border border-slate-200 rounded-lg p-1.5 sm:p-2 text-[10px] font-bold text-slate-600 focus:outline-none focus:border-[#0f2851] transition-all cursor-pointer"
                               >
                                 <option value="">+ Turma</option>
                                 {turmas.map(t => (
@@ -397,7 +466,7 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
                                 <select
                                   value={cellData?.componente_horario || ''}
                                   onChange={(e) => handleComponenteSelect(diaIdx, slot, e.target.value)}
-                                  className="w-full bg-[#eef2ff] border border-blue-100 rounded-lg p-2 text-[9px] font-black text-[#0f2851] focus:outline-none focus:border-blue-400 transition-all cursor-pointer uppercase tracking-tighter"
+                                  className="w-full bg-[#eef2ff] border border-blue-100 rounded-lg p-1.5 sm:p-2 text-[9px] font-black text-[#0f2851] focus:outline-none focus:border-blue-400 transition-all cursor-pointer uppercase tracking-tighter"
                                 >
                                   <option value="">+ Disciplina</option>
                                   {professorDisciplinas.map(d => (
@@ -409,20 +478,20 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
                               )}
                             </div>
                           ) : (
-                            <div className="h-full w-full p-2 flex flex-col justify-between">
+                            <div className="h-full w-full p-1 sm:p-2 flex flex-col justify-between">
                               {cellData ? (
                                 <>
                                   <div className="space-y-1">
                                     <div className="flex items-center gap-1.5 text-[9px] font-bold text-[#0f2851] uppercase tracking-tighter">
-                                      <Building2 className="w-3 h-3 text-[#0f2851]/60" />
+                                      <Building2 className="w-3 h-3 text-[#0f2851]/60 shrink-0" />
                                       {cellData.turno || 'GERAL'}
                                     </div>
-                                    <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-800 uppercase tracking-tight leading-tight">
+                                    <div className="flex items-center gap-1.5 text-[11px] sm:text-[12px] font-extrabold text-slate-800 uppercase tracking-tight leading-tight">
                                       {cellData.nome}
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-1.5 mt-2 bg-[#eef2ff] border border-blue-100 rounded-md px-1.5 py-1">
-                                    <BookOpen className="w-3 h-3 text-[#0f2851]/40" />
+                                  <div className="flex items-center gap-1.5 mt-1.5 sm:mt-2 bg-[#eef2ff] border border-blue-100 rounded-md px-1.5 py-1">
+                                    <BookOpen className="w-3 h-3 text-[#0f2851]/40 shrink-0" />
                                     <span className="text-[9px] font-bold text-[#0f2851] uppercase tracking-widest leading-none truncate">
                                       {cellData.componente_horario || 'N/A'}
                                     </span>
@@ -430,7 +499,7 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
                                 </>
                               ) : (
                                 <div className="h-full flex items-center justify-center">
-                                  <span className="text-slate-200 font-bold text-2xl">—</span>
+                                  <span className="text-slate-200 font-bold text-xl sm:text-2xl">—</span>
                                 </div>
                               )}
                             </div>
@@ -446,22 +515,22 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
-          <div className="flex gap-4">
-            <div className="flex items-center gap-2">
+        <div className="p-3 sm:p-6 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-4 shrink-0">
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+            <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-[#0f2851]" />
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Escola</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-[#0f2851]/60" />
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Turma</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-purple-500" />
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Disciplina</span>
             </div>
           </div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em]">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em] text-center sm:text-right">
             Horários atualizados em tempo real com o Banco de Dados
           </p>
         </div>
