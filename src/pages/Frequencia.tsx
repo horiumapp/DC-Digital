@@ -82,7 +82,7 @@ export default function Frequencia() {
       <div className="relative z-10">
         {/* Banner de Período Fechado */}
         {isPeriodoFechado && (
-          <div className="bg-amber-500 text-white px-8 py-3 flex items-center justify-between shadow-md">
+          <div className="bg-amber-500 text-white px-4 py-3 sm:px-8 flex items-center justify-between shadow-md">
             <div className="flex items-center gap-3">
               <span className="text-xl">⚠️</span>
               <div>
@@ -94,8 +94,8 @@ export default function Frequencia() {
         )}
 
         {/* SubHeader */}
-        <div className="bg-blue-50/10 px-8 py-3 flex items-center justify-between border-b border-blue-100/50">
-          <div className="flex items-center gap-4">
+        <div className="bg-blue-50/10 px-4 py-3 sm:px-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-blue-100/50">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <Link to="/diario" className="bg-[#eef2ff] text-[#0f2851] px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold border border-blue-100 hover:bg-[#e0e7ff] transition shadow-sm">
               <ArrowLeft className="w-4 h-4" /> Voltar
             </Link>
@@ -117,12 +117,12 @@ export default function Frequencia() {
         </div>
 
         {/* Main Content */}
-        <main className="p-8 max-w-7xl mx-auto">
+        <main className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
 
             {/* Info Cards */}
-            <div className="p-6 bg-slate-50/50 border-b border-slate-200">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="p-4 sm:p-6 bg-slate-50/50 border-b border-slate-200">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#0f2851]">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" /></svg>
@@ -171,12 +171,12 @@ export default function Frequencia() {
               </div>
             </div>
 
-            <div className="flex border-b border-slate-200 px-6 bg-white">
+            <div className="flex overflow-x-auto border-b border-slate-200 px-3 sm:px-6 bg-white">
               {(['frequencia', 'objeto', 'anotacoes', 'avaliacoes'] as const).map((tab) => {
                 const labels: Record<string, string> = { frequencia: 'Frequência', objeto: 'Conteúdo Ministrado', anotacoes: 'Anotações', avaliacoes: 'Avaliações' };
                 return (
                   <button key={tab} onClick={() => handleTabChange(tab)}
-                    className={`px-6 py-4 text-sm font-bold transition-all relative ${activeTab === tab ? 'text-[#0f2851]' : 'text-slate-400 hover:text-[#0f2851]'}`}>
+                    className={`shrink-0 px-4 sm:px-6 py-4 text-sm font-bold transition-all relative ${activeTab === tab ? 'text-[#0f2851]' : 'text-slate-400 hover:text-[#0f2851]'}`}>
                     {labels[tab]}
                     {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#0f2851] rounded-t-full" />}
                   </button>
@@ -185,7 +185,7 @@ export default function Frequencia() {
             </div>
 
             {/* Content Area */}
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {activeTab === 'frequencia' && (
                 <FrequenciaTab
                   selectedDate={selectedDate}

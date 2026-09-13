@@ -52,3 +52,37 @@
 @media (min-width: 1024px) { .dd-topbar { padding-inline: 2rem; } }
 .dd-auth-shell { background: linear-gradient(135deg, #f8fafc 0%, #e8f0fa 100%); }.dd-auth-content { max-width: 28rem; }.dd-auth-card { border-color: #dbe3ef; box-shadow: 0 18px 45px rgb(15 40 81 / .12); }.dd-auth-card h1 { color: var(--dd-primary); }.dd-auth-card input { min-height: 3rem; }.dd-auth-card button[type="submit"] { min-height: 3.2rem; }
 @media (max-width: 640px) { .dd-auth-card { padding: 1.5rem; box-shadow: none; } }
+
+/* Mobile-first: conteúdo legível sem rotação do aparelho */
+.dd-calendar-weekday-short { display: none; }
+@media (max-width: 639px) {
+  .dd-topbar { min-height: 3.75rem; padding: .5rem .75rem; gap: .5rem; }
+  .dd-topbar > div { gap: .45rem; }
+  .dd-topbar .dd-icon-button { width: 2.55rem; min-height: 2.55rem; }
+  .dd-topbar .dd-secondary-button { min-height: 2.55rem; padding-inline: .65rem; }
+  .dd-topbar a.flex b { font-size: .94rem; white-space: nowrap; }
+  .dd-topbar a.flex img { width: 2rem; height: 2rem; }
+  .dd-calendar-header { padding: .75rem; gap: .35rem; }
+  .dd-calendar-header button { min-width: 2.4rem; padding: .55rem; border-radius: .65rem; }
+  .dd-calendar-button-label { display: none; }
+  .dd-calendar-title { font-size: 1rem; letter-spacing: -.03em; }
+  .dd-calendar-weekday { padding: .65rem .1rem; font-size: .68rem; }
+  .dd-calendar-weekday-full { display: none; }
+  .dd-calendar-weekday-short { display: inline; }
+  .dd-calendar-day { min-height: 5.5rem !important; padding: .4rem !important; }
+  .dd-calendar-day > div + div { gap: .2rem; }
+  .dd-calendar-day span.text-base { font-size: .9rem; }
+  .dd-calendar-day span.w-5 { width: 1.2rem; height: 1.2rem; font-size: .55rem; }
+  .dd-mobile-table { display: block; width: 100%; min-width: 0; }
+  .dd-mobile-table thead { display: none; }
+  .dd-mobile-table tbody { display: grid; gap: .65rem; padding: .65rem; background: #f8fafc; }
+  .dd-mobile-table tr { display: grid; gap: .35rem; padding: .8rem; border: 1px solid #dbe3ef; border-radius: .75rem; background: #fff; box-shadow: 0 1px 2px rgb(15 40 81 / .04); }
+  .dd-mobile-table td { display: grid; grid-template-columns: minmax(6rem, 38%) 1fr; align-items: center; gap: .5rem; padding: .25rem 0; white-space: normal !important; text-align: left !important; }
+  .dd-mobile-table td::before { content: attr(data-label); color: #64748b; font-size: .72rem; font-weight: 750; text-transform: uppercase; letter-spacing: .04em; }
+  .dd-mobile-table td:has(button) { align-items: center; }
+  .dd-mobile-table td .mx-auto { margin-inline: 0; }
+  .dd-mobile-table td .w-fit { margin-inline: 0; }
+  .dd-frequency-summary { width: 100%; align-items: stretch; }
+  .dd-frequency-summary > div, .dd-frequency-summary > button { width: 100%; }
+  .dd-frequency-summary .flex.items-center { flex-wrap: wrap; }
+}

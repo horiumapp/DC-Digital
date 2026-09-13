@@ -98,41 +98,40 @@ export default function CalendarWidget({
   const weekDays = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+    <div className="dd-calendar bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
       {/* Calendar Header */}
-      <div className="p-5 flex items-center justify-between border-b border-slate-200">
+      <div className="dd-calendar-header p-5 flex items-center justify-between border-b border-slate-200">
         <button 
           onClick={handlePrevMonth}
           disabled={currentMonth <= minMonth}
           className="flex items-center gap-1 px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <ChevronLeft className="w-4 h-4" />
-          Anterior
+          <span className="dd-calendar-button-label">Anterior</span>
         </button>
-        <h3 className="text-lg font-semibold text-slate-700">{monthNames[currentMonth].toUpperCase()}</h3>
+        <h3 className="dd-calendar-title text-lg font-semibold text-slate-700">{monthNames[currentMonth].toUpperCase()}</h3>
         <button 
           onClick={handleNextMonth}
           disabled={currentMonth >= maxMonth}
           className="flex items-center gap-1 px-4 py-2 bg-[#0f2851] text-white rounded-xl text-sm font-bold hover:bg-[#1a3a6d] transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#0f2851]/20"
         >
-          Próximo
+          <span className="dd-calendar-button-label">Próximo</span>
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 
       {/* Calendar Grid */}
-      <div className="grid grid-cols-7 border-l border-slate-200">
+      <div className="dd-calendar-grid grid grid-cols-7 border-l border-slate-200">
         {/* Weekday Headers */}
         {weekDays.map((day) => (
-          <div key={day} className="text-center py-4 text-sm font-semibold text-slate-800 border-b border-r border-slate-200">
-            {day}
+          <div key={day} className="dd-calendar-weekday text-center py-4 text-sm font-semibold text-slate-800 border-b border-r border-slate-200">`n            <span className="dd-calendar-weekday-full">{day}</span><span className="dd-calendar-weekday-short">{day.slice(0, 3)}</span>
           </div>
         ))}
 
         {/* Days */}
         {calendarDays.map((day, index) => {
           if (day === null) {
-            return <div key={`empty-${index}`} className="min-h-[120px] p-3 border-b border-r border-slate-200 bg-slate-50/50"></div>;
+            return <div key={`empty-${index}`} className="dd-calendar-day min-h-[120px] p-3 border-b border-r border-slate-200 bg-slate-50/50"></div>;
           }
 
           const dayOfWeek = index % 7;
@@ -207,7 +206,7 @@ export default function CalendarWidget({
               <Link 
                 key={`day-${day}`}
                 to={`/frequencia?date=${dayStr}&turmaId=${turmaAtiva?.id}`}
-                className={`min-h-[120px] p-3 border-b border-r border-slate-200 flex justify-between ${bgColor} transition-all group relative hover:shadow-md hover:brightness-95`}
+                className={`dd-calendar-day min-h-[120px] p-3 border-b border-r border-slate-200 flex justify-between ${bgColor} transition-all group relative hover:shadow-md hover:brightness-95`}
               >
                 <div className="flex flex-col justify-between">
                   <span className="text-base font-medium text-slate-700">{day}</span>
@@ -231,7 +230,7 @@ export default function CalendarWidget({
           return (
             <div 
               key={`day-${day}`} 
-              className="min-h-[120px] p-3 border-b border-r border-slate-200 flex justify-between bg-slate-100/50 opacity-50 cursor-not-allowed"
+              className="dd-calendar-day min-h-[120px] p-3 border-b border-r border-slate-200 flex justify-between bg-slate-100/50 opacity-50 cursor-not-allowed"
             >
               <span className="text-base font-medium text-slate-400">{day}</span>
             </div>

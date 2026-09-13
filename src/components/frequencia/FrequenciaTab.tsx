@@ -142,9 +142,9 @@ export default function FrequenciaTab({
 
       {isLaunching && (
         <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3"><h3 className="text-lg font-medium text-slate-800">Alunos</h3>{!disabled && <button onClick={markAllPresent} className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-100">Marcar todos presentes</button>}</div>
-            <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-center gap-3"><h3 className="text-lg font-medium text-slate-800">Alunos</h3>{!disabled && <button onClick={markAllPresent} className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-100">Marcar todos presentes</button>}</div>
+            <div className="dd-frequency-summary flex flex-wrap items-center gap-3">
               {isLancado && (
                 <button
                   onClick={() => !disabled && setShowDeleteFreqModal(true)}
@@ -184,8 +184,8 @@ export default function FrequenciaTab({
             />
           </div>
 
-          <div className="overflow-x-auto border border-slate-200 rounded-lg">
-            <table className="w-full text-sm text-left">
+          <div className="border border-slate-200 rounded-lg">
+            <table className="dd-mobile-table w-full text-sm text-left">
               <thead className="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
                 <tr>
                   <th className="px-4 py-3 w-16">Nº</th>
@@ -197,12 +197,12 @@ export default function FrequenciaTab({
               <tbody className="divide-y divide-slate-100">
                 {visibleStudents.map((aluno, index) => (
                   <tr key={aluno.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}>
-                    <td className="px-4 py-3 text-slate-500 font-bold tabular-nums">{String(index + 1).padStart(2, '0')}</td>
-                    <td className="px-4 py-3">
+                    <td data-label="Nº" className="px-4 py-3 text-slate-500 font-bold tabular-nums">{String(index + 1).padStart(2, '0')}</td>
+                    <td data-label="Aluno" className="px-4 py-3">
                       <p className="text-sm font-medium text-slate-700">{aluno.nome}</p>
                       <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mt-1">Matrícula: {aluno.matricula}</p>
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td data-label={tempoAula} className="px-4 py-3 text-center">
                       <button
                         onClick={() => !disabled && toggleFreq(aluno.id)}
                         disabled={disabled}
@@ -214,7 +214,7 @@ export default function FrequenciaTab({
                         {aluno.freq}
                       </button>
                     </td>
-                    <td className="px-4 py-3">
+                    <td data-label="Participação" className="px-4 py-3">
                       <div className={`flex items-center justify-center rounded-lg overflow-hidden border w-fit mx-auto transition-all ${!aluno.freq ? 'opacity-30 grayscale pointer-events-none border-slate-200' : 'border-blue-100 shadow-sm'}`}>
                         <button
                           disabled={disabled || !aluno.freq}
@@ -238,8 +238,8 @@ export default function FrequenciaTab({
             </table>
           </div>
 
-          <div className="flex items-center justify-between text-sm text-slate-600">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
               <span>Mostrando {visibleStudents.length} de {studentData.length} registros</span>
               <div className="flex items-center gap-2 ml-4">
                 <span>Mostrar</span>

@@ -442,8 +442,8 @@ export default function Turmas() {
             </div>
 
             {/* Data Table */}
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+            <div>
+              <table className="dd-mobile-table min-w-full divide-y divide-slate-200 dark:divide-slate-700">
                 <thead className="bg-[#f8f9fa] border-b border-slate-200">
                   <tr>
                     <th scope="col" className="px-6 py-4 text-left text-[13px] font-bold text-[#0f2851] uppercase tracking-wider cursor-pointer hover:text-slate-900">
@@ -473,10 +473,10 @@ export default function Turmas() {
                   {filteredTurmas.length > 0 ? (
                     filteredTurmas.map((turma) => (
                       <tr key={turma.id} className="hover:bg-blue-50/30 dark:hover:bg-slate-800 transition-colors">
-                        <td className="px-6 py-5 whitespace-nowrap text-sm font-medium text-slate-600 dark:text-slate-200">{turma.ensino}</td>
-                        <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{turma.fase}</td>
-                        <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{turma.componente}</td>
-                        <td className="px-6 py-5 whitespace-nowrap">
+                        <td data-label="Ensino / Projeto" className="px-6 py-5 whitespace-nowrap text-sm font-medium text-slate-600 dark:text-slate-200">{turma.ensino}</td>
+                        <td data-label="Fase / Turma" className="px-6 py-5 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{turma.fase}</td>
+                        <td data-label="Componente" className="px-6 py-5 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{turma.componente}</td>
+                        <td data-label="Ações" className="px-6 py-5 whitespace-nowrap">
                           <button
                             onClick={() => handleSelectTurma(turma)}
                             className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#eef2ff] text-[#0f2851] border border-blue-100 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition-all uppercase"
