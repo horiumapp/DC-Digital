@@ -76,7 +76,7 @@ export default function TabAlunos() {
     if (data) setTodasTurmas(data);
   }
 
-  // Auto-selecionar escola se for Gestor ou SecretÃƒÂ¡rio
+  // Auto-selecionar escola se for Gestor ou Secretário
   useEffect(() => {
     if ((user?.role === 'GESTOR' || user?.role === 'SECRETARIO') && user.escola_id && escolas.length > 0 && !selectedEscola) {
       const minhaEscola = escolas.find(e => e.id === user.escola_id);
@@ -104,7 +104,7 @@ export default function TabAlunos() {
 
     if (error) {
       console.error('Erro ao carregar escolas:', error);
-      showError('NÃƒÂ£o foi possÃƒÂ­vel carregar a lista de escolas.');
+      showError('Não foi possível carregar a lista de escolas.');
       return;
     }
 
@@ -166,7 +166,7 @@ export default function TabAlunos() {
       if (error) {
         showError("Erro ao editar aluno: " + error.message);
       } else {
-        // Sincronizar escola_id na tabela usuarios (para transferÃƒÂªncias)
+        // Sincronizar escola_id na tabela usuarios (para transferências)
         if (novoAluno.cpf) {
           const cpfDigits = getMatriculaLogin(novoAluno.cpf);
           const pseudoEmail = `${cpfDigits}@${ALUNO_EMAIL_DOMAIN}`;
@@ -190,7 +190,7 @@ export default function TabAlunos() {
 
       if (error) {
         console.error("Erro ao criar aluno:", error);
-        showError("Erro ao criar aluno. Verifique se os dados sÃƒÂ£o vÃƒÂ¡lidos e tente novamente.");
+        showError("Erro ao criar aluno. Verifique se os dados são válidos e tente novamente.");
       } else {
         const newAluno = newAlunoList?.[0];
         
@@ -200,7 +200,7 @@ export default function TabAlunos() {
           const pseudoEmail = `${cpfDigits}@${ALUNO_EMAIL_DOMAIN}`;
           
           try {
-            // FIX C2: senha temporÃƒÂ¡ria aleatÃƒÂ³ria forte Ã¢â‚¬â€ nunca mais "Aluno2026"
+            // FIX C2: senha temporária aleatória forte — nunca mais "Aluno2026"
             const senhaTemporaria = gerarSenhaTemporaria();
             const { data: authData, error: authError } = await supabase.functions.invoke('admin-create-user', {
               body: {
@@ -214,16 +214,16 @@ export default function TabAlunos() {
 
             if (authError || authData?.error) {
               const msg = authData?.error || authError?.message || 'Erro desconhecido';
-              showWarning(`Aluno cadastrado, mas nÃƒÂ£o foi possÃƒÂ­vel criar a conta de acesso: ${msg}`);
+              showWarning(`Aluno cadastrado, mas não foi possível criar a conta de acesso: ${msg}`);
             } else {
-              showSuccess(`Aluno ${novoAluno.nome} cadastrado! MatrÃƒÂ­cula (CPF): ${formatMatricula(newAluno.id, novoAluno.cpf)} | Senha: ${senhaTemporaria}`);
+              showSuccess(`Aluno ${novoAluno.nome} cadastrado! Matrícula (CPF): ${formatMatricula(newAluno.id, novoAluno.cpf)} | Senha: ${senhaTemporaria}`);
             }
           } catch (err: unknown) {
             console.error("Erro ao criar conta de acesso do aluno:", err);
             showWarning('Aluno cadastrado, mas houve um erro ao criar a conta de acesso.');
           }
         } else if (newAluno) {
-          showSuccess(`Aluno ${novoAluno.nome} cadastrado! CPF nÃƒÂ£o informado Ã¢â‚¬â€ a conta de acesso serÃƒÂ¡ criada quando o CPF for adicionado.`);
+          showSuccess(`Aluno ${novoAluno.nome} cadastrado! CPF não informado — a conta de acesso será criada quando o CPF for adicionado.`);
         }
 
         fetchAlunos();
@@ -258,14 +258,14 @@ export default function TabAlunos() {
               body: { action: 'delete-user', email: pseudoEmail },
             });
           } catch (e) {
-            console.warn('Erro ao remover conta Auth do aluno excluÃƒÂ­do:', e);
+            console.warn('Erro ao remover conta Auth do aluno excluído:', e);
           }
         }
 
         fetchAlunos();
         fetchEscolas();
         setAlunoParaExcluir(null);
-        showSuccess("Aluno excluÃƒÂ­do com sucesso!");
+        showSuccess("Aluno excluído com sucesso!");
       }
     }
   };
@@ -305,8 +305,8 @@ export default function TabAlunos() {
     return a.nome.localeCompare(b.nome);
   });
 
-  // Agrupar turmas por turno para o acordeÃƒÂ£o
-  const turnosOrdenados = ['MANHÃƒÆ’', 'TARDE', 'NOITE', 'INTEGRAL'];
+  // Agrupar turmas por turno para o acordeão
+  const turnosOrdenados = ['MANHÃ', 'TARDE', 'NOITE', 'INTEGRAL'];
   const turmasPorTurno = todasTurmas.reduce((acc: Record<string, TurmaItem[]>, t) => {
     const turno = t.turno?.toUpperCase() || 'N/A';
     if (!acc[turno]) acc[turno] = [];
@@ -384,7 +384,7 @@ export default function TabAlunos() {
                     <h1 className="text-2xl font-black text-white tracking-widest uppercase">ALUNOS</h1>
                   </div>
                   <p className="text-blue-100/80 text-sm mt-1 font-bold italic">
-                    Gerencie matrÃƒÂ­culas e informaÃƒÂ§ÃƒÂµes dos estudantes.
+                    Gerencie matrículas e informações dos estudantes.
                   </p>
                 </div>
               </div>
@@ -410,12 +410,12 @@ export default function TabAlunos() {
             </div>
           </div>
 
-          {/* Barra de Pesquisa e BotÃƒÂ£o Novo Aluno */}
+          {/* Barra de Pesquisa e Botão Novo Aluno */}
           <div className="px-8 -mt-6 relative z-20 mb-6">
             <div className="bg-white p-5 rounded-2xl shadow-xl shadow-blue-900/5 border border-slate-100 flex flex-col sm:flex-row items-end gap-4">
               <div className="flex-1 space-y-1.5 w-full">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                  BUSCAR ALUNO POR NOME, CPF OU RESPONSÃƒÂVEL
+                  BUSCAR ALUNO POR NOME, CPF OU RESPONSÁVEL
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -425,7 +425,7 @@ export default function TabAlunos() {
                     type="text"
                     value={busca}
                     onChange={(e) => setBusca(e.target.value)}
-                    placeholder="Ex: JoÃƒÂ£o Silva ou 123.456..."
+                    placeholder="Ex: João Silva ou 123.456..."
                     className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-xl text-base placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851]"
                   />
                 </div>
@@ -447,7 +447,7 @@ export default function TabAlunos() {
         </div>
       )}
 
-      {/* ConteÃƒÂºdo Principal */}
+      {/* Conteúdo Principal */}
       <div className="flex-1 overflow-y-auto p-8 pt-0">
         {!selectedEscola ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 tracking-tight">
@@ -507,7 +507,7 @@ export default function TabAlunos() {
               
               return (
                 <div key={turno} className="space-y-6">
-                  {/* CabeÃƒÂ§alho do Turno */}
+                  {/* Cabeçalho do Turno */}
                   <div className="flex items-center gap-4 px-2">
                     <h3 className="text-[10px] font-black text-[#0f2851] uppercase tracking-[0.2em] bg-[#eef2ff] px-3 py-1.5 rounded-lg border border-blue-100/50">
                       TURNO: {turno}
@@ -522,7 +522,7 @@ export default function TabAlunos() {
 
                       return (
                         <div key={turma.id} className="space-y-4">
-                          {/* Card da Turma (AcordeÃƒÂ£o) */}
+                          {/* Card da Turma (Acordeão) */}
                           <button
                             onClick={() => toggleTurma(turma.id)}
                             className={`w-full flex items-center justify-between p-4 bg-white border rounded-2xl transition-all hover:shadow-md ${
@@ -538,7 +538,7 @@ export default function TabAlunos() {
                               <div className="text-left">
                                 <h4 className="font-black text-[#0f2851] text-sm uppercase tracking-wider">{turma.nome}</h4>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                                  {turno} Ã¢â‚¬Â¢ {alunosDaTurma.length.toString().padStart(2, '0')} Alunos
+                                  {turno} • {alunosDaTurma.length.toString().padStart(2, '0')} Alunos
                                 </p>
                               </div>
                             </div>
@@ -547,19 +547,19 @@ export default function TabAlunos() {
                             </div>
                           </button>
 
-                          {/* Lista de Alunos (ExpandÃƒÂ­vel) */}
+                          {/* Lista de Alunos (Expandível) */}
                           {isExpanded && (
                             <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm animate-in slide-in-from-top-2 duration-200">
                               <div className="overflow-x-auto">
                                 <table className="w-full text-left border-collapse">
                                   <thead>
                                     <tr className="border-b border-slate-100 bg-slate-50/50">
-                                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-16">NÃ‚Âº</th>
+                                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-16">Nº</th>
                                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome do Aluno</th>
-                                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ResponsÃƒÂ¡vel</th>
+                                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Responsável</th>
                                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Telefone</th>
                                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
-                                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">AÃƒÂ§ÃƒÂµes</th>
+                                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-slate-50">
@@ -580,7 +580,7 @@ export default function TabAlunos() {
                                                 </span>
                                                 <span className="text-[10px] font-bold text-slate-400 tabular-nums uppercase tracking-tight">
                                                   {/* FIX H4: mascarar CPF na listagem (LGPD) */}
-                                                  MATRÃƒÂCULA: {aluno.cpf ? formatCpfObscured(aluno.cpf) : 'CPF Pendente'}
+                                                  MATRÍCULA: {aluno.cpf ? formatCpfObscured(aluno.cpf) : 'CPF Pendente'}
                                                 </span>
                                               </div>
                                             </div>
@@ -644,7 +644,7 @@ export default function TabAlunos() {
               );
             })}
 
-            {/* SeÃƒÂ§ÃƒÂ£o Alunos Sem Turma (Opcional) */}
+            {/* Seção Alunos Sem Turma (Opcional) */}
             {alunosAgrupados['sem-turma'] && (
               <div className="space-y-6 mt-12">
                 <div className="flex items-center gap-4 px-2">
@@ -658,12 +658,12 @@ export default function TabAlunos() {
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="border-b border-red-50 bg-red-50/30">
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-16">NÃ‚Âº</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-16">Nº</th>
                           <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome do Aluno</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ResponsÃƒÂ¡vel</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Responsável</th>
                           <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Telefone</th>
                           <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">AÃƒÂ§ÃƒÂµes</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
@@ -682,7 +682,7 @@ export default function TabAlunos() {
                                     {aluno.nome}
                                   </span>
                                   <span className="text-[10px] font-bold text-red-400 uppercase tracking-tight">
-                                    Ã¢Å¡Â  SEM TURMA ATRIBUÃƒÂDA
+                                    ⚠  SEM TURMA ATRIBUÍDA
                                   </span>
                                 </div>
                               </div>
@@ -754,7 +754,7 @@ export default function TabAlunos() {
         title="Excluir Aluno"
         message={
           <>
-            Tem certeza que deseja excluir o(a) aluno(a) <strong>{alunoParaExcluir?.nome}</strong>? Esta aÃƒÂ§ÃƒÂ£o nÃƒÂ£o pode ser desfeita.
+            Tem certeza que deseja excluir o(a) aluno(a) <strong>{alunoParaExcluir?.nome}</strong>? Esta ação não pode ser desfeita.
           </>
         }
       />

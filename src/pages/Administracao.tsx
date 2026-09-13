@@ -64,7 +64,7 @@ export default function Administracao() {
               className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'usuarios' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
             >
               <Users className="w-5 h-5" />
-              UsuÃ¡rios
+              Usuários
             </button>
           )}
           {user?.role === 'ADMIN' && (

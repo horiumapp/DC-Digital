@@ -9,10 +9,10 @@ import ScheduleModal from '../../components/ScheduleModal';
 import { gerarSenhaTemporaria } from '../../utils/formatters';
 
 
-const DEPARTAMENTOS = ['Geral', 'BIOLÃ“GICAS', 'HUMANAS', 'EXATAS', 'LINGUAGENS'];
+const DEPARTAMENTOS = ['Geral', 'BIOLÓGICAS', 'HUMANAS', 'EXATAS', 'LINGUAGENS'];
 const DISCIPLINAS = [
-  'PortuguÃªs', 'MatemÃ¡tica', 'CiÃªncias', 'HistÃ³ria', 'Geografia',
-  'Artes', 'EducaÃ§Ã£o FÃ­sica', 'InglÃªs', 'Ensino Religioso'
+  'Português', 'Matemática', 'Ciências', 'História', 'Geografia',
+  'Artes', 'Educação Física', 'Inglês', 'Ensino Religioso'
 ];
 
 import { useToast } from '../../components/common/Toast';
@@ -58,7 +58,7 @@ export default function TabProfessores() {
   const [selectedEscola, setSelectedEscola] = useState<EscolaOption | null>(null);
   const [_loading, setLoading] = useState(true);
 
-  // Estado para o formulÃ¡rio inline
+  // Estado para o formulário inline
   const [inlineFormData, setInlineFormData] = useState({
     nome: '',
     email: '',
@@ -86,7 +86,7 @@ export default function TabProfessores() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fase 2: Se o usuÃ¡rio Ã© GESTOR ou SECRETARIO, auto-selecionar a escola dele
+  // Fase 2: Se o usuário é GESTOR ou SECRETARIO, auto-selecionar a escola dele
   useEffect(() => {
     if ((user?.role === 'GESTOR' || user?.role === 'SECRETARIO') && user.escola_id && escolas.length > 0 && !selectedEscola) {
       const minhaEscola = escolas.find(e => e.id === user.escola_id);
@@ -111,21 +111,21 @@ export default function TabProfessores() {
     // BUG-06 FIX: tratar erro silenciado anteriormente
     if (error) {
       console.error('Erro ao carregar escolas:', error);
-      showError('NÃ£o foi possÃ­vel carregar a lista de escolas.');
+      showError('Não foi possível carregar a lista de escolas.');
       return;
     }
     if (data) setEscolas(data);
   };
 
   async function fetchProfessores() {
-    // SEC-04 FIX: especificar campos em vez de select('*') para evitar expor CPF e dados desnecessÃ¡rios
+    // SEC-04 FIX: especificar campos em vez de select('*') para evitar expor CPF e dados desnecessários
     const { data, error } = await supabase
       .from('professores')
       .select('id, nome, email, status, departamento, disciplinas, vinculo, telefone, professor_alocacoes(id, escola_id, turno, escolas(nome)), professor_horarios(id, escola_id)')
       .order('nome');
       
     if (error) {
-      console.error("Erro ao carregar professores e alocaÃ§Ãµes:", error);
+      console.error("Erro ao carregar professores e alocações:", error);
     }
     
     if (data) {
@@ -161,7 +161,7 @@ export default function TabProfessores() {
         setIsNovoProfessorModalOpen(false);
       }
     } else {
-      // Limpa chaves vazias para nÃ£o conflitar com constraints UNIQUE (tipo cpf vazio)
+      // Limpa chaves vazias para não conflitar com constraints UNIQUE (tipo cpf vazio)
       const dataToInsert: Record<string, string | null | string[] | undefined> = { ...professorData };
       if (!dataToInsert.cpf) dataToInsert.cpf = null;
       if (!dataToInsert.email) dataToInsert.email = null;
@@ -183,14 +183,14 @@ export default function TabProfessores() {
             .insert({
                professor_id: newProf.id,
                escola_id: selectedEscola.id,
-               turno: 'ManhÃ£'
+               turno: 'Manhã'
             });
           if (alocError) console.error("Erro ao alocar:", alocError);
         }
 
         // Fase 2: Se forneceu e-mail, criar conta de acesso via Edge Function
         if (novoProfessor.email && selectedEscola) {
-          // FIX C2: senha temporÃ¡ria aleatÃ³ria forte â€” nunca mais "@prof123"
+          // FIX C2: senha temporária aleatória forte — nunca mais "@prof123"
           const senhaDeAcesso = novoProfessor.senha || gerarSenhaTemporaria();
 
           if (senhaDeAcesso.length >= 8) {
@@ -208,7 +208,7 @@ export default function TabProfessores() {
               if (authError || authData?.error) {
                 let msg = authData?.error || authError?.message || 'Erro desconhecido';
                 if (authData?.details) msg += ` - Detalhes: ${JSON.stringify(authData.details)}`;
-                showWarning(`Professor cadastrado, mas nÃ£o foi possÃ­vel criar a conta de acesso: ${msg}`);
+                showWarning(`Professor cadastrado, mas não foi possível criar a conta de acesso: ${msg}`);
               } else {
                 showSuccess(`Professor ${novoProfessor.nome} cadastrado com acesso! (Senha: ${senhaDeAcesso})`);
               }
@@ -217,7 +217,7 @@ export default function TabProfessores() {
               showWarning('Professor cadastrado, mas houve um erro ao criar a conta de acesso.');
             }
           } else {
-            showWarning('Professor cadastrado, mas a senha deve ter no mÃ­nimo 8 caracteres, incluindo letras e nÃºmeros, para criar conta de acesso.');
+            showWarning('Professor cadastrado, mas a senha deve ter no mínimo 8 caracteres, incluindo letras e números, para criar conta de acesso.');
           }
         }
 
@@ -255,7 +255,7 @@ export default function TabProfessores() {
     if (!professorParaExcluir) return;
 
     if (user?.role === 'ADMIN') {
-      // ADMIN: ExclusÃ£o mestre do professor em todo o sistema
+      // ADMIN: Exclusão mestre do professor em todo o sistema
       const { error } = await supabase
         .from('professores')
         .delete()
@@ -272,17 +272,17 @@ export default function TabProfessores() {
               body: { action: 'delete-user', email: professorParaExcluir.email.trim().toLowerCase() },
             });
           } catch (e) {
-            console.warn('Erro ao remover conta Auth do professor excluÃ­do:', e);
+            console.warn('Erro ao remover conta Auth do professor excluído:', e);
           }
         }
 
         fetchProfessores();
         setProfessorParaExcluir(null);
-        showSuccess("Professor excluÃ­do com sucesso do sistema!");
+        showSuccess("Professor excluído com sucesso do sistema!");
       }
     } else if (selectedEscola?.id) {
-      // NÃƒO-ADMIN (GESTOR / SECRETARIO): Remove a alocaÃ§Ã£o e horÃ¡rios do professor apenas nesta escola
-      // Preserva o cadastro global e os vÃ­nculos com outras escolas da rede municipal
+      // NÃO-ADMIN (GESTOR / SECRETARIO): Remove a alocação e horários do professor apenas nesta escola
+      // Preserva o cadastro global e os vínculos com outras escolas da rede municipal
       const { error: alocError } = await supabase
         .from('professor_alocacoes')
         .delete()
@@ -295,7 +295,7 @@ export default function TabProfessores() {
         return;
       }
 
-      // Remover tambÃ©m horÃ¡rios do professor vinculados a esta escola
+      // Remover também horários do professor vinculados a esta escola
       await supabase
         .from('professor_horarios')
         .delete()
@@ -510,7 +510,7 @@ export default function TabProfessores() {
                 </div>
               </div>
 
-              {/* BotÃ£o */}
+              {/* Botão */}
               <button 
                 onClick={handleInlineSubmit}
                 className="w-full bg-[#0f2851] hover:bg-[#1a3a6d] text-white py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-all shadow-lg shadow-[#0f2851]/20 active:scale-[0.98]"
@@ -522,7 +522,7 @@ export default function TabProfessores() {
         </div>
       )}
 
-      {/* ConteÃºdo */}
+      {/* Conteúdo */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden p-8 pt-0">
         {!selectedEscola ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 tracking-tight">
@@ -597,7 +597,7 @@ export default function TabProfessores() {
                         setIsAlocacoesModalOpen(true);
                       }}
                       className="p-2.5 text-slate-400 hover:text-blue-600 bg-white rounded-lg shadow-sm border border-slate-100 flex-1 flex justify-center transition-colors"
-                      title="Gerenciar Escolas / AlocaÃ§Ãµes"
+                      title="Gerenciar Escolas / Alocações"
                     >
                       <Building2 className="w-4 h-4" />
                     </button>
@@ -608,7 +608,7 @@ export default function TabProfessores() {
                         setIsScheduleModalOpen(true);
                       }}
                       className="p-2.5 text-slate-400 hover:text-emerald-600 bg-white rounded-lg shadow-sm border border-slate-100 flex-1 flex justify-center transition-colors"
-                      title="HorÃ¡rio"
+                      title="Horário"
                     >
                       <Calendar className="w-4 h-4" />
                     </button>
@@ -695,9 +695,9 @@ export default function TabProfessores() {
         title={user?.role === 'ADMIN' ? "Excluir Professor do Sistema" : "Desvincular Professor da Escola"}
         message={
           user?.role === 'ADMIN' ? (
-            <>Tem certeza que deseja excluir permanentemente o(a) professor(a) <strong>{professorParaExcluir?.nome}</strong> do sistema? Todas as alocaÃ§Ãµes e horÃ¡rios em todas as escolas serÃ£o removidos.</>
+            <>Tem certeza que deseja excluir permanentemente o(a) professor(a) <strong>{professorParaExcluir?.nome}</strong> do sistema? Todas as alocações e horários em todas as escolas serão removidos.</>
           ) : (
-            <>Tem certeza que deseja desvincular o(a) professor(a) <strong>{professorParaExcluir?.nome}</strong> da escola <strong>{selectedEscola?.nome}</strong>? As aulas e alocaÃ§Ãµes nesta unidade serÃ£o removidas, preservando o cadastro nas demais escolas.</>
+            <>Tem certeza que deseja desvincular o(a) professor(a) <strong>{professorParaExcluir?.nome}</strong> da escola <strong>{selectedEscola?.nome}</strong>? As aulas e alocações nesta unidade serão removidas, preservando o cadastro nas demais escolas.</>
           )
         }
       />

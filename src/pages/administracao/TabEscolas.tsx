@@ -139,7 +139,7 @@ export default function TabEscolas() {
 
   if (_user?.role !== 'ADMIN') return null;
 
-  // Se uma escola estÃ¡ selecionada, mostrar os detalhes dela
+  // Se uma escola está selecionada, mostrar os detalhes dela
   if (escolaSelecionada) {
     return (
       <EscolaDetalhes
@@ -166,7 +166,7 @@ export default function TabEscolas() {
             Gerenciamento de Escolas
           </h2>
           <p className="text-xs text-slate-500 mt-0.5 font-medium">
-            Administre as unidades escolares do municÃ­pio.
+            Administre as unidades escolares do município.
           </p>
         </div>
 
@@ -269,7 +269,7 @@ export default function TabEscolas() {
                 <div className="space-y-2 mt-auto text-slate-500">
                   <div className="flex items-start gap-2">
                     <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <span className="text-[11px] font-medium leading-tight line-clamp-2">{escola.distrito || 'EndereÃ§o nÃ£o cadastrado'}</span>
+                    <span className="text-[11px] font-medium leading-tight line-clamp-2">{escola.distrito || 'Endereço não cadastrado'}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -310,7 +310,7 @@ export default function TabEscolas() {
         title="Excluir Escola"
         message={
           <>
-            Tem certeza que deseja excluir a escola <strong>{escolaParaExcluir?.nome}</strong>? Esta aÃ§Ã£o nÃ£o pode ser desfeita.
+            Tem certeza que deseja excluir a escola <strong>{escolaParaExcluir?.nome}</strong>? Esta ação não pode ser desfeita.
           </>
         }
       />
