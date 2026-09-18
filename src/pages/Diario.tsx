@@ -147,32 +147,41 @@ export default function Diario() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 relative">
-      <div className="relative z-10 mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-8 sm:py-8">
-        <div className="mx-auto max-w-[1400px] space-y-4">
-        {/* Secondary Header */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="/turmas" className="flex items-center gap-1 px-4 py-2 bg-[#eef2ff] text-[#0f2851] text-sm font-bold rounded-xl border border-blue-100 hover:bg-[#e0e7ff] transition">
-              <ArrowLeft className="w-4 h-4" /> 
-              Voltar
+    <div className="min-h-screen bg-slate-50 dark:bg-[#090e17] relative">
+      <div className="relative z-10 max-w-[1500px] mx-auto px-4 py-5 sm:px-8 space-y-5">
+        {/* Compact Workspace Breadcrumb & Period Selector */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link 
+              to="/turmas" 
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> 
+              <span>Turmas</span>
             </Link>
-            <h2 className="text-xl font-medium text-slate-700 dark:text-slate-100">
-              {turmaAtiva.ensino} - {turmaAtiva.fase}
-              <span className="bg-green-100 text-green-700 text-sm font-bold px-3 py-1 rounded-full border border-green-200 ml-2">Ano: {APP_CONFIG.YEAR}</span>
-            </h2>
+
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-black text-[#0b1f3f] dark:text-sky-300 tracking-tight">
+                {turmaAtiva.fase}
+              </h2>
+              <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-sky-300 font-bold text-xs rounded-lg border border-blue-100 dark:border-blue-900">
+                {turmaAtiva.componente}
+              </span>
+              <span className="text-slate-400 dark:text-slate-600 text-xs hidden sm:inline">•</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">
+                {turmaAtiva.ensino}
+              </span>
+            </div>
           </div>
 
-        </div>
-
-        {/* Main Info Cards */}
-        <div className="bg-white/70 dark:bg-slate-800/70 rounded-2xl p-6 border border-slate-200 dark:border-slate-700">
-          <TurmaHeaderInfo turmaAtiva={turmaAtiva} />
-
-          <div className="flex flex-col lg:flex-row gap-8 mt-6">
-            <div className="w-full lg:w-[340px] shrink-0">
-              <label className="text-sm font-bold text-slate-500 dark:text-slate-300 mb-1 block">Período letivo</label>
+          {/* Period Selector (Bimestre) */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <label htmlFor="periodo-select" className="text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0">
+                Bimestre:
+              </label>
               <select 
+                id="periodo-select"
                 value={periodoSelecionadoId}
                 onChange={(e) => {
                   const newId = e.target.value;
@@ -183,7 +192,7 @@ export default function Diario() {
                     setCurrentMonth(obterMesValido(selectedPeriod));
                   }
                 }}
-                className="w-full border border-slate-300 dark:border-slate-600 rounded-xl text-[15px] sm:text-sm tracking-tight bg-white dark:bg-slate-700 dark:text-slate-100 px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] cursor-pointer font-bold text-[#0f2851]"
+                className="border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold bg-slate-50 dark:bg-slate-800 text-[#0b1f3f] dark:text-sky-300 px-3 py-1.5 outline-none focus:ring-2 focus:ring-[#0b1f3f]/15 cursor-pointer shadow-xs"
               >
                 {periodosVisiveis.map(p => {
                   const format = (d: string) => d.split('-').reverse().join('/');
@@ -194,115 +203,48 @@ export default function Diario() {
                   );
                 })}
               </select>
+            </div>
 
-            </div>
-            <div className="flex-1">
-              <label className="text-sm font-bold text-slate-500 dark:text-slate-300 mb-1 block">Legenda</label>
-              <div className="flex flex-wrap gap-2">
-                <span className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs font-bold text-slate-600 dark:text-slate-200">
-                  <span className="w-4 h-4 rounded bg-blue-500 text-white flex items-center justify-center text-[10px]">F</span> Frequência
-                </span>
-                <span className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs font-bold text-slate-600 dark:text-slate-200">
-                  <span className="w-4 h-4 rounded bg-blue-400 text-white flex items-center justify-center text-[10px]">A</span> Avaliação
-                </span>
-                <span className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs font-bold text-slate-600 dark:text-slate-200">
-                  <span className="w-4 h-4 rounded bg-blue-700 text-white flex items-center justify-center text-[10px]">CM</span> Conteúdo Ministrado
-                </span>
-                <span className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs font-bold text-slate-600 dark:text-slate-200">
-                  <span className="w-4 h-4 rounded-full bg-emerald-500"></span> Concluído
-                </span>
-                <span className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs font-bold text-slate-600 dark:text-slate-200">
-                  <span className="w-4 h-4 rounded-full bg-amber-400"></span> Iniciado
-                </span>
-                <span className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs font-bold text-slate-600 dark:text-slate-200">
-                  <span className="w-4 h-4 rounded-full bg-red-500"></span> Pendente
-                </span>
-              </div>
-            </div>
+            <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
+              isAparataFechada 
+                ? 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300 border border-red-200 dark:border-red-900' 
+                : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900'
+            }`}>
+              {isAparataFechada ? 'Aparata Fechada' : 'Bimestre Aberto'}
+            </span>
           </div>
         </div>
 
-        {/* Progress Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-4 space-y-6">
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm transition-all">
-              <h4 className="text-base font-bold text-slate-700 mb-6 uppercase tracking-tight">Lançamentos da Turma</h4>
-              
-              <div className="space-y-4">
-                {/* Frequência */}
-                <div>
-                  <div className="flex justify-between text-[12px] font-bold text-slate-500 mb-1.5 uppercase">
-                    <span>Frequências</span> <span>{pFreq}%</span>
-                  </div>
-                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full ${barColor(pFreq)} transition-all duration-1000`} style={{ width: `${pFreq}%` }}></div>
-                  </div>
-                </div>
+        {/* Compact Metadata Strip */}
+        <TurmaHeaderInfo turmaAtiva={turmaAtiva} />
 
-                {/* Objetos */}
-                <div>
-                  <div className="flex justify-between text-[12px] font-bold text-slate-500 mb-1.5 uppercase">
-                    <span>Objetos de Conhecimento Ministrados</span> <span>{pObj}%</span>
-                  </div>
-                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full ${barColor(pObj)} transition-all duration-1000`} style={{ width: `${pObj}%` }}></div>
-                  </div>
-                </div>
-
-                {/* Avaliações */}
-                <div>
-                  <div className="flex justify-between text-[12px] font-bold text-slate-500 mb-1.5 uppercase">
-                    <span>Avaliações</span> <span>{pAvaliacoes}%</span>
-                  </div>
-                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full ${barColor(pAvaliacoes)} transition-all duration-1000`} style={{ width: `${pAvaliacoes}%` }}></div>
-                  </div>
-                </div>
-
-                {/* Notas */}
-                <div>
-                  <div className="flex justify-between text-[12px] font-bold text-slate-500 mb-1.5 uppercase">
-                    <span>Notas</span> <span>{pNotas}%</span>
-                  </div>
-                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full ${barColor(pNotas)} transition-all duration-1000`} style={{ width: `${pNotas}%` }}></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-              <div className="p-4 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
-                <h4 className="text-sm font-bold text-slate-700 uppercase tracking-tight">Aparata</h4>
-                <Link to="/aparata" className="bg-[#0f2851] hover:bg-[#1a3a6d] transition text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-lg shadow-[#0f2851]/20">
-                  <Folder className="w-4 h-4" /> 
-                  Ver aparata
-                </Link>
-              </div>
-              <div className="p-4 space-y-4">
-                <div className="flex justify-between items-center text-[12px] font-bold text-slate-500 uppercase">
-                  <span>Situação</span>
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] text-white ${isAparataFechada ? 'bg-red-500' : 'bg-emerald-500'}`}>
-                    {isAparataFechada ? 'FECHADO' : 'ABERTO'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-[12px] font-bold text-slate-500 uppercase">
-                  <span>Sincronização</span>
-                  <span className="bg-red-500 text-white px-2.5 py-1 rounded-full text-[10px]">NÃO</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Calendar Section */}
-          <div className="lg:col-span-8">
+        {/* Workspace Columns: Hero Calendar & Continuity Panel */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Calendar Section (Hero Workspace) */}
+          <div className="lg:col-span-8 space-y-4">
             {isAparataFechada ? (
-              <div className="bg-[#fcf3f3] border border-[#f5c6c6] p-6 rounded-xl text-[#842029]">
-                <h3 className="text-lg font-bold mb-4">Aparata Fechada</h3>
-                <div className="space-y-2 text-sm">
-                  <p>- Para realizar lançamentos, solicite reabertura de aparata ao gestor da escola;</p>
-                  <p>- Visualização somente através dos relatórios</p>
+              <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 p-6 rounded-2xl text-red-900 dark:text-red-200 space-y-3">
+                <h3 className="text-base font-bold flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-600"></span>
+                  Lançamentos Bloqueados — Aparata Fechada
+                </h3>
+                <p className="text-xs text-red-700 dark:text-red-300">
+                  O período selecionado ({periodoSelecionado?.nome}) foi encerrado na escola. Para realizar ou alterar lançamentos neste bimestre, solicite a reabertura de aparata à coordenação ou gestão escolar.
+                </p>
+                <div className="pt-2 flex gap-3">
+                  <Link 
+                    to="/aparata" 
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-red-700 hover:bg-red-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                  >
+                    <Folder className="w-3.5 h-3.5" />
+                    <span>Consultar Aparatas</span>
+                  </Link>
+                  <Link 
+                    to="/relatorio-notas" 
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white dark:bg-slate-800 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-xl text-xs font-bold transition-all shadow-xs"
+                  >
+                    <span>Ver Relatório de Notas</span>
+                  </Link>
                 </div>
               </div>
             ) : (
@@ -322,10 +264,103 @@ export default function Diario() {
               />
             )}
           </div>
+
+          {/* Continuity & Records Panel */}
+          <div className="lg:col-span-4 space-y-4">
+            {/* Academic Continuity Card */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/90 dark:border-slate-800 shadow-xs">
+              <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 dark:border-slate-800">
+                <h4 className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider">
+                  Continuidade Pedagógica
+                </h4>
+                <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">
+                  {periodoSelecionado?.nome}
+                </span>
+              </div>
+              
+              <div className="space-y-3.5">
+                {/* Frequência */}
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
+                    <span>Frequência das aulas</span> 
+                    <span className="tabular-nums font-black">{pFreq}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className={`h-full ${barColor(pFreq)} transition-all duration-700`} style={{ width: `${pFreq}%` }}></div>
+                  </div>
+                </div>
+
+                {/* Conteúdos */}
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
+                    <span>Conteúdos ministrados</span> 
+                    <span className="tabular-nums font-black">{pObj}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className={`h-full ${barColor(pObj)} transition-all duration-700`} style={{ width: `${pObj}%` }}></div>
+                  </div>
+                </div>
+
+                {/* Avaliações */}
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
+                    <span>Avaliações planejadas</span> 
+                    <span className="tabular-nums font-black">{pAvaliacoes}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className={`h-full ${barColor(pAvaliacoes)} transition-all duration-700`} style={{ width: `${pAvaliacoes}%` }}></div>
+                  </div>
+                </div>
+
+                {/* Notas */}
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
+                    <span>Notas registradas</span> 
+                    <span className="tabular-nums font-black">{pNotas}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className={`h-full ${barColor(pNotas)} transition-all duration-700`} style={{ width: `${pNotas}%` }}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Aparata Card */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-5 shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <Folder className="w-4 h-4 text-blue-600 dark:text-sky-400" />
+                  <h4 className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider">
+                    Aparata & Registros
+                  </h4>
+                </div>
+                <Link 
+                  to="/aparata" 
+                  className="text-xs font-bold text-blue-700 hover:text-blue-900 dark:text-sky-400 hover:underline"
+                >
+                  Abrir aparata →
+                </Link>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
+                  <span className="font-semibold">Situação do período:</span>
+                  <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] text-white ${isAparataFechada ? 'bg-red-600' : 'bg-emerald-600'}`}>
+                    {isAparataFechada ? 'FECHADO' : 'ABERTO'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
+                  <span className="font-semibold">Sincronização em nuvem:</span>
+                  <span className="text-emerald-700 dark:text-emerald-400 font-bold text-[11px] flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    Ativa
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
       </div>
     </div>
   );
 }
-

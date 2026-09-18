@@ -64,47 +64,49 @@ export default function ConnectionStatus() {
 
   const configs = {
     ONLINE: {
-      bg: deadLetterCount > 0 ? 'bg-amber-600/95' : 'bg-emerald-500/90',
+      bg: deadLetterCount > 0 ? 'bg-amber-600/95' : 'bg-emerald-600/95',
       icon: deadLetterCount > 0 ? <AlertTriangle className="w-4 h-4" /> : <Check className="w-4 h-4" />,
       text: deadLetterCount > 0
-        ? `Atenção: ${deadLetterCount} item(ns) com erro permanente de sync`
-        : pendingCount > 0 ? `Conectado • ${pendingCount} pendente(s)` : 'Conectado',
+        ? `Falha na sincronização: ${deadLetterCount} item(ns) requerem atenção`
+        : pendingCount > 0 
+        ? `Aguardando sincronização • ${pendingCount} alteração(ões) pendente(s)` 
+        : 'Sincronizado • Todos os registros atualizados com a nuvem',
       action: deadLetterCount > 0 ? (
         <button
           onClick={() => setShowDeadLetterModal(true)}
-          className="ml-2 px-2 py-0.5 bg-white/20 hover:bg-white/30 rounded text-xs font-bold transition-colors cursor-pointer"
+          className="ml-2 px-2.5 py-0.5 bg-white/20 hover:bg-white/30 rounded text-xs font-bold transition-colors cursor-pointer"
         >
           Ver erros
         </button>
       ) : pendingCount > 0 ? (
         <button
           onClick={syncNow}
-          className="ml-2 px-2 py-0.5 bg-white/20 rounded-md text-xs font-semibold hover:bg-white/30 transition-colors cursor-pointer"
+          className="ml-2 px-2.5 py-0.5 bg-white/20 rounded-md text-xs font-semibold hover:bg-white/30 transition-colors cursor-pointer"
         >
-          Sincronizar
+          Sincronizar agora
         </button>
       ) : null,
     },
     OFFLINE: {
-      bg: isNearCapacity ? 'bg-amber-600/95 font-bold' : 'bg-amber-500/95',
+      bg: isNearCapacity ? 'bg-amber-600/95 font-bold' : 'bg-[#0b1f3f]/95 border-b border-white/10',
       icon: isNearCapacity ? <AlertTriangle className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />,
       text: isNearCapacity
-        ? `Atenção: Fila offline próxima do limite (${pendingCount}/5000) • Conecte-se à internet para sincronizar!`
+        ? `Atenção: Fila offline próxima do limite (${pendingCount}/5000) • Conecte-se para sincronizar!`
         : pendingCount > 0
-        ? `Sem conexão • ${pendingCount} alteração(ões) salva(s) localmente`
-        : 'Sem conexão — trabalhando offline',
+        ? `Salvo neste dispositivo • Aguardando sincronização (${pendingCount} alteração${pendingCount > 1 ? 'ões' : ''})`
+        : 'Salvo neste dispositivo • Modo offline ativo (você pode continuar trabalhando normalmente)',
       action: null,
     },
     SYNCING: {
-      bg: 'bg-blue-500/95',
+      bg: 'bg-blue-600/95',
       icon: <RefreshCw className="w-4 h-4 animate-spin" />,
-      text: `Sincronizando ${pendingCount} item(ns)...`,
+      text: pendingCount > 0 ? `Sincronizando... (${pendingCount} item${pendingCount > 1 ? 'ns' : ''})` : 'Sincronizando...',
       action: null,
     },
     ERROR: {
-      bg: 'bg-red-500/95',
+      bg: 'bg-rose-600/95',
       icon: <AlertCircle className="w-4 h-4" />,
-      text: lastError || 'Erro na sincronização',
+      text: lastError ? `Falha na sincronização • ${lastError}` : 'Falha na sincronização',
       action: (
         <div className="flex items-center gap-1.5 ml-2">
           <button
@@ -114,14 +116,14 @@ export default function ConnectionStatus() {
                 setShowDeadLetterModal(true);
               }
             }}
-            className="px-2 py-0.5 bg-white/20 rounded-md text-xs font-semibold hover:bg-white/30 transition-colors cursor-pointer"
+            className="px-2.5 py-0.5 bg-white/20 rounded-md text-xs font-semibold hover:bg-white/30 transition-colors cursor-pointer"
           >
             Tentar novamente
           </button>
           {deadLetterCount > 0 && (
             <button
               onClick={() => setShowDeadLetterModal(true)}
-              className="px-2 py-0.5 bg-white/30 hover:bg-white/40 rounded text-xs font-bold transition-colors cursor-pointer"
+              className="px-2.5 py-0.5 bg-white/30 hover:bg-white/40 rounded text-xs font-bold transition-colors cursor-pointer"
             >
               Ver {deadLetterCount} erro(s)
             </button>
