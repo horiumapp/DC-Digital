@@ -309,15 +309,149 @@ export default function FrequenciaTab({
             </div>
           </div>
 
-          {/* Student Attendance Table */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-            <table className="dd-mobile-table w-full text-sm text-left">
+          {/* Student Attendance List: Mobile Cards (< md) & Desktop Table (>= md) */}
+          
+          {/* Mobile Attendance Cards */}
+          <div className="md:hidden space-y-3">
+            {visibleStudents.map((aluno, index) => (
+              <div 
+                key={aluno.id}
+                className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3.5"
+              >
+                {/* Card Header: Index, Name, Registration */}
+                <div className="flex items-start justify-between gap-2.5">
+                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                    <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs flex items-center justify-center tabular-nums mt-0.5">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-snug">
+                        {aluno.nome}
+                      </h4>
+                      {aluno.matricula && (
+                        <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 font-medium mt-0.5">
+                          Matrícula: {aluno.matricula}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Status Badge */}
+                  {aluno.freq && (
+                    <span className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[11px] font-extrabold text-white shadow-xs ${
+                      aluno.freq === 'P' 
+                        ? 'bg-emerald-600' 
+                        : aluno.freq === 'F' 
+                        ? 'bg-rose-600' 
+                        : 'bg-amber-600'
+                    }`}>
+                      {aluno.freq === 'P' ? 'Presente' : aluno.freq === 'F' ? 'Falta' : 'Justificada'}
+                    </span>
+                  )}
+                </div>
+
+                {/* Frequency Selector: 3 Big Thumb Buttons */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                      Frequência ({tempoAula})
+                    </label>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Toque para selecionar</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => !disabled && setDirectFreq(aluno.id, aluno.freq === 'P' ? '' : 'P')}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed ${
+                        aluno.freq === 'P'
+                          ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-400/40'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/40 border border-slate-200/60 dark:border-slate-700/60'
+                      }`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${aluno.freq === 'P' ? 'bg-white' : 'bg-emerald-500'}`} />
+                      Presença
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => !disabled && setDirectFreq(aluno.id, aluno.freq === 'F' ? '' : 'F')}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed ${
+                        aluno.freq === 'F'
+                          ? 'bg-rose-600 text-white shadow-sm ring-2 ring-rose-400/40'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950/40 border border-slate-200/60 dark:border-slate-700/60'
+                      }`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${aluno.freq === 'F' ? 'bg-white' : 'bg-rose-500'}`} />
+                      Falta
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => !disabled && setDirectFreq(aluno.id, aluno.freq === 'FJ' ? '' : 'FJ')}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed ${
+                        aluno.freq === 'FJ'
+                          ? 'bg-amber-600 text-white shadow-sm ring-2 ring-amber-400/40'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-950/40 border border-slate-200/60 dark:border-slate-700/60'
+                      }`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${aluno.freq === 'FJ' ? 'bg-white' : 'bg-amber-500'}`} />
+                      Justificada
+                    </button>
+                  </div>
+                </div>
+
+                {/* Participation Selector: Full-Width 50%/50% Segmented Pill */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+                    Participação
+                  </label>
+                  <div className={`flex w-full rounded-xl overflow-hidden border transition-all ${
+                    !aluno.freq
+                      ? 'opacity-40 grayscale pointer-events-none border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40'
+                      : 'border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 shadow-xs'
+                  }`}>
+                    <button
+                      type="button"
+                      disabled={disabled || !aluno.freq}
+                      onClick={() => togglePart(aluno.id, 'Presencial')}
+                      className={`flex-1 py-2.5 px-3 text-center text-xs font-bold transition-all cursor-pointer ${
+                        aluno.part === 'Presencial'
+                          ? 'bg-[#0b1f3f] text-white shadow-xs'
+                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      Presencial
+                    </button>
+                    <button
+                      type="button"
+                      disabled={disabled || !aluno.freq}
+                      onClick={() => togglePart(aluno.id, 'Remoto')}
+                      className={`flex-1 py-2.5 px-3 text-center text-xs font-bold transition-all border-l border-slate-200 dark:border-slate-700 cursor-pointer ${
+                        aluno.part === 'Remoto'
+                          ? 'bg-[#0b1f3f] text-white shadow-xs'
+                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      Remoto
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Attendance Table (>= md) */}
+          <div className="hidden md:block bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+            <table className="w-full text-sm text-left">
               <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider border-b border-slate-200/80 dark:border-slate-800">
                 <tr>
                   <th className="px-4 py-3.5 w-16 text-center">Nº</th>
                   <th className="px-4 py-3.5">Estudante</th>
-                  <th className="px-4 py-3.5 text-center w-36">{tempoAula}</th>
-                  <th className="px-4 py-3.5 text-center w-52">Participação</th>
+                  <th className="px-4 py-3.5 text-center w-48">{tempoAula}</th>
+                  <th className="px-4 py-3.5 text-center w-56">Participação</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
@@ -328,10 +462,10 @@ export default function FrequenciaTab({
                       index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/30 dark:bg-slate-800/20'
                     }`}
                   >
-                    <td data-label="Nº" className="px-4 py-3.5 text-center text-slate-500 dark:text-slate-400 font-bold tabular-nums">
+                    <td className="px-4 py-3.5 text-center text-slate-500 dark:text-slate-400 font-bold tabular-nums">
                       {String(index + 1).padStart(2, '0')}
                     </td>
-                    <td data-label="Aluno" className="px-4 py-3.5">
+                    <td className="px-4 py-3.5">
                       <p className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">
                         {aluno.nome}
                       </p>
@@ -341,8 +475,8 @@ export default function FrequenciaTab({
                         </p>
                       )}
                     </td>
-                    <td data-label={tempoAula} className="px-4 py-3.5 text-center">
-                      <div className="inline-flex items-center gap-1.5">
+                    <td className="px-4 py-3.5 text-center">
+                      <div className="inline-flex items-center justify-center gap-2">
                         {/* Main Touch Toggle Button */}
                         <button
                           type="button"
@@ -364,13 +498,13 @@ export default function FrequenciaTab({
                         </button>
 
                         {/* Quick 1-click status shortcuts for desktop */}
-                        <div className="hidden sm:inline-flex items-center gap-1 ml-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200/80 dark:border-slate-700/80">
+                        <div className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200/80 dark:border-slate-700/80">
                           <button
                             type="button"
                             onClick={() => !disabled && setDirectFreq(aluno.id, 'P')}
                             disabled={disabled}
                             title="Presença"
-                            className={`w-5 h-5 rounded text-[10px] font-bold transition-all cursor-pointer ${aluno.freq === 'P' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-emerald-700 hover:bg-emerald-50'}`}
+                            className={`w-6 h-6 rounded text-[11px] font-bold transition-all cursor-pointer ${aluno.freq === 'P' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 hover:text-emerald-700 hover:bg-emerald-50'}`}
                           >
                             P
                           </button>
@@ -379,7 +513,7 @@ export default function FrequenciaTab({
                             onClick={() => !disabled && setDirectFreq(aluno.id, 'F')}
                             disabled={disabled}
                             title="Falta"
-                            className={`w-5 h-5 rounded text-[10px] font-bold transition-all cursor-pointer ${aluno.freq === 'F' ? 'bg-rose-600 text-white' : 'text-slate-500 hover:text-rose-700 hover:bg-rose-50'}`}
+                            className={`w-6 h-6 rounded text-[11px] font-bold transition-all cursor-pointer ${aluno.freq === 'F' ? 'bg-rose-600 text-white shadow-xs' : 'text-slate-500 hover:text-rose-700 hover:bg-rose-50'}`}
                           >
                             F
                           </button>
@@ -388,15 +522,15 @@ export default function FrequenciaTab({
                             onClick={() => !disabled && setDirectFreq(aluno.id, 'FJ')}
                             disabled={disabled}
                             title="Falta Justificada"
-                            className={`w-5 h-5 rounded text-[10px] font-bold transition-all cursor-pointer ${aluno.freq === 'FJ' ? 'bg-amber-600 text-white' : 'text-slate-500 hover:text-amber-700 hover:bg-amber-50'}`}
+                            className={`w-6 h-6 rounded text-[11px] font-bold transition-all cursor-pointer ${aluno.freq === 'FJ' ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-500 hover:text-amber-700 hover:bg-amber-50'}`}
                           >
                             FJ
                           </button>
                         </div>
                       </div>
                     </td>
-                    <td data-label="Participação" className="px-4 py-3.5 text-center">
-                      <div className={`inline-flex rounded-xl overflow-hidden border transition-all ${
+                    <td className="px-4 py-3.5 text-center">
+                      <div className={`inline-flex rounded-xl overflow-hidden border transition-all min-w-[170px] ${
                         !aluno.freq 
                           ? 'opacity-40 grayscale pointer-events-none border-slate-200 dark:border-slate-700' 
                           : 'border-slate-200 dark:border-slate-700 shadow-sm'
@@ -405,7 +539,7 @@ export default function FrequenciaTab({
                           type="button"
                           disabled={disabled || !aluno.freq}
                           onClick={() => togglePart(aluno.id, 'Presencial')}
-                          className={`px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                          className={`px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                             aluno.part === 'Presencial' 
                               ? 'bg-[#0b1f3f] text-white' 
                               : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
@@ -417,7 +551,7 @@ export default function FrequenciaTab({
                           type="button"
                           disabled={disabled || !aluno.freq}
                           onClick={() => togglePart(aluno.id, 'Remoto')}
-                          className={`px-3 py-1.5 text-xs font-bold transition-all border-l border-slate-200 dark:border-slate-700 cursor-pointer ${
+                          className={`px-3.5 py-1.5 text-xs font-bold transition-all border-l border-slate-200 dark:border-slate-700 cursor-pointer ${
                             aluno.part === 'Remoto' 
                               ? 'bg-[#0b1f3f] text-white' 
                               : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
