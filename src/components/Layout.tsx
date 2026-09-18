@@ -380,19 +380,45 @@ export default function Layout() {
           onClick={close}
         >
           <aside 
-            className="h-full w-[min(20rem,86vw)] overflow-y-auto bg-white p-5 shadow-2xl dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800" 
+            className="h-full w-[min(20rem,86vw)] flex flex-col justify-between overflow-y-auto bg-white shadow-2xl dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800" 
             onClick={e => e.stopPropagation()}
           >
-            <div className="mb-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
-              <div className="flex items-center gap-2">
-                <img src="/logo.png" alt="" className="h-8 w-8 object-contain" />
-                <span className="font-extrabold text-[#0b1f3f] dark:text-sky-400 text-sm">DC Digital</span>
+            <div className="p-5 flex-1 overflow-y-auto">
+              <div className="mb-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                <div className="flex items-center gap-2">
+                  <img src="/logo.png" alt="" className="h-8 w-8 object-contain" />
+                  <div>
+                    <strong className="font-extrabold text-[#0b1f3f] dark:text-sky-400 text-sm block leading-tight">DC Digital</strong>
+                    <small className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Espaço Pedagógico</small>
+                  </div>
+                </div>
+                <button className="dd-icon-button" onClick={close} aria-label="Fechar menu">
+                  <X aria-hidden="true" />
+                </button>
               </div>
-              <button className="dd-icon-button" onClick={close} aria-label="Fechar menu">
-                <X aria-hidden="true" />
-              </button>
+              {renderNav()}
             </div>
-            {renderNav()}
+
+            {/* Mobile Drawer User Card */}
+            <div className="border-t border-slate-200 p-4 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-[#eef4fc] text-[#0b1f3f] dark:bg-slate-800 dark:text-sky-400 font-bold flex items-center justify-center text-xs border border-blue-100 dark:border-slate-700">
+                  {user?.name ? user.name.slice(0, 2).toUpperCase() : 'US'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-xs font-bold text-slate-800 dark:text-slate-200">{user?.name || 'Usuário'}</p>
+                  <p className="truncate text-[11px] text-slate-400 dark:text-slate-500 font-medium uppercase tracking-wider">{user?.title || user?.role}</p>
+                </div>
+                <button 
+                  onClick={async () => { close(); await logout(); navigate('/'); }} 
+                  className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                  title="Sair do sistema"
+                  aria-label="Sair"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           </aside>
         </div>
       )}
