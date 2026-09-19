@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { APP_CONFIG } from '../config/appConfig';
-import { TurmaService, NotaRecord } from '../services/turmaService';
+import type { NotaRecord } from '../services/turmaService';
+import * as OfflineTurmaService from '../services/turmaServiceOffline';
 import { Aluno, Avaliacao } from '../contexts/TurmaContext';
 
 import { useToast } from '../components/common/Toast';
@@ -211,10 +212,10 @@ export default function RelatorioNotas() {
       const [turmaId, componente] = selectedTurma.split('|');
       const tid = turmaId.split('||')[0];
       
-      const alunosData = await TurmaService.fetchAlunos(tid);
+      const alunosData = await OfflineTurmaService.fetchAlunos(tid);
       setAlunos(alunosData);
 
-      const { avaliacoes: avsData, notasData } = await TurmaService.fetchAvaliacoes(tid, componente);
+      const { avaliacoes: avsData, notasData } = await OfflineTurmaService.fetchAvaliacoes(tid, componente);
       const filteredAvs = avsData.filter(a => a.bimestre === periodo);
       setAvaliacoes(filteredAvs);
       setNotas(notasData);

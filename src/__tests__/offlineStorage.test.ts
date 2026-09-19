@@ -275,6 +275,7 @@ import {
   deleteConteudoLocal,
   saveAvaliacaoLocal,
   deleteAvaliacaoLocal,
+  deleteNotasLocal,
   clearOldSyncedData,
   clearAllLocalData,
 } from '../services/offlineStorage';
@@ -561,6 +562,99 @@ describe('offlineStorage Service', () => {
     await deleteConteudoLocal('t-123', 'História', '2026-04-15', '1');
 
     expect(store.conteudos).toHaveLength(0);
+    expect(store.syncQueue).toHaveLength(0);
+  });
+
+  it('atualiza avaliação existente se coincidir com clientTempId em saveAvaliacaoLocal (DATA-01)', async () => {
+    const store = getMockStore();
+    // 1. Inserir avaliação offline pela primeira vez
+    const lid1 = await saveAvaliacaoLocal({
+      turma_id: 't-123',
+      tipo: 'AV1',
+      data: '2026-04-15',
+      instrumento: 'Prova',
+      objetos: [],
+      bimestre: '1º Bimestre',
+      valor_maximo: 10,
+      disciplina: 'História',
+      clientTempId: 'temp_171000000',
+    });
+
+    expect(store.avaliacoes).toHaveLength(1);
+    expect(store.avaliacoes[0].tipo).toBe('AV1');
+
+    // 2. Editar a mesma avaliação offline passando o mesmo clientTempId
+    const lid2 = await saveAvaliacaoLocal({
+      turma_id: 't-123',
+      tipo: 'AV1-Editada',
+      data: '2026-04-15',
+      instrumento: 'Trabalho',
+      objetos: [],
+      bimestre: '1º Bimestre',
+      valor_maximo: 10,
+      disciplina: 'História',
+      clientTempId: 'temp_171000000',
+    });
+
+    // Não deve criar registro duplicado em avaliacoes
+    expect(lid2).toBe(lid1);
+    expect(store.avaliacoes).toHaveLength(1);
+    expect(store.avaliacoes[0].tipo).toBe('AV1-Editada');
+    expect(store.avaliacoes[0].instrumento).toBe('Trabalho');
+  });
+
+  it('purga registros de alunos deletados da syncQueue em deleteNotasLocal (DATA-02)', async () => {
+    const store = getMockStore();
+    store.notas.push({
+      localId: 10,
+      avaliacao_id: 'temp_av_99',
+      aluno_id: 'aluno-1',
+      valor: 8.5,
+      syncStatus: 'pending',
+    });
+    store.notas.push({
+      localId: 11,
+      avaliacao_id: 'temp_av_99',
+      aluno_id: 'aluno-2',
+      valor: 9.0,
+      syncStatus: 'pending',
+    });
+
+    store.syncQueue.push({
+      id: 501,
+      table: 'notas',
+      operation: 'UPSERT',
+      payload: JSON.stringify({
+        records: [
+          { avaliacao_id: 'temp_av_99', aluno_id: 'aluno-1', valor: 8.5 },
+          { avaliacao_id: 'temp_av_99', aluno_id: 'aluno-2', valor: 9.0 },
+        ],
+      }),
+      status: 'pending',
+      hash: 'h-nota-batch',
+      createdAt: '2026-04-15',
+      updatedAt: '2026-04-15',
+      retryCount: 0,
+    });
+
+    // Deleta a nota do aluno-1
+    await deleteNotasLocal('temp_av_99', ['aluno-1']);
+
+    // Verifica que no Dexie só sobrou aluno-2
+    expect(store.notas).toHaveLength(1);
+    expect(store.notas[0].aluno_id).toBe('aluno-2');
+
+    // Verifica que na syncQueue o aluno-1 foi purgado e aluno-2 permaneceu
+    expect(store.syncQueue).toHaveLength(1);
+    const parsedPayload = JSON.parse(String(store.syncQueue[0].payload));
+    expect(parsedPayload.records).toHaveLength(1);
+    expect(parsedPayload.records[0].aluno_id).toBe('aluno-2');
+
+    // Deleta a nota restante do aluno-2
+    await deleteNotasLocal('temp_av_99', ['aluno-2']);
+
+    expect(store.notas).toHaveLength(0);
+    // Como ficou vazio, o lote de UPSERT deve ter sido removido por completo
     expect(store.syncQueue).toHaveLength(0);
   });
 });

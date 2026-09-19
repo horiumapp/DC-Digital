@@ -247,13 +247,12 @@ export default function PortalAluno() {
       }));
     }
 
-    // Buscar frequências do aluno
+    // Buscar frequências do aluno (histórico completo para cálculo preciso de faltas no boletim)
     const { data: freqData } = await supabase
       .from('frequencias')
       .select('data, disciplina, status, participacao')
       .eq('aluno_id', alunoEncontrado.id)
-      .order('data', { ascending: false })
-      .limit(50);
+      .order('data', { ascending: false });
 
     if (freqData) {
       setFrequencias(freqData);

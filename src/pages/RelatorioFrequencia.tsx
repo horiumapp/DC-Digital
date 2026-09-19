@@ -8,7 +8,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { formatarDataParaISO, getBimestrePorData } from '../utils/dateUtils';
 import { APP_CONFIG } from '../config/appConfig';
-import { TurmaService } from '../services/turmaService';
+import * as OfflineTurmaService from '../services/turmaServiceOffline';
+import * as OfflineStorage from '../services/offlineStorage';
 
 import { useToast } from '../components/common/Toast';
 
@@ -194,18 +195,31 @@ export default function RelatorioFrequencia() {
 
 
 
-      // 1. Buscar Alunos
-      const alunosList = await TurmaService.fetchAlunos(turmaId);
+      // 1. Buscar Alunos (suporte online/offline)
+      const tid = turmaId.split('||')[0];
+      const alunosList = await OfflineTurmaService.fetchAlunos(tid);
 
+      // 2. Buscar Frequências (com fallback para cache local offline)
+      let rawFreqs: Array<{ turma_id: string; aluno_id: string; data: string; tempo: string; status: string; participacao?: string; disciplina: string }> = [];
 
-      // 2. Buscar Frequências de forma ampla
-      const { data: rawFreqs, error: freqError } = await supabase
-        .from('frequencias')
-        .select('*')
-        .eq('turma_id', turmaId);
+      if (navigator.onLine) {
+        try {
+          const { data, error: freqError } = await supabase
+            .from('frequencias')
+            .select('turma_id, aluno_id, data, tempo, status, participacao, disciplina')
+            .eq('turma_id', tid);
 
-      if (freqError) throw freqError;
-
+          if (freqError) throw freqError;
+          rawFreqs = (data || []) as typeof rawFreqs;
+        } catch (netErr) {
+          console.warn('[RelatorioFrequencia] Falha ao consultar Supabase, usando dados locais:', netErr);
+          const localFreqs = await OfflineStorage.getAllFrequenciasLocal(tid, componente);
+          rawFreqs = localFreqs;
+        }
+      } else {
+        const localFreqs = await OfflineStorage.getAllFrequenciasLocal(tid, componente);
+        rawFreqs = localFreqs;
+      }
 
       // Filtragem em Memória (JS)
       const finalFreqs = (rawFreqs || []).filter(f => {
@@ -218,29 +232,10 @@ export default function RelatorioFrequencia() {
         return matchProp && matchDate;
       });
 
-
-
       if (finalFreqs.length === 0) {
-        // Fallback: Tenta buscar pelo NOME da disciplina caso o ID da turma esteja vinculado de forma diferente
-        const { data: fallbackFreqs } = await supabase
-          .from('frequencias')
-          .select('*')
-          .ilike('disciplina', componente);
-
-        const filteredFallback = (fallbackFreqs || []).filter(f => {
-          // Verifica se o aluno da frequência pertence à turma atual
-          const alunoPertence = alunosList.some(a => a.id.toString() === f.aluno_id.toString());
-          const fDateISO = formatarDataParaISO(f.data);
-          return alunoPertence && fDateISO >= dateStart && fDateISO <= dateEnd;
-        });
-
-        if (filteredFallback.length > 0) {
-          finalFreqs.push(...filteredFallback);
-        } else {
-          showWarning('Nenhuma frequência encontrada para os critérios selecionados.');
-          setDataLoading(false);
-          return;
-        }
+        showWarning('Nenhuma frequência encontrada para os critérios selecionados.');
+        setDataLoading(false);
+        return;
       }
 
       // 3. Processar Colunas (Datas/Tempos)

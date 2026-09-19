@@ -563,11 +563,37 @@ export async function saveAvaliacaoLocal(data: Omit<LocalAvaliacao, 'localId' | 
     const timestamp = now();
 
     // Se tem server ID, atualizar registro existente
-    if (normalizedData.id) {
+    if (normalizedData.id && !normalizedData.id.startsWith('temp_') && !normalizedData.id.startsWith('local_')) {
       const existing = await db.avaliacoes.where('id').equals(normalizedData.id).first();
       if (existing?.localId) {
         await db.avaliacoes.update(existing.localId, {
           ...normalizedData,
+          syncStatus: 'pending',
+          updatedAt: timestamp,
+          version: (existing.version || 0) + 1,
+        });
+        return existing.localId;
+      }
+    }
+
+    // FIX DATA-01: Se não tem server ID ou é ID temporário da UI, verificar por clientTempId / aliases
+    const tempIdToMatch = normalizedData.clientTempId
+      || (normalizedData.id && (normalizedData.id.startsWith('temp_') || normalizedData.id.startsWith('local_')) ? normalizedData.id : undefined);
+
+    if (tempIdToMatch) {
+      const existing = await db.avaliacoes
+        .filter(a => {
+          const lId = a.localId;
+          return a.clientTempId === tempIdToMatch
+            || a.id === tempIdToMatch
+            || (lId !== undefined && (`temp_${lId}` === tempIdToMatch || `local_${lId}` === tempIdToMatch || String(lId) === tempIdToMatch));
+        })
+        .first();
+
+      if (existing?.localId) {
+        await db.avaliacoes.update(existing.localId, {
+          ...normalizedData,
+          clientTempId: existing.clientTempId || tempIdToMatch,
           syncStatus: 'pending',
           updatedAt: timestamp,
           version: (existing.version || 0) + 1,
@@ -763,12 +789,85 @@ export async function getNotasLocal(avaliacaoIds: string[]): Promise<LocalNota[]
 
 export async function deleteNotasLocal(avaliacaoId: string, alunoIds: string[]): Promise<void> {
   if (alunoIds.length === 0) return;
-  await db.transaction('rw', db.notas, async () => {
-    const existing = await db.notas.where('avaliacao_id').equals(avaliacaoId).toArray();
-    const toDelete = existing.filter(n => alunoIds.includes(n.aluno_id));
+  const alunoIdsSet = new Set(alunoIds.map(String));
+
+  // Buscar possíveis aliases da avaliação para encontrar notas e itens de fila
+  const avRecord = await db.avaliacoes
+    .filter(a => {
+      const lid = a.localId;
+      return a.id === avaliacaoId
+        || a.clientTempId === avaliacaoId
+        || a.serverId === avaliacaoId
+        || (lid !== undefined && (String(lid) === avaliacaoId || `temp_${lid}` === avaliacaoId || `local_${lid}` === avaliacaoId));
+    })
+    .first();
+
+  const avaliacaoAliases = new Set(
+    [
+      avaliacaoId,
+      avRecord?.id,
+      avRecord?.clientTempId,
+      avRecord?.serverId,
+      avRecord?.localId !== undefined ? String(avRecord.localId) : undefined,
+      avRecord?.localId !== undefined ? `temp_${avRecord.localId}` : undefined,
+      avRecord?.localId !== undefined ? `local_${avRecord.localId}` : undefined,
+    ].filter((v): v is string => Boolean(v))
+  );
+
+  await db.transaction('rw', [db.notas, db.syncQueue], async () => {
+    // 1. Remover do Dexie
+    const existing = await db.notas
+      .filter(n => avaliacaoAliases.has(String(n.avaliacao_id)))
+      .toArray();
+    const toDelete = existing.filter(n => alunoIdsSet.has(String(n.aluno_id)));
     const ids = toDelete.map(n => n.localId).filter((id): id is number => id !== undefined);
     if (ids.length > 0) {
       await db.notas.bulkDelete(ids);
+    }
+
+    // 2. Limpar ou expurgar da syncQueue (evitar ressurreição após sync da avaliação)
+    const queueItems = await db.syncQueue
+      .where('table')
+      .equals('notas')
+      .filter(item => item.status === 'pending')
+      .toArray();
+
+    for (const item of queueItems) {
+      let payload: Record<string, unknown>;
+      try {
+        payload = JSON.parse(item.payload) as Record<string, unknown>;
+      } catch {
+        continue;
+      }
+
+      if (Array.isArray(payload.records)) {
+        const records = payload.records as Array<Record<string, unknown>>;
+        const remainingRecords = records.filter(r => {
+          if (!r || typeof r !== 'object') return true;
+          const matchesAv = avaliacaoAliases.has(String(r.avaliacao_id));
+          const matchesAluno = alunoIdsSet.has(String(r.aluno_id));
+          return !(matchesAv && matchesAluno);
+        });
+
+        if (remainingRecords.length === records.length) continue;
+        if (remainingRecords.length === 0) {
+          if (item.id !== undefined) await db.syncQueue.delete(item.id);
+          continue;
+        }
+
+        payload.records = remainingRecords;
+        if (item.id !== undefined) {
+          await db.syncQueue.update(item.id, {
+            payload: JSON.stringify(payload),
+            hash: await hashOperation(item.table, item.operation, payload),
+            updatedAt: now(),
+          });
+        }
+      } else if (payload.avaliacao_id && payload.aluno_id) {
+        if (avaliacaoAliases.has(String(payload.avaliacao_id)) && alunoIdsSet.has(String(payload.aluno_id))) {
+          if (item.id !== undefined) await db.syncQueue.delete(item.id);
+        }
+      }
     }
   });
 }

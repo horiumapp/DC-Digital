@@ -290,7 +290,19 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
     if (!targetProfId || !targetEscolaId) return;
 
     setSaving(true);
+    let previousRows: Array<Record<string, unknown>> = [];
     try {
+      // FIX CONC-02: Obter backup dos registros atuais para rollback caso o insert falhe
+      const { data: existingRows } = await supabase
+        .from('professor_horarios')
+        .select('*')
+        .eq('professor_id', targetProfId)
+        .eq('escola_id', targetEscolaId);
+
+      if (existingRows) {
+        previousRows = existingRows;
+      }
+
       await supabase
         .from('professor_horarios')
         .delete()
@@ -313,7 +325,13 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
 
       if (inserts.length > 0) {
         const { error } = await supabase.from('professor_horarios').insert(inserts);
-        if (error) throw error;
+        if (error) {
+          // Rollback: restaurar registros anteriores
+          if (previousRows.length > 0) {
+            await supabase.from('professor_horarios').insert(previousRows);
+          }
+          throw error;
+        }
       }
 
       setIsEditing(false);

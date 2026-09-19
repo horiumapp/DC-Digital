@@ -275,21 +275,23 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const registrarLancamento = useCallback((novo: Lancamento) => {
+    const tidNovo = getTid(novo.turmaId);
     setLancamentos(prev => {
       const existe = prev.some(l => 
-        String(l.turmaId) === String(novo.turmaId) && 
+        getTid(l.turmaId) === tidNovo && 
         l.data === novo.data && 
         l.tipo === novo.tipo && 
         l.tempo === novo.tempo
       );
       if (existe) return prev;
-      return [...prev, novo];
+      return [...prev, { ...novo, turmaId: tidNovo }];
     });
   }, []);
 
   const removerLancamento = useCallback((filtro: Lancamento) => {
+    const tidFiltro = getTid(filtro.turmaId);
     setLancamentos(prev => prev.filter(l => 
-      !(String(l.turmaId) === String(filtro.turmaId) && 
+      !(getTid(l.turmaId) === tidFiltro && 
         l.data === filtro.data && 
         l.tipo === filtro.tipo && 
         l.tempo === filtro.tempo)
@@ -431,7 +433,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       await OfflineTurmaService.salvarFrequencia(rawId, turmaAtiva.componente, data, tempo, alunosFreq);
       
       registrarLancamento({
-        turmaId: turmaAtiva.id,
+        turmaId: rawId,
         data,
         tipo: 'frequencia',
         tempo

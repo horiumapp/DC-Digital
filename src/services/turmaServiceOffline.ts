@@ -229,7 +229,9 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
       const idToCheck = String(formatted.id);
       const isRemote = remoteIds.has(idToCheck) || (local.id && remoteIds.has(String(local.id))) || (local.serverId && remoteIds.has(String(local.serverId)));
 
-      if (!isRemote) {
+      // FIX CONC-01: Se não é remoto, OU se é remoto mas possui alterações locais pendentes de sincronização,
+      // a versão local deve prevalecer sobre o snapshot do servidor para não descartar edições do usuário.
+      if (!isRemote || local.syncStatus === 'pending') {
         const existingIdx = mergedAvaliacoes.findIndex(a => 
           String(a.id) === idToCheck || 
           (local.id && String(a.id) === String(local.id)) ||

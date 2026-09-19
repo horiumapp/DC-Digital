@@ -152,11 +152,18 @@ export default function Turmas() {
       }
 
       // 1. Encontrar o(s) registro(s) do professor vinculado ao usuário logado
-      // Usamos eq com correspondência exata para evitar falsos positivos
-      const { data: professorDataResult, error: profError } = await supabase
+      // FIX REG-01: Usar usuario_id (UUID do Auth) com fallback para email
+      let queryProf = supabase
         .from('professores')
-        .select('id, disciplinas')
-        .eq('email', emailLimpo);
+        .select('id, disciplinas');
+
+      if (user.id) {
+        queryProf = queryProf.or(`usuario_id.eq.${user.id},email.eq.${emailLimpo}`);
+      } else {
+        queryProf = queryProf.eq('email', emailLimpo);
+      }
+
+      const { data: professorDataResult, error: profError } = await queryProf;
 
       if (profError) throw profError;
 
