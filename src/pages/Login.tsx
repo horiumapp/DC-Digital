@@ -264,7 +264,7 @@ export default function Login() {
                   }`}
                 >
                   <Briefcase className="w-4 h-4" />
-                  Educador / Servidor
+                  Servidor
                 </button>
                 <button
                   type="button"
