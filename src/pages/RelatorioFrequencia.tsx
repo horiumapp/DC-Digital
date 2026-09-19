@@ -6,7 +6,7 @@ import { ArrowLeft, ChevronDown, Search, Check, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { formatarDataParaISO, getBimestrePorData } from '../utils/dateUtils';
+import { formatarDataParaISO, getBimestrePorData, formatarDiaMes } from '../utils/dateUtils';
 import { APP_CONFIG } from '../config/appConfig';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
 import * as OfflineStorage from '../services/offlineStorage';
@@ -432,11 +432,10 @@ export default function RelatorioFrequencia() {
                       <th className="px-4 py-3 font-bold text-[11px] w-12 border-r border-slate-200">Nº</th>
                       <th className="px-6 py-3 font-bold text-[11px] w-80 border-r border-slate-200">Nome</th>
                       {colunasDatas.map(col => {
-                        const [data, tempo] = col.split('|');
-                        const dateObj = new Date(formatarDataParaISO(data));
+                        const [data] = col.split('|');
                         return (
                           <th key={col} className="px-2 py-3 font-black text-[9px] text-center border-r border-slate-200 min-w-[45px] leading-tight">
-                            {data.split('/')[0]}<br />{['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'][dateObj.getMonth()]}<br />{tempo?.charAt(0)}T
+                            {formatarDiaMes(data)}
                           </th>
                         );
                       })}
@@ -604,7 +603,14 @@ export default function RelatorioFrequencia() {
               <tr>
                 <th style={{ width: '3%' }}>Nº</th>
                 <th style={{ width: '20%' }}>ALUNO</th>
-                {colunasDatas.map(col => <th key={col} className="text-[6px]" style={{ width: '2%' }}>{col.split('|')[0].substring(0, 5)}<br />{col.split('|')[1].charAt(0)}T</th>)}
+                {colunasDatas.map(col => {
+                  const [data] = col.split('|');
+                  return (
+                    <th key={col} className="text-[6px]" style={{ width: '2%' }}>
+                      {formatarDiaMes(data)}
+                    </th>
+                  );
+                })}
                 <th style={{ width: '6%' }}>FALTAS</th>
                 <th style={{ width: '6%' }}>FREQ. %</th>
               </tr>
