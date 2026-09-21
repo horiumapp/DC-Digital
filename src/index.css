@@ -293,6 +293,134 @@
   background: radial-gradient(circle at 10% 20%, #0a1120 0%, #0f172a 50%, #080d18 100%);
 }
 
+/* ── Diário em Foco: Calendar Redesign ── */
+:root {
+  --dd-cal-cell-min: 6.5rem;
+  --dd-cal-today-ring: #2563eb;
+  --dd-cal-selected-bg: #eff6ff;
+  --dd-cal-selected-border: #3b82f6;
+  --dd-cal-lesson-bg: #ffffff;
+  --dd-cal-empty-bg: #f8fafc;
+  --dd-cal-disabled-bg: #f1f5f9;
+  --dd-status-done: #059669;
+  --dd-status-partial: #d97706;
+  --dd-status-pending: #94a3b8;
+}
+
+.dark {
+  --dd-cal-today-ring: #38bdf8;
+  --dd-cal-selected-bg: #172554;
+  --dd-cal-selected-border: #3b82f6;
+  --dd-cal-lesson-bg: #0f172a;
+  --dd-cal-empty-bg: #0c1322;
+  --dd-cal-disabled-bg: #0b1120;
+  --dd-status-done: #34d399;
+  --dd-status-partial: #fbbf24;
+  --dd-status-pending: #475569;
+}
+
+/* Calendar cell base */
+.dd-cal-cell {
+  position: relative;
+  min-height: var(--dd-cal-cell-min);
+  padding: 0.5rem;
+  border-right: 1px solid var(--dd-border);
+  border-bottom: 1px solid var(--dd-border);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Today ring */
+.dd-cal-today {
+  box-shadow: inset 0 0 0 2px var(--dd-cal-today-ring);
+  z-index: 1;
+}
+
+/* Selected day */
+.dd-cal-selected {
+  background: var(--dd-cal-selected-bg) !important;
+  box-shadow: inset 0 0 0 2px var(--dd-cal-selected-border);
+  z-index: 2;
+}
+
+/* Combined today + selected */
+.dd-cal-today.dd-cal-selected {
+  box-shadow: inset 0 0 0 2px var(--dd-cal-selected-border), inset 0 0 0 4px var(--dd-cal-today-ring);
+}
+
+/* Lesson day hover */
+.dd-cal-lesson {
+  background: var(--dd-cal-lesson-bg);
+  cursor: pointer;
+}
+
+.dd-cal-lesson:hover {
+  background: var(--dd-cal-selected-bg);
+}
+
+.dd-cal-lesson:focus-visible {
+  outline: 2px solid var(--dd-focus);
+  outline-offset: -2px;
+}
+
+/* Empty/disabled day */
+.dd-cal-empty {
+  background: var(--dd-cal-empty-bg);
+  color: var(--dd-ink-muted);
+}
+
+.dd-cal-disabled {
+  background: var(--dd-cal-disabled-bg);
+  opacity: 0.5;
+}
+
+/* Status indicator badges */
+.dd-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.3rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.dd-badge-done {
+  background: color-mix(in srgb, var(--dd-status-done) 15%, transparent);
+  color: var(--dd-status-done);
+}
+
+.dd-badge-partial {
+  background: color-mix(in srgb, var(--dd-status-partial) 15%, transparent);
+  color: var(--dd-status-partial);
+}
+
+.dd-badge-pending {
+  background: color-mix(in srgb, var(--dd-status-pending) 12%, transparent);
+  color: var(--dd-status-pending);
+}
+
+/* Agenda week separator */
+.dd-agenda-week {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--dd-ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dd-agenda-week::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--dd-border);
+}
+
 /* Mobile-first: conteúdo legível sem rotação do aparelho */
 .dd-calendar-weekday-short { display: none; }
 @media (max-width: 639px) {
@@ -316,4 +444,8 @@
   .dd-frequency-summary { width: 100%; align-items: stretch; }
   .dd-frequency-summary > div, .dd-frequency-summary > button { width: 100%; }
   .dd-frequency-summary .flex.items-center { flex-wrap: wrap; }
+
+  /* Calendar mobile adjustments */
+  :root { --dd-cal-cell-min: 5rem; }
+  .dd-badge { font-size: 0.625rem; padding: 0.1rem 0.3rem; }
 }

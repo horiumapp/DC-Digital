@@ -1,11 +1,14 @@
 import React from 'react';
 import { Eye, Pencil, Trash2, List, Check, Calendar as CalendarIcon, Plus, Clock } from 'lucide-react';
 import { Avaliacao, Aluno } from '../../../contexts/TurmaContext';
-import { formatarDataParaISO, formatarDataParaExibicao } from '../../../utils/dateUtils';
+import { formatarDataParaISO, formatarDataParaExibicao, getBimestreNumero } from '../../../utils/dateUtils';
 import { isAvaliacaoPendente } from '../../../utils/avaliacaoUtils';
 
 interface AvaliacoesListProps {
   avaliacoes: Avaliacao[];
+  todasAvaliacoes?: Avaliacao[];
+  currentBimestre?: string;
+  onSelectBimestre?: (bimestre: string) => void;
   alunos: Aluno[];
   faltasPorData: Record<string, Set<string>>;
   onViewDetails: (av: Avaliacao) => void;
@@ -20,6 +23,9 @@ interface AvaliacoesListProps {
 
 const AvaliacoesList = React.memo(function AvaliacoesList({
   avaliacoes,
+  todasAvaliacoes,
+  currentBimestre = '1º Bimestre',
+  onSelectBimestre,
   alunos,
   faltasPorData,
   onViewDetails,
@@ -33,41 +39,116 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
 }: AvaliacoesListProps) {
   const BIMESTRES = ['1º Bimestre', '2º Bimestre', '3º Bimestre', '4º Bimestre'];
 
+  // Contagem de avaliações por bimestre
+  const countsPorBimestre = React.useMemo(() => {
+    const list = todasAvaliacoes || avaliacoes;
+    const map: Record<string, number> = {
+      '1º Bimestre': 0,
+      '2º Bimestre': 0,
+      '3º Bimestre': 0,
+      '4º Bimestre': 0,
+    };
+    list.forEach(av => {
+      if (av.parent_id) return;
+      const num = getBimestreNumero(av.bimestre || '') ?? getBimestreNumero(av.data);
+      if (num && map[`${num}º Bimestre`] !== undefined) {
+        map[`${num}º Bimestre`]++;
+      }
+    });
+    return map;
+  }, [todasAvaliacoes, avaliacoes]);
+
+  // Filtra as avaliações principais do bimestre atual
+  const avsBim = React.useMemo(() => {
+    const targetNum = getBimestreNumero(currentBimestre);
+    return avaliacoes.filter(av => {
+      if (av.parent_id) return false;
+      const avNum = getBimestreNumero(av.bimestre || '') ?? getBimestreNumero(av.data);
+      return avNum === targetNum;
+    });
+  }, [avaliacoes, currentBimestre]);
+
   return (
     <div className="space-y-4">
-      {!disabled && (
-        <div className="flex items-end shadow-sm mb-2">
+      {/* Barra de Seleção de Bimestre e Ação */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200/90 dark:border-slate-800">
+        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100/80 dark:bg-slate-800/60 rounded-xl">
+          {BIMESTRES.map(bim => {
+            const isSelected = bim === currentBimestre;
+            const count = countsPorBimestre[bim] || 0;
+            return (
+              <button
+                key={bim}
+                type="button"
+                onClick={() => onSelectBimestre?.(bim)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  isSelected
+                    ? 'bg-white dark:bg-slate-900 text-[#0f2851] dark:text-sky-300 shadow-xs ring-1 ring-slate-200/60 dark:ring-slate-700'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                }`}
+              >
+                <span>{bim}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                  isSelected
+                    ? 'bg-[#eef2ff] text-[#0f2851] dark:bg-sky-950 dark:text-sky-300'
+                    : 'bg-slate-200/80 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {!disabled && (
           <button
             onClick={onAddAvaliacao}
-            className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded-lg text-sm font-bold hover:bg-[#e0e7ff] transition flex items-center gap-2 shadow-sm active:scale-95"
+            className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 hover:bg-[#e0e7ff] dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-900 px-5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-xs active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4" /> Adicionar Avaliação
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
-      {avaliacoes.length > 0 && (
+      {avsBim.length === 0 ? (
+        <div className="py-16 px-4 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/30 space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-sky-950/50 text-[#0f2851] dark:text-sky-400 flex items-center justify-center mx-auto shadow-xs">
+            <CalendarIcon className="w-6 h-6" />
+          </div>
+          <div className="space-y-1 max-w-md mx-auto">
+            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+              Nenhuma avaliação cadastrada no {currentBimestre}
+            </h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Não há avaliações cadastradas para esta turma neste bimestre.
+            </p>
+          </div>
+          {!disabled && (
+            <div className="pt-2">
+              <button
+                onClick={onAddAvaliacao}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#0f2851] hover:bg-[#1a3a6d] text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
+              >
+                <Plus className="w-4 h-4" /> Cadastrar Avaliação
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
         <>
           {/* Visualização Mobile (Cards) - para telas menores que md */}
-          <div className="block md:hidden space-y-6">
-            {BIMESTRES.map(bim => {
-              const avsBim = avaliacoes.filter(av => av.bimestre === bim && !av.parent_id);
-              if (avsBim.length === 0) return null;
+          <div className="block md:hidden space-y-4">
+            <div className="bg-[#eef2ff] border border-blue-100 px-4 py-2.5 rounded-xl font-bold text-[#0f2851] text-xs uppercase tracking-wider flex items-center justify-between">
+              <span>{currentBimestre}</span>
+              <span className="text-[10px] font-bold text-[#0f2851] bg-white px-2.5 py-0.5 rounded-full border border-blue-100 shadow-xs">
+                {avsBim.length} {avsBim.length === 1 ? 'avaliação' : 'avaliações'}
+              </span>
+            </div>
 
-              return (
-                <div key={bim} className="space-y-3">
-                  {/* Cabeçalho do Bimestre */}
-                  <div className="bg-[#eef2ff] border border-blue-100 px-4 py-2.5 rounded-xl font-bold text-[#0f2851] text-xs uppercase tracking-wider flex items-center justify-between">
-                    <span>{bim}</span>
-                    <span className="text-[10px] font-bold text-[#0f2851] bg-white px-2.5 py-0.5 rounded-full border border-blue-100 shadow-xs">
-                      {avsBim.length} {avsBim.length === 1 ? 'avaliação' : 'avaliações'}
-                    </span>
-                  </div>
-
-                  {/* Lista de Avaliações em Cards */}
-                  <div className="space-y-3">
-                    {avsBim.map((av) => {
-                      const temPendencia = isAvaliacaoPendente(av, avaliacoes, alunos, faltasPorData);
+            {/* Lista de Avaliações em Cards */}
+            <div className="space-y-3">
+              {avsBim.map((av) => {
+                const temPendencia = isAvaliacaoPendente(av, avaliacoes, alunos, faltasPorData);
                       const hasAbsences = (faltasPorData[formatarDataParaISO(av.data)] || new Set()).size > 0;
                       const alreadyHasSecondCall = avaliacoes.some(rp => String(rp.parent_id) === String(av.id) && rp.tipo.includes('2CH'));
                       const canAddRP = alunos.some(aluno => {
@@ -234,10 +315,7 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                         </div>
                       );
                     })}
-                  </div>
-                </div>
-              );
-            })}
+            </div>
           </div>
 
           {/* Visualização Desktop (Tabela) - para telas md ou maiores */}
@@ -253,15 +331,12 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {BIMESTRES.map(bim => {
-                    const avsBim = avaliacoes.filter(av => av.bimestre === bim && !av.parent_id);
-                    if (avsBim.length === 0) return null;
-                    return (
-                      <React.Fragment key={bim}>
-                        <tr className="bg-[#eef2ff]/30">
-                          <td colSpan={4} className="px-6 py-2 font-bold text-[#0f2851] text-[11px] uppercase tracking-wider">{bim}</td>
-                        </tr>
-                        {avsBim.map((av) => {
+                  <tr className="bg-[#eef2ff]/30">
+                    <td colSpan={4} className="px-6 py-2.5 font-bold text-[#0f2851] text-[11px] uppercase tracking-wider">
+                      {currentBimestre} ({avsBim.length} {avsBim.length === 1 ? 'avaliação' : 'avaliações'})
+                    </td>
+                  </tr>
+                  {avsBim.map((av) => {
                           const temPendencia = isAvaliacaoPendente(av, avaliacoes, alunos, faltasPorData);
                           return (
                           <React.Fragment key={av.id}>
@@ -404,9 +479,6 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                           </React.Fragment>
                           );
                         })}
-                      </React.Fragment>
-                    );
-                  })}
                 </tbody>
               </table>
             </div>

@@ -194,7 +194,10 @@ export default function Frequencia() {
                 />
               )}
               {activeTab === 'avaliacoes' && (
-                <AvaliacoesTab disabled={isPeriodoFechado} />
+                <AvaliacoesTab 
+                  selectedDate={selectedDate}
+                  disabled={isPeriodoFechado} 
+                />
               )}
             </div>
           </div>

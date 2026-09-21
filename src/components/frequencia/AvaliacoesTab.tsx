@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { useTurma, Avaliacao, ObjetoAvaliacao } from '../../contexts/TurmaContext';
 import { APP_CONFIG } from '../../config/appConfig';
 import { useCaptcha } from '../../hooks/useCaptcha';
-import { getBimestrePorData, formatarDataParaISO } from '../../utils/dateUtils';
+import { getBimestrePorData, getBimestreNumero, formatarDataParaISO } from '../../utils/dateUtils';
 import { isAvaliacaoPendente, getMensagemPendenciaAvaliacao, getInfoPontosBimestre } from '../../utils/avaliacaoUtils';
 
 // Sub-componentes
@@ -15,15 +15,34 @@ import SegundaChamadaEditor from './avaliacoes/SegundaChamadaEditor';
 import DeleteAvaliacaoModal from './avaliacoes/DeleteAvaliacaoModal';
 
 interface AvaliacoesTabProps {
+  selectedDate?: string;
   disabled?: boolean;
 }
 
-export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
+export default function AvaliacoesTab({ selectedDate: dataContexto = '', disabled }: AvaliacoesTabProps) {
   const { 
     turmaAtiva, alunos, avaliacoes, conteudos, loading, 
     salvarAvaliacao, removerAvaliacao, salvarNotas, 
     carregarFaltasDaData, faltasPorData 
   } = useTurma();
+
+  const bimestreDaData = dataContexto ? getBimestrePorData(dataContexto) : '1º Bimestre';
+  const [bimestreFiltro, setBimestreFiltro] = useState<string>(() => bimestreDaData || '1º Bimestre');
+
+  useEffect(() => {
+    if (dataContexto) {
+      const bim = getBimestrePorData(dataContexto);
+      if (bim) setBimestreFiltro(bim);
+    }
+  }, [dataContexto]);
+
+  const avaliacoesDoBimestre = React.useMemo(() => {
+    const targetNum = getBimestreNumero(bimestreFiltro);
+    return avaliacoes.filter(av => {
+      const avNum = getBimestreNumero(av.bimestre || '') ?? getBimestreNumero(av.data);
+      return avNum === targetNum;
+    });
+  }, [avaliacoes, bimestreFiltro]);
 
   const [avaliacaoViewMode, setAvaliacaoViewMode] = useState<'list' | 'details' | 'edit' | 'grades' | 'second_call'>('list');
   const [selectedAvaliacao, setSelectedAvaliacao] = useState<Avaliacao | null>(null);
@@ -133,23 +152,29 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
   }, [avaliacoes, carregarFaltasDaData]);
    
 
-  // Avaliação com notas/RP/2CH pendentes (se houver)
+  // Avaliação com notas/RP/2CH pendentes no bimestre ativo (se houver)
   const avaliacaoPendente = React.useMemo(() => {
     if (!avaliacoes || avaliacoes.length === 0 || !alunos || alunos.length === 0) {
       return null;
     }
 
-    const avsPrincipais = avaliacoes.filter(av => !av.parent_id);
-    if (avsPrincipais.length === 0) return null;
+    const targetNum = getBimestreNumero(bimestreFiltro);
+    const avsPrincipaisDoBimestre = avaliacoes.filter(av => {
+      if (av.parent_id) return false;
+      const avNum = getBimestreNumero(av.bimestre || '') ?? getBimestreNumero(av.data);
+      return avNum === targetNum;
+    });
 
-    for (const av of avsPrincipais) {
+    if (avsPrincipaisDoBimestre.length === 0) return null;
+
+    for (const av of avsPrincipaisDoBimestre) {
       if (isAvaliacaoPendente(av, avaliacoes, alunos, faltasPorData)) {
         return av;
       }
     }
 
     return null;
-  }, [avaliacoes, alunos, faltasPorData]);
+  }, [avaliacoes, alunos, faltasPorData, bimestreFiltro]);
 
   // Handlers
   const resetForm = () => {
@@ -316,13 +341,21 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
 
       {avaliacaoViewMode === 'list' && (
         <AvaliacoesList 
-          avaliacoes={avaliacoes}
+          avaliacoes={avaliacoesDoBimestre}
+          todasAvaliacoes={avaliacoes}
+          currentBimestre={bimestreFiltro}
+          onSelectBimestre={(bim) => setBimestreFiltro(bim)}
           alunos={alunos}
           faltasPorData={faltasPorData}
           onViewDetails={(av) => { setSelectedAvaliacao(av); setAvaliacaoViewMode('details'); }}
           onEdit={(av) => { 
             setSelectedAvaliacao(av); 
             setSelectedDate(av.data); 
+            const [y, m] = av.data.split('-').map(Number);
+            if (y && m) {
+              setCalendarYear(y);
+              setCalendarMonth(m - 1);
+            }
             setInstrumentoAvaliacao(av.instrumento || 'AVALIACAO ESCRITA'); 
             setObjetosAvaliacao(av.objetos || []); 
             setValorMaximo(av.valorMaximo ? av.valorMaximo.toString().replace('.', ',') : '10,00');
@@ -347,7 +380,7 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
               id: '',
               turmaId: av.turmaId,
               tipo: av.tipo.includes('AV') ? av.tipo.replace('AV', 'RP') : `RP - ${av.tipo}`,
-              data: new Date().toISOString().split('T')[0],
+              data: av.data,
               instrumento: av.instrumento,
               objetos: av.objetos,
               bimestre: av.bimestre,
@@ -356,6 +389,11 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
             };
             setSelectedAvaliacao(novoRP);
             setSelectedDate(novoRP.data);
+            const [y, m] = novoRP.data.split('-').map(Number);
+            if (y && m) {
+              setCalendarYear(y);
+              setCalendarMonth(m - 1);
+            }
             setInstrumentoAvaliacao(novoRP.instrumento);
             setObjetosAvaliacao(novoRP.objetos || []);
             setValorMaximo(novoRP.valorMaximo ? novoRP.valorMaximo.toString().replace('.', ',') : '10,00');
@@ -367,7 +405,7 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
             carregarFaltasDaData(av.data);
             const rows: Record<string, { selected: boolean; date: string; grade: string }> = {};
             alunos.forEach(a => {
-              rows[a.id] = { selected: !a.notas?.[av.id], date: new Date().toISOString().split('T')[0], grade: '' };
+              rows[a.id] = { selected: !a.notas?.[av.id], date: av.data, grade: '' };
             });
             setSecondCallRows(rows);
             setAvaliacaoViewMode('second_call');
@@ -378,17 +416,25 @@ export default function AvaliacoesTab({ disabled }: AvaliacoesTabProps) {
               alert(getMensagemPendenciaAvaliacao(avaliacaoPendente, avaliacoes, alunos, faltasPorData));
               return;
             }
-            const dataPadrao = new Date().toISOString().split('T')[0];
-            const bimPadrao = getBimestrePorData(dataPadrao);
-            const { limite, pontosDisponiveis } = getInfoPontosBimestre(bimPadrao, avaliacoes);
+            const periodoConfig = APP_CONFIG.PERIODOS.find(p => p.nome === bimestreFiltro || p.id === bimestreFiltro);
+            let dataPadrao = dataContexto;
+            if (!dataPadrao || getBimestrePorData(dataPadrao) !== bimestreFiltro) {
+              dataPadrao = periodoConfig?.dataInicio || new Date().toISOString().split('T')[0];
+            }
+            const { limite, pontosDisponiveis } = getInfoPontosBimestre(bimestreFiltro, avaliacoes);
 
             if (pontosDisponiveis <= 0) {
-              alert(`A pontuação máxima do ${bimPadrao} (${limite.toFixed(2).replace('.', ',')} pontos) já foi totalmente distribuída entre as avaliações cadastradas.`);
+              alert(`A pontuação máxima do ${bimestreFiltro} (${limite.toFixed(2).replace('.', ',')} pontos) já foi totalmente distribuída entre as avaliações cadastradas.`);
               return;
             }
 
             resetForm(); 
             setSelectedDate(dataPadrao);
+            const [pY, pM] = dataPadrao.split('-').map(Number);
+            if (pY && pM) {
+              setCalendarYear(pY);
+              setCalendarMonth(pM - 1);
+            }
             const maxSugerido = Math.min(10, pontosDisponiveis);
             setValorMaximo(maxSugerido.toFixed(2).replace('.', ','));
             setAvaliacaoViewMode('edit'); 

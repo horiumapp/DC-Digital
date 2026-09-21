@@ -10,12 +10,20 @@ vi.mock('../contexts/TurmaContext', () => ({
   useTurma: () => mockUseTurma(),
 }));
 
+vi.mock('../contexts/OfflineContext', () => ({
+  useOffline: () => ({
+    isOnline: true,
+    connectionState: 'ONLINE',
+    pendingCount: 0,
+  }),
+}));
+
 vi.mock('../components/common/TurmaHeaderInfo', () => ({
   default: () => <div data-testid="turma-header" />,
 }));
 
 vi.mock('../components/common/CalendarWidget', () => ({
-  default: (props: any) => (
+  default: (props: { currentMonth?: number }) => (
     <div data-testid="calendar-widget" data-current-month={props.currentMonth}>
       Calendar Month: {props.currentMonth}
     </div>
@@ -28,12 +36,23 @@ vi.mock('../hooks/useTurmaProgress', () => ({
     pObj: 100,
     pAvaliacoes: 100,
     pNotas: 100,
+    freqLancadas: 56,
+    conteudoLancados: 56,
+    totalEsperado: 56,
     barColor: () => 'bg-emerald-500',
   }),
 }));
 
 vi.mock('react-router-dom', () => ({
   Link: ({ children, to }: { children: React.ReactNode; to: string }) => <a href={to}>{children}</a>,
+  useNavigate: () => vi.fn(),
+}));
+
+vi.mock('motion/react', () => ({
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  motion: {
+    div: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => <div {...props}>{children}</div>,
+  },
 }));
 
 const turmaMock = {
