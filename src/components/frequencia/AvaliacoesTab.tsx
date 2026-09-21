@@ -628,6 +628,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
           onGenerateNewCaptcha={generateNewCaptcha}
           onSetCalendarMonth={setCalendarMonth}
           onSetCalendarYear={setCalendarYear}
+          isSaving={isSaving}
         />
       )}
 
