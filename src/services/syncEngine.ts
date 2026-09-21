@@ -857,12 +857,35 @@ async function syncNotas(operation: string, payload: Record<string, unknown>): P
     sanitizedRecords.map(r => `${String(r.avaliacao_id)}|${String(r.aluno_id)}`)
   );
   const avaliacaoIds = [...new Set(sanitizedRecords.map(r => String(r.avaliacao_id)))];
-  const localNotas = await db.notas.where('avaliacao_id').anyOf(avaliacaoIds).toArray();
+
+  // Buscar aliases (IDs temporários anteriores que já foram convertidos para o serverId)
+  const allPossibleAvIds = new Set(avaliacaoIds);
+  const localAvs = await db.avaliacoes.where('id').anyOf(avaliacaoIds).toArray();
+  for (const av of localAvs) {
+    if (av.clientTempId) allPossibleAvIds.add(String(av.clientTempId));
+    if (av.localId) {
+      allPossibleAvIds.add(String(av.localId));
+      allPossibleAvIds.add(`temp_${av.localId}`);
+      allPossibleAvIds.add(`local_${av.localId}`);
+    }
+  }
+
+  const localNotas = await db.notas.where('avaliacao_id').anyOf(Array.from(allPossibleAvIds)).toArray();
+  const timestamp = now();
   await db.transaction('rw', db.notas, async () => {
     for (const nota of localNotas) {
-      const noteKey = `${String(nota.avaliacao_id)}|${String(nota.aluno_id)}`;
-      if (syncedNoteKeys.has(noteKey) && nota.localId) {
-        await db.notas.update(nota.localId, { syncStatus: 'synced', updatedAt: now() });
+      const directKey = `${String(nota.avaliacao_id)}|${String(nota.aluno_id)}`;
+      const matchingRecord = sanitizedRecords.find(r => 
+        String(r.aluno_id) === String(nota.aluno_id) &&
+        (String(r.avaliacao_id) === String(nota.avaliacao_id) || allPossibleAvIds.has(String(nota.avaliacao_id)))
+      );
+
+      if ((syncedNoteKeys.has(directKey) || matchingRecord) && nota.localId) {
+        await db.notas.update(nota.localId, { 
+          avaliacao_id: matchingRecord ? String(matchingRecord.avaliacao_id) : nota.avaliacao_id,
+          syncStatus: 'synced', 
+          updatedAt: timestamp 
+        });
       }
     }
   });
@@ -1055,18 +1078,37 @@ async function autoRepairDeadLetters(): Promise<void> {
 
       // 2. Auto-reparo de notas com avaliacao_id temporário
       if (item.table === 'notas') {
+        const repairedAvIds = new Map<string, string>();
         if (payloadObj.avaliacao_id && tempToRealMap.has(String(payloadObj.avaliacao_id))) {
-          payloadObj.avaliacao_id = tempToRealMap.get(String(payloadObj.avaliacao_id));
+          const oldId = String(payloadObj.avaliacao_id);
+          const newId = tempToRealMap.get(oldId)!;
+          payloadObj.avaliacao_id = newId;
+          repairedAvIds.set(oldId, newId);
           repaired = true;
         }
         if (Array.isArray(payloadObj.records)) {
           payloadObj.records = payloadObj.records.map((r: Record<string, unknown>) => {
             if (r && r.avaliacao_id && tempToRealMap.has(String(r.avaliacao_id))) {
+              const oldId = String(r.avaliacao_id);
+              const newId = tempToRealMap.get(oldId)!;
+              repairedAvIds.set(oldId, newId);
               repaired = true;
-              return { ...r, avaliacao_id: tempToRealMap.get(String(r.avaliacao_id)) };
+              return { ...r, avaliacao_id: newId };
             }
             return r;
           });
+        }
+        // Atualizar também na tabela local db.notas para que coincidam com o ID oficial
+        if (repairedAvIds.size > 0) {
+          const timestamp = now();
+          for (const [oldAvId, newAvId] of repairedAvIds.entries()) {
+            const notasLocais = await db.notas.where('avaliacao_id').equals(oldAvId).toArray();
+            for (const nl of notasLocais) {
+              if (nl.localId) {
+                await db.notas.update(nl.localId, { avaliacao_id: newAvId, updatedAt: timestamp });
+              }
+            }
+          }
         }
       }
 
@@ -1086,6 +1128,7 @@ async function autoRepairDeadLetters(): Promise<void> {
           hash: newHash,
           status: 'pending',
           retryCount: 0,
+          retryAfter: undefined,
           lastError: undefined,
           updatedAt: now(),
         });
@@ -1227,15 +1270,40 @@ async function reconcileLocalRecords(): Promise<void> {
     }
     // FIX P1: Usar índice syncStatus em vez de filter() JavaScript (full scan)
     const unsyncedNotas = await db.notas.where('syncStatus').anyOf(['pending', 'error']).toArray();
+
+    // Mapear avaliações locais completas para resolver IDs temporários em db.notas
+    const allLocalAvs = typeof db.avaliacoes?.toArray === 'function' ? await db.avaliacoes.toArray() : [];
+    const tempToCanonicalAvMap = new Map<string, string>();
+    for (const av of allLocalAvs) {
+      const canonicalId = av.serverId || (av.id && !String(av.id).startsWith('temp_') && !String(av.id).startsWith('local_') ? String(av.id) : null);
+      if (canonicalId) {
+        if (av.id) tempToCanonicalAvMap.set(String(av.id), canonicalId);
+        if (av.serverId) tempToCanonicalAvMap.set(String(av.serverId), canonicalId);
+        if (av.clientTempId) tempToCanonicalAvMap.set(String(av.clientTempId), canonicalId);
+        if (av.localId) {
+          tempToCanonicalAvMap.set(String(av.localId), canonicalId);
+          tempToCanonicalAvMap.set(`temp_${av.localId}`, canonicalId);
+          tempToCanonicalAvMap.set(`local_${av.localId}`, canonicalId);
+        }
+      }
+    }
+
+    // Atualizar avaliacao_id em db.notas se apontava para ID temporário que já tem equivalente no servidor
+    for (const n of unsyncedNotas) {
+      if (tempToCanonicalAvMap.has(n.avaliacao_id) && n.localId) {
+        const resolvedId = tempToCanonicalAvMap.get(n.avaliacao_id)!;
+        if (resolvedId !== n.avaliacao_id) {
+          await db.notas.update(n.localId, { avaliacao_id: resolvedId, updatedAt: now() });
+          n.avaliacao_id = resolvedId;
+        }
+      }
+    }
+
     const missingNotas = unsyncedNotas.filter(n => !notaKeys.has(`${n.avaliacao_id}|${n.aluno_id}`));
-    // Evitar reenfileirar notas cuja avaliação ainda não sincronizou (ids temporários).
-    // FIX SYNC-02/P-04: Buscar apenas as avaliações referenciadas pelas notas pendentes,
-    // em vez de carregar toda a tabela avaliacoes (toArray) na memória.
+    // Evitar reenfileirar notas cuja avaliação ainda não sincronizou (ids temporários verdadeiros)
     const resolvableAvIds = new Set<string>();
     if (missingNotas.length > 0) {
-      const neededAvIds = [...new Set(missingNotas.map(n => n.avaliacao_id))];
-      const referencedAvs = await db.avaliacoes.where('id').anyOf(neededAvIds).toArray();
-      for (const av of referencedAvs) {
+      for (const av of allLocalAvs) {
         if (av.serverId) resolvableAvIds.add(String(av.serverId));
         if (av.id && !String(av.id).startsWith('temp_') && !String(av.id).startsWith('local_')) resolvableAvIds.add(String(av.id));
       }

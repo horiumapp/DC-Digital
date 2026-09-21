@@ -270,16 +270,12 @@ export default function Layout() {
           <div className="flex items-center gap-2">
             {/* Sync Status Capsule */}
             <div 
-              onClick={() => {
-                if (connectionState === 'ERROR' || deadLetterCount > 0 || (isOnline && pendingCount > 0)) {
-                  syncNow();
-                }
-              }}
+              onClick={pendingCount > 0 && isOnline ? () => syncNow() : undefined}
               title={
                 !isOnline 
                   ? `Offline: ${pendingCount} alteração(ões) salva(s) localmente` 
                   : pendingCount > 0 
-                  ? `${pendingCount} item(ns) aguardando sincronização` 
+                  ? `${pendingCount} item(ns) aguardando sincronização. Clique para sincronizar agora.` 
                   : 'Conectado e sincronizado'
               }
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer select-none ${

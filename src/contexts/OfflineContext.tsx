@@ -72,14 +72,15 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     setOnlineStatus(isOnline);
   }, [isOnline]);
 
-  // Auto-sync quando volta a ficar online
+  // Auto-sync quando volta a ficar online ou quando há pendências locais
   useEffect(() => {
-    if (isOnline && wasOffline.current) {
-      console.log('[OfflineProvider] Internet restaurada — iniciando sincronização...');
-      SyncEngine.scheduleSync();
+    if (isOnline) {
+      if (wasOffline.current || pendingCount > 0) {
+        SyncEngine.scheduleSync();
+      }
     }
     wasOffline.current = !isOnline;
-  }, [isOnline]);
+  }, [isOnline, pendingCount]);
 
   // FIX #7: Limpeza periódica com localStorage para rastrear último cleanup.
   useEffect(() => {
