@@ -324,6 +324,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
   };
 
   const handleSaveAvaliacao = async () => {
+    if (isSaving) return;
     if (!validateCaptcha()) { alert('Código incorreto!'); return; }
     if (!selectedDate) { alert('Selecione uma data!'); return; }
     if (objetosAvaliacao.length === 0) { alert('Adicione pelo menos um Objeto de Conhecimento!'); return; }
@@ -369,9 +370,14 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
       parent_id: selectedAvaliacao?.parent_id
     };
 
-    await salvarAvaliacao(payload);
-    setAvaliacaoViewMode('list');
-    resetForm();
+    try {
+      setIsSaving(true);
+      await salvarAvaliacao(payload);
+      setAvaliacaoViewMode('list');
+      resetForm();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleConfirmGrades = async () => {

@@ -622,7 +622,7 @@ export async function getAvaliacoesLocal(turmaId: string, disciplina?: string): 
 }
 
 export async function deleteAvaliacaoLocal(id: string): Promise<void> {
-  const record = await db.avaliacoes
+  const records = await db.avaliacoes
     .filter(avaliacao => {
       const localId = avaliacao.localId;
       return avaliacao.id === id
@@ -632,13 +632,18 @@ export async function deleteAvaliacaoLocal(id: string): Promise<void> {
           String(localId) === id || `temp_${localId}` === id || `local_${localId}` === id
         ));
     })
-    .first();
+    .toArray();
 
-  if (!record?.localId) return;
+  if (records.length === 0) return;
+
+  const allLocalIds = records.map(r => r.localId).filter((localId): localId is number => localId !== undefined);
+  const localIdSet = new Set(allLocalIds);
 
   const avaliacaoAliases = new Set(
-    [id, record.id, record.clientTempId, record.serverId, String(record.localId), `temp_${record.localId}`, `local_${record.localId}`]
-      .filter((value): value is string => Boolean(value))
+    [
+      id,
+      ...records.flatMap(r => [r.id, r.clientTempId, r.serverId, String(r.localId), `temp_${r.localId}`, `local_${r.localId}`])
+    ].filter((value): value is string => Boolean(value))
   );
 
   await db.transaction('rw', [db.avaliacoes, db.notas, db.syncQueue], async () => {
@@ -660,7 +665,7 @@ export async function deleteAvaliacaoLocal(id: string): Promise<void> {
       }
 
       const isAvaliacaoOperation = item.table === 'avaliacoes'
-        && (item.localId === record.localId || avaliacaoAliases.has(String(payload.id)));
+        && ((item.localId && localIdSet.has(item.localId)) || avaliacaoAliases.has(String(payload.id)));
       if (isAvaliacaoOperation) {
         if (item.id !== undefined) await db.syncQueue.delete(item.id);
         continue;
@@ -696,7 +701,9 @@ export async function deleteAvaliacaoLocal(id: string): Promise<void> {
       }
     }
 
-    await db.avaliacoes.delete(record.localId);
+    for (const lid of allLocalIds) {
+      await db.avaliacoes.delete(lid);
+    }
   });
 }
 
@@ -712,16 +719,41 @@ export async function cacheAvaliacoes(records: Array<Omit<LocalAvaliacao, 'local
     if (r.id) existingMap.set(r.id, r);
   }
 
+  // Obter todos os registros locais para buscar por chave de negócio se não encontrado por server ID
+  const allLocal = await db.avaliacoes.toArray();
+
   await db.transaction('rw', db.avaliacoes, async () => {
     for (const data of records) {
-      const existing = existingMap.get(data.id);
+      let existing = existingMap.get(data.id);
+
+      if (!existing) {
+        // Encontrar por chave de negócio (turma_id, disciplina, tipo, data) ou parent_id
+        existing = allLocal.find(l =>
+          (l.id === data.id || l.serverId === data.id) ||
+          (l.turma_id === data.turma_id &&
+           l.disciplina.toLowerCase() === data.disciplina.toLowerCase() &&
+           l.tipo === data.tipo &&
+           l.data === data.data &&
+           String(l.parent_id || '') === String(data.parent_id || ''))
+        );
+      }
+
       if (existing?.localId) {
         if (existing.syncStatus !== 'pending') {
           await db.avaliacoes.update(existing.localId, {
             ...data,
+            id: data.id,
+            serverId: data.id,
             syncStatus: 'synced',
             updatedAt: timestamp,
             version: existing.version || 1,
+          });
+        } else {
+          // Se estava pending, atualizar ID oficial do servidor mantendo alterações locais
+          await db.avaliacoes.update(existing.localId, {
+            id: data.id,
+            serverId: data.id,
+            updatedAt: timestamp,
           });
         }
       } else {

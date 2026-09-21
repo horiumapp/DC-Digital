@@ -215,7 +215,7 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
 
     for (const local of localAvs) {
       const formatted: Avaliacao = {
-        id: local.id || local.serverId || `local_${local.localId}`,
+        id: local.id || local.serverId || local.clientTempId || `local_${local.localId}`,
         turmaId: local.turma_id,
         tipo: local.tipo,
         data: local.data,
@@ -235,20 +235,47 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
         const existingIdx = mergedAvaliacoes.findIndex(a => 
           String(a.id) === idToCheck || 
           (local.id && String(a.id) === String(local.id)) ||
-          (local.serverId && String(a.id) === String(local.serverId))
+          (local.serverId && String(a.id) === String(local.serverId)) ||
+          (local.clientTempId && String(a.id) === String(local.clientTempId)) ||
+          (a.tipo === local.tipo && a.data === local.data && String(a.parent_id || '') === String(local.parent_id || ''))
         );
 
         if (existingIdx >= 0) {
-          mergedAvaliacoes[existingIdx] = formatted;
+          const existingRemoteId = mergedAvaliacoes[existingIdx].id;
+          const hasRealServerId = existingRemoteId && !existingRemoteId.startsWith('temp_') && !existingRemoteId.startsWith('local_');
+          mergedAvaliacoes[existingIdx] = {
+            ...formatted,
+            id: hasRealServerId ? existingRemoteId : formatted.id,
+          };
         } else {
           mergedAvaliacoes.push(formatted);
         }
       }
     }
 
+    // Deduplicação defensiva final para garantir que não haja avaliações duplicadas
+    const seenMap = new Map<string, Avaliacao>();
+    for (const av of mergedAvaliacoes) {
+      const uniqueKey = (av.id && !av.id.startsWith('temp_') && !av.id.startsWith('local_'))
+        ? `id_${av.id}`
+        : `meta_${av.tipo}_${av.data}_${av.parent_id || 'root'}`;
+
+      const existing = seenMap.get(uniqueKey);
+      if (!existing) {
+        seenMap.set(uniqueKey, av);
+      } else {
+        const existingIsReal = existing.id && !existing.id.startsWith('temp_') && !existing.id.startsWith('local_');
+        const currentIsReal = av.id && !av.id.startsWith('temp_') && !av.id.startsWith('local_');
+        if (!existingIsReal && currentIsReal) {
+          seenMap.set(uniqueKey, av);
+        }
+      }
+    }
+    const finalAvaliacoes = Array.from(seenMap.values());
+
     // Mesclar notas do servidor com notas salvas localmente no IndexedDB (suportando IDs temporários e aliases)
     const possibleAvIds = new Set<string>();
-    mergedAvaliacoes.forEach(a => {
+    finalAvaliacoes.forEach(a => {
       if (a.id) possibleAvIds.add(String(a.id));
     });
     localAvs.forEach(a => {
@@ -266,7 +293,7 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
 
     const aliasToCanonicalMap = new Map<string, string[]>();
     localAvs.forEach(av => {
-      const canonical = mergedAvaliacoes.find(m => 
+      const canonical = finalAvaliacoes.find(m => 
         m.id === av.id || m.id === av.serverId || m.id === av.clientTempId || (av.localId && (m.id === `temp_${av.localId}` || m.id === `local_${av.localId}` || m.id === String(av.localId)))
       )?.id || av.id || av.serverId || (av.localId ? `temp_${av.localId}` : '');
 
@@ -307,14 +334,14 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
     });
 
     return {
-      avaliacoes: mergedAvaliacoes,
+      avaliacoes: finalAvaliacoes,
       notasData: Array.from(mergedNotasMap.values()),
     };
   } catch {
     // Fallback local
     const localAvs = await OfflineStorage.getAvaliacoesLocal(tid, disciplina);
-    const avaliacoes: Avaliacao[] = localAvs.map(av => ({
-      id: av.id || av.serverId || `local_${av.localId}`,
+    const avaliacoesRaw: Avaliacao[] = localAvs.map(av => ({
+      id: av.id || av.serverId || av.clientTempId || `local_${av.localId}`,
       turmaId: av.turma_id,
       tipo: av.tipo,
       data: av.data,
@@ -324,6 +351,18 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
       valorMaximo: av.valor_maximo,
       parent_id: av.parent_id !== undefined ? String(av.parent_id) : undefined,
     }));
+
+    // Deduplicar no fallback offline também
+    const seenOfflineMap = new Map<string, Avaliacao>();
+    for (const av of avaliacoesRaw) {
+      const uniqueKey = (av.id && !av.id.startsWith('temp_') && !av.id.startsWith('local_'))
+        ? `id_${av.id}`
+        : `meta_${av.tipo}_${av.data}_${av.parent_id || 'root'}`;
+      if (!seenOfflineMap.has(uniqueKey)) {
+        seenOfflineMap.set(uniqueKey, av);
+      }
+    }
+    const avaliacoes = Array.from(seenOfflineMap.values());
 
     const avIds = avaliacoes.map(a => a.id);
     const localNotas = await OfflineStorage.getNotasLocal(avIds);

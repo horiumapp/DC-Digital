@@ -39,6 +39,7 @@ interface AvaliacaoFormProps {
   onGenerateNewCaptcha: () => void;
   onSetCalendarMonth: (val: number) => void;
   onSetCalendarYear: (val: number) => void;
+  isSaving?: boolean;
 }
 
 const AvaliacaoForm = React.memo(function AvaliacaoForm({
@@ -73,7 +74,8 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
   onSetCaptchaInput,
   onGenerateNewCaptcha,
   onSetCalendarMonth,
-  onSetCalendarYear
+  onSetCalendarYear,
+  isSaving = false
 }: AvaliacaoFormProps) {
   const displayDate = selectedDate.includes('-') ? selectedDate.split('-').reverse().join('/') : selectedDate;
   const [modoManualUnidade, setModoManualUnidade] = React.useState(false);
@@ -366,9 +368,10 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <button 
             onClick={onSave} 
-            className="flex-1 bg-[#0f2851] text-white py-4 rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20 flex items-center justify-center gap-3 active:scale-95"
+            disabled={isSaving}
+            className="flex-1 bg-[#0f2851] text-white py-4 rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Check className="w-5 h-5 text-emerald-400" /> Salvar Avaliação
+            <Check className="w-5 h-5 text-emerald-400" /> {isSaving ? 'Salvando...' : 'Salvar Avaliação'}
           </button>
           <button onClick={onCancel} className="w-full sm:w-auto px-10 bg-slate-100 text-slate-500 py-4 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-slate-200 transition">Sair</button>
         </div>

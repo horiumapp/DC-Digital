@@ -331,7 +331,12 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       // causado pelo padrão anterior de update otimista + re-fetch que sobrescrevia.
       await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunosRef.current);
       setAvaliacoes(prev => {
-        const exists = prev.some(a => a.id === avaliacaoSalva.id);
+        const exists = prev.some(a => 
+          a.id === avaliacaoSalva.id || 
+          a.id === createdId || 
+          a.id === av.id ||
+          (a.tipo === avaliacaoSalva.tipo && a.data === avaliacaoSalva.data && String(a.parent_id || '') === String(avaliacaoSalva.parent_id || ''))
+        );
         if (exists) return prev;
         return [...prev, avaliacaoSalva];
       });
