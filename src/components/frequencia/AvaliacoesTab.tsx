@@ -51,23 +51,18 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
     carregarFaltasDaData, faltasPorData 
   } = useTurma();
 
-  const bimestreDaData = dataContexto ? getBimestrePorData(dataContexto) : '1º Bimestre';
-  const [bimestreFiltro, setBimestreFiltro] = useState<string>(() => bimestreDaData || '1º Bimestre');
-
-  useEffect(() => {
-    if (dataContexto) {
-      const bim = getBimestrePorData(dataContexto);
-      if (bim) setBimestreFiltro(bim);
-    }
+  const currentBimestre = React.useMemo(() => {
+    return (dataContexto ? getBimestrePorData(dataContexto) : '') || '1º Bimestre';
   }, [dataContexto]);
 
   const avaliacoesDoBimestre = React.useMemo(() => {
-    const targetNum = getBimestreNumero(bimestreFiltro);
+    const targetNum = getBimestreNumero(currentBimestre);
     return avaliacoes.filter(av => {
+      if (av.parent_id) return false;
       const avNum = getBimestreNumero(av.bimestre || '') ?? getBimestreNumero(av.data);
       return avNum === targetNum;
     });
-  }, [avaliacoes, bimestreFiltro]);
+  }, [avaliacoes, currentBimestre]);
 
   const [avaliacaoViewMode, setAvaliacaoViewMode] = useState<'list' | 'details' | 'edit' | 'grades' | 'second_call'>('list');
   const [selectedAvaliacao, setSelectedAvaliacao] = useState<Avaliacao | null>(null);
@@ -118,7 +113,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
       const matchAno = ano.match(/^(\d+)/);
       if (matchAno) ano = `${matchAno[1]}º Ano`;
 
-      const bimestreAlvo = periodoLetivo || (selectedDate ? getBimestrePorData(selectedDate) : bimestreFiltro) || '1º Bimestre';
+      const bimestreAlvo = periodoLetivo || (selectedDate ? getBimestrePorData(selectedDate) : currentBimestre) || '1º Bimestre';
 
       const chave = {
         modalidade,
@@ -170,7 +165,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
     }
 
     loadCurriculo();
-  }, [turmaAtiva, selectedDate, periodoLetivo, bimestreFiltro]);
+  }, [turmaAtiva, selectedDate, periodoLetivo, currentBimestre]);
 
   // Memos para opções de objetos de conhecimento
   const unidadesOpcoes = React.useMemo(() => {
@@ -297,7 +292,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
       return null;
     }
 
-    const targetNum = getBimestreNumero(bimestreFiltro);
+    const targetNum = getBimestreNumero(currentBimestre);
     const avsPrincipaisDoBimestre = avaliacoes.filter(av => {
       if (av.parent_id) return false;
       const avNum = getBimestreNumero(av.bimestre || '') ?? getBimestreNumero(av.data);
@@ -313,7 +308,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
     }
 
     return null;
-  }, [avaliacoes, alunos, faltasPorData, bimestreFiltro]);
+  }, [avaliacoes, alunos, faltasPorData, currentBimestre]);
 
   // Handlers
   const resetForm = () => {
@@ -482,8 +477,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
         <AvaliacoesList 
           avaliacoes={avaliacoesDoBimestre}
           todasAvaliacoes={avaliacoes}
-          currentBimestre={bimestreFiltro}
-          onSelectBimestre={(bim) => setBimestreFiltro(bim)}
+          currentBimestre={currentBimestre}
           alunos={alunos}
           faltasPorData={faltasPorData}
           onViewDetails={(av) => { setSelectedAvaliacao(av); setAvaliacaoViewMode('details'); }}
@@ -557,21 +551,21 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
               alert(getMensagemPendenciaAvaliacao(avaliacaoPendente, avaliacoes, alunos, faltasPorData));
               return;
             }
-            const periodoConfig = APP_CONFIG.PERIODOS.find(p => p.nome === bimestreFiltro || p.id === bimestreFiltro);
+            const periodoConfig = APP_CONFIG.PERIODOS.find(p => p.nome === currentBimestre || p.id === currentBimestre);
             let dataPadrao = dataContexto;
-            if (!dataPadrao || getBimestrePorData(dataPadrao) !== bimestreFiltro) {
+            if (!dataPadrao || getBimestrePorData(dataPadrao) !== currentBimestre) {
               dataPadrao = periodoConfig?.dataInicio || new Date().toISOString().split('T')[0];
             }
-            const { limite, pontosDisponiveis } = getInfoPontosBimestre(bimestreFiltro, avaliacoes);
+            const { limite, pontosDisponiveis } = getInfoPontosBimestre(currentBimestre, avaliacoes);
 
             if (pontosDisponiveis <= 0) {
-              alert(`A pontuação máxima do ${bimestreFiltro} (${limite.toFixed(2).replace('.', ',')} pontos) já foi totalmente distribuída entre as avaliações cadastradas.`);
+              alert(`A pontuação máxima do ${currentBimestre} (${limite.toFixed(2).replace('.', ',')} pontos) já foi totalmente distribuída entre as avaliações cadastradas.`);
               return;
             }
 
             resetForm(); 
             setSelectedDate(dataPadrao);
-            setPeriodoLetivo(bimestreFiltro);
+            setPeriodoLetivo(currentBimestre);
             const [pY, pM] = dataPadrao.split('-').map(Number);
             if (pY && pM) {
               setCalendarYear(pY);
