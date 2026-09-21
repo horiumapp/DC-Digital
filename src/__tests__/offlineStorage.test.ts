@@ -274,6 +274,7 @@ import {
   saveConteudoLocal,
   deleteConteudoLocal,
   saveAvaliacaoLocal,
+  cacheAvaliacoes,
   deleteAvaliacaoLocal,
   deleteNotasLocal,
   clearOldSyncedData,
@@ -656,5 +657,42 @@ describe('offlineStorage Service', () => {
     expect(store.notas).toHaveLength(0);
     // Como ficou vazio, o lote de UPSERT deve ter sido removido por completo
     expect(store.syncQueue).toHaveLength(0);
+  });
+
+  it('atualiza registro existente com server ID em vez de duplicar em cacheAvaliacoes', async () => {
+    const store = getMockStore();
+    // 1. Inserir avaliação offline (sem server ID ainda, syncStatus: pending)
+    await saveAvaliacaoLocal({
+      turma_id: 't-123',
+      tipo: 'AV04',
+      data: '2026-09-15',
+      instrumento: 'AVALIACAO ESCRITA',
+      objetos: [],
+      bimestre: '3º Bimestre',
+      valor_maximo: 10,
+      disciplina: 'Matemática',
+      clientTempId: 'temp_1726888000',
+    });
+
+    expect(store.avaliacoes).toHaveLength(1);
+    expect(store.avaliacoes[0].id).toBeUndefined();
+
+    // 2. Simular sync que inseriu no Supabase e gerou id 'server-av-55'
+    // O cacheAvaliacoes recebe o registro do servidor
+    await cacheAvaliacoes([{
+      id: 'server-av-55',
+      turma_id: 't-123',
+      tipo: 'AV04',
+      data: '2026-09-15',
+      instrumento: 'AVALIACAO ESCRITA',
+      objetos: [],
+      bimestre: '3º Bimestre',
+      valor_maximo: 10,
+      disciplina: 'Matemática',
+    }]);
+
+    // Não deve criar um 2º registro no IndexedDB
+    expect(store.avaliacoes).toHaveLength(1);
+    expect(store.avaliacoes[0].id).toBe('server-av-55');
   });
 });
