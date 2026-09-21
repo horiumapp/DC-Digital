@@ -37,27 +37,6 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
   onAddAvaliacao,
   disabled
 }: AvaliacoesListProps) {
-  const BIMESTRES = ['1º Bimestre', '2º Bimestre', '3º Bimestre', '4º Bimestre'];
-
-  // Contagem de avaliações por bimestre
-  const countsPorBimestre = React.useMemo(() => {
-    const list = todasAvaliacoes || avaliacoes;
-    const map: Record<string, number> = {
-      '1º Bimestre': 0,
-      '2º Bimestre': 0,
-      '3º Bimestre': 0,
-      '4º Bimestre': 0,
-    };
-    list.forEach(av => {
-      if (av.parent_id) return;
-      const num = getBimestreNumero(av.bimestre || '') ?? getBimestreNumero(av.data);
-      if (num && map[`${num}º Bimestre`] !== undefined) {
-        map[`${num}º Bimestre`]++;
-      }
-    });
-    return map;
-  }, [todasAvaliacoes, avaliacoes]);
-
   // Filtra as avaliações principais do bimestre atual
   const avsBim = React.useMemo(() => {
     const targetNum = getBimestreNumero(currentBimestre);
@@ -70,34 +49,15 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
 
   return (
     <div className="space-y-4">
-      {/* Barra de Seleção de Bimestre e Ação */}
+      {/* Barra de Bimestre Atual e Ação */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200/90 dark:border-slate-800">
-        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100/80 dark:bg-slate-800/60 rounded-xl">
-          {BIMESTRES.map(bim => {
-            const isSelected = bim === currentBimestre;
-            const count = countsPorBimestre[bim] || 0;
-            return (
-              <button
-                key={bim}
-                type="button"
-                onClick={() => onSelectBimestre?.(bim)}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                  isSelected
-                    ? 'bg-white dark:bg-slate-900 text-[#0f2851] dark:text-sky-300 shadow-xs ring-1 ring-slate-200/60 dark:ring-slate-700'
-                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                }`}
-              >
-                <span>{bim}</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
-                  isSelected
-                    ? 'bg-[#eef2ff] text-[#0f2851] dark:bg-sky-950 dark:text-sky-300'
-                    : 'bg-slate-200/80 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
-                }`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-2">
+          <div className="px-3.5 py-1.5 bg-slate-100/80 dark:bg-slate-800/60 rounded-xl text-xs font-bold text-[#0f2851] dark:text-sky-300 border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-2 shadow-xs">
+            <span>{currentBimestre}</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-black bg-[#eef2ff] text-[#0f2851] dark:bg-sky-950 dark:text-sky-300">
+              {avsBim.length}
+            </span>
+          </div>
         </div>
 
         {!disabled && (
