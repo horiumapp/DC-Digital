@@ -28,7 +28,7 @@ export default function FrequenciaTab({
     removerFrequencia, 
     lancamentos 
   } = useTurma();
-  const { showError: showToastError, showSuccess: showToastSuccess } = useToast();
+  const { showError: showToastError } = useToast();
   
   const [studentData, setStudentData] = useState<Aluno[]>([]);
   const [isLaunching, setIsLaunching] = useState(false);
@@ -123,27 +123,26 @@ export default function FrequenciaTab({
       if (turmaAtiva) {
         setIsSaving(true);
         try {
-          await salvarFrequencia(selectedDate, tempoAula, studentData);
-          showToastSuccess('Frequência salva com sucesso!');
-          setIsLaunching(false);
-          setCaptchaInput('');
-          generateNewCaptcha();
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          const ok = await salvarFrequencia(selectedDate, tempoAula, studentData);
+          if (ok) {
+            setIsLaunching(false);
+            setCaptchaInput('');
+            generateNewCaptcha();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
 
-          // Auto-advance para o próximo tempo pendente (ou próximo sequencial)
-          const nextPendingTempo = disponiveisTempos.find(t => 
-            t !== tempoAula && !lancamentos.some(l => l.data === selectedDate && l.tempo === t && l.tipo === 'frequencia')
-          );
-          if (nextPendingTempo) {
-            setTempoAula(nextPendingTempo);
-          } else {
-            const currentIndex = disponiveisTempos.indexOf(tempoAula);
-            if (currentIndex >= 0 && currentIndex < disponiveisTempos.length - 1) {
-              setTempoAula(disponiveisTempos[currentIndex + 1]);
+            // Auto-advance para o próximo tempo pendente (ou próximo sequencial)
+            const nextPendingTempo = disponiveisTempos.find(t => 
+              t !== tempoAula && !lancamentos.some(l => l.data === selectedDate && l.tempo === t && l.tipo === 'frequencia')
+            );
+            if (nextPendingTempo) {
+              setTempoAula(nextPendingTempo);
+            } else {
+              const currentIndex = disponiveisTempos.indexOf(tempoAula);
+              if (currentIndex >= 0 && currentIndex < disponiveisTempos.length - 1) {
+                setTempoAula(disponiveisTempos[currentIndex + 1]);
+              }
             }
           }
-        } catch {
-          showToastError('Erro ao salvar frequência. Verifique sua conexão ou tente novamente.');
         } finally {
           setIsSaving(false);
         }
@@ -154,14 +153,11 @@ export default function FrequenciaTab({
   };
 
   const handleExcluirFrequencia = async () => {
-    try {
-      await removerFrequencia(selectedDate, tempoAula);
-      showToastSuccess('Frequência excluída com sucesso.');
+    const ok = await removerFrequencia(selectedDate, tempoAula);
+    if (ok) {
       generateNewCaptcha();
       setShowDeleteFreqModal(false);
       setIsLaunching(false);
-    } catch {
-      showToastError('Erro ao excluir frequência.');
     }
   };
 

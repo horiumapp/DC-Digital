@@ -97,11 +97,11 @@ interface TurmaContextType {
   salvarAvaliacao: (av: Avaliacao) => Promise<string>;
   removerAvaliacao: (id: string) => Promise<void>;
   salvarNotas: (avaliacaoId: string, notas: { alunoId: string, valor: string }[], alunoIdsRemovidos?: string[]) => Promise<void>;
-  salvarFrequencia: (data: string, tempo: string, alunosFreq: Aluno[]) => Promise<void>;
+  salvarFrequencia: (data: string, tempo: string, alunosFreq: Aluno[]) => Promise<boolean>;
   salvarConteudo: (cont: Conteudo) => Promise<void>;
   buscarFrequencia: (data: string, tempo: string) => Promise<void>;
   buscarConteudo: (data: string, tempo: string) => Promise<Conteudo | null>;
-  removerFrequencia: (data: string, tempo: string) => Promise<void>;
+  removerFrequencia: (data: string, tempo: string) => Promise<boolean>;
   removerConteudo: (data: string, tempo: string) => Promise<void>;
   carregarFaltasDaData: (data: string) => Promise<void>;
   faltasPorData: Record<string, Set<string>>;
@@ -422,11 +422,11 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     }
   }, [turmaAtiva]);
 
-  const salvarFrequencia = useCallback(async (data: string, tempo: string, alunosFreq: Aluno[]) => {
-    if (!turmaAtiva) return;
+  const salvarFrequencia = useCallback(async (data: string, tempo: string, alunosFreq: Aluno[]): Promise<boolean> => {
+    if (!turmaAtiva) return false;
     if (verificarPeriodoFechado(data)) {
       showErrorRef.current('Operação bloqueada: O período correspondente a esta data está fechado.');
-      return;
+      return false;
     }
     const rawId = getTid(turmaAtiva.id);
     try {
@@ -440,10 +440,12 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       });
 
       await carregarFaltasDaData(data);
-      showSuccessRef.current('Frequência salva!');
+      showSuccessRef.current('Frequência salva com sucesso!');
+      return true;
     } catch (err) {
       console.error('Erro ao salvar frequência:', err);
       showErrorRef.current('Erro ao salvar a frequência.');
+      return false;
     }
   }, [turmaAtiva, verificarPeriodoFechado, registrarLancamento, carregarFaltasDaData]);
 
@@ -493,11 +495,11 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     return contData;
   }, [turmaAtiva, registrarLancamento]);
 
-  const removerFrequencia = useCallback(async (data: string, tempo: string) => {
-    if (!turmaAtiva) return;
+  const removerFrequencia = useCallback(async (data: string, tempo: string): Promise<boolean> => {
+    if (!turmaAtiva) return false;
     if (verificarPeriodoFechado(data)) {
       showErrorRef.current('Operação bloqueada: O período correspondente a esta data está fechado.');
-      return;
+      return false;
     }
     const rawId = getTid(turmaAtiva.id);
     try {
@@ -505,9 +507,11 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       removerLancamento({ turmaId: rawId, data, tipo: 'frequencia', tempo });
       setAlunos(prev => prev.map(a => ({ ...a, freq: '', part: 'Presencial' })));
       await carregarFaltasDaData(data);
-      showSuccessRef.current('Lançamento de frequência removido.');
+      showSuccessRef.current('Frequência excluída com sucesso.');
+      return true;
     } catch {
       showErrorRef.current('Não foi possível remover a frequência.');
+      return false;
     }
   }, [turmaAtiva, verificarPeriodoFechado, removerLancamento, carregarFaltasDaData]);
 
