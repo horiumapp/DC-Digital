@@ -76,6 +76,11 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
   onSetCalendarYear
 }: AvaliacaoFormProps) {
   const displayDate = selectedDate.includes('-') ? selectedDate.split('-').reverse().join('/') : selectedDate;
+  const [modoManualUnidade, setModoManualUnidade] = React.useState(false);
+  const [modoManualObjeto, setModoManualObjeto] = React.useState(false);
+
+  const isManualUnidade = modoManualUnidade || unidadesOpcoes.length === 0;
+  const isManualObjeto = modoManualObjeto || isManualUnidade || objetosOpcoes.length === 0;
 
   return (
     <div className="space-y-6">
@@ -188,9 +193,14 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Período letivo</label>
                   <select
                     value={periodoLetivo}
-                    onChange={(e) => { onSetPeriodoLetivo(e.target.value); onSetUnidadeDidatica(''); onSetObjetoConhecimento(''); }}
+                    onChange={(e) => {
+                      onSetPeriodoLetivo(e.target.value);
+                      onSetUnidadeDidatica('');
+                      onSetObjetoConhecimento('');
+                      setModoManualUnidade(false);
+                      setModoManualObjeto(false);
+                    }}
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer"
-                    disabled
                   >
                     <option value="">Selecione...</option>
                     {Object.entries(PERIODOS_LABELS).map(([bim, label]) => (
@@ -198,35 +208,104 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
                     ))}
                   </select>
                 </div>
+
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Unidade didática</label>
-                  <select
-                    value={unidadeDidatica}
-                    onChange={(e) => { onSetUnidadeDidatica(e.target.value); onSetObjetoConhecimento(''); }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer"
-                    disabled={!periodoLetivo || unidadesOpcoes.length === 0}
-                  >
-                    <option value="">{unidadesOpcoes.length > 0 ? "Selecione..." : "Nenhuma unidade lançada"}</option>
-                    {unidadesOpcoes.map(u => <option key={u} value={u}>{u}</option>)}
-                  </select>
+                  <div className="flex justify-between items-center pl-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade didática</label>
+                    {unidadesOpcoes.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModoManualUnidade(!isManualUnidade);
+                          onSetUnidadeDidatica('');
+                          onSetObjetoConhecimento('');
+                        }}
+                        className="text-[11px] font-bold text-[#0f2851] hover:underline"
+                      >
+                        {isManualUnidade ? '← Escolher da lista' : '+ Digitar manual'}
+                      </button>
+                    )}
+                  </div>
+                  {!isManualUnidade ? (
+                    <select
+                      value={unidadeDidatica}
+                      onChange={(e) => {
+                        if (e.target.value === '__MANUAL__') {
+                          setModoManualUnidade(true);
+                          onSetUnidadeDidatica('');
+                          onSetObjetoConhecimento('');
+                        } else {
+                          onSetUnidadeDidatica(e.target.value);
+                          onSetObjetoConhecimento('');
+                        }
+                      }}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer"
+                    >
+                      <option value="">Selecione a unidade...</option>
+                      {unidadesOpcoes.map(u => <option key={u} value={u}>{u}</option>)}
+                      <option value="__MANUAL__">-- Outra Unidade (Digitar manual) --</option>
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={unidadeDidatica}
+                      onChange={(e) => onSetUnidadeDidatica(e.target.value)}
+                      placeholder="Digite a unidade didática (ex: Geometria, Álgebra...)"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10"
+                    />
+                  )}
                 </div>
               </div>
+
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-end">
                 <div className="flex-1 space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Objeto de Conhecimento</label>
-                  <select
-                    value={objetoConhecimento}
-                    onChange={(e) => onSetObjetoConhecimento(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer"
-                    disabled={!unidadeDidatica || objetosOpcoes.length === 0}
-                  >
-                    <option value="">{objetosOpcoes.length > 0 ? "Selecione..." : "Nenhum objeto lançado"}</option>
-                    {objetosOpcoes.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
+                  <div className="flex justify-between items-center pl-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Objeto de Conhecimento</label>
+                    {objetosOpcoes.length > 0 && !isManualUnidade && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModoManualObjeto(!isManualObjeto);
+                          onSetObjetoConhecimento('');
+                        }}
+                        className="text-[11px] font-bold text-[#0f2851] hover:underline"
+                      >
+                        {isManualObjeto ? '← Escolher da lista' : '+ Digitar manual'}
+                      </button>
+                    )}
+                  </div>
+                  {!isManualObjeto && !isManualUnidade ? (
+                    <select
+                      value={objetoConhecimento}
+                      onChange={(e) => {
+                        if (e.target.value === '__MANUAL__') {
+                          setModoManualObjeto(true);
+                          onSetObjetoConhecimento('');
+                        } else {
+                          onSetObjetoConhecimento(e.target.value);
+                        }
+                      }}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer"
+                      disabled={!unidadeDidatica}
+                    >
+                      <option value="">{unidadeDidatica ? 'Selecione o objeto...' : 'Selecione primeiro a unidade'}</option>
+                      {objetosOpcoes.map(o => <option key={o} value={o}>{o}</option>)}
+                      <option value="__MANUAL__">-- Outro Objeto (Digitar manual) --</option>
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={objetoConhecimento}
+                      onChange={(e) => onSetObjetoConhecimento(e.target.value)}
+                      placeholder="Digite o objeto de conhecimento da avaliação..."
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10"
+                    />
+                  )}
                 </div>
                 <button
+                  type="button"
                   onClick={onAddObjeto}
-                  disabled={!objetoConhecimento}
+                  disabled={!objetoConhecimento || objetoConhecimento.trim().length === 0}
                   className="w-full sm:w-auto bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-3.5 rounded-2xl text-sm font-bold hover:bg-[#e0e7ff] transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm active:scale-95 whitespace-nowrap"
                 >
                   <Plus className="w-4 h-4" /> Adicionar

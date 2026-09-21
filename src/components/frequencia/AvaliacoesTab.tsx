@@ -13,6 +13,31 @@ import AvaliacaoDetailsView from './avaliacoes/AvaliacaoDetailsView';
 import NotasEditor from './avaliacoes/NotasEditor';
 import SegundaChamadaEditor from './avaliacoes/SegundaChamadaEditor';
 import DeleteAvaliacaoModal from './avaliacoes/DeleteAvaliacaoModal';
+import { supabase } from '../../lib/supabase';
+import * as OfflineStorage from '../../services/offlineStorage';
+
+interface CurriculoObjeto {
+  id?: string;
+  unidade_id?: string;
+  descricao: string;
+}
+
+interface CurriculoHabilidade {
+  id?: string;
+  unidade_id?: string;
+  codigo: string;
+}
+
+interface CurriculoUnidade {
+  id: string;
+  modalidade: string;
+  ano: string;
+  bimestre: string;
+  disciplina: string;
+  nome: string;
+  objetos: CurriculoObjeto[];
+  habilidades: CurriculoHabilidade[];
+}
 
 interface AvaliacoesTabProps {
   selectedDate?: string;
@@ -79,25 +104,122 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
     validateCaptcha
   } = useCaptcha();
 
+  const [unidadesBD, setUnidadesBD] = useState<CurriculoUnidade[]>([]);
+  const [_loadingCurriculo, setLoadingCurriculo] = useState(false);
+
+  useEffect(() => {
+    async function loadCurriculo() {
+      if (!turmaAtiva) return;
+      setLoadingCurriculo(true);
+
+      const modalidadeRaw = turmaAtiva.ensino || '';
+      const modalidade = modalidadeRaw.split('(')[0].trim();
+      let ano = turmaAtiva.fase || '';
+      const matchAno = ano.match(/^(\d+)/);
+      if (matchAno) ano = `${matchAno[1]}º Ano`;
+
+      const bimestreAlvo = periodoLetivo || (selectedDate ? getBimestrePorData(selectedDate) : bimestreFiltro) || '1º Bimestre';
+
+      const chave = {
+        modalidade,
+        ano,
+        bimestre: bimestreAlvo,
+        disciplina: turmaAtiva.componente || '',
+      };
+
+      try {
+        let unidades: CurriculoUnidade[] = [];
+
+        if (navigator.onLine) {
+          const { data, error } = await supabase
+            .from('curriculo_unidades')
+            .select('*, objetos:curriculo_objetos(*), habilidades:curriculo_habilidades(*)')
+            .ilike('modalidade', `%${chave.modalidade}%`)
+            .eq('ano', chave.ano)
+            .eq('bimestre', chave.bimestre)
+            .ilike('disciplina', `%${chave.disciplina}%`);
+
+          if (error) throw error;
+          unidades = (data || []) as CurriculoUnidade[];
+          if (unidades.length > 0) {
+            await OfflineStorage.cacheCurriculo(unidades.map(unidade => ({
+              id: unidade.id,
+              modalidade: unidade.modalidade,
+              ano: unidade.ano,
+              bimestre: unidade.bimestre,
+              disciplina: unidade.disciplina,
+              nome: unidade.nome,
+              objetos: unidade.objetos || [],
+              habilidades: unidade.habilidades || [],
+            })));
+          }
+        }
+
+        if (unidades.length === 0) {
+          unidades = (await OfflineStorage.getCachedCurriculo(chave)) as unknown as CurriculoUnidade[];
+        }
+
+        setUnidadesBD(unidades || []);
+      } catch (err) {
+        console.error('Erro ao buscar currículo para avaliação:', err);
+        const unidadesCache = (await OfflineStorage.getCachedCurriculo(chave)) as unknown as CurriculoUnidade[];
+        setUnidadesBD(unidadesCache || []);
+      } finally {
+        setLoadingCurriculo(false);
+      }
+    }
+
+    loadCurriculo();
+  }, [turmaAtiva, selectedDate, periodoLetivo, bimestreFiltro]);
+
   // Memos para opções de objetos de conhecimento
   const unidadesOpcoes = React.useMemo(() => {
-    if (!selectedDate || !conteudos) return [];
-    const bimestreAtual = getBimestrePorData(selectedDate);
-    const unidades = conteudos
-      .filter(c => getBimestrePorData(c.data) === bimestreAtual)
-      .map(c => c.habilidades[0])
-      .filter((u, index, self) => u && self.indexOf(u) === index);
-    return unidades;
-  }, [selectedDate, conteudos]);
+    const list: string[] = [];
+    unidadesBD.forEach(u => {
+      if (u.nome && !list.includes(u.nome)) {
+        list.push(u.nome);
+      }
+    });
+    if (selectedDate && conteudos) {
+      const bim = periodoLetivo || getBimestrePorData(selectedDate);
+      conteudos
+        .filter(c => getBimestrePorData(c.data) === bim)
+        .forEach(c => {
+          if (c.habilidades && c.habilidades[0] && !list.includes(c.habilidades[0])) {
+            list.push(c.habilidades[0]);
+          }
+        });
+    }
+    return list;
+  }, [unidadesBD, selectedDate, periodoLetivo, conteudos]);
 
   const objetosOpcoes = React.useMemo(() => {
-    if (!unidadeDidatica || !conteudos) return [];
-    const objetos = conteudos
-      .filter(c => c.habilidades[0] === unidadeDidatica)
-      .flatMap(c => c.objetos)
-      .filter((o, index, self) => o && self.indexOf(o) === index);
-    return objetos;
-  }, [unidadeDidatica, conteudos]);
+    if (!unidadeDidatica) return [];
+    const list: string[] = [];
+
+    const matchedUnidade = unidadesBD.find(u => u.nome === unidadeDidatica);
+    if (matchedUnidade && matchedUnidade.objetos) {
+      matchedUnidade.objetos.forEach((o: CurriculoObjeto | string) => {
+        const desc = typeof o === 'object' && o !== null ? (o.descricao || '') : String(o);
+        if (desc && !list.includes(desc)) {
+          list.push(desc);
+        }
+      });
+    }
+
+    if (conteudos) {
+      conteudos
+        .filter(c => c.habilidades && c.habilidades[0] === unidadeDidatica)
+        .flatMap(c => c.objetos || [])
+        .forEach(desc => {
+          if (desc && !list.includes(desc)) {
+            list.push(desc);
+          }
+        });
+    }
+
+    return list;
+  }, [unidadeDidatica, unidadesBD, conteudos]);
 
   // Alunos filtrados para notas (lógica de RP: alunos com nota abaixo de 50% do valor máximo da avaliação)
   const alunosParaNotas = React.useMemo(() => {
@@ -129,16 +251,33 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
   }, [avaliacaoViewMode, selectedAvaliacao, alunosParaNotas]);
    
 
-  // Atualizar período letivo pela data selecionada
-   
-  useEffect(() => {
-    if (selectedDate) {
-      const bim = getBimestrePorData(selectedDate);
-      setPeriodoLetivo(bim);
+  // Handlers para sincronização de período letivo e data
+  const handleSetPeriodoLetivo = (novoBim: string) => {
+    setPeriodoLetivo(novoBim);
+    setUnidadeDidatica('');
+    setObjetoConhecimento('');
+    if (novoBim) {
+      const periodoConfig = APP_CONFIG.PERIODOS.find(p => p.nome === novoBim || p.id === novoBim);
+      if (periodoConfig && getBimestrePorData(selectedDate) !== novoBim) {
+        setSelectedDate(periodoConfig.dataInicio);
+        const [y, m] = periodoConfig.dataInicio.split('-').map(Number);
+        if (y && m) {
+          setCalendarYear(y);
+          setCalendarMonth(m - 1);
+        }
+      }
+    }
+  };
+
+  const handleSetSelectedDate = (novaData: string) => {
+    setSelectedDate(novaData);
+    const novoBim = getBimestrePorData(novaData);
+    if (novoBim) {
+      setPeriodoLetivo(novoBim);
       setUnidadeDidatica('');
       setObjetoConhecimento('');
     }
-  }, [selectedDate]);
+  };
 
   // Carregar faltas de cada data de avaliação automaticamente
   useEffect(() => {
@@ -351,6 +490,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
           onEdit={(av) => { 
             setSelectedAvaliacao(av); 
             setSelectedDate(av.data); 
+            setPeriodoLetivo(av.bimestre || getBimestrePorData(av.data));
             const [y, m] = av.data.split('-').map(Number);
             if (y && m) {
               setCalendarYear(y);
@@ -389,6 +529,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
             };
             setSelectedAvaliacao(novoRP);
             setSelectedDate(novoRP.data);
+            setPeriodoLetivo(novoRP.bimestre || getBimestrePorData(novoRP.data));
             const [y, m] = novoRP.data.split('-').map(Number);
             if (y && m) {
               setCalendarYear(y);
@@ -430,6 +571,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
 
             resetForm(); 
             setSelectedDate(dataPadrao);
+            setPeriodoLetivo(bimestreFiltro);
             const [pY, pM] = dataPadrao.split('-').map(Number);
             if (pY && pM) {
               setCalendarYear(pY);
@@ -465,15 +607,20 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
           onSave={handleSaveAvaliacao}
           onCancel={() => { setAvaliacaoViewMode('list'); resetForm(); }}
           onAddObjeto={() => {
-            if (!unidadeDidatica || !objetoConhecimento) return alert('Selecione os campos!');
-            if (objetosAvaliacao.some(o => o.unidade === unidadeDidatica && o.objeto === objetoConhecimento)) return alert('Já existe!');
-            setObjetosAvaliacao(prev => [...prev, { unidade: unidadeDidatica, objeto: objetoConhecimento }]);
+            const u = unidadeDidatica.trim() || 'Conteúdo da Avaliação';
+            const o = objetoConhecimento.trim();
+            if (!o) return alert('Por favor, informe o Objeto de Conhecimento!');
+            if (objetosAvaliacao.some(item => item.unidade === u && item.objeto === o)) {
+              return alert('Este objeto de conhecimento já foi adicionado à avaliação!');
+            }
+            setObjetosAvaliacao(prev => [...prev, { unidade: u, objeto: o }]);
+            setObjetoConhecimento('');
           }}
           onRemoveObjeto={(idx) => setObjetosAvaliacao(prev => prev.filter((_, i) => i !== idx))}
-          onSetSelectedDate={setSelectedDate}
+          onSetSelectedDate={handleSetSelectedDate}
           onSetIsDatePickerOpen={setIsDatePickerOpen}
           onSetInstrumentoAvaliacao={setInstrumentoAvaliacao}
-          onSetPeriodoLetivo={setPeriodoLetivo}
+          onSetPeriodoLetivo={handleSetPeriodoLetivo}
           onSetUnidadeDidatica={setUnidadeDidatica}
           onSetObjetoConhecimento={setObjetoConhecimento}
           onSetValorMaximo={setValorMaximo}
