@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Printer, Search, BookOpen } from 'lucide-react';
+import { ArrowLeft, Printer, Search, BookOpen, Unlock } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -139,6 +139,10 @@ export default function AparataDetalhes() {
 
   const isAparataFechada = !!fechamentos[bimestreInfo.id];
 
+  const [isReabrirModalOpen, setIsReabrirModalOpen] = useState(false);
+  const [escopoReabertura, setEscopoReabertura] = useState<'COMPONENTE' | 'TODAS'>('COMPONENTE');
+  const [reabrindo, setReabrindo] = useState(false);
+
   const handleFecharAparata = async () => {
     if (window.confirm(`Tem certeza que deseja FECHAR a aparata do ${periodo}? Não será mais possível fazer lançamentos de frequência, conteúdos e notas neste período.`)) {
       await salvarFechamento(bimestreInfo.id, 'FECHADO');
@@ -146,10 +150,24 @@ export default function AparataDetalhes() {
     }
   };
 
-  const handleReabrirAparata = async () => {
-    if (window.confirm(`Tem certeza que deseja REABRIR a aparata do ${periodo}? O professor voltará a ter acesso para fazer lançamentos.`)) {
-      await salvarFechamento(bimestreInfo.id, 'ABERTO');
+  const handleReabrirAparata = () => {
+    setIsReabrirModalOpen(true);
+  };
+
+  const handleConfirmarReabertura = async () => {
+    setReabrindo(true);
+    try {
+      if (escopoReabertura === 'TODAS') {
+        await salvarFechamento(bimestreInfo.id, 'ABERTO', 'TODAS');
+      } else {
+        await salvarFechamento(bimestreInfo.id, 'ABERTO', turmaAtiva.componente);
+      }
+      setIsReabrirModalOpen(false);
       navigate('/diario');
+    } catch (err) {
+      console.error('Erro ao reabrir aparata:', err);
+    } finally {
+      setReabrindo(false);
     }
   };
 
@@ -336,6 +354,86 @@ export default function AparataDetalhes() {
           </div>
         </div>
       </div>
+
+      {/* Modal de Confirmação de Reabertura Granular */}
+      {isReabrirModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <Unlock className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">Reabrir Aparata</h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  {periodo} • {turmaAtiva.fase}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-600">
+              Selecione o escopo da reabertura para permitir novos lançamentos e correções pelo professor:
+            </p>
+
+            <div className="space-y-3">
+              <label className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition ${escopoReabertura === 'COMPONENTE' ? 'border-emerald-500 bg-emerald-50/40 text-emerald-950' : 'border-slate-200 hover:bg-slate-50 text-slate-700'}`}>
+                <input
+                  type="radio"
+                  name="escopo-reabertura"
+                  checked={escopoReabertura === 'COMPONENTE'}
+                  onChange={() => setEscopoReabertura('COMPONENTE')}
+                  className="mt-1 text-emerald-600 focus:ring-emerald-500"
+                />
+                <div className="space-y-0.5">
+                  <span className="text-sm font-bold block">
+                    Apenas {turmaAtiva.componente} (Recomendado)
+                  </span>
+                  <span className="text-xs text-slate-500 block">
+                    Reabre apenas o diário deste componente curricular para correções pontuais. As demais disciplinas continuam fechadas.
+                  </span>
+                </div>
+              </label>
+
+              <label className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition ${escopoReabertura === 'TODAS' ? 'border-blue-500 bg-blue-50/40 text-blue-950' : 'border-slate-200 hover:bg-slate-50 text-slate-700'}`}>
+                <input
+                  type="radio"
+                  name="escopo-reabertura"
+                  checked={escopoReabertura === 'TODAS'}
+                  onChange={() => setEscopoReabertura('TODAS')}
+                  className="mt-1 text-blue-600 focus:ring-blue-500"
+                />
+                <div className="space-y-0.5">
+                  <span className="text-sm font-bold block">
+                    Todas as disciplinas da turma
+                  </span>
+                  <span className="text-xs text-slate-500 block">
+                    Reabre todos os componentes curriculares desta turma para o {periodo} (ideal após conselho de classe geral).
+                  </span>
+                </div>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsReabrirModalOpen(false)}
+                disabled={reabrindo}
+                className="px-4 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarReabertura}
+                disabled={reabrindo}
+                className="px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 transition flex items-center gap-2 cursor-pointer"
+              >
+                {reabrindo ? 'Reabrindo...' : 'Confirmar Reabertura'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -42,6 +42,7 @@ export default function Turmas() {
   const [alocacaoAtiva, setAlocacaoAtiva] = useState<EscolaAlocacao | null>(null);
   const [isLotacaoModalOpen, setIsLotacaoModalOpen] = useState(false);
   const [turmasBD, setTurmasBD] = useState<TurmaBD[]>([]);
+  const [staffTurmas, setStaffTurmas] = useState<TurmaRelatorioInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [professorDisciplinas, setProfessorDisciplinas] = useState<string>('');
   const isMounted = React.useRef(true);
@@ -125,9 +126,18 @@ export default function Turmas() {
   const fetchAlocacoes = React.useCallback(async () => {
     if (!user || !user.email) return;
     
-    // Usuários administrativos não precisam buscar lotações de professor
-    if (['ADMIN', 'GESTOR', 'SECRETARIO'].includes(user.role)) {
-      if (isMounted.current) setLoading(false);
+    // Usuários administrativos e secretaria: carregar as turmas da escola
+    if (user?.role && ['ADMIN', 'GESTOR', 'SECRETARIO'].includes(user.role)) {
+      try {
+        const turmasList = await OfflineTurmaService.fetchTurmasRelatorio(user);
+        if (isMounted.current) {
+          setStaffTurmas(turmasList);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Erro ao carregar turmas administrativas:', err);
+        if (isMounted.current) setLoading(false);
+      }
       return;
     }
 
@@ -281,7 +291,40 @@ export default function Turmas() {
   }, [alocacaoAtiva, fetchTurmasBD]);
    
 
+  const isStaffRole = Boolean(user?.role && ['ADMIN', 'GESTOR', 'SECRETARIO'].includes(user.role));
+
   const filteredTurmas: Turma[] = useMemo(() => {
+    if (isStaffRole && staffTurmas.length > 0) {
+      const term = searchTerm.toLowerCase();
+      return staffTurmas
+        .filter(t =>
+          t.nome.toLowerCase().includes(term) ||
+          t.componente.toLowerCase().includes(term) ||
+          t.turno.toLowerCase().includes(term)
+        )
+        .map(t => ({
+          id: `${t.id}||${t.componente}`,
+          ensino: t.ensino,
+          fase: t.fase,
+          componente: t.componente,
+          professor: user?.name || 'Secretaria',
+          escola: t.escolaNome,
+          escola_id: t.escolaId,
+          turno: t.turno,
+          metricas: {
+            frequencia: 0,
+            objetosMinistrados: 0,
+            objetosPlanejados: 0,
+            avaliacoesCadastradas: 0,
+            avaliacoesPrevistas: 0,
+            notasLancadas: 0,
+            notasPrevistas: 0
+          },
+          diasDeAula: [1, 2, 3, 4, 5],
+          tempos: ['1º TEMPO', '2º TEMPO']
+        }));
+    }
+
     const rawFiltered = turmasBD.filter(t => t.nome.toLowerCase().includes(searchTerm.toLowerCase()));
     const exploded: Turma[] = [];
 
@@ -339,22 +382,21 @@ export default function Turmas() {
     });
 
     return exploded;
-  }, [turmasBD, searchTerm, professorDisciplinas, user?.name, alocacaoAtiva]);
+  }, [turmasBD, searchTerm, professorDisciplinas, user?.name, alocacaoAtiva, isStaffRole, staffTurmas]);
 
-  // Usuários administrativos (ADMIN, GESTOR, SECRETARIO) não têm alocação de professor.
-  // Redirecioná-los para a área de administração é a UX correta.
-  const isAdminUser = user?.role && ['ADMIN', 'GESTOR', 'SECRETARIO'].includes(user.role);
+  // Usuários administrativos sem turmas ou lotações
+  const isAdminSemTurmas = isStaffRole && staffTurmas.length === 0 && alocacoes.length === 0;
 
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-slate-500 animate-pulse font-medium">Carregando sua lotação...</div>
+        <div className="text-slate-500 animate-pulse font-medium">Carregando turmas...</div>
       </div>
     );
   }
 
   // Tela especial para administradores sem lotação de professor
-  if (isAdminUser && alocacoes.length === 0) {
+  if (isAdminSemTurmas) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-10 max-w-md w-full text-center">
@@ -363,8 +405,8 @@ export default function Turmas() {
           </div>
           <h2 className="text-xl font-bold text-slate-800 mb-2">Acesso Administrativo</h2>
           <p className="text-slate-500 text-sm mb-6">
-            Sua conta possui perfil <strong>{user?.role}</strong>. A visualização de turmas é reservada
-            para professores com lotação ativa. Acesse o painel administrativo para gerenciar o sistema.
+            Sua conta possui perfil <strong>{user?.role}</strong>. Nenhuma turma foi encontrada para a escola vinculada.
+            Acesse o painel administrativo para gerenciar o sistema.
           </p>
           <Link
             to="/administracao"
@@ -386,7 +428,7 @@ export default function Turmas() {
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-xl sm:text-2xl font-black text-[#0b1f3f] dark:text-sky-300 tracking-tight">
-                  Minhas Turmas & Componentes
+                  {isStaffRole ? 'Turmas & Diários da Escola' : 'Minhas Turmas & Componentes'}
                 </h1>
                 <span className="bg-emerald-100/80 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 text-xs font-bold px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
                   {APP_CONFIG.YEAR}
@@ -403,11 +445,11 @@ export default function Turmas() {
                 <Building2 className="w-4 h-4 text-blue-600 dark:text-sky-400 shrink-0" />
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                   <span className="font-bold text-slate-800 dark:text-slate-200">
-                    {alocacaoAtiva?.escolas?.nome || 'Escola não selecionada'}
+                    {alocacaoAtiva?.escolas?.nome || staffTurmas[0]?.escolaNome || 'Escola'}
                   </span>
                   <span className="text-slate-300 dark:text-slate-600 hidden sm:inline">•</span>
                   <span className="text-slate-500 dark:text-slate-400 font-semibold uppercase text-[11px]">
-                    Turno {alocacaoAtiva?.turno || 'N/A'}
+                    {isStaffRole ? (user?.role === 'SECRETARIO' ? 'Secretaria Escolar' : user?.role) : `Turno ${alocacaoAtiva?.turno || 'N/A'}`}
                   </span>
                 </div>
               </div>
