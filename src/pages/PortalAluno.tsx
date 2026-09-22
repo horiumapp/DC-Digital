@@ -281,6 +281,37 @@ export default function PortalAluno() {
     return match ? parseInt(match[1], 10) : 99;
   };
 
+  const getBimestreEstilo = (bimestreStr: string) => {
+    const num = getBimestreNum(bimestreStr);
+    switch (num) {
+      case 1:
+        return {
+          rowBg: 'bg-amber-50/50 hover:bg-amber-100/70',
+          badge: 'bg-amber-100 text-amber-900 border border-amber-300/70',
+        };
+      case 2:
+        return {
+          rowBg: 'bg-sky-50/50 hover:bg-sky-100/70',
+          badge: 'bg-sky-100 text-sky-900 border border-sky-300/70',
+        };
+      case 3:
+        return {
+          rowBg: 'bg-purple-50/40 hover:bg-purple-100/70',
+          badge: 'bg-purple-100 text-purple-900 border border-purple-300/70',
+        };
+      case 4:
+        return {
+          rowBg: 'bg-emerald-50/40 hover:bg-emerald-100/70',
+          badge: 'bg-emerald-100 text-emerald-900 border border-emerald-300/70',
+        };
+      default:
+        return {
+          rowBg: 'hover:bg-slate-50',
+          badge: 'bg-slate-100 text-slate-700 border border-slate-200',
+        };
+    }
+  };
+
   const getPesoTipo = (tipo: string): number => {
     const t = String(tipo || '').toUpperCase().trim();
 
@@ -476,32 +507,37 @@ export default function PortalAluno() {
                         <table className="w-full">
                           <thead>
                             <tr>
-                              <th className="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3">Avaliação</th>
-                              <th className="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3">Bimestre</th>
-                              <th className="text-right text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3">Nota</th>
+                              <th className="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3 px-3">Avaliação</th>
+                              <th className="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3 px-3">Bimestre</th>
+                              <th className="text-right text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3 px-3">Nota</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-slate-50">
-                            {notasDisc.map((nota, i) => (
-                              <tr key={i} className="group">
-                                <td className="py-2.5 text-sm font-medium text-slate-700">{nota.tipo}</td>
-                                <td className="py-2.5">
-                                  <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-                                    {nota.bimestre}
-                                  </span>
-                                </td>
-                                <td className="py-2.5 text-right">
-                                  <span className={`text-sm font-black ${
-                                    nota.valor >= (nota.valor_maximo * 0.6)
-                                      ? 'text-emerald-600'
-                                      : 'text-red-500'
-                                  }`}>
-                                    {nota.valor.toFixed(1)}
-                                  </span>
-                                  <span className="text-[10px] text-slate-400 font-medium"> / {nota.valor_maximo}</span>
-                                </td>
-                              </tr>
-                            ))}
+                          <tbody className="divide-y divide-slate-100">
+                            {notasDisc.map((nota, i) => {
+                              const estilo = getBimestreEstilo(nota.bimestre);
+                              const isAprovado = nota.valor >= (nota.valor_maximo * 0.5);
+
+                              return (
+                                <tr key={i} className={`group transition-colors ${estilo.rowBg}`}>
+                                  <td className="py-2.5 px-3 text-sm font-semibold text-slate-700 first:rounded-l-lg">{nota.tipo}</td>
+                                  <td className="py-2.5 px-3">
+                                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-md ${estilo.badge}`}>
+                                      {nota.bimestre}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right last:rounded-r-lg">
+                                    <span className={`text-sm font-black ${
+                                      isAprovado
+                                        ? 'text-blue-600'
+                                        : 'text-red-500'
+                                    }`}>
+                                      {nota.valor.toFixed(1)}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 font-medium"> / {nota.valor_maximo}</span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
