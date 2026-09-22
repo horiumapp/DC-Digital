@@ -356,8 +356,8 @@ export default function ObjetoConhecimentoTab({
               </div>
             </div>
           )}
-          <div className="grid grid-cols-12 gap-4">
-            <div className="col-span-8">
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+            <div className="sm:col-span-8">
               <label className="block text-sm text-slate-600 mb-1">Conteúdo ministrado</label>
               {todosConteudos.length > 0 && !modoTextoLivre ? (
                 <select
@@ -401,29 +401,31 @@ export default function ObjetoConhecimentoTab({
                 </div>
               )}
             </div>
-            <div className="col-span-2">
-              <label className="block text-sm text-slate-600 mb-1">Tempo de aula</label>
-              <select
-                className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 bg-white"
-                value={tempoAula}
-                onChange={(e) => setTempoAula(e.target.value)}
-              >
-                {disponiveisTempos.map((t: string) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm text-slate-600 mb-1">Status</label>
-              <select
-                className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 bg-white"
-                value={objetoStatus}
-                onChange={(e) => setObjetoStatus(e.target.value)}
-              >
-                <option>Ministrado</option>
-                <option>Planejado</option>
-                <option>Em andamento</option>
-              </select>
+            <div className="grid grid-cols-2 gap-4 sm:col-span-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm text-slate-600 mb-1">Tempo de aula</label>
+                <select
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 bg-white"
+                  value={tempoAula}
+                  onChange={(e) => setTempoAula(e.target.value)}
+                >
+                  {disponiveisTempos.map((t: string) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-slate-600 mb-1">Status</label>
+                <select
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 bg-white"
+                  value={objetoStatus}
+                  onChange={(e) => setObjetoStatus(e.target.value)}
+                >
+                  <option>Ministrado</option>
+                  <option>Planejado</option>
+                  <option>Em andamento</option>
+                </select>
+              </div>
             </div>
           </div>
 

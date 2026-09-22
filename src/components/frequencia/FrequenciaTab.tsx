@@ -346,7 +346,7 @@ export default function FrequenciaTab({
                   )}
                 </div>
 
-                {/* Frequency Selector: 3 Big Thumb Buttons */}
+                {/* Frequency Selector: Circle Buttons (P / F / FJ) */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -354,47 +354,47 @@ export default function FrequenciaTab({
                     </label>
                     <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Toque para selecionar</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="flex items-center gap-4 justify-start">
                     <button
                       type="button"
                       disabled={disabled}
                       onClick={() => !disabled && setDirectFreq(aluno.id, aluno.freq === 'P' ? '' : 'P')}
-                      className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed ${
+                      aria-label="Presença"
+                      className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-black transition-all active:scale-90 cursor-pointer disabled:cursor-not-allowed ${
                         aluno.freq === 'P'
-                          ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-400/40'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/40 border border-slate-200/60 dark:border-slate-700/60'
+                          ? 'bg-emerald-500 text-white shadow-md ring-2 ring-emerald-300/50 dark:ring-emerald-700/50'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-2 border-slate-200 dark:border-slate-700 hover:border-emerald-400 hover:text-emerald-600'
                       }`}
                     >
-                      <span className={`w-2 h-2 rounded-full ${aluno.freq === 'P' ? 'bg-white' : 'bg-emerald-500'}`} />
-                      Presença
+                      P
                     </button>
 
                     <button
                       type="button"
                       disabled={disabled}
                       onClick={() => !disabled && setDirectFreq(aluno.id, aluno.freq === 'F' ? '' : 'F')}
-                      className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed ${
+                      aria-label="Falta"
+                      className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-black transition-all active:scale-90 cursor-pointer disabled:cursor-not-allowed ${
                         aluno.freq === 'F'
-                          ? 'bg-rose-600 text-white shadow-sm ring-2 ring-rose-400/40'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950/40 border border-slate-200/60 dark:border-slate-700/60'
+                          ? 'bg-rose-500 text-white shadow-md ring-2 ring-rose-300/50 dark:ring-rose-700/50'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-2 border-slate-200 dark:border-slate-700 hover:border-rose-400 hover:text-rose-600'
                       }`}
                     >
-                      <span className={`w-2 h-2 rounded-full ${aluno.freq === 'F' ? 'bg-white' : 'bg-rose-500'}`} />
-                      Falta
+                      F
                     </button>
 
                     <button
                       type="button"
                       disabled={disabled}
                       onClick={() => !disabled && setDirectFreq(aluno.id, aluno.freq === 'FJ' ? '' : 'FJ')}
-                      className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed ${
+                      aria-label="Falta Justificada"
+                      className={`w-11 h-11 rounded-full flex items-center justify-center text-[11px] font-black transition-all active:scale-90 cursor-pointer disabled:cursor-not-allowed ${
                         aluno.freq === 'FJ'
-                          ? 'bg-amber-600 text-white shadow-sm ring-2 ring-amber-400/40'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-950/40 border border-slate-200/60 dark:border-slate-700/60'
+                          ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-300/50 dark:ring-amber-700/50'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-2 border-slate-200 dark:border-slate-700 hover:border-amber-400 hover:text-amber-600'
                       }`}
                     >
-                      <span className={`w-2 h-2 rounded-full ${aluno.freq === 'FJ' ? 'bg-white' : 'bg-amber-500'}`} />
-                      Justificada
+                      FJ
                     </button>
                   </div>
                 </div>
