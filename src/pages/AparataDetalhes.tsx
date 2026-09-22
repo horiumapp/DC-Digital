@@ -77,22 +77,25 @@ export default function AparataDetalhes() {
   const dataHoje = `${hoje.getDate().toString().padStart(2, '0')}/${(hoje.getMonth() + 1).toString().padStart(2, '0')}/${hoje.getFullYear()}`;
 
   const alunosDetalhados = useMemo(() => {
-    const principalAvs = avaliacoes.filter(a => a.tipo.startsWith('AV') && !a.tipo.startsWith('RP'));
+    const principalAvs = avaliacoes.filter(a => a.tipo.startsWith('AV') && !a.tipo.startsWith('RP') && !a.tipo.includes('2CH') && !a.parent_id);
 
     return (alunos || []).map((aluno, index) => {
-      // Cálculo da Soma Parcial (considerando as notas e eventuais recuperações)
+      // Cálculo da Soma Parcial (considerando as notas, 2ª chamada e eventuais recuperações)
       let somaParcial = '0,00';
       if (principalAvs.length > 0) {
         let soma = 0;
         principalAvs.forEach(av => {
-          const rp = avaliacoes.find(a => a.parent_id?.toString() === av.id?.toString());
+          const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('RP'));
+          const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('2CH'));
           const valAvStr = aluno.notas?.[av.id];
+          const valChStr = ch ? aluno.notas?.[ch.id] : undefined;
           const valRpStr = rp ? aluno.notas?.[rp.id] : undefined;
           
-          const valAv = valAvStr ? parseFloat(valAvStr.replace(',', '.')) : 0;
-          const valRp = valRpStr ? parseFloat(valRpStr.replace(',', '.')) : 0;
+          const valAv = valAvStr ? parseFloat(String(valAvStr).replace(',', '.')) : 0;
+          const valCh = valChStr ? parseFloat(String(valChStr).replace(',', '.')) : 0;
+          const valRp = valRpStr ? parseFloat(String(valRpStr).replace(',', '.')) : 0;
           
-          soma += Math.max(isNaN(valAv) ? 0 : valAv, isNaN(valRp) ? 0 : valRp);
+          soma += Math.max(isNaN(valAv) ? 0 : valAv, isNaN(valCh) ? 0 : valCh, isNaN(valRp) ? 0 : valRp);
         });
         somaParcial = soma.toFixed(2).replace('.', ',');
       }
