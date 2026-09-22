@@ -10,7 +10,8 @@
  */
 import { getBimestrePorData } from '../utils/dateUtils';
 import type { Aluno, Avaliacao, Conteudo, Horario, Lancamento } from '../contexts/TurmaContext';
-import type { FrequenciaRecord, NotaRecord } from './turmaService';
+import type { FrequenciaRecord, NotaRecord, TurmaRelatorioInfo } from './turmaService';
+export type { TurmaRelatorioInfo };
 import { TurmaService } from './turmaService';
 import * as OfflineStorage from './offlineStorage';
 import * as Queue from './offlineQueue';
@@ -57,6 +58,93 @@ export function setOnlineStatus(online: boolean): void {
 // ============================================================
 // LEITURAS — Servidor primeiro, fallback local
 // ============================================================
+
+export async function fetchTurmasRelatorio(user: { id: string; role: string; email?: string; escola_id?: string }): Promise<TurmaRelatorioInfo[]> {
+  try {
+    if (!_isOnline) throw new Error('Offline');
+    const result = await TurmaService.fetchTurmasRelatorio(user);
+    if (result.length > 0) {
+      const uniqueTurmasMap = new Map<string, { id: string; nome: string; turno: string; ensino: string; escola_id: string }>();
+      result.forEach(t => {
+        if (!uniqueTurmasMap.has(t.id)) {
+          uniqueTurmasMap.set(t.id, {
+            id: t.id,
+            nome: t.nome,
+            turno: t.turno,
+            ensino: t.ensino,
+            escola_id: t.escolaId
+          });
+        }
+      });
+      await OfflineStorage.cacheTurmas(Array.from(uniqueTurmasMap.values()));
+    }
+    return result;
+  } catch {
+    // Fallback offline a partir do IndexedDB
+    try {
+      let localTurmas = await db.turmas.toArray();
+      if ((user.role === 'SECRETARIO' || user.role === 'GESTOR') && user.escola_id) {
+        localTurmas = localTurmas.filter(t => t.escola_id === user.escola_id);
+      }
+      if (localTurmas.length === 0) return [];
+
+      const localHorarios = await db.horarios.toArray();
+      const localAvs = await db.avaliacoes.toArray();
+
+      const componentesPorTurma = new Map<string, Set<string>>();
+      localHorarios.forEach(h => {
+        const comp = (h.componente || '').trim();
+        if (comp) {
+          if (!componentesPorTurma.has(h.turma_id)) componentesPorTurma.set(h.turma_id, new Set());
+          componentesPorTurma.get(h.turma_id)!.add(comp);
+        }
+      });
+      localAvs.forEach(a => {
+        const disc = (a.disciplina || '').trim();
+        if (disc && disc.toUpperCase() !== 'GERAL') {
+          if (!componentesPorTurma.has(a.turma_id)) componentesPorTurma.set(a.turma_id, new Set());
+          componentesPorTurma.get(a.turma_id)!.add(disc);
+        }
+      });
+
+      const finalTurmas: TurmaRelatorioInfo[] = [];
+      localTurmas.forEach(t => {
+        let fase = t.nome;
+        let numero = '01';
+
+        const match = t.nome.match(/(.+)\s+([A-Za-z0-9]+)$/);
+        if (match) {
+          fase = match[1].trim();
+          numero = match[2].trim();
+        } else {
+          const matchNum = t.nome.match(/(\d+)$/);
+          if (matchNum) numero = matchNum[1];
+        }
+
+        let comps = Array.from(componentesPorTurma.get(t.id) || []);
+        if (comps.length === 0) comps = ['POLIVALENTE'];
+        comps.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+        comps.forEach(comp => {
+          finalTurmas.push({
+            id: t.id,
+            nome: t.nome,
+            turno: t.turno,
+            componente: comp,
+            ensino: t.ensino || 'Fundamental Anos Iniciais (1° ao 5° ANO)',
+            fase: fase,
+            numero: numero,
+            escolaId: t.escola_id || '',
+            escolaNome: 'ESCOLA LOCAL'
+          });
+        });
+      });
+      return finalTurmas;
+    } catch {
+      return [];
+    }
+  }
+}
 
 export async function fetchHorario(turmaId: string | number, disciplina: string): Promise<Horario[]> {
   const tid = getTid(turmaId);

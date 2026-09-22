@@ -53,117 +53,12 @@ export default function RelatorioMedias() {
     setLoading(true);
     try {
       if (!user) return;
-
-      if (user.role === 'ADMIN' || user.role === 'GESTOR' || user.role === 'SECRETARIO') {
-        const { data: todasTurmas, error } = await supabase
-          .from('turmas')
-          .select('*, escolas(nome)')
-          .order('nome');
-        
-        if (error) throw error;
-        if (todasTurmas) {
-          const finalTurmas: TurmaRelatorio[] = [];
-          todasTurmas.forEach(t => {
-            let fase = t.nome;
-            let numero = '01';
-
-            const match = t.nome.match(/(.+)\s+([A-Za-z0-9]+)$/);
-            if (match) {
-              fase = match[1].trim();
-              numero = match[2].trim();
-            } else {
-              const matchNum = t.nome.match(/(\d+)$/);
-              if (matchNum) numero = matchNum[1];
-            }
-
-            finalTurmas.push({
-              id: `${t.id}|GERAL`,
-              nome: t.nome,
-              turno: t.turno,
-              componente: 'GERAL',
-              ensino: t.ensino || 'Fundamental Anos Iniciais (1° ao 5° ANO)',
-              fase: fase,
-              numero: t.turma_codigo || numero,
-              escolaId: t.escola_id,
-              escolaNome: t.escolas?.nome || 'ESCOLA NÃO IDENTIFICADA'
-            });
-          });
-
-          setTurmas(finalTurmas);
-          if (finalTurmas.length > 0) {
-            setSelectedTurma(finalTurmas[0].id);
-          }
-        }
+      const finalTurmas = await OfflineTurmaService.fetchTurmasRelatorio(user);
+      setTurmas(finalTurmas);
+      if (finalTurmas.length > 0) {
+        setSelectedTurma(`${finalTurmas[0].id}|${finalTurmas[0].componente}`);
       } else {
-        const emailLimpo = user.email.trim();
-        const { data: profs, error: profError } = await supabase
-          .from('professores')
-          .select('id, disciplinas')
-          .or(`usuario_id.eq.${user.id},email.ilike.${emailLimpo}`);
-
-        if (profError) throw profError;
-        if (profs && profs.length > 0) {
-          let allDisciplinas: string[] = [];
-          profs.forEach(p => {
-            if (p.disciplinas && Array.isArray(p.disciplinas)) {
-              allDisciplinas = [...allDisciplinas, ...p.disciplinas];
-            }
-          });
-          let componentes = [...new Set(allDisciplinas)];
-          if (componentes.length === 0) componentes = ['POLIVALENTE'];
-
-          const profIds = profs.map(p => p.id);
-          const { data: alocs, error: alocError } = await supabase
-            .from('professor_alocacoes')
-            .select('escola_id, turno')
-            .in('professor_id', profIds);
-
-          if (alocError) throw alocError;
-          if (alocs && alocs.length > 0) {
-            const orConditions = alocs.map(a => `and(escola_id.eq.${a.escola_id},turno.eq.${a.turno})`).join(',');
-            const { data: turmasAlocadas, error: turmasError } = await supabase
-              .from('turmas')
-              .select('*, escolas(nome)')
-              .or(orConditions)
-              .order('nome');
-
-            if (turmasError) throw turmasError;
-            if (turmasAlocadas) {
-              const finalTurmas: TurmaRelatorio[] = [];
-              turmasAlocadas.forEach(t => {
-                componentes.forEach(comp => {
-                  let fase = t.nome;
-                  let numero = '01';
-
-                  const match = t.nome.match(/(.+)\s+([A-Za-z0-9]+)$/);
-                  if (match) {
-                    fase = match[1].trim();
-                    numero = match[2].trim();
-                  } else {
-                    const matchNum = t.nome.match(/(\d+)$/);
-                    if (matchNum) numero = matchNum[1];
-                  }
-
-                  finalTurmas.push({
-                    id: `${t.id}|${comp}`,
-                    nome: t.nome,
-                    turno: t.turno,
-                    componente: comp,
-                    ensino: t.ensino || 'Fundamental Anos Iniciais (1° ao 5° ANO)',
-                    fase: fase,
-                    numero: t.turma_codigo || numero,
-                    escolaId: t.escola_id,
-                    escolaNome: t.escolas?.nome || 'ESCOLA NÃO IDENTIFICADA'
-                  });
-                });
-              });
-              setTurmas(finalTurmas);
-              if (finalTurmas.length > 0) {
-                setSelectedTurma(finalTurmas[0].id);
-              }
-            }
-          }
-        }
+        setSelectedTurma('');
       }
     } catch (err) {
       console.error('Erro ao buscar turmas:', err);
@@ -241,7 +136,7 @@ export default function RelatorioMedias() {
     return Math.min(soma, maxLimit);
   };
 
-  const selectedTurmaObj = turmas.find(t => t.id === selectedTurma);
+  const selectedTurmaObj = turmas.find(t => `${t.id}|${t.componente}` === selectedTurma) || turmas.find(t => t.id === selectedTurma);
 
   return (
     <div className="min-h-screen bg-slate-50 relative">

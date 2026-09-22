@@ -20,6 +20,19 @@ export interface NotaRecord {
   valor: number;
 }
 
+/** Estrutura de turma e componente para relatórios */
+export interface TurmaRelatorioInfo {
+  id: string;
+  nome: string;
+  turno: string;
+  componente: string;
+  ensino: string;
+  fase: string;
+  numero: string;
+  escolaId: string;
+  escolaNome: string;
+}
+
 import { getTid, normalizarDataISO } from '../utils/turmaUtils';
 
 export const TurmaService = {
@@ -111,7 +124,9 @@ export const TurmaService = {
       .select('id, turma_id, tipo, data, instrumento, objetos, bimestre, valor_maximo, parent_id, disciplina')
       .eq('turma_id', tid)
       .order('data', { ascending: true });
-    if (disciplina) avQuery = avQuery.ilike('disciplina', disciplina);
+    if (disciplina && disciplina.trim() !== '' && disciplina.trim().toUpperCase() !== 'GERAL') {
+      avQuery = avQuery.ilike('disciplina', disciplina.trim());
+    }
 
     const { data: avData, error: avError } = await avQuery;
     
@@ -405,6 +420,176 @@ export const TurmaService = {
         .from('fechamentos_bimestres')
         .upsert(payload, { onConflict: 'turma_id,disciplina,bimestre' });
       if (error) throw error;
+    }
+  },
+
+  fetchTurmasRelatorio: async (user: { id: string; role: string; email?: string; escola_id?: string }): Promise<TurmaRelatorioInfo[]> => {
+    if (!user) return [];
+
+    if (user.role === 'ADMIN' || user.role === 'GESTOR' || user.role === 'SECRETARIO') {
+      let query = supabase
+        .from('turmas')
+        .select('*, escolas(nome)')
+        .order('nome');
+
+      if ((user.role === 'SECRETARIO' || user.role === 'GESTOR') && user.escola_id) {
+        query = query.eq('escola_id', user.escola_id);
+      }
+
+      const { data: todasTurmas, error } = await query;
+      if (error) throw error;
+      if (!todasTurmas || todasTurmas.length === 0) return [];
+
+      const turmaIds = todasTurmas.map(t => t.id);
+
+      // Buscar componentes reais dos horários e disciplinas das avaliações cadastradas em paralelo
+      const [horariosRes, avRowsRes] = await Promise.all([
+        supabase
+          .from('professor_horarios')
+          .select('turma_id, componente')
+          .in('turma_id', turmaIds),
+        supabase
+          .from('avaliacoes')
+          .select('turma_id, disciplina')
+          .in('turma_id', turmaIds),
+      ]);
+
+      const componentesPorTurma = new Map<string, Set<string>>();
+
+      (horariosRes.data || []).forEach(h => {
+        const comp = (h.componente || '').trim();
+        if (comp) {
+          if (!componentesPorTurma.has(h.turma_id)) {
+            componentesPorTurma.set(h.turma_id, new Set());
+          }
+          componentesPorTurma.get(h.turma_id)!.add(comp);
+        }
+      });
+
+      (avRowsRes.data || []).forEach(a => {
+        const disc = (a.disciplina || '').trim();
+        if (disc && disc.toUpperCase() !== 'GERAL') {
+          if (!componentesPorTurma.has(a.turma_id)) {
+            componentesPorTurma.set(a.turma_id, new Set());
+          }
+          componentesPorTurma.get(a.turma_id)!.add(disc);
+        }
+      });
+
+      const finalTurmas: TurmaRelatorioInfo[] = [];
+
+      todasTurmas.forEach(t => {
+        let fase = t.nome;
+        let numero = '01';
+
+        const match = t.nome.match(/(.+)\s+([A-Za-z0-9]+)$/);
+        if (match) {
+          fase = match[1].trim();
+          numero = match[2].trim();
+        } else {
+          const matchNum = t.nome.match(/(\d+)$/);
+          if (matchNum) numero = matchNum[1];
+        }
+
+        let comps = Array.from(componentesPorTurma.get(t.id) || []);
+        if (comps.length === 0) {
+          comps = ['POLIVALENTE'];
+        }
+        comps.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+        comps.forEach(comp => {
+          finalTurmas.push({
+            id: t.id,
+            nome: t.nome,
+            turno: t.turno,
+            componente: comp,
+            ensino: t.ensino || 'Fundamental Anos Iniciais (1° ao 5° ANO)',
+            fase: fase,
+            numero: t.turma_codigo || numero,
+            escolaId: t.escola_id,
+            escolaNome: t.escolas?.nome || 'ESCOLA NÃO IDENTIFICADA'
+          });
+        });
+      });
+
+      return finalTurmas;
+    } else {
+      const emailLimpo = (user.email || '').trim();
+      let profQuery = supabase
+        .from('professores')
+        .select('id, disciplinas');
+      if (user.id) {
+        profQuery = profQuery.or(`usuario_id.eq.${user.id},email.ilike.${emailLimpo}`);
+      } else {
+        profQuery = profQuery.ilike('email', emailLimpo);
+      }
+
+      const { data: profs, error: profError } = await profQuery;
+      if (profError) throw profError;
+
+      if (profs && profs.length > 0) {
+        let allDisciplinas: string[] = [];
+        profs.forEach(p => {
+          if (p.disciplinas && Array.isArray(p.disciplinas)) {
+            allDisciplinas = [...allDisciplinas, ...p.disciplinas];
+          }
+        });
+        let componentes = [...new Set(allDisciplinas)];
+        if (componentes.length === 0) componentes = ['POLIVALENTE'];
+
+        const profIds = profs.map(p => p.id);
+
+        const { data: alocs, error: alocError } = await supabase
+          .from('professor_alocacoes')
+          .select('escola_id, turno')
+          .in('professor_id', profIds);
+
+        if (alocError) throw alocError;
+
+        if (alocs && alocs.length > 0) {
+          const orConditions = alocs.map(a => `and(escola_id.eq.${a.escola_id},turno.eq.${a.turno})`).join(',');
+          const { data: turmasAlocadas, error: turmasError } = await supabase
+            .from('turmas')
+            .select('*, escolas(nome)')
+            .or(orConditions)
+            .order('nome');
+
+          if (turmasError) throw turmasError;
+
+          if (turmasAlocadas) {
+            const finalTurmas: TurmaRelatorioInfo[] = [];
+            turmasAlocadas.forEach(t => {
+              componentes.forEach(comp => {
+                let fase = t.nome;
+                let numero = '01';
+
+                const match = t.nome.match(/(.+)\s+([A-Za-z0-9]+)$/);
+                if (match) {
+                  fase = match[1].trim();
+                  numero = match[2].trim();
+                } else {
+                  const matchNum = t.nome.match(/(\d+)$/);
+                  if (matchNum) numero = matchNum[1];
+                }
+
+                finalTurmas.push({
+                  id: t.id,
+                  nome: t.nome,
+                  turno: t.turno,
+                  componente: comp,
+                  ensino: t.ensino || 'Fundamental Anos Iniciais (1° ao 5° ANO)',
+                  fase: fase,
+                  numero: t.turma_codigo || numero,
+                  escolaId: t.escola_id,
+                  escolaNome: t.escolas?.nome || 'ESCOLA NÃO IDENTIFICADA'
+                });
+              });
+            });
+            return finalTurmas;
+          }
+        }
+      }
+      return [];
     }
   }
 };
