@@ -83,7 +83,8 @@ export async function fetchTurmasRelatorio(user: { id: string; role: string; ema
     // Fallback offline a partir do IndexedDB
     try {
       let localTurmas = await db.turmas.toArray();
-      if ((user.role === 'SECRETARIO' || user.role === 'GESTOR') && user.escola_id) {
+      if (user.role === 'SECRETARIO' || user.role === 'GESTOR') {
+        if (!user.escola_id) return [];
         localTurmas = localTurmas.filter(t => t.escola_id === user.escola_id);
       }
       if (localTurmas.length === 0) return [];

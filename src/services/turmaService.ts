@@ -437,7 +437,8 @@ export const TurmaService = {
         .select('*, escolas(nome)')
         .order('nome');
 
-      if ((user.role === 'SECRETARIO' || user.role === 'GESTOR') && user.escola_id) {
+      if (user.role === 'SECRETARIO' || user.role === 'GESTOR') {
+        if (!user.escola_id) return [];
         query = query.eq('escola_id', user.escola_id);
       }
 

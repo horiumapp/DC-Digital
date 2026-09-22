@@ -171,7 +171,10 @@ export default function AparataDetalhes() {
     }
   };
 
-  const canReabrir = _user?.role === 'GESTOR' || _user?.role === 'SECRETARIO' || _user?.role === 'ADMIN';
+  const canReabrir =
+    _user?.role === 'ADMIN' ||
+    ((_user?.role === 'GESTOR' || _user?.role === 'SECRETARIO') &&
+      Boolean(_user?.escola_id && turmaAtiva?.escola_id && _user.escola_id === turmaAtiva.escola_id));
 
   return (
     <div className="min-h-screen bg-slate-50 relative">
