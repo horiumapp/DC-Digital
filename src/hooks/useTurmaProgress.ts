@@ -145,10 +145,24 @@ export function useTurmaProgress(
         const valMax = Number(av.valorMaximo ?? 10);
         const val = isNaN(valMax) ? 10 : valMax;
         
+        // Buscar sub-avaliações de 2ª chamada vinculadas a esta avaliação principal
+        const subAvs2CH = avaliacoes.filter(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('2CH'));
+
         let alunosComNota = 0;
         alunos.forEach(aluno => {
-          const nota = aluno.notas ? aluno.notas[av.id] : null;
-          if (nota !== undefined && nota !== null && nota !== '') {
+          const notaPrincipal = aluno.notas ? (aluno.notas[av.id] ?? aluno.notas[String(av.id)]) : null;
+          const temNotaPrincipal = notaPrincipal !== undefined && notaPrincipal !== null && String(notaPrincipal).trim() !== '';
+
+          // Se não tem nota na avaliação principal, verificar se possui nota em 2ª Chamada
+          let temNota2CH = false;
+          if (!temNotaPrincipal && subAvs2CH.length > 0 && aluno.notas) {
+            temNota2CH = subAvs2CH.some(ch => {
+              const nCh = aluno.notas ? (aluno.notas[ch.id] ?? aluno.notas[String(ch.id)]) : null;
+              return nCh !== undefined && nCh !== null && String(nCh).trim() !== '';
+            });
+          }
+
+          if (temNotaPrincipal || temNota2CH) {
             alunosComNota++;
           }
         });
