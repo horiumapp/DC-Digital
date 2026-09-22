@@ -208,17 +208,27 @@ export default function RelatorioMedias() {
     return notaRow ? notaRow.valor : null;
   };
 
+  const isSecondCall = (tipo?: string) => {
+    if (!tipo) return false;
+    return (tipo.includes('2CH') || tipo.includes('CH') || tipo.toLowerCase().includes('chamada')) && !tipo.includes('RP') && !tipo.toLowerCase().includes('recupera');
+  };
+
+  const isRecuperacao = (tipo?: string) => {
+    if (!tipo) return false;
+    return tipo.includes('RP') || tipo.toLowerCase().includes('recupera');
+  };
+
   const calcularSomaBimestre = (alunoId: string, bimestre: string) => {
     const prefix = bimestre[0];
     const avsBimestre = avaliacoes.filter(a => a.bimestre && a.bimestre[0] === prefix);
-    const principalAvs = avsBimestre.filter(a => a.tipo.startsWith('AV') && !a.tipo.startsWith('RP') && !a.tipo.includes('2CH') && !a.parent_id);
+    const principalAvs = avsBimestre.filter(a => !a.parent_id && a.tipo.startsWith('AV') && !isRecuperacao(a.tipo) && !isSecondCall(a.tipo));
     
     if (principalAvs.length === 0) return null;
     
     let soma = 0;
     principalAvs.forEach(av => {
-      const rp = avsBimestre.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('RP'));
-      const ch = avsBimestre.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('2CH'));
+      const rp = avsBimestre.find(a => String(a.parent_id) === String(av.id) && isRecuperacao(a.tipo));
+      const ch = avsBimestre.find(a => String(a.parent_id) === String(av.id) && isSecondCall(a.tipo));
       const valAv = Number(getNota(alunoId, av.id) ?? 0);
       const valCh = ch ? Number(getNota(alunoId, ch.id) ?? 0) : 0;
       const valRp = rp ? Number(getNota(alunoId, rp.id) ?? 0) : 0;
