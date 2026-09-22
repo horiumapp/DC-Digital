@@ -160,14 +160,24 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                           {/* Recuperações Paralelas (RPs) vinculadas */}
                           {rps.length > 0 && (
                             <div className="space-y-2 pt-1">
-                              {rps.map(rp => (
-                                <div key={rp.id} className="bg-amber-50/60 border border-amber-200 rounded-xl p-3 space-y-2.5">
+                              {rps.map(rp => {
+                                const is2CH = rp.tipo?.includes('2CH');
+                                return (
+                                <div key={rp.id} className={`${is2CH ? 'bg-blue-50/40 border-blue-200' : 'bg-amber-50/60 border-amber-200'} border rounded-xl p-3 space-y-2.5`}>
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                      <div className="w-5 h-5 rounded-md bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs">
-                                        +
-                                      </div>
-                                      <span className="text-slate-900 font-bold text-sm">{rp.tipo}</span>
+                                      {is2CH ? (
+                                        <div className="w-5 h-5 rounded-md bg-blue-100 text-[#0f2851] flex items-center justify-center font-bold text-xs">
+                                          2
+                                        </div>
+                                      ) : (
+                                        <div className="w-5 h-5 rounded-md bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs">
+                                          +
+                                        </div>
+                                      )}
+                                      <span className="text-slate-900 font-bold text-sm">
+                                        {is2CH ? (rp.tipo === '2CH' ? `2ª Chamada (${av.tipo})` : rp.tipo) : rp.tipo}
+                                      </span>
                                     </div>
                                     <div className="flex items-center gap-1 text-slate-600 font-bold text-[11px] uppercase">
                                       <CalendarIcon className="w-3 h-3 text-slate-400" />
@@ -175,7 +185,7 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                                     </div>
                                   </div>
                                   <div>
-                                    <span className="px-2.5 py-0.5 bg-white text-slate-600 rounded-full text-[9px] font-black uppercase tracking-wider border border-amber-100">
+                                    <span className="px-2.5 py-0.5 bg-white text-slate-600 rounded-full text-[9px] font-black uppercase tracking-wider border border-slate-200">
                                       {rp.instrumento}
                                     </span>
                                   </div>
@@ -210,7 +220,8 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                                     )}
                                   </div>
                                 </div>
-                              ))}
+                              );
+                            })}
                             </div>
                           )}
 
@@ -386,14 +397,24 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                             {/* Seção de Recuperações Paralelas */}
                             {avaliacoes.some(rp => String(rp.parent_id) === String(av.id)) && (
                               <>
-                                {avaliacoes.filter(rp => String(rp.parent_id) === String(av.id)).map(rp => (
-                                  <tr key={rp.id} className="bg-amber-50/40 border-b border-slate-50 group/rp transition-colors hover:bg-amber-50/60">
+                                {avaliacoes.filter(rp => String(rp.parent_id) === String(av.id)).map(rp => {
+                                  const is2CH = rp.tipo?.includes('2CH');
+                                  return (
+                                  <tr key={rp.id} className={`${is2CH ? 'bg-blue-50/20 hover:bg-blue-50/40' : 'bg-amber-50/40 hover:bg-amber-50/60'} border-b border-slate-50 group/rp transition-colors`}>
                                     <td className="px-6 py-4">
                                       <div className="flex items-center gap-3">
-                                        <div className="w-6 h-6 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-                                          <Plus className="w-3.5 h-3.5" />
-                                        </div>
-                                        <span className="text-slate-900 font-bold text-base">{rp.tipo}</span>
+                                        {is2CH ? (
+                                          <div className="w-6 h-6 rounded-lg bg-blue-100 text-[#0f2851] flex items-center justify-center font-bold text-xs">
+                                            2
+                                          </div>
+                                        ) : (
+                                          <div className="w-6 h-6 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                                            <Plus className="w-3.5 h-3.5" />
+                                          </div>
+                                        )}
+                                        <span className="text-slate-900 font-bold text-base">
+                                          {is2CH ? (rp.tipo === '2CH' ? `2ª Chamada (${av.tipo})` : rp.tipo) : rp.tipo}
+                                        </span>
                                       </div>
                                     </td>
                                     <td className="px-6 py-5">
@@ -433,7 +454,8 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                                       </div>
                                     </td>
                                   </tr>
-                                ))}
+                                );
+                              })}
                               </>
                             )}
                           </React.Fragment>

@@ -96,7 +96,7 @@ const NotasEditor = React.memo(function NotasEditor({
                   </td>
                   <td className="px-4 sm:px-8 py-3.5 sm:py-6">
                     <div className="relative max-w-[140px] mx-auto">
-                      {faltasPorData[formatarDataParaISO(selectedAvaliacao.data || '')]?.has(aluno.id) ? (
+                      {(!selectedAvaliacao.tipo?.includes('2CH') && faltasPorData[formatarDataParaISO(selectedAvaliacao.data || '')]?.has(aluno.id)) ? (
                         <div className="w-full bg-red-50 border-2 border-red-100 rounded-2xl px-4 py-3 text-center text-sm font-black text-red-600 uppercase tracking-widest flex items-center justify-center gap-2">
                           <AlertCircle className="w-4 h-4" /> Falta
                         </div>
