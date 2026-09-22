@@ -211,16 +211,18 @@ export default function RelatorioMedias() {
   const calcularSomaBimestre = (alunoId: string, bimestre: string) => {
     const prefix = bimestre[0];
     const avsBimestre = avaliacoes.filter(a => a.bimestre && a.bimestre[0] === prefix);
-    const principalAvs = avsBimestre.filter(a => a.tipo.startsWith('AV') && !a.tipo.startsWith('RP'));
+    const principalAvs = avsBimestre.filter(a => a.tipo.startsWith('AV') && !a.tipo.startsWith('RP') && !a.tipo.includes('2CH') && !a.parent_id);
     
     if (principalAvs.length === 0) return null;
     
     let soma = 0;
     principalAvs.forEach(av => {
-      const rp = avsBimestre.find(a => a.parent_id?.toString() === av.id?.toString());
-      const valAv = getNota(alunoId, av.id) ?? 0;
-      const valRp = rp ? (getNota(alunoId, rp.id) ?? 0) : 0;
-      soma += Math.max(valAv, valRp);
+      const rp = avsBimestre.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('RP'));
+      const ch = avsBimestre.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('2CH'));
+      const valAv = Number(getNota(alunoId, av.id) ?? 0);
+      const valCh = ch ? Number(getNota(alunoId, ch.id) ?? 0) : 0;
+      const valRp = rp ? Number(getNota(alunoId, rp.id) ?? 0) : 0;
+      soma += Math.max(valAv, valCh, valRp);
     });
     
     const bimNumber = parseInt(bimestre[0]);
