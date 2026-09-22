@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Edit2, Trash2, Building2, ChevronRight, GraduationCap, Users, ArrowLeft } from 'lucide-react';
+import { Search, Edit2, Trash2, Building2, ChevronRight, GraduationCap, Users, ArrowLeft, Folder } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useTurma, type Turma } from '../../contexts/TurmaContext';
 import NovaTurmaModal from '../../components/NovaTurmaModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 
