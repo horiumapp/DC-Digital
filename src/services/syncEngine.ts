@@ -894,12 +894,17 @@ async function syncNotas(operation: string, payload: Record<string, unknown>): P
 async function syncFechamento(operation: string, payload: Record<string, unknown>): Promise<void> {
   const sanitized = sanitizeFechamento(payload as unknown as FechamentoPayload);
   if (operation === 'DELETE' || sanitized.status === 'ABERTO') {
-    const { error } = await supabase
+    let query = supabase
       .from('fechamentos_bimestres')
       .delete()
       .eq('turma_id', sanitized.turma_id)
-      .eq('disciplina', sanitized.disciplina)
       .eq('bimestre', sanitized.bimestre);
+
+    if (sanitized.disciplina && sanitized.disciplina.toUpperCase() !== 'TODAS') {
+      query = query.eq('disciplina', sanitized.disciplina);
+    }
+
+    const { error } = await query;
     if (error) throw error;
     return;
   }

@@ -883,9 +883,24 @@ export async function salvarFechamento(
     usuario_fechamento_id: userId,
   };
 
-  // FIX A1: Salvar + enfileirar em transação atômica
+  // Salvar/remover localmente + enfileirar em transação atômica
   await db.transaction('rw', [db.fechamentos, db.syncQueue], async () => {
-    await OfflineStorage.saveFechamentoLocal(payload);
+    if (status === 'ABERTO') {
+      if (disciplina && disciplina.toUpperCase() === 'TODAS') {
+        await db.fechamentos
+          .where('turma_id')
+          .equals(tid)
+          .filter(f => f.bimestre === bimestre)
+          .delete();
+      } else {
+        await db.fechamentos
+          .where('[turma_id+disciplina+bimestre]')
+          .equals([tid, disciplina, bimestre])
+          .delete();
+      }
+    } else {
+      await OfflineStorage.saveFechamentoLocal(payload);
+    }
     await Queue.enqueue('fechamentos', status === 'ABERTO' ? 'DELETE' : 'UPSERT', payload);
   });
 

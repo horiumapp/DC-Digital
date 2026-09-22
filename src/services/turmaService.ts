@@ -401,12 +401,17 @@ export const TurmaService = {
   ): Promise<void> => {
     const tid = getTid(turmaId);
     if (status === 'ABERTO') {
-      const { error } = await supabase
+      let query = supabase
         .from('fechamentos_bimestres')
         .delete()
         .eq('turma_id', tid)
-        .eq('disciplina', disciplina)
         .eq('bimestre', bimestre);
+
+      if (disciplina && disciplina.toUpperCase() !== 'TODAS') {
+        query = query.eq('disciplina', disciplina);
+      }
+
+      const { error } = await query;
       if (error) throw error;
     } else {
       const payload = {
