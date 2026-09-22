@@ -35,6 +35,8 @@ export interface NovaTurmaData {
 export default function TabTurmas() {
   const { user } = useAuth();
   const { showError } = useToast();
+  const { selecionarTurma } = useTurma();
+  const navigate = useNavigate();
   const [buscaTurma, setBuscaTurma] = useState('');
   const [isNovaTurmaModalOpen, setIsNovaTurmaModalOpen] = useState(false);
   const [turmaParaEditar, setTurmaParaEditar] = useState<TurmaRow | null>(null);
@@ -43,6 +45,25 @@ export default function TabTurmas() {
   const [escolas, setEscolas] = useState<EscolaItem[]>([]);
   const [selectedEscola, setSelectedEscola] = useState<EscolaItem | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const handleAbrirAparatas = (turma: TurmaRow) => {
+    const turmaObj: Turma = {
+      id: turma.id,
+      ensino: 'Ensino Fundamental',
+      fase: turma.nome,
+      componente: 'POLIVALENTE',
+      professor: user?.name || 'Secretaria',
+      escola: turma.escolas?.nome || selectedEscola?.nome || 'Escola',
+      escola_id: turma.escola_id,
+      turno: turma.turno,
+      metricas: { frequencia: 0, objetosMinistrados: 0, objetosPlanejados: 0, avaliacoesCadastradas: 0, avaliacoesPrevistas: 0, notasLancadas: 0, notasPrevistas: 0 },
+      diasDeAula: [1, 2, 3, 4, 5],
+      tempos: ['1º TEMPO', '2º TEMPO']
+    };
+    selecionarTurma(turmaObj);
+    sessionStorage.setItem('turmaAtivaId', turma.id.toString());
+    navigate('/aparata');
+  };
 
   useEffect(() => {
     fetchInitialData();
@@ -426,6 +447,18 @@ export default function TabTurmas() {
                             <span className="text-sm font-medium">Ano Letivo: {turma.ano_letivo}</span>
                           </div>
                         </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleAbrirAparatas(turma)}
+                          className="w-full mt-auto pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-[#0f2851] hover:text-blue-700 py-1.5 transition group/btn cursor-pointer"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Folder className="w-4 h-4 text-[#0f2851]" />
+                            Gerenciar Aparatas
+                          </span>
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover/btn:translate-x-0.5 transition-transform" />
+                        </button>
                       </div>
                     ))}
                   </div>
