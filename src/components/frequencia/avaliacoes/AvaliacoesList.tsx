@@ -176,7 +176,7 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                                         </div>
                                       )}
                                       <span className="text-slate-900 font-bold text-sm">
-                                        {is2CH ? (rp.tipo === '2CH' ? `2ª Chamada (${av.tipo})` : rp.tipo) : rp.tipo}
+                                        {is2CH ? (rp.tipo === '2CH' ? `2ª CH (${av.tipo})` : rp.tipo.replace('Chamada', 'CH')) : rp.tipo}
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-1 text-slate-600 font-bold text-[11px] uppercase">
@@ -413,7 +413,7 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                                           </div>
                                         )}
                                         <span className="text-slate-900 font-bold text-base">
-                                          {is2CH ? (rp.tipo === '2CH' ? `2ª Chamada (${av.tipo})` : rp.tipo) : rp.tipo}
+                                          {is2CH ? (rp.tipo === '2CH' ? `2ª CH (${av.tipo})` : rp.tipo.replace('Chamada', 'CH')) : rp.tipo}
                                         </span>
                                       </div>
                                     </td>
