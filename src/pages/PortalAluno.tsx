@@ -286,23 +286,23 @@ export default function PortalAluno() {
     switch (num) {
       case 1:
         return {
-          rowBg: 'bg-amber-50/50 hover:bg-amber-100/70',
-          badge: 'bg-amber-100 text-amber-900 border border-amber-300/70',
+          rowBg: 'bg-emerald-50/50 hover:bg-emerald-100/70',
+          badge: 'bg-emerald-100 text-emerald-900 border border-emerald-300/70',
         };
       case 2:
         return {
-          rowBg: 'bg-sky-50/50 hover:bg-sky-100/70',
-          badge: 'bg-sky-100 text-sky-900 border border-sky-300/70',
+          rowBg: 'bg-red-50/50 hover:bg-red-100/70',
+          badge: 'bg-red-100 text-red-900 border border-red-300/70',
         };
       case 3:
         return {
-          rowBg: 'bg-purple-50/40 hover:bg-purple-100/70',
-          badge: 'bg-purple-100 text-purple-900 border border-purple-300/70',
+          rowBg: 'bg-amber-50/50 hover:bg-amber-100/70',
+          badge: 'bg-amber-100 text-amber-900 border border-amber-300/70',
         };
       case 4:
         return {
-          rowBg: 'bg-emerald-50/40 hover:bg-emerald-100/70',
-          badge: 'bg-emerald-100 text-emerald-900 border border-emerald-300/70',
+          rowBg: 'bg-blue-50/50 hover:bg-blue-100/70',
+          badge: 'bg-blue-100 text-blue-900 border border-blue-300/70',
         };
       default:
         return {
