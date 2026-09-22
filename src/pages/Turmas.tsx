@@ -7,6 +7,8 @@ import { useAuth, type Alocacao } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/common/Toast';
 import { getCachedUser, cacheUser, cacheTurmas, getCachedTurmas } from '../services/offlineStorage';
+import * as OfflineTurmaService from '../services/turmaServiceOffline';
+import type { TurmaRelatorioInfo } from '../services/turmaService';
 import SelecionarLotacaoModal from '../components/SelecionarLotacaoModal';
 
 // FIX #10: Reutilizar Alocacao do AuthContext em vez de definição local duplicada
