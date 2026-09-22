@@ -227,7 +227,10 @@ export default function RelatorioNotas() {
     }
   };
 
-  const principalAvs = avaliacoes.filter(a => a.tipo.startsWith('AV') && !a.tipo.startsWith('RP')).sort((a,b) => a.tipo.localeCompare(b.tipo));
+  const principalAvs = avaliacoes
+    .filter(a => a.tipo.startsWith('AV') && !a.tipo.startsWith('RP') && !a.tipo.includes('2CH') && !a.parent_id)
+    .sort((a,b) => a.tipo.localeCompare(b.tipo));
+  const hasAnySecondCall = avaliacoes.some(a => a.tipo?.includes('2CH'));
 
   const getNota = (alunoId: string, avaliacaoId: string) => {
     const notaRow = notas.find(n => n.aluno_id?.toString() === alunoId?.toString() && n.avaliacao_id?.toString() === avaliacaoId?.toString());
@@ -238,10 +241,17 @@ export default function RelatorioNotas() {
     if (principalAvs.length === 0) return null;
     let soma = 0;
     principalAvs.forEach(av => {
-      const rp = avaliacoes.find(a => a.parent_id?.toString() === av.id?.toString());
-      const valAv = getNota(alunoId, av.id) ?? 0;
-      const valRp = rp ? (getNota(alunoId, rp.id) ?? 0) : 0;
-      soma += Math.max(valAv, valRp);
+      const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('RP'));
+      const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('2CH'));
+      const valAv = getNota(alunoId, av.id);
+      const valCh = ch ? getNota(alunoId, ch.id) : null;
+      const valRp = rp ? getNota(alunoId, rp.id) : null;
+
+      const numAv = valAv !== null ? Number(valAv) : 0;
+      const numCh = valCh !== null ? Number(valCh) : 0;
+      const numRp = valRp !== null ? Number(valRp) : 0;
+
+      soma += Math.max(numAv, numCh, numRp);
     });
     
     const bimNumber = parseInt(periodo[0]);
@@ -396,8 +406,10 @@ export default function RelatorioNotas() {
                           </div>
                         </th>
                         {principalAvs.map(av => {
-                          const rp = avaliacoes.find(a => a.parent_id?.toString() === av.id?.toString());
+                          const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('RP'));
+                          const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('2CH'));
                           const diaMesAv = formatDiaMes(av.data);
+                          const diaMesCh = ch ? formatDiaMes(ch.data) : '';
                           const diaMesRp = rp ? formatDiaMes(rp.data) : '';
                           return (
                             <React.Fragment key={av.id}>
@@ -413,7 +425,27 @@ export default function RelatorioNotas() {
                                   </div>
                                 </div>
                               </th>
-                              <th className="px-2 py-4 border-b border-slate-200 text-center min-w-[80px] hover:bg-slate-50 transition-colors">
+                              {hasAnySecondCall && (
+                                <th className="px-2 py-4 border-b border-slate-200 border-l border-slate-100 text-center min-w-[80px] hover:bg-slate-50 transition-colors">
+                                  <div className="flex flex-col items-center justify-center relative">
+                                    {ch ? (
+                                      <>
+                                        {diaMesCh ? <span className="text-[13px] text-[#0f2851] font-bold tracking-tight mb-1">{diaMesCh}</span> : <div className="h-[20px] mb-1"></div>}
+                                        <div className="w-[80%] h-[1px] bg-slate-200 mb-1"></div>
+                                        <div className="flex items-center justify-center w-full relative">
+                                          <span className="text-[13px] text-[#0f2851] font-bold">2ª CH</span>
+                                          <div className="absolute right-0 flex flex-col text-[10px] text-slate-300 opacity-60 font-black leading-[6px] gap-[1px]">
+                                            <span>▲</span><span>▼</span>
+                                          </div>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <span className="text-slate-300 font-black tracking-wide text-xs">-</span>
+                                    )}
+                                  </div>
+                                </th>
+                              )}
+                              <th className="px-2 py-4 border-b border-slate-200 border-l border-slate-100 text-center min-w-[80px] hover:bg-slate-50 transition-colors">
                                 <div className="flex flex-col items-center justify-center relative">
                                   {rp ? (
                                     <>
@@ -465,8 +497,10 @@ export default function RelatorioNotas() {
                             <td className="px-4 py-4 text-slate-500 font-semibold">{numStr}</td>
                             <td className="px-6 py-4 text-slate-700 font-medium border-l border-slate-100">{aluno.nome}</td>
                             {principalAvs.map(av => {
-                              const rp = avaliacoes.find(a => a.parent_id?.toString() === av.id?.toString());
+                              const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('RP'));
+                              const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('2CH'));
                               const vAv = getNota(aluno.id, av.id);
+                              const vCh = ch ? getNota(aluno.id, ch.id) : null;
                               const vRp = rp ? getNota(aluno.id, rp.id) : null;
                               
                               return (
@@ -480,7 +514,20 @@ export default function RelatorioNotas() {
                                       <span className="inline-flex min-w-[50px] justify-center bg-slate-100 text-slate-400 px-3 py-1 rounded-full text-[13px] font-bold">S/N</span>
                                     )}
                                   </td>
-                                  <td className="px-2 py-4 text-center border-l border-transparent">
+                                  {hasAnySecondCall && (
+                                    <td className="px-2 py-4 text-center border-l border-slate-100">
+                                      {ch && vCh !== null ? (
+                                        <span className="inline-flex min-w-[50px] justify-center bg-[#0f2851] text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm shadow-blue-200/50 tracking-wide">
+                                          {Number(vCh).toFixed(2).replace('.', ',')}
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex min-w-[50px] justify-center bg-slate-100 text-slate-400 px-3 py-1 rounded-full text-[13px] font-bold">
+                                          {ch ? 'S/N' : '-'}
+                                        </span>
+                                      )}
+                                    </td>
+                                  )}
+                                  <td className="px-2 py-4 text-center border-l border-slate-100">
                                     {rp && vRp !== null ? (
                                       <span className="inline-flex min-w-[50px] justify-center bg-[#0f2851] text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm shadow-blue-200/50 tracking-wide">
                                         {Number(vRp).toFixed(2).replace('.', ',')}
@@ -660,6 +707,9 @@ export default function RelatorioNotas() {
                   {principalAvs.map((av) => (
                     <React.Fragment key={av.id}>
                       <th style={{ textAlign: 'center' }}>{av.tipo?.toUpperCase()}</th>
+                      {hasAnySecondCall && (
+                        <th style={{ textAlign: 'center' }}>2ª CH {av.tipo?.toUpperCase()}</th>
+                      )}
                       <th style={{ textAlign: 'center' }}>REC. {av.tipo?.toUpperCase()}</th>
                     </React.Fragment>
                   ))}
@@ -677,14 +727,21 @@ export default function RelatorioNotas() {
                       <td style={{ textAlign: 'center' }}>{selectedTurmaObj.numero}</td>
                       <td style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{aluno.nome}</td>
                       {principalAvs.map(av => {
-                        const rp = avaliacoes.find(a => a.parent_id?.toString() === av.id?.toString());
+                        const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('RP'));
+                        const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('2CH'));
                         const vAv = getNota(aluno.id, av.id);
+                        const vCh = ch ? getNota(aluno.id, ch.id) : null;
                         const vRp = rp ? getNota(aluno.id, rp.id) : null;
                         return (
                           <React.Fragment key={av.id}>
                             <td style={{ textAlign: 'center' }}>
                               {vAv !== null ? Number(vAv).toFixed(1).replace('.', ',') : '-'}
                             </td>
+                            {hasAnySecondCall && (
+                              <td style={{ textAlign: 'center' }}>
+                                {ch && vCh !== null ? Number(vCh).toFixed(1).replace('.', ',') : '-'}
+                              </td>
+                            )}
                             <td style={{ textAlign: 'center' }}>
                               {rp && vRp !== null ? Number(vRp).toFixed(1).replace('.', ',') : '-'}
                             </td>
