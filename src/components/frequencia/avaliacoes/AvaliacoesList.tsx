@@ -23,9 +23,9 @@ interface AvaliacoesListProps {
 
 const AvaliacoesList = React.memo(function AvaliacoesList({
   avaliacoes,
-  todasAvaliacoes,
+  todasAvaliacoes: _todasAvaliacoes,
   currentBimestre = '1º Bimestre',
-  onSelectBimestre,
+  onSelectBimestre: _onSelectBimestre,
   alunos,
   faltasPorData,
   onViewDetails,
