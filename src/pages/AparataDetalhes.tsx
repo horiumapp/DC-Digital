@@ -77,7 +77,7 @@ export default function AparataDetalhes() {
   const dataHoje = `${hoje.getDate().toString().padStart(2, '0')}/${(hoje.getMonth() + 1).toString().padStart(2, '0')}/${hoje.getFullYear()}`;
 
   const alunosDetalhados = useMemo(() => {
-    const principalAvs = avaliacoes.filter(a => a.tipo.startsWith('AV') && !a.tipo.startsWith('RP') && !a.tipo.includes('2CH') && !a.parent_id);
+    const principalAvs = avaliacoes.filter(a => !a.parent_id && a.tipo.startsWith('AV') && !a.tipo.startsWith('RP') && !a.tipo.includes('CH'));
 
     return (alunos || []).map((aluno, index) => {
       // Cálculo da Soma Parcial (considerando as notas, 2ª chamada e eventuais recuperações)
@@ -85,8 +85,8 @@ export default function AparataDetalhes() {
       if (principalAvs.length > 0) {
         let soma = 0;
         principalAvs.forEach(av => {
-          const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('RP'));
-          const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('2CH'));
+          const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && (a.tipo?.includes('RP') || a.tipo?.toLowerCase().includes('recupera')));
+          const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && (a.tipo?.includes('2CH') || a.tipo?.includes('CH') || a.tipo?.toLowerCase().includes('chamada')));
           const valAvStr = aluno.notas?.[av.id];
           const valChStr = ch ? aluno.notas?.[ch.id] : undefined;
           const valRpStr = rp ? aluno.notas?.[rp.id] : undefined;
