@@ -216,22 +216,39 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
     return list;
   }, [unidadeDidatica, unidadesBD, conteudos]);
 
-  // Alunos filtrados para notas (lógica de RP: alunos com nota abaixo de 50% do valor máximo da avaliação)
+  // Alunos filtrados para notas:
+  // - 2ª Chamada (2CH): alunos faltosos na data original OU sem nota lançada na original OU que já tenham nota nesta 2CH
+  // - Recuperação Paralela (RP): alunos que realizaram a avaliação original e obtiveram nota abaixo de 50%
   const alunosParaNotas = React.useMemo(() => {
     if (!selectedAvaliacao) return [];
     if (selectedAvaliacao.parent_id) {
       const parentAv = avaliacoes.find(a => String(a.id) === String(selectedAvaliacao.parent_id));
+      const parentId = String(selectedAvaliacao.parent_id);
+
+      if (selectedAvaliacao.tipo?.includes('2CH')) {
+        const parentDataIso = parentAv ? formatarDataParaISO(parentAv.data) : '';
+        const faltasPai = parentDataIso ? (faltasPorData[parentDataIso] || new Set()) : new Set();
+        return alunos.filter(aluno => {
+          const jaTemNota2CH = aluno.notas?.[selectedAvaliacao.id] !== undefined && String(aluno.notas[selectedAvaliacao.id]).trim() !== '';
+          const faltouNaOrigem = faltasPai.has(aluno.id);
+          const notaPai = aluno.notas?.[parentId];
+          const semNotaOrigem = notaPai === undefined || notaPai === null || String(notaPai).trim() === '';
+          return jaTemNota2CH || faltouNaOrigem || semNotaOrigem;
+        });
+      }
+
+      // Lógica de RP: alunos com nota abaixo de 50% do valor máximo da avaliação
       const parentMax = parentAv?.valorMaximo ? Number(parentAv.valorMaximo) : (selectedAvaliacao.valorMaximo ? Number(selectedAvaliacao.valorMaximo) : 10);
       const mediaCorte = parentMax / 2;
       return alunos.filter(aluno => {
-        const parentId = String(selectedAvaliacao.parent_id);
         const notaPaiStr = aluno.notas?.[parentId];
-        const notaPai = parseFloat((notaPaiStr || '0').replace(',', '.'));
+        if (notaPaiStr === undefined || notaPaiStr === null || String(notaPaiStr).trim() === '') return false;
+        const notaPai = parseFloat(notaPaiStr.replace(',', '.'));
         return !isNaN(notaPai) && notaPai < mediaCorte;
       });
     }
     return alunos;
-  }, [selectedAvaliacao, alunos, avaliacoes]);
+  }, [selectedAvaliacao, alunos, avaliacoes, faltasPorData]);
 
   // Carregar notas ao entrar em modo editor
    
@@ -428,32 +445,40 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
       }
     }
 
-    setIsSaving(true);
-    const dates = [...new Set(selectedAlunIds.map(id => secondCallRows[id].date))];
+    try {
+      setIsSaving(true);
+      const dates = [...new Set(selectedAlunIds.map(id => secondCallRows[id].date))];
 
-    for (const d of dates) {
-      const payload: Avaliacao = {
-        id: `temp_2ch_${Date.now()}_${d}`,
-        turmaId: selectedAvaliacao.turmaId,
-        tipo: `2CH`,
-        data: d,
-        instrumento: selectedAvaliacao.instrumento,
-        objetos: selectedAvaliacao.objetos,
-        bimestre: selectedAvaliacao.bimestre,
-        valorMaximo: selectedAvaliacao.valorMaximo || 10,
-        parent_id: selectedAvaliacao.id
-      };
+      for (const d of dates) {
+        const payload: Avaliacao = {
+          id: `temp_2ch_${Date.now()}_${d}`,
+          turmaId: selectedAvaliacao.turmaId,
+          tipo: `2CH`,
+          data: d,
+          instrumento: selectedAvaliacao.instrumento,
+          objetos: selectedAvaliacao.objetos,
+          bimestre: selectedAvaliacao.bimestre,
+          valorMaximo: selectedAvaliacao.valorMaximo || 10,
+          parent_id: selectedAvaliacao.id
+        };
 
-      const createdId = await salvarAvaliacao(payload);
-      const notasParaData = selectedAlunIds
-        .filter(id => secondCallRows[id].date === d)
-        .map(id => ({ alunoId: id, valor: secondCallRows[id].grade }));
-      
-      await salvarNotas(createdId, notasParaData);
+        const createdId = await salvarAvaliacao(payload);
+        const notasParaData = selectedAlunIds
+          .filter(id => secondCallRows[id].date === d && secondCallRows[id].grade && secondCallRows[id].grade.trim() !== '')
+          .map(id => ({ alunoId: id, valor: secondCallRows[id].grade }));
+        
+        if (notasParaData.length > 0 && createdId) {
+          await salvarNotas(createdId, notasParaData);
+        }
+      }
+
+      setAvaliacaoViewMode('list');
+      resetForm();
+    } catch (err) {
+      console.error('Erro ao salvar segunda chamada:', err);
+    } finally {
+      setIsSaving(false);
     }
-
-    setAvaliacaoViewMode('list');
-    setIsSaving(false);
   };
 
   const handleNotaChange = (alunoId: string, val: string) => {
@@ -481,7 +506,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
 
       {avaliacaoViewMode === 'list' && (
         <AvaliacoesList 
-          avaliacoes={avaliacoesDoBimestre}
+          avaliacoes={avaliacoes}
           todasAvaliacoes={avaliacoes}
           currentBimestre={currentBimestre}
           alunos={alunos}

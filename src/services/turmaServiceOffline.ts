@@ -685,8 +685,8 @@ export async function salvarNotas(
     ? alunoIdsRemovidos
     : notas.filter(n => !n.valor || n.valor.trim() === '').map(n => String(n.alunoId));
 
-  // FIX A1: Salvar + enfileirar em transação atômica
-  await db.transaction('rw', [db.notas, db.syncQueue], async () => {
+  // FIX A1: Salvar + enfileirar em transação atômica (incluindo db.avaliacoes para consultas de aliases em deleteNotasLocal)
+  await db.transaction('rw', [db.notas, db.syncQueue, db.avaliacoes], async () => {
     // Processar notas preenchidas
     if (preenchidas.length > 0) {
       const records = preenchidas.map(n => ({
