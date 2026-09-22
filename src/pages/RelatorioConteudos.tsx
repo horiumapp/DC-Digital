@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 import { formatarDataParaISO, getBimestrePorData, getDayOfWeek } from '../utils/dateUtils';
 import { APP_CONFIG } from '../config/appConfig';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
+import * as OfflineStorage from '../services/offlineStorage';
 
 import { useToast } from '../components/common/Toast';
 
@@ -98,7 +99,11 @@ export default function RelatorioConteudos() {
 
     setDataLoading(true);
     try {
-      const [turmaId, componente] = selectedTurmaId.split('|');
+      const [turmaId, rawComp] = selectedTurmaId.split('|');
+      const turmaObj = turmas.find(t => `${t.id}|${t.componente}` === selectedTurmaId) || turmas.find(t => t.id === turmaId);
+      const componente = (rawComp || turmaObj?.componente || '').trim();
+      const tid = turmaId.split('||')[0];
+
       let dateStart = '';
       let dateEnd = '';
 
@@ -125,17 +130,24 @@ export default function RelatorioConteudos() {
         }
       }
 
+      // Busca Primária por UUID (com suporte online / fallback local offline)
+      let rawContents: any[] = [];
+      if (navigator.onLine) {
+        try {
+          const { data, error } = await supabase
+            .from('conteudos')
+            .select('*')
+            .eq('turma_id', tid);
 
-
-      // Busca Primária por UUID (Sem filtro agressivo de data no SQL para evitar problemas de formato string)
-      const { data: rawContents, error } = await supabase
-        .from('conteudos')
-        .select('*')
-        .eq('turma_id', turmaId);
-
-      if (error) throw error;
-
-
+          if (error) throw error;
+          rawContents = data || [];
+        } catch (netErr) {
+          console.warn('[RelatorioConteudos] Falha ao consultar Supabase, usando dados locais:', netErr);
+          rawContents = await OfflineStorage.getAllConteudosLocal(tid, componente);
+        }
+      } else {
+        rawContents = await OfflineStorage.getAllConteudosLocal(tid, componente);
+      }
 
       // Filtragem Inteligente em Memória (JS) usando normalização de datas
       const filtered = (rawContents || []).filter(c => {
@@ -143,30 +155,32 @@ export default function RelatorioConteudos() {
         if (!cDateISO || cDateISO === 'Invalid Date') return false;
 
         const matchDate = cDateISO >= dateStart && cDateISO <= dateEnd;
-        const matchComp = String(c.disciplina || '').trim().toUpperCase() === componente.trim().toUpperCase();
+        const matchComp = !componente || String(c.disciplina || '').trim().toUpperCase() === componente.toUpperCase();
         return matchDate && matchComp;
       });
 
-
-
       let contentsRes = filtered;
 
-      // Fallback: Se não achou nada pelo ID, tentamos buscar pelo NOME da disciplina em todo o período
-      if (contentsRes.length === 0) {
-        const { data: fallbackData } = await supabase
-          .from('conteudos')
-          .select('*')
-          .ilike('disciplina', componente)
-          .gte('data', dateStart.split('-').reverse().join('/')) // Tenta formato BR caso o GTE funcione
-          .lte('data', dateEnd.split('-').reverse().join('/'));
+      // Fallback: Se não achou nada pelo ID e estiver online, tentamos buscar pelo NOME da disciplina
+      if (contentsRes.length === 0 && componente && navigator.onLine) {
+        try {
+          const { data: fallbackData } = await supabase
+            .from('conteudos')
+            .select('*')
+            .ilike('disciplina', componente)
+            .gte('data', dateStart.split('-').reverse().join('/'))
+            .lte('data', dateEnd.split('-').reverse().join('/'));
 
-        const fallbackFiltered = (fallbackData || []).filter(c => {
-          const cDateISO = formatarDataParaISO(c.data);
-          return cDateISO >= dateStart && cDateISO <= dateEnd;
-        });
+          const fallbackFiltered = (fallbackData || []).filter(c => {
+            const cDateISO = formatarDataParaISO(c.data);
+            return cDateISO >= dateStart && cDateISO <= dateEnd;
+          });
 
-        if (fallbackFiltered.length > 0) {
-          contentsRes = fallbackFiltered;
+          if (fallbackFiltered.length > 0) {
+            contentsRes = fallbackFiltered;
+          }
+        } catch (e) {
+          console.warn('[RelatorioConteudos] Falha no fallback online:', e);
         }
       }
 
@@ -209,7 +223,7 @@ export default function RelatorioConteudos() {
       // Definir o nome do arquivo PDF (via título do documento)
       const oldTitle = document.title;
       const turmaNome = selectedTurmaObj?.nome?.replace(/\s+/g, '_') || 'Turma';
-      const disciplinaNome = componente?.replace(/\s+/g, '_') || 'Disciplina';
+      const disciplinaNome = (componente || 'Disciplina').replace(/\s+/g, '_');
       const periodoLimpo = periodoSelecionado.replace(/\s+/g, '');
        
       document.title = `CM_${periodoLimpo}_${turmaNome}_${disciplinaNome}`;
@@ -295,28 +309,32 @@ export default function RelatorioConteudos() {
                         <td colSpan={4} className="px-4 py-8 text-center text-slate-400">Nenhuma turma encontrada.</td>
                       </tr>
                     ) : (
-                      filteredTurmas.map((t) => (
-                        <tr
-                          key={t.id}
-                          className={`hover:bg-[#f8faff] transition-colors cursor-pointer ${selectedTurmaId === t.id ? 'bg-[#eef2ff]' : ''}`}
-                          onClick={() => setSelectedTurmaId(t.id)}
-                        >
-                          <td className="px-6 py-4 border-r border-slate-100 text-slate-600">{t.ensino}</td>
-                          <td className="px-6 py-4 border-r border-slate-100 text-slate-600 font-bold">{t.fase} {t.numero}</td>
-                          <td className="px-6 py-4 border-r border-slate-100 text-slate-600 uppercase font-black text-[12px]">{t.componente}</td>
-                          <td className="px-6 py-4 text-center">
-                            <div className="flex justify-center">
-                              <input
-                                type="radio"
-                                name="turma-select"
-                                checked={selectedTurmaId === t.id}
-                                onChange={() => setSelectedTurmaId(t.id)}
-                                className="w-5 h-5 text-[#0f2851] border-slate-300 focus:ring-[#0f2851]"
-                              />
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                      filteredTurmas.map((t) => {
+                        const rowKey = `${t.id}|${t.componente}`;
+                        const isSelected = selectedTurmaId === rowKey || (Boolean(selectedTurmaId) && selectedTurmaId === t.id);
+                        return (
+                          <tr
+                            key={`${t.id}-${t.componente}`}
+                            className={`hover:bg-[#f8faff] transition-colors cursor-pointer ${isSelected ? 'bg-[#eef2ff]' : ''}`}
+                            onClick={() => setSelectedTurmaId(rowKey)}
+                          >
+                            <td className="px-6 py-4 border-r border-slate-100 text-slate-600">{t.ensino}</td>
+                            <td className="px-6 py-4 border-r border-slate-100 text-slate-600 font-bold">{t.fase} {t.numero}</td>
+                            <td className="px-6 py-4 border-r border-slate-100 text-slate-600 uppercase font-black text-[12px]">{t.componente}</td>
+                            <td className="px-6 py-4 text-center">
+                              <div className="flex justify-center">
+                                <input
+                                  type="radio"
+                                  name="turma-select"
+                                  checked={isSelected}
+                                  onChange={() => setSelectedTurmaId(rowKey)}
+                                  className="w-5 h-5 text-[#0f2851] border-slate-300 focus:ring-[#0f2851]"
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>

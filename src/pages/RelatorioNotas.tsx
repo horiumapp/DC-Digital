@@ -94,7 +94,9 @@ export default function RelatorioNotas() {
     setDataLoading(true);
     setHasSearched(true);
     try {
-      const [turmaId, componente] = selectedTurma.split('|');
+      const [turmaId, rawComp] = selectedTurma.split('|');
+      const turmaObj = turmas.find(t => `${t.id}|${t.componente}` === selectedTurma) || turmas.find(t => t.id === turmaId);
+      const componente = (rawComp || turmaObj?.componente || '').trim();
       const tid = turmaId.split('||')[0];
       
       const alunosData = await OfflineTurmaService.fetchAlunos(tid);

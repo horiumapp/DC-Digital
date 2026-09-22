@@ -105,7 +105,9 @@ export default function RelatorioFrequencia() {
 
     setDataLoading(true);
     try {
-      const [turmaId, componente] = selectedTurmaId.split('|');
+      const [turmaId, rawComp] = selectedTurmaId.split('|');
+      const turmaObj = turmas.find(t => `${t.id}|${t.componente}` === selectedTurmaId) || turmas.find(t => t.id === turmaId);
+      const componente = (rawComp || turmaObj?.componente || '').trim();
       let dateStart = '';
       let dateEnd = '';
       const hojeISO = new Date().toISOString().split('T')[0];
@@ -164,7 +166,7 @@ export default function RelatorioFrequencia() {
         if (!fDateISO || fDateISO === 'Invalid Date') return false;
 
         // Comparação robusta de disciplina e período
-        const matchProp = String(f.disciplina || '').trim().toUpperCase() === componente.trim().toUpperCase();
+        const matchProp = !componente || String(f.disciplina || '').trim().toUpperCase() === componente.toUpperCase();
         const matchDate = fDateISO >= dateStart && fDateISO <= dateEnd;
         return matchProp && matchDate;
       });
@@ -224,7 +226,7 @@ export default function RelatorioFrequencia() {
 
       const oldTitle = document.title;
       const turmaNome = selectedTurmaObj?.nome?.replace(/\s+/g, '_') || 'Turma';
-      const disciplinaNome = componente?.replace(/\s+/g, '_') || 'Disciplina';
+      const disciplinaNome = (componente || 'Disciplina').replace(/\s+/g, '_');
        
       document.title = `FREQ_${periodoSelecionado.replace(/\s+/g, '')}_${turmaNome}_${disciplinaNome}`;
 
@@ -281,7 +283,9 @@ export default function RelatorioFrequencia() {
                       className="w-full py-2.5 px-4 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-blue-500/10 outline-none font-bold text-[#0f2851]"
                     >
                       {turmas.map(t => (
-                        <option key={t.id} value={t.id}>{t.ensino} - {t.fase} {t.numero} - {t.componente}</option>
+                        <option key={`${t.id}-${t.componente}`} value={`${t.id}|${t.componente}`}>
+                          {t.ensino} - {t.fase} {t.numero} - {t.componente}
+                        </option>
                       ))}
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />

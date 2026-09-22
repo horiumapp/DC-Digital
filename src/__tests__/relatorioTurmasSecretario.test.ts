@@ -156,4 +156,47 @@ describe('Relatórios: fetchTurmasRelatorio e fetchAvaliacoes para SECRETARIO/GE
 
     expect(ilikeCalled).toBe(false);
   });
+
+  it('deve extrair com segurança componente e turma_id mesmo quando selectedTurmaId for apenas UUID ou composto', () => {
+    const turmas = [
+      { id: 'uuid-1', componente: 'MATEMÁTICA', nome: '1º A' },
+      { id: 'uuid-2', componente: 'PORTUGUÊS', nome: '1º B' },
+    ];
+
+    // Caso 1: SelectedTurmaId com chave composta 'uuid-1|MATEMÁTICA'
+    const selectedComposite = 'uuid-1|MATEMÁTICA';
+    const [tId1, rawComp1] = selectedComposite.split('|');
+    const obj1 = turmas.find(t => `${t.id}|${t.componente}` === selectedComposite) || turmas.find(t => t.id === tId1);
+    const comp1 = (rawComp1 || obj1?.componente || '').trim();
+    expect(tId1).toBe('uuid-1');
+    expect(comp1).toBe('MATEMÁTICA');
+
+    // Caso 2: SelectedTurmaId antigo com apenas UUID 'uuid-1' (sem pipe)
+    const selectedOnlyId = 'uuid-1';
+    const [tId2, rawComp2] = selectedOnlyId.split('|');
+    const obj2 = turmas.find(t => `${t.id}|${t.componente}` === selectedOnlyId) || turmas.find(t => t.id === tId2);
+    const comp2 = (rawComp2 || obj2?.componente || '').trim();
+    expect(tId2).toBe('uuid-1');
+    expect(comp2).toBe('MATEMÁTICA'); // Recuperado com sucesso via fallback do objeto!
+
+    // Caso 3: Filtro não lança TypeError: Cannot read properties of undefined (reading 'trim')
+    const conteudos = [
+      { disciplina: 'MATEMÁTICA', data: '2026-02-15' },
+      { disciplina: 'PORTUGUÊS', data: '2026-02-16' },
+      { disciplina: null, data: '2026-02-17' },
+    ];
+
+    const matchFn = (c: any, comp: string) => {
+      return !comp || String(c.disciplina || '').trim().toUpperCase() === comp.toUpperCase();
+    };
+
+    expect(() => {
+      conteudos.filter(c => matchFn(c, comp2));
+    }).not.toThrow();
+
+    const filtered = conteudos.filter(c => matchFn(c, comp2));
+    expect(filtered.length).toBe(1);
+    expect(filtered[0].disciplina).toBe('MATEMÁTICA');
+  });
 });
+
