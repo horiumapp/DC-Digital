@@ -246,8 +246,8 @@ export default function ObjetoConhecimentoTab({
     <div className="animate-in fade-in slide-in-from-top-4 duration-300 relative">
       {!isAddingObjeto ? (
         <>
-          <div className="flex items-end gap-4 mb-6">
-            <div className="w-64">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4 mb-6">
+            <div className="w-full sm:w-64">
               <label className="block text-sm text-slate-600 mb-1">Tempo da aula</label>
               <select
                 className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500"
@@ -259,32 +259,34 @@ export default function ObjetoConhecimentoTab({
                 ))}
               </select>
             </div>
-            <button
-               onClick={() => {
-                 if (objetoSalvo && objetoData) {
-                   setShowObjetoTable(true);
-                   setShowNoRecordsObjeto(false);
-                 } else {
-                   setShowNoRecordsObjeto(true);
-                   setShowObjetoTable(false);
-                 }
-               }}
-               className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] shadow-sm active:scale-95"
-             >
-               Exibir
-             </button>
-              {!disabled && (
-                <button
-                  onClick={() => {
-                    setShowObjetoTable(false);
-                    setShowNoRecordsObjeto(false);
-                    setIsAddingObjeto(true);
-                  }}
-                  className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] flex items-center gap-2 shadow-sm active:scale-95"
-                >
-                  <span className="text-lg leading-none">+</span> Adicionar Conteúdo Ministrado
-                </button>
-              )}
+            <div className="flex items-center gap-3">
+              <button
+                 onClick={() => {
+                   if (objetoSalvo && objetoData) {
+                     setShowObjetoTable(true);
+                     setShowNoRecordsObjeto(false);
+                   } else {
+                     setShowNoRecordsObjeto(true);
+                     setShowObjetoTable(false);
+                   }
+                 }}
+                 className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] shadow-sm active:scale-95 whitespace-nowrap"
+               >
+                 Exibir
+               </button>
+                {!disabled && (
+                  <button
+                    onClick={() => {
+                      setShowObjetoTable(false);
+                      setShowNoRecordsObjeto(false);
+                      setIsAddingObjeto(true);
+                    }}
+                    className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-4 sm:px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] flex items-center gap-2 shadow-sm active:scale-95 whitespace-nowrap"
+                  >
+                    <span className="text-lg leading-none">+</span> Adicionar Conteúdo
+                  </button>
+                )}
+            </div>
           </div>
 
           {showNoRecordsObjeto && !showObjetoTable && (
