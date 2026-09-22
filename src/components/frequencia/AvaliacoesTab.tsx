@@ -361,7 +361,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
     const payload: Avaliacao = {
       id: isEditingExisting ? selectedAvaliacao.id : `temp_${Date.now()}`,
       turmaId: turmaAtiva?.id || '',
-      tipo: selectedAvaliacao?.tipo || `AV${String(avaliacoes.filter(a => !a.parent_id).length + 1).padStart(2, '0')}`,
+      tipo: selectedAvaliacao?.tipo || `AV${String(avaliacoesDoBimestre.length + 1).padStart(2, '0')}`,
       data: selectedDate,
       instrumento: instrumentoAvaliacao,
       objetos: objetosAvaliacao,
