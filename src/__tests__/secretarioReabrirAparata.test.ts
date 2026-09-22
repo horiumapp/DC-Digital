@@ -160,12 +160,12 @@ describe('Reabertura de Aparata / Fechamento de Bimestre (Granular e Total)', ()
       nome: string;
     }
 
-    // Política RLS staff_delete_fechamentos
+    // Política RLS staff_delete_fechamentos (Migration 20260909000022)
     function canUserReopenFechamento(user: UserContext, turma: Turma): boolean {
-      if (user.role === 'ADMIN' || user.role === 'GESTOR') {
+      if (user.role === 'ADMIN') {
         return true;
       }
-      if (user.role === 'SECRETARIO') {
+      if (user.role === 'GESTOR' || user.role === 'SECRETARIO') {
         return !!user.escola_id && user.escola_id === turma.escola_id;
       }
       // Professores e Alunos NÃO podem excluir fechamentos
@@ -186,10 +186,18 @@ describe('Reabertura de Aparata / Fechamento de Bimestre (Granular e Total)', ()
       expect(canUserReopenFechamento(secretarioOutraEscola, turmaEscolaA)).toBe(false);
     });
 
-    it('GESTOR e ADMIN podem reabrir aparatas de qualquer escola', () => {
-      const gestor: UserContext = { role: 'GESTOR' };
-      const admin: UserContext = { role: 'ADMIN' };
+    it('GESTOR pode reabrir aparatas na sua própria escola', () => {
+      const gestor: UserContext = { role: 'GESTOR', escola_id: escolaA };
       expect(canUserReopenFechamento(gestor, turmaEscolaA)).toBe(true);
+    });
+
+    it('GESTOR NÃO pode reabrir aparatas em outra escola (apenas ADMIN pode entre escolas)', () => {
+      const gestorOutraEscola: UserContext = { role: 'GESTOR', escola_id: escolaB };
+      expect(canUserReopenFechamento(gestorOutraEscola, turmaEscolaA)).toBe(false);
+    });
+
+    it('ADMIN é o único papel com permissão sistêmica para reabrir aparatas de qualquer escola', () => {
+      const admin: UserContext = { role: 'ADMIN' };
       expect(canUserReopenFechamento(admin, turmaEscolaA)).toBe(true);
     });
 
