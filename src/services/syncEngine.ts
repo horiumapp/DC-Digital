@@ -900,8 +900,9 @@ async function syncFechamento(operation: string, payload: Record<string, unknown
       .eq('turma_id', sanitized.turma_id)
       .eq('bimestre', sanitized.bimestre);
 
-    if (sanitized.disciplina && sanitized.disciplina.toUpperCase() !== 'TODAS') {
-      query = query.eq('disciplina', sanitized.disciplina);
+    const disciplinaStr = String(sanitized.disciplina || '');
+    if (disciplinaStr && disciplinaStr.toUpperCase() !== 'TODAS') {
+      query = query.eq('disciplina', disciplinaStr);
     }
 
     const { error } = await query;
