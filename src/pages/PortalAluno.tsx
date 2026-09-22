@@ -268,24 +268,64 @@ export default function PortalAluno() {
   const faltasJustificadas = frequencias.filter(f => f.status === 'FJ').length;
   const percentual = totalAulas > 0 ? Math.round((presencas / totalAulas) * 100) : 0;
 
-  // Agrupar notas por disciplina e bimestre
+  // Agrupar notas por disciplina
   const notasPorDisciplina = notas.reduce((acc, nota) => {
     if (!acc[nota.disciplina]) acc[nota.disciplina] = [];
     acc[nota.disciplina].push(nota);
     return acc;
   }, {} as Record<string, NotaItem[]>);
 
-  // Ordenar notas por tipo (AV1, RP1, AV2, RP2...) dentro de cada disciplina
+  // Ordenar notas por Bimestre (1º, 2º, 3º, 4º) e dentro de cada bimestre por tipo (AV01, 2ª CH, RP01, AV02...)
+  const getBimestreNum = (bimestreStr: string): number => {
+    const match = String(bimestreStr || '').match(/(\d+)/);
+    return match ? parseInt(match[1], 10) : 99;
+  };
+
+  const getPesoTipo = (tipo: string): number => {
+    const t = String(tipo || '').toUpperCase().trim();
+
+    // Extrair o número da avaliação principal (ex: AV01 -> 1, 2ª CH (AV01) -> 1, RP01 -> 1, AV02 -> 2)
+    let avNum = 0;
+    const avMatch = t.match(/AV\s*0*(\d+)/i);
+    if (avMatch) {
+      avNum = parseInt(avMatch[1], 10);
+    } else {
+      const isSecondCall = t.includes('2CH') || t.includes('CH') || t.includes('CHAMADA');
+      if (!isSecondCall) {
+        const numMatch = t.match(/(\d+)/);
+        if (numMatch) avNum = parseInt(numMatch[1], 10);
+      }
+    }
+
+    // Sub-ordem:
+    // AV principal = 1
+    // 2ª Chamada (2CH) = 2
+    // Recuperação Paralela (RP) = 3
+    // Outros = 4
+    let subOrdem = 4;
+    if (t.startsWith('AV')) {
+      subOrdem = 1;
+    } else if (t.includes('2CH') || t.includes('CH') || t.includes('CHAMADA')) {
+      subOrdem = 2;
+    } else if (t.startsWith('RP') || t.includes('RECUPERA')) {
+      subOrdem = 3;
+    }
+
+    if (avNum > 0) {
+      return avNum * 10 + subOrdem;
+    }
+
+    return 900 + subOrdem;
+  };
+
   Object.keys(notasPorDisciplina).forEach(disciplina => {
     notasPorDisciplina[disciplina].sort((a, b) => {
-      const getPeso = (tipo: string) => {
-        const t = tipo.toUpperCase();
-        const num = parseInt(t.replace(/\D/g, '')) || 0;
-        if (t.startsWith('AV')) return num * 10;     // AV1=10, AV2=20
-        if (t.startsWith('RP')) return num * 10 + 5; // RP1=15, RP2=25
-        return 900 + num;                            // Outros tipos no final
-      };
-      return getPeso(a.tipo) - getPeso(b.tipo);
+      const bimA = getBimestreNum(a.bimestre);
+      const bimB = getBimestreNum(b.bimestre);
+      if (bimA !== bimB) {
+        return bimA - bimB;
+      }
+      return getPesoTipo(a.tipo) - getPesoTipo(b.tipo);
     });
   });
 
