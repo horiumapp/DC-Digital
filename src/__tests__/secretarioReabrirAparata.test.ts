@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TurmaService } from '../services/turmaService';
 import { supabase } from '../lib/supabase';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
-import { db } from '../db/dexie';
+import { db } from '../lib/db';
 import * as Queue from '../services/offlineQueue';
 
 // Mock supabase
@@ -18,7 +18,7 @@ vi.mock('../services/offlineQueue', () => ({
 }));
 
 // Mock dexie db transaction and fechamentos
-vi.mock('../db/dexie', () => {
+vi.mock('../lib/db', () => {
   const whereFechamentos = vi.fn();
   return {
     db: {
