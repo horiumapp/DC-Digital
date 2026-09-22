@@ -227,10 +227,20 @@ export default function RelatorioNotas() {
     }
   };
 
+  const isSecondCall = (tipo?: string) => {
+    if (!tipo) return false;
+    return (tipo.includes('2CH') || tipo.includes('CH') || tipo.toLowerCase().includes('chamada')) && !tipo.includes('RP') && !tipo.toLowerCase().includes('recupera');
+  };
+
+  const isRecuperacao = (tipo?: string) => {
+    if (!tipo) return false;
+    return tipo.includes('RP') || tipo.toLowerCase().includes('recupera');
+  };
+
   const principalAvs = avaliacoes
-    .filter(a => a.tipo.startsWith('AV') && !a.tipo.startsWith('RP') && !a.tipo.includes('2CH') && !a.parent_id)
+    .filter(a => !a.parent_id && a.tipo.startsWith('AV') && !isRecuperacao(a.tipo) && !isSecondCall(a.tipo))
     .sort((a,b) => a.tipo.localeCompare(b.tipo));
-  const hasAnySecondCall = avaliacoes.some(a => a.tipo?.includes('2CH'));
+  const hasAnySecondCall = avaliacoes.some(a => isSecondCall(a.tipo));
 
   const getNota = (alunoId: string, avaliacaoId: string) => {
     const notaRow = notas.find(n => n.aluno_id?.toString() === alunoId?.toString() && n.avaliacao_id?.toString() === avaliacaoId?.toString());
@@ -241,8 +251,8 @@ export default function RelatorioNotas() {
     if (principalAvs.length === 0) return null;
     let soma = 0;
     principalAvs.forEach(av => {
-      const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('RP'));
-      const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('2CH'));
+      const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && isRecuperacao(a.tipo));
+      const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && isSecondCall(a.tipo));
       const valAv = getNota(alunoId, av.id);
       const valCh = ch ? getNota(alunoId, ch.id) : null;
       const valRp = rp ? getNota(alunoId, rp.id) : null;
@@ -406,8 +416,8 @@ export default function RelatorioNotas() {
                           </div>
                         </th>
                         {principalAvs.map(av => {
-                          const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('RP'));
-                          const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('2CH'));
+                          const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && isRecuperacao(a.tipo));
+                          const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && isSecondCall(a.tipo));
                           const diaMesAv = formatDiaMes(av.data);
                           const diaMesCh = ch ? formatDiaMes(ch.data) : '';
                           const diaMesRp = rp ? formatDiaMes(rp.data) : '';
@@ -497,8 +507,8 @@ export default function RelatorioNotas() {
                             <td className="px-4 py-4 text-slate-500 font-semibold">{numStr}</td>
                             <td className="px-6 py-4 text-slate-700 font-medium border-l border-slate-100">{aluno.nome}</td>
                             {principalAvs.map(av => {
-                              const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('RP'));
-                              const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('2CH'));
+                              const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && isRecuperacao(a.tipo));
+                              const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && isSecondCall(a.tipo));
                               const vAv = getNota(aluno.id, av.id);
                               const vCh = ch ? getNota(aluno.id, ch.id) : null;
                               const vRp = rp ? getNota(aluno.id, rp.id) : null;
@@ -727,8 +737,8 @@ export default function RelatorioNotas() {
                       <td style={{ textAlign: 'center' }}>{selectedTurmaObj.numero}</td>
                       <td style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{aluno.nome}</td>
                       {principalAvs.map(av => {
-                        const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('RP'));
-                        const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('2CH'));
+                        const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && isRecuperacao(a.tipo));
+                        const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && isSecondCall(a.tipo));
                         const vAv = getNota(aluno.id, av.id);
                         const vCh = ch ? getNota(aluno.id, ch.id) : null;
                         const vRp = rp ? getNota(aluno.id, rp.id) : null;
