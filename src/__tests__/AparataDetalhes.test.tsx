@@ -18,6 +18,8 @@ vi.mock('../contexts/AuthContext', () => ({
 
 vi.mock('../services/turmaServiceOffline', () => ({
   fetchAllFrequencias: vi.fn(),
+  fetchFechamentos: vi.fn().mockResolvedValue({}),
+  fetchDisciplinasDaTurma: vi.fn().mockResolvedValue(['Matemática']),
 }));
 
 vi.mock('../components/common/TurmaHeaderInfo', () => ({
