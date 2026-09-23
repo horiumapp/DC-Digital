@@ -14,12 +14,35 @@ export default function AparataDetalhes() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const periodoQuery = searchParams.get('periodo');
+  const disciplinaQuery = searchParams.get('disciplina');
+  const componenteAtivo = disciplinaQuery || turmaAtiva?.componente || 'POLIVALENTE';
   
   const bimestres = APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE'));
   const bimestreInfo = bimestres.find(b => b.id === periodoQuery) || getBimestreAtual() || bimestres[0];
 
   const [search, setSearch] = useState('');
   const [faltasMap, setFaltasMap] = useState<Record<string, number>>({});
+  const [fechamentosLocais, setFechamentosLocais] = useState<Record<string, boolean>>({});
+  const [disciplinasTurma, setDisciplinasTurma] = useState<string[]>([]);
+  const [disciplinaEscolhidaReabrir, setDisciplinaEscolhidaReabrir] = useState<string>(componenteAtivo);
+
+  useEffect(() => {
+    async function carregarFechamentosEDisciplinas() {
+      if (!turmaAtiva) return;
+      const rawId = turmaAtiva.id.toString().split('||')[0];
+      try {
+        const [fechs, discs] = await Promise.all([
+          OfflineTurmaService.fetchFechamentos(rawId, componenteAtivo),
+          OfflineTurmaService.fetchDisciplinasDaTurma(rawId)
+        ]);
+        setFechamentosLocais(fechs);
+        setDisciplinasTurma(discs);
+      } catch (err) {
+        console.error('Erro ao carregar fechamentos e disciplinas:', err);
+      }
+    }
+    carregarFechamentosEDisciplinas();
+  }, [turmaAtiva, componenteAtivo]);
 
   // Buscar histórico de faltas para todos os alunos da turma filtrados pelo período da aparata.
   // O serviço offline-first devolve o cache local quando não há conexão, incluindo registros pending.
@@ -28,14 +51,14 @@ export default function AparataDetalhes() {
       if (!turmaAtiva) return;
       try {
         const rawId = turmaAtiva.id.toString().split('||')[0];
-        const frequenciasAtuais = await OfflineTurmaService.fetchAllFrequencias(rawId, turmaAtiva.componente);
+        const frequenciasAtuais = await OfflineTurmaService.fetchAllFrequencias(rawId, componenteAtivo);
         const alunosDaTurma = new Set(alunos.map(aluno => String(aluno.id)));
         // Histórico permanece na turma de origem; para o aparata, consolidamos por aluno.
         const { data: frequenciasHistoricas } = await supabase
           .from('frequencias')
           .select('data, aluno_id, status, disciplina')
           .in('aluno_id', [...alunosDaTurma])
-          .eq('disciplina', turmaAtiva.componente);
+          .eq('disciplina', componenteAtivo);
         const frequencias = frequenciasHistoricas || frequenciasAtuais;
         const map: Record<string, number> = {};
         const pStart = new Date(bimestreInfo.dataInicio + 'T00:00:00');
@@ -45,7 +68,7 @@ export default function AparataDetalhes() {
           // turma e disciplina são filtradas pelo serviço; os demais filtros são
           // aplicados aqui para manter o escopo da Aparata.
           if (!alunosDaTurma.has(String(f.aluno_id))) return;
-          if (f.disciplina !== turmaAtiva.componente) return;
+          if (f.disciplina !== componenteAtivo) return;
           if (f.status !== 'F' && f.status !== 'FJ') return;
           if (!f.data) return;
 
@@ -137,16 +160,16 @@ export default function AparataDetalhes() {
   const periodo = bimestreInfo.nome;
   const meses = `${new Date(bimestreInfo.dataInicio).toLocaleDateString('pt-BR', { month: 'long' })} - ${new Date(bimestreInfo.dataFim).toLocaleDateString('pt-BR', { month: 'long' })}`;
 
-  const isAparataFechada = !!fechamentos[bimestreInfo.id];
+  const isAparataFechada = !!fechamentos[bimestreInfo.id] || !!fechamentosLocais[bimestreInfo.id];
 
   const [isReabrirModalOpen, setIsReabrirModalOpen] = useState(false);
   const [escopoReabertura, setEscopoReabertura] = useState<'COMPONENTE' | 'TODAS'>('COMPONENTE');
   const [reabrindo, setReabrindo] = useState(false);
 
   const handleFecharAparata = async () => {
-    if (window.confirm(`Tem certeza que deseja FECHAR a aparata do ${periodo}? Não será mais possível fazer lançamentos de frequência, conteúdos e notas neste período.`)) {
-      await salvarFechamento(bimestreInfo.id, 'FECHADO');
-      navigate('/diario');
+    if (window.confirm(`Tem certeza que deseja FECHAR a aparata do ${periodo} (${componenteAtivo})? Não será mais possível fazer lançamentos de frequência, conteúdos e notas neste período.`)) {
+      await salvarFechamento(bimestreInfo.id, 'FECHADO', componenteAtivo);
+      navigate(-1);
     }
   };
 
@@ -160,10 +183,10 @@ export default function AparataDetalhes() {
       if (escopoReabertura === 'TODAS') {
         await salvarFechamento(bimestreInfo.id, 'ABERTO', 'TODAS');
       } else {
-        await salvarFechamento(bimestreInfo.id, 'ABERTO', turmaAtiva.componente);
+        await salvarFechamento(bimestreInfo.id, 'ABERTO', disciplinaEscolhidaReabrir || componenteAtivo);
       }
       setIsReabrirModalOpen(false);
-      navigate('/diario');
+      navigate(-1);
     } catch (err) {
       console.error('Erro ao reabrir aparata:', err);
     } finally {
@@ -242,7 +265,7 @@ export default function AparataDetalhes() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Componente</label>
-                  <div className="border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-slate-50">{turmaAtiva.componente}</div>
+                  <div className="border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-slate-50 font-bold">{componenteAtivo}</div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Ensino</label>
@@ -379,22 +402,43 @@ export default function AparataDetalhes() {
             </p>
 
             <div className="space-y-3">
-              <label className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition ${escopoReabertura === 'COMPONENTE' ? 'border-emerald-500 bg-emerald-50/40 text-emerald-950' : 'border-slate-200 hover:bg-slate-50 text-slate-700'}`}>
-                <input
-                  type="radio"
-                  name="escopo-reabertura"
-                  checked={escopoReabertura === 'COMPONENTE'}
-                  onChange={() => setEscopoReabertura('COMPONENTE')}
-                  className="mt-1 text-emerald-600 focus:ring-emerald-500"
-                />
-                <div className="space-y-0.5">
-                  <span className="text-sm font-bold block">
-                    Apenas {turmaAtiva.componente} (Recomendado)
-                  </span>
-                  <span className="text-xs text-slate-500 block">
-                    Reabre apenas o diário deste componente curricular para correções pontuais. As demais disciplinas continuam fechadas.
-                  </span>
+              <label className={`flex flex-col gap-2 p-3.5 rounded-xl border cursor-pointer transition ${escopoReabertura === 'COMPONENTE' ? 'border-emerald-500 bg-emerald-50/40 text-emerald-950' : 'border-slate-200 hover:bg-slate-50 text-slate-700'}`}>
+                <div className="flex items-start gap-3">
+                  <input
+                    type="radio"
+                    name="escopo-reabertura"
+                    checked={escopoReabertura === 'COMPONENTE'}
+                    onChange={() => setEscopoReabertura('COMPONENTE')}
+                    className="mt-1 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <div className="space-y-0.5">
+                    <span className="text-sm font-bold block">
+                      Apenas uma disciplina específica (Recomendado)
+                    </span>
+                    <span className="text-xs text-slate-500 block">
+                      Reabre apenas o diário deste componente curricular para correções pontuais. As demais disciplinas continuam fechadas.
+                    </span>
+                  </div>
                 </div>
+
+                {escopoReabertura === 'COMPONENTE' && (
+                  <div className="mt-1 ml-7">
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Qual disciplina deseja reabrir?</label>
+                    <select
+                      value={disciplinaEscolhidaReabrir}
+                      onChange={(e) => setDisciplinaEscolhidaReabrir(e.target.value)}
+                      className="w-full border border-slate-300 bg-white rounded-lg px-3 py-2 text-sm font-bold text-[#0f2851]"
+                    >
+                      {disciplinasTurma.length > 0 ? (
+                        disciplinasTurma.map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ))
+                      ) : (
+                        <option value={componenteAtivo}>{componenteAtivo}</option>
+                      )}
+                    </select>
+                  </div>
+                )}
               </label>
 
               <label className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition ${escopoReabertura === 'TODAS' ? 'border-blue-500 bg-blue-50/40 text-blue-950' : 'border-slate-200 hover:bg-slate-50 text-slate-700'}`}>
