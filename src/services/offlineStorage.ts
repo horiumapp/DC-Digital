@@ -1020,8 +1020,11 @@ export async function saveFechamentoLocal(data: Omit<LocalFechamento, 'localId' 
   });
 }
 
-export async function getFechamentosLocal(turmaId: string, disciplina: string): Promise<LocalFechamento[]> {
+export async function getFechamentosLocal(turmaId: string, disciplina?: string): Promise<LocalFechamento[]> {
   const tid = getTid(turmaId);
+  if (!disciplina || disciplina.toUpperCase() === 'TODAS' || disciplina.toUpperCase() === 'GERAL') {
+    return db.fechamentos.where('turma_id').equals(tid).toArray();
+  }
   return db.fechamentos
     .where('[turma_id+disciplina+bimestre]')
     .between(

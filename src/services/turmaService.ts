@@ -124,7 +124,7 @@ export const TurmaService = {
       .select('id, turma_id, tipo, data, instrumento, objetos, bimestre, valor_maximo, parent_id, disciplina')
       .eq('turma_id', tid)
       .order('data', { ascending: true });
-    if (disciplina && disciplina.trim() !== '' && disciplina.trim().toUpperCase() !== 'GERAL') {
+    if (disciplina && disciplina.trim() !== '' && disciplina.trim().toUpperCase() !== 'GERAL' && disciplina.trim().toUpperCase() !== 'TODAS') {
       avQuery = avQuery.ilike('disciplina', disciplina.trim());
     }
 
@@ -256,7 +256,9 @@ export const TurmaService = {
       .from('frequencias')
       .select('data, tempo, aluno_id, status, participacao, disciplina')
       .eq('turma_id', tid);
-    if (disciplina) query = query.ilike('disciplina', disciplina);
+    if (disciplina && disciplina.toUpperCase() !== 'TODAS' && disciplina.toUpperCase() !== 'GERAL') {
+      query = query.ilike('disciplina', disciplina);
+    }
 
     const { data: freqData, error } = await query;
     if (error) throw error;
