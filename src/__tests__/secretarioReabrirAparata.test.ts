@@ -104,6 +104,58 @@ describe('Reabertura de Aparata / Fechamento de Bimestre (Granular e Total)', ()
         { onConflict: 'turma_id,disciplina,bimestre' }
       );
     });
+
+    it('fetchDisciplinasDaTurma deve consolidar componentes de horarios, avaliacoes e fechamentos', async () => {
+      (supabase.from as any).mockImplementation((table: string) => {
+        if (table === 'professor_horarios') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ data: [{ componente: 'Matemática' }, { componente: 'Português' }] })
+            })
+          };
+        }
+        if (table === 'avaliacoes') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ data: [{ disciplina: 'Ciências' }, { disciplina: 'GERAL' }] })
+            })
+          };
+        }
+        if (table === 'fechamentos_bimestres') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ data: [{ disciplina: 'História' }] })
+            })
+          };
+        }
+        return { select: vi.fn() };
+      });
+
+      const discs = await TurmaService.fetchDisciplinasDaTurma('turma-1');
+      expect(discs).toContain('Matemática');
+      expect(discs).toContain('Português');
+      expect(discs).toContain('Ciências');
+      expect(discs).toContain('História');
+      expect(discs).not.toContain('GERAL');
+    });
+
+    it('fetchFechamentos com TODAS deve indicar FECHADO se qualquer disciplina estiver fechada', async () => {
+      const mockQuery: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({
+          data: [
+            { id: '1', bimestre: '1. BIMESTRE', status: 'FECHADO', disciplina: 'Matemática' },
+            { id: '2', bimestre: '1. BIMESTRE', status: 'ABERTO', disciplina: 'Português' },
+          ],
+          error: null
+        })
+      };
+      (supabase.from as any).mockReturnValue(mockQuery);
+
+      const statusMap = await TurmaService.fetchFechamentos('turma-1', 'TODAS');
+      expect(statusMap['1. BIMESTRE']).toBe(true);
+      expect(statusMap['1º Bimestre']).toBe(true);
+    });
   });
 
   describe('OfflineTurmaService.salvarFechamento (Offline-first & Dexie)', () => {
