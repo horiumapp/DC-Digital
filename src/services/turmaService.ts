@@ -364,29 +364,64 @@ export const TurmaService = {
     }));
   },
 
-  fetchFechamentosRaw: async (turmaId: string | number, disciplina: string): Promise<{ bimestre: string; status: string }[]> => {
+  fetchDisciplinasDaTurma: async (turmaId: string | number): Promise<string[]> => {
     const tid = getTid(turmaId);
-    const { data, error } = await supabase
-      .from('fechamentos_bimestres')
-      .select('bimestre, status')
-      .eq('turma_id', tid)
-      .eq('disciplina', disciplina);
+    const [horariosRes, avsRes, fechamentosRes] = await Promise.all([
+      supabase.from('professor_horarios').select('componente').eq('turma_id', tid),
+      supabase.from('avaliacoes').select('disciplina').eq('turma_id', tid),
+      supabase.from('fechamentos_bimestres').select('disciplina').eq('turma_id', tid)
+    ]);
 
-    if (error) throw error;
-    return data || [];
+    const set = new Set<string>();
+    (horariosRes.data || []).forEach(h => {
+      const c = (h.componente || '').trim();
+      if (c && c.toUpperCase() !== 'GERAL') set.add(c);
+    });
+    (avsRes.data || []).forEach(a => {
+      const d = (a.disciplina || '').trim();
+      if (d && d.toUpperCase() !== 'GERAL') set.add(d);
+    });
+    (fechamentosRes.data || []).forEach(f => {
+      const d = (f.disciplina || '').trim();
+      if (d && d.toUpperCase() !== 'GERAL' && d.toUpperCase() !== 'TODAS') set.add(d);
+    });
+
+    if (set.size === 0) return ['POLIVALENTE'];
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   },
 
-  fetchFechamentos: async (turmaId: string | number, disciplina: string): Promise<Record<string, boolean>> => {
+  fetchFechamentosRaw: async (
+    turmaId: string | number,
+    disciplina?: string
+  ): Promise<{ id?: string; bimestre: string; status: string; disciplina: string; created_at?: string; usuario_fechamento_id?: string }[]> => {
+    const tid = getTid(turmaId);
+    let query = supabase
+      .from('fechamentos_bimestres')
+      .select('id, bimestre, status, disciplina, created_at, usuario_fechamento_id')
+      .eq('turma_id', tid);
+
+    if (disciplina && disciplina.toUpperCase() !== 'TODAS' && disciplina.toUpperCase() !== 'GERAL') {
+      query = query.eq('disciplina', disciplina);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data || []) as any[];
+  },
+
+  fetchFechamentos: async (turmaId: string | number, disciplina?: string): Promise<Record<string, boolean>> => {
     const raw = await TurmaService.fetchFechamentosRaw(turmaId, disciplina);
     const map: Record<string, boolean> = {};
     raw.forEach(f => {
       const isFechado = f.status === 'FECHADO';
-      map[f.bimestre] = isFechado;
-      const match = f.bimestre.match(/^[1-4]/);
-      if (match) {
-        const n = match[0];
-        map[`${n}. BIMESTRE`] = isFechado;
-        map[`${n}º Bimestre`] = isFechado;
+      if (isFechado) {
+        map[f.bimestre] = true;
+        const match = f.bimestre.match(/^[1-4]/);
+        if (match) {
+          const n = match[0];
+          map[`${n}. BIMESTRE`] = true;
+          map[`${n}º Bimestre`] = true;
+        }
       }
     });
     return map;

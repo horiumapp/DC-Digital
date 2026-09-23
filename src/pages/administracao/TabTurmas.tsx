@@ -51,7 +51,7 @@ export default function TabTurmas() {
       id: turma.id,
       ensino: 'Ensino Fundamental',
       fase: turma.nome,
-      componente: 'POLIVALENTE',
+      componente: 'TODAS',
       professor: user?.name || 'Secretaria',
       escola: turma.escolas?.nome || selectedEscola?.nome || 'Escola',
       escola_id: turma.escola_id,

@@ -524,43 +524,107 @@ export async function fetchAllConteudos(turmaId: string | number, disciplina: st
   }
 }
 
-export async function fetchFechamentos(turmaId: string | number, disciplina: string): Promise<Record<string, boolean>> {
+export async function fetchDisciplinasDaTurma(turmaId: string | number): Promise<string[]> {
+  const tid = getTid(turmaId);
+  try {
+    if (!_isOnline) throw new Error('Offline');
+    return await TurmaService.fetchDisciplinasDaTurma(turmaId);
+  } catch {
+    const [horarios, avs, fechamentos] = await Promise.all([
+      db.horarios.where('turma_id').equals(tid).toArray(),
+      db.avaliacoes.where('turma_id').equals(tid).toArray(),
+      db.fechamentos.where('turma_id').equals(tid).toArray(),
+    ]);
+    const set = new Set<string>();
+    horarios.forEach(h => {
+      const c = (h.componente || '').trim();
+      if (c && c.toUpperCase() !== 'GERAL') set.add(c);
+    });
+    avs.forEach(a => {
+      const d = (a.disciplina || '').trim();
+      if (d && d.toUpperCase() !== 'GERAL') set.add(d);
+    });
+    fechamentos.forEach(f => {
+      const d = (f.disciplina || '').trim();
+      if (d && d.toUpperCase() !== 'GERAL' && d.toUpperCase() !== 'TODAS') set.add(d);
+    });
+    if (set.size === 0) return ['POLIVALENTE'];
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }
+}
+
+export async function fetchFechamentosRaw(
+  turmaId: string | number,
+  disciplina?: string
+): Promise<{ id?: string; bimestre: string; status: string; disciplina: string; created_at?: string; usuario_fechamento_id?: string }[]> {
+  const tid = getTid(turmaId);
+  try {
+    if (!_isOnline) throw new Error('Offline');
+    return await TurmaService.fetchFechamentosRaw(turmaId, disciplina);
+  } catch {
+    const local = await db.fechamentos.where('turma_id').equals(tid).toArray();
+    let filtered = local;
+    if (disciplina && disciplina.toUpperCase() !== 'TODAS' && disciplina.toUpperCase() !== 'GERAL') {
+      filtered = local.filter(f => f.disciplina === disciplina);
+    }
+    return filtered.map(f => ({
+      id: f.serverId || String(f.localId),
+      bimestre: f.bimestre,
+      status: f.status,
+      disciplina: f.disciplina,
+      created_at: f.createdAt,
+      usuario_fechamento_id: f.usuario_fechamento_id
+    }));
+  }
+}
+
+export async function fetchFechamentos(turmaId: string | number, disciplina?: string): Promise<Record<string, boolean>> {
   const tid = getTid(turmaId);
   try {
     if (!_isOnline) throw new Error('Offline');
     const rawRecords = await TurmaService.fetchFechamentosRaw(turmaId, disciplina);
-    // Cache: salvar registros reais sem duplicar aliases no IndexedDB
-    const records = rawRecords.map(f => ({
-      turma_id: tid,
-      disciplina,
-      bimestre: f.bimestre,
-      status: (f.status === 'FECHADO' ? 'FECHADO' : 'ABERTO') as 'FECHADO' | 'ABERTO',
-    }));
-    await OfflineStorage.cacheFechamentos(tid, disciplina, records);
+    // Cache: salvar registros reais no IndexedDB
+    if (disciplina && disciplina.toUpperCase() !== 'TODAS') {
+      const records = rawRecords.map(f => ({
+        turma_id: tid,
+        disciplina: f.disciplina || disciplina,
+        bimestre: f.bimestre,
+        status: (f.status === 'FECHADO' ? 'FECHADO' : 'ABERTO') as 'FECHADO' | 'ABERTO',
+      }));
+      await OfflineStorage.cacheFechamentos(tid, disciplina, records);
+    }
     
     const map: Record<string, boolean> = {};
     rawRecords.forEach(f => {
       const isFechado = f.status === 'FECHADO';
-      map[f.bimestre] = isFechado;
-      const match = f.bimestre.match(/^[1-4]/);
-      if (match) {
-        const n = match[0];
-        map[`${n}. BIMESTRE`] = isFechado;
-        map[`${n}º Bimestre`] = isFechado;
+      if (isFechado) {
+        map[f.bimestre] = true;
+        const match = f.bimestre.match(/^[1-4]/);
+        if (match) {
+          const n = match[0];
+          map[`${n}. BIMESTRE`] = true;
+          map[`${n}º Bimestre`] = true;
+        }
       }
     });
     return map;
   } catch {
-    const local = await OfflineStorage.getFechamentosLocal(tid, disciplina);
+    const local = await db.fechamentos.where('turma_id').equals(tid).toArray();
     const map: Record<string, boolean> = {};
-    local.forEach(f => {
+    const filtered = (disciplina && disciplina.toUpperCase() !== 'TODAS' && disciplina.toUpperCase() !== 'GERAL')
+      ? local.filter(f => f.disciplina === disciplina)
+      : local;
+      
+    filtered.forEach(f => {
       const isFechado = f.status === 'FECHADO';
-      map[f.bimestre] = isFechado;
-      const match = f.bimestre.match(/^[1-4]/);
-      if (match) {
-        const n = match[0];
-        map[`${n}. BIMESTRE`] = isFechado;
-        map[`${n}º Bimestre`] = isFechado;
+      if (isFechado) {
+        map[f.bimestre] = true;
+        const match = f.bimestre.match(/^[1-4]/);
+        if (match) {
+          const n = match[0];
+          map[`${n}. BIMESTRE`] = true;
+          map[`${n}º Bimestre`] = true;
+        }
       }
     });
     return map;
