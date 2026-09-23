@@ -59,6 +59,7 @@ export default function RelatorioFrequencia() {
   const [colunasDatas, setColunasDatas] = useState<string[]>([]);
 
   const [opcaoFiltro, setOpcaoFiltro] = useState('Período');
+  const [periodoSelecionado, setPeriodoSelecionado] = useState('1. BIMESTRE');
   const [activeTab, setActiveTab] = useState('Alunos');
   const [buscaAluno, setBuscaAluno] = useState('');
 
