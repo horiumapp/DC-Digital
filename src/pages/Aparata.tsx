@@ -26,7 +26,7 @@ export default function Aparata() {
     turmaAtiva?.componente && turmaAtiva.componente !== 'POLIVALENTE' ? turmaAtiva.componente : 'TODAS'
   );
   const [disciplinas, setDisciplinas] = useState<string[]>([]);
-  const [fechamentosRaw, setFechamentosRaw] = useState<{ id?: string; bimestre: string; status: string; disciplina: string; created_at?: string; usuario_fechamento_id?: string }[]>([]);
+  const [fechamentosRaw, setFechamentosRaw] = useState<{ id?: string; bimestre: string; status: string; disciplina: string; data_fechamento?: string; created_at?: string; usuario_fechamento_id?: string }[]>([]);
   const [showDados, setShowDados] = useState(true);
   const [searchMovimentacao, setSearchMovimentacao] = useState('');
   const [loading, setLoading] = useState(false);
@@ -135,7 +135,7 @@ export default function Aparata() {
 
     return filtrados.map((f, idx) => ({
       seq: idx + 1,
-      data: f.created_at ? new Date(f.created_at).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR'),
+      data: (f.data_fechamento || f.created_at) ? new Date(f.data_fechamento || f.created_at!).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR'),
       operacao: f.status === 'FECHADO' ? 'FECHAMENTO' : 'ABERTURA',
       componente: f.disciplina,
       usuario: user?.name?.toUpperCase() || 'SECRETARIA',

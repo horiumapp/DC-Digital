@@ -397,11 +397,11 @@ export const TurmaService = {
   fetchFechamentosRaw: async (
     turmaId: string | number,
     disciplina?: string
-  ): Promise<{ id?: string; bimestre: string; status: string; disciplina: string; created_at?: string; usuario_fechamento_id?: string }[]> => {
+  ): Promise<{ id?: string; bimestre: string; status: string; disciplina: string; data_fechamento?: string; created_at?: string; usuario_fechamento_id?: string }[]> => {
     const tid = getTid(turmaId);
     let query = supabase
       .from('fechamentos_bimestres')
-      .select('id, bimestre, status, disciplina, created_at, usuario_fechamento_id')
+      .select('id, bimestre, status, disciplina, data_fechamento, usuario_fechamento_id')
       .eq('turma_id', tid);
 
     if (disciplina && disciplina.toUpperCase() !== 'TODAS' && disciplina.toUpperCase() !== 'GERAL') {
@@ -410,7 +410,10 @@ export const TurmaService = {
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data || []) as any[];
+    return (data || []).map((f: any) => ({
+      ...f,
+      created_at: f.data_fechamento || f.created_at,
+    }));
   },
 
   fetchFechamentos: async (turmaId: string | number, disciplina?: string): Promise<Record<string, boolean>> => {
