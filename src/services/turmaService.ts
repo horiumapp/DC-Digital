@@ -349,7 +349,9 @@ export const TurmaService = {
       .select('id, turma_id, data, tempo, objetos, habilidades, descricao, disciplina')
       .eq('turma_id', tid)
       .order('data', { ascending: false });
-    if (disciplina) query = query.ilike('disciplina', disciplina);
+    if (disciplina && disciplina.toUpperCase() !== 'TODAS' && disciplina.toUpperCase() !== 'GERAL') {
+      query = query.ilike('disciplina', disciplina);
+    }
 
     const { data, error } = await query;
       
