@@ -1,7 +1,6 @@
  
 /* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, ChevronDown, Search, Check, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -60,8 +59,14 @@ export default function RelatorioFrequencia() {
   const [colunasDatas, setColunasDatas] = useState<string[]>([]);
 
   const [opcaoFiltro, setOpcaoFiltro] = useState('Período');
-  const [periodoSelecionado, setPeriodoSelecionado] = useState('1. BIMESTRE');
   const [activeTab, setActiveTab] = useState('Alunos');
+  const [buscaAluno, setBuscaAluno] = useState('');
+
+  const alunosFiltrados = useMemo(() => {
+    if (!buscaAluno.trim()) return alunosRelatorio;
+    const term = buscaAluno.toLowerCase();
+    return alunosRelatorio.filter(a => a.nome.toLowerCase().includes(term));
+  }, [alunosRelatorio, buscaAluno]);
 
   useEffect(() => {
     if (opcaoFiltro === 'Período') {
@@ -253,34 +258,34 @@ export default function RelatorioFrequencia() {
     <div className="min-h-screen bg-slate-50 relative pb-10">
       <div className="relative z-10 no-print">
         {/* SubHeader */}
-        <div className="bg-white/80 backdrop-blur-md px-8 py-3 flex items-center justify-between border-b border-blue-100 shadow-sm sticky top-0 z-20">
-          <div className="flex items-center gap-4">
-            <Link to="/diario" className="bg-[#eef2ff] text-[#0f2851] px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold border border-blue-100 hover:bg-[#e0e7ff] transition-all shadow-sm">
+        <div className="bg-white/80 backdrop-blur-md px-4 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-blue-100 shadow-sm sticky top-0 z-20">
+          <div className="flex items-center gap-3">
+            <Link to="/diario" className="bg-[#eef2ff] text-[#0f2851] px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-bold border border-blue-100 hover:bg-[#e0e7ff] transition-all shadow-sm shrink-0">
               <ArrowLeft className="w-4 h-4" /> Voltar
             </Link>
-            <h1 className="text-xl font-semibold text-[#0f2851]">Relatório de Frequências da Turma</h1>
+            <h1 className="text-base sm:text-xl font-bold text-[#0f2851] truncate">Relatório de Frequências da Turma</h1>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="bg-emerald-100 text-emerald-700 text-[12px] font-bold px-3 py-1 rounded-full border border-emerald-200 uppercase">Ano: {APP_CONFIG.YEAR}</span>
-            <button onClick={handleExibir} className="bg-[#0f2851] text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-[#0f2851]/20 hover:bg-[#1a3a6d] transition">Imprimir</button>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="bg-emerald-100 text-emerald-700 text-[11px] sm:text-[12px] font-bold px-2.5 sm:px-3 py-1 rounded-full border border-emerald-200 uppercase">Ano: {APP_CONFIG.YEAR}</span>
+            <button onClick={handleExibir} className="bg-[#0f2851] text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold shadow-lg shadow-[#0f2851]/20 hover:bg-[#1a3a6d] transition">Imprimir</button>
           </div>
         </div>
 
-        <main className="px-4 py-6 sm:p-8 flex flex-col items-center gap-6 sm:gap-8">
+        <main className="px-3 py-4 sm:px-8 sm:py-8 flex flex-col items-center gap-4 sm:gap-8">
           <div className="w-full max-w-[1400px] bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-6 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-[#0f2851]">Pesquisa</h2>
+            <div className="p-4 sm:p-6 border-b border-slate-100">
+              <h2 className="text-base sm:text-lg font-bold text-[#0f2851]">Pesquisa</h2>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6">
                 <div className="space-y-1.5 md:col-span-6 lg:col-span-6">
-                  <label className="text-sm font-bold text-slate-600">Turma</label>
+                  <label className="text-xs sm:text-sm font-bold text-slate-600">Turma</label>
                   <div className="relative">
                     <select
                       value={selectedTurmaId}
                       onChange={(e) => setSelectedTurmaId(e.target.value)}
-                      className="w-full py-2.5 pl-4 pr-10 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-blue-500/10 outline-none font-bold text-[#0f2851]"
+                      className="w-full py-2.5 pl-3.5 pr-10 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-blue-500/10 outline-none font-bold text-[#0f2851]"
                     >
                       {turmas.map(t => (
                         <option key={`${t.id}-${t.componente}`} value={`${t.id}|${t.componente}`}>
@@ -293,12 +298,12 @@ export default function RelatorioFrequencia() {
                 </div>
 
                 <div className="space-y-1.5 md:col-span-2 lg:col-span-2">
-                  <label className="text-sm font-bold text-slate-600">Opção</label>
+                  <label className="text-xs sm:text-sm font-bold text-slate-600">Opção</label>
                   <div className="relative">
                     <select
                       value={opcaoFiltro}
                       onChange={(e) => setOpcaoFiltro(e.target.value)}
-                      className="w-full py-2.5 pl-4 pr-10 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-blue-500/10 outline-none font-bold text-[#0f2851]"
+                      className="w-full py-2.5 pl-3.5 pr-10 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-blue-500/10 outline-none font-bold text-[#0f2851]"
                     >
                       <option value="Período">Período</option>
                       <option value="Mensal">Mensal</option>
@@ -308,12 +313,12 @@ export default function RelatorioFrequencia() {
                 </div>
 
                 <div className="space-y-1.5 md:col-span-4 lg:col-span-4">
-                  <label className="text-sm font-bold text-slate-600">Período</label>
-                  <div className="relative flex gap-2">
+                  <label className="text-xs sm:text-sm font-bold text-slate-600">Período</label>
+                  <div className="relative flex flex-col sm:flex-row gap-2">
                     <select
                       value={periodoSelecionado}
                       onChange={(e) => setPeriodoSelecionado(e.target.value)}
-                      className="flex-1 min-w-0 py-2.5 px-4 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-blue-500/10 outline-none font-bold text-[#0f2851]"
+                      className="w-full sm:flex-1 min-w-0 py-2.5 px-3.5 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-blue-500/10 outline-none font-bold text-[#0f2851]"
                     >
                       {opcaoFiltro === 'Período' ? (
                         APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE')).map(p => <option key={p.label} value={p.label}>{p.label}</option>)
@@ -324,7 +329,7 @@ export default function RelatorioFrequencia() {
                     <button
                       onClick={handleExibir}
                       disabled={dataLoading}
-                      className="bg-[#0f2851] text-white px-5 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-[#1a3a6d] transition shadow-md shadow-blue-900/20 shrink-0"
+                      className="w-full sm:w-auto justify-center bg-[#0f2851] text-white px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-[#1a3a6d] transition shadow-md shadow-blue-900/20 shrink-0"
                     >
                       <Search className="w-4 h-4" /> Exibir
                     </button>
@@ -335,12 +340,12 @@ export default function RelatorioFrequencia() {
           </div>
 
           <div className="w-full max-w-[1400px] bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="flex border-b border-slate-100 bg-[#f8fafc]">
+            <div className="flex border-b border-slate-100 bg-[#f8fafc] overflow-x-auto scrollbar-none">
               {['Alunos', 'Com faltas importadas', 'Saíram da Turma', 'Com Faltas Justificadas'].map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-6 py-4 text-xs font-bold transition-all relative uppercase tracking-wider ${activeTab === tab ? 'text-[#0f2851]' : 'text-slate-400 hover:text-slate-600'}`}
+                  className={`whitespace-nowrap px-4 sm:px-6 py-3 sm:py-4 text-xs font-bold transition-all relative uppercase tracking-wider shrink-0 ${activeTab === tab ? 'text-[#0f2851]' : 'text-slate-400 hover:text-slate-600'}`}
                 >
                   {tab}
                   {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0f2851]" />}
@@ -348,30 +353,48 @@ export default function RelatorioFrequencia() {
               ))}
             </div>
 
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-slate-700">Alunos</h3>
-                <div className="flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+            <div className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base sm:text-lg font-bold text-slate-700">Alunos</h3>
+                  <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">
+                    {alunosFiltrados.length}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 bg-slate-50 px-3 sm:px-4 py-2 rounded-xl border border-slate-100">
                   <span className="text-[10px] uppercase font-black text-slate-400">Legenda</span>
-                  <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><span className="w-3 h-3 rounded-full bg-slate-300"></span> Sem frequência</span>
-                    <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><span className="w-3 h-3 rounded-full bg-red-500"></span> Falta</span>
-                    <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><span className="w-3 h-3 rounded-full bg-green-500"></span> Presença</span>
+                  <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+                    <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-slate-300 shrink-0"></span> Sem freq.</span>
+                    <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500 shrink-0"></span> Falta</span>
+                    <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500 shrink-0"></span> Presença</span>
                   </div>
                 </div>
               </div>
 
-              <div className="relative mb-6">
+              <div className="relative mb-4 sm:mb-6">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input type="text" placeholder="Pesquisar aluno..." className="w-full pl-12 pr-4 py-3 bg-[#f8f9fa] border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/10 outline-none" />
+                <input
+                  type="text"
+                  value={buscaAluno}
+                  onChange={(e) => setBuscaAluno(e.target.value)}
+                  placeholder="Pesquisar aluno por nome..."
+                  className="w-full pl-12 pr-4 py-2.5 sm:py-3 bg-[#f8f9fa] border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/10 outline-none"
+                />
+              </div>
+
+              {/* Dica de rolagem horizontal em telas pequenas */}
+              <div className="flex items-center justify-between text-xs text-slate-500 mb-2 md:hidden">
+                <span className="flex items-center gap-1.5 font-medium text-[11px]">
+                  <span className="inline-block animate-pulse">👉</span> Deslize para o lado para ver todas as datas
+                </span>
               </div>
 
               <div className="overflow-x-auto border border-slate-200 rounded-xl shadow-inner bg-white">
-                <table className="w-full text-left border-collapse min-w-[1000px]">
+                <table className="w-full text-left border-collapse min-w-[700px] sm:min-w-[1000px]">
                   <thead>
                     <tr className="bg-[#f0f4f8] text-[#0f2851] border-b border-slate-200">
-                      <th className="px-4 py-3 font-bold text-[11px] w-12 border-r border-slate-200">Nº</th>
-                      <th className="px-6 py-3 font-bold text-[11px] w-80 border-r border-slate-200">Nome</th>
+                      <th className="sticky left-0 z-20 bg-[#f0f4f8] px-3 sm:px-4 py-3 font-bold text-[11px] w-12 border-r border-slate-200 text-center">Nº</th>
+                      <th className="sticky left-12 z-20 bg-[#f0f4f8] px-3 sm:px-6 py-3 font-bold text-[11px] min-w-[140px] sm:w-80 border-r border-slate-200 shadow-[3px_0_6px_-2px_rgba(0,0,0,0.12)]">Nome</th>
                       {colunasDatas.map(col => {
                         const [data] = col.split('|');
                         return (
@@ -380,15 +403,15 @@ export default function RelatorioFrequencia() {
                           </th>
                         );
                       })}
-                      <th className="px-4 py-3 font-bold text-[11px] text-center w-24 border-r border-slate-200 bg-blue-50">FALTAS TOTAIS</th>
-                      <th className="px-4 py-3 font-bold text-[11px] text-center w-24 bg-blue-50">FALTAS %</th>
+                      <th className="px-3 sm:px-4 py-3 font-bold text-[11px] text-center w-20 sm:w-24 border-r border-slate-200 bg-blue-50">FALTAS</th>
+                      <th className="px-3 sm:px-4 py-3 font-bold text-[11px] text-center w-20 sm:w-24 bg-blue-50">%</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {alunosRelatorio.map((aluno, idx) => (
-                      <tr key={aluno.id} className="hover:bg-[#f8faff] transition-colors">
-                        <td className="px-4 py-3 text-slate-500 font-bold border-r border-slate-100 text-center">{String(idx + 1).padStart(2, '0')}</td>
-                        <td className="px-6 py-3 font-medium text-slate-700 border-r border-slate-100">{aluno.nome}</td>
+                    {alunosFiltrados.map((aluno, idx) => (
+                      <tr key={aluno.id} className="group hover:bg-[#f8faff] transition-colors">
+                        <td className="sticky left-0 z-10 bg-white group-hover:bg-[#f8faff] px-3 sm:px-4 py-3 text-slate-500 font-bold border-r border-slate-100 text-center">{String(idx + 1).padStart(2, '0')}</td>
+                        <td className="sticky left-12 z-10 bg-white group-hover:bg-[#f8faff] px-3 sm:px-6 py-3 font-medium text-slate-700 border-r border-slate-100 truncate max-w-[150px] sm:max-w-none shadow-[3px_0_6px_-2px_rgba(0,0,0,0.12)]" title={aluno.nome}>{aluno.nome}</td>
                         {colunasDatas.map(col => {
                           const status = aluno.frequencias[col];
                           return (
@@ -402,10 +425,10 @@ export default function RelatorioFrequencia() {
                             </td>
                           );
                         })}
-                        <td className="px-4 py-3 text-center border-r border-slate-100 font-black text-[#0f2851] bg-[#eef2ff]/30">
-                          <span className="bg-[#eef2ff] px-2 py-0.5 rounded-full border border-blue-100">{aluno.totalFaltas}</span>
+                        <td className="px-3 sm:px-4 py-3 text-center border-r border-slate-100 font-black text-[#0f2851] bg-[#eef2ff]/30">
+                          <span className="bg-[#eef2ff] px-2 py-0.5 rounded-full border border-blue-100 text-xs">{aluno.totalFaltas}</span>
                         </td>
-                        <td className="px-4 py-3 text-center font-black text-white bg-[#eef2ff]/30">
+                        <td className="px-3 sm:px-4 py-3 text-center font-black text-white bg-[#eef2ff]/30">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] ${aluno.porcentagemFrequencia > 25 ? 'bg-red-500' : 'bg-blue-600'}`}>
                             {aluno.porcentagemFrequencia.toFixed(1).replace('.', ',')}%
                           </span>
