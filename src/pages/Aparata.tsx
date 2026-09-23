@@ -259,9 +259,9 @@ export default function Aparata() {
                   <select
                     value={disciplinaSelecionada}
                     onChange={(e) => { setDisciplinaSelecionada(e.target.value); }}
-                    className="w-72 border border-slate-200 bg-white rounded-xl px-4 py-2.5 text-sm text-[#0f2851] font-bold focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer shadow-sm"
+                    className="min-w-[260px] border border-slate-200 bg-white rounded-xl px-4 py-2.5 text-sm text-[#0f2851] font-bold focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer shadow-sm"
                   >
-                    <option value="TODAS">TODAS AS DISCIPLINAS (VISÃO GERAL)</option>
+                    <option value="TODAS">TODAS AS DISCIPLINAS</option>
                     {disciplinas.map(d => (
                       <option key={d} value={d}>{d}</option>
                     ))}
