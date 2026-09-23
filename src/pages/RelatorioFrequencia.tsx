@@ -273,14 +273,14 @@ export default function RelatorioFrequencia() {
             </div>
 
             <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-1.5">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6">
+                <div className="space-y-1.5 md:col-span-6 lg:col-span-6">
                   <label className="text-sm font-bold text-slate-600">Turma</label>
                   <div className="relative">
                     <select
                       value={selectedTurmaId}
                       onChange={(e) => setSelectedTurmaId(e.target.value)}
-                      className="w-full py-2.5 px-4 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-blue-500/10 outline-none font-bold text-[#0f2851]"
+                      className="w-full py-2.5 pl-4 pr-10 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-blue-500/10 outline-none font-bold text-[#0f2851]"
                     >
                       {turmas.map(t => (
                         <option key={`${t.id}-${t.componente}`} value={`${t.id}|${t.componente}`}>
@@ -292,13 +292,13 @@ export default function RelatorioFrequencia() {
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 md:col-span-2 lg:col-span-2">
                   <label className="text-sm font-bold text-slate-600">Opção</label>
                   <div className="relative">
                     <select
                       value={opcaoFiltro}
                       onChange={(e) => setOpcaoFiltro(e.target.value)}
-                      className="w-full py-2.5 px-4 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-blue-500/10 outline-none font-bold text-[#0f2851]"
+                      className="w-full py-2.5 pl-4 pr-10 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-blue-500/10 outline-none font-bold text-[#0f2851]"
                     >
                       <option value="Período">Período</option>
                       <option value="Mensal">Mensal</option>
@@ -307,13 +307,13 @@ export default function RelatorioFrequencia() {
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 md:col-span-4 lg:col-span-4">
                   <label className="text-sm font-bold text-slate-600">Período</label>
                   <div className="relative flex gap-2">
                     <select
                       value={periodoSelecionado}
                       onChange={(e) => setPeriodoSelecionado(e.target.value)}
-                      className="flex-1 py-2.5 px-4 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-blue-500/10 outline-none font-bold text-[#0f2851]"
+                      className="flex-1 min-w-0 py-2.5 px-4 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-blue-500/10 outline-none font-bold text-[#0f2851]"
                     >
                       {opcaoFiltro === 'Período' ? (
                         APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE')).map(p => <option key={p.label} value={p.label}>{p.label}</option>)
@@ -324,7 +324,7 @@ export default function RelatorioFrequencia() {
                     <button
                       onClick={handleExibir}
                       disabled={dataLoading}
-                      className="bg-[#0f2851] text-white px-6 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-[#1a3a6d] transition shadow-md shadow-blue-900/20"
+                      className="bg-[#0f2851] text-white px-5 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-[#1a3a6d] transition shadow-md shadow-blue-900/20 shrink-0"
                     >
                       <Search className="w-4 h-4" /> Exibir
                     </button>
