@@ -48,7 +48,7 @@ export default function TabEscolas() {
   async function fetchEscolas() {
     const { data, error } = await supabase
       .from('escolas')
-      .select('*')
+      .select('id, nome, distrito, inep, diretor, secretario, status, logo_url')
       .order('nome');
     
     if (!error && data) {
