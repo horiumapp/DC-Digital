@@ -131,16 +131,24 @@ export default function RelatorioConteudos() {
       }
 
       // Busca Primária por UUID (com suporte online / fallback local offline)
-      let rawContents: any[] = [];
+      let rawContents: Array<{ id?: string | number; turma_id?: string; data: string; tempo: string; disciplina?: string; descricao?: string; objetos?: string[] }> = [];
       if (navigator.onLine) {
         try {
-          const { data, error } = await supabase
+          let contQuery = supabase
             .from('conteudos')
-            .select('*')
-            .eq('turma_id', tid);
+            .select('id, turma_id, data, tempo, disciplina, descricao, objetos')
+            .eq('turma_id', tid)
+            .gte('data', dateStart)
+            .lte('data', dateEnd);
+
+          if (componente && componente.toUpperCase() !== 'TODAS' && componente.toUpperCase() !== 'GERAL') {
+            contQuery = contQuery.eq('disciplina', componente);
+          }
+
+          const { data, error } = await contQuery;
 
           if (error) throw error;
-          rawContents = data || [];
+          rawContents = (data || []) as typeof rawContents;
         } catch (netErr) {
           console.warn('[RelatorioConteudos] Falha ao consultar Supabase, usando dados locais:', netErr);
           rawContents = await OfflineStorage.getAllConteudosLocal(tid, componente);
@@ -166,8 +174,8 @@ export default function RelatorioConteudos() {
         try {
           const { data: fallbackData } = await supabase
             .from('conteudos')
-            .select('*')
-            .ilike('disciplina', componente)
+            .select('id, turma_id, data, tempo, disciplina, descricao, objetos')
+            .eq('disciplina', componente)
             .gte('data', dateStart.split('-').reverse().join('/'))
             .lte('data', dateEnd.split('-').reverse().join('/'));
 

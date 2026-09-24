@@ -1,11 +1,11 @@
  
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, ChevronDown, Search, Check, Filter } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { formatarDataParaISO, getBimestrePorData, formatarDiaMes } from '../utils/dateUtils';
+import { formatarDataParaISO, formatarDiaMes } from '../utils/dateUtils';
 import { APP_CONFIG } from '../config/appConfig';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
 import * as OfflineStorage from '../services/offlineStorage';
@@ -149,10 +149,18 @@ export default function RelatorioFrequencia() {
 
       if (navigator.onLine) {
         try {
-          const { data, error: freqError } = await supabase
+          let freqQuery = supabase
             .from('frequencias')
             .select('turma_id, aluno_id, data, tempo, status, participacao, disciplina')
-            .eq('turma_id', tid);
+            .eq('turma_id', tid)
+            .gte('data', dateStart)
+            .lte('data', dateEnd);
+
+          if (componente && componente.toUpperCase() !== 'TODAS' && componente.toUpperCase() !== 'GERAL') {
+            freqQuery = freqQuery.eq('disciplina', componente);
+          }
+
+          const { data, error: freqError } = await freqQuery;
 
           if (freqError) throw freqError;
           rawFreqs = (data || []) as typeof rawFreqs;

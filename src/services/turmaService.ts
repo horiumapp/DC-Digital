@@ -54,35 +54,51 @@ export const TurmaService = {
 
   fetchLancamentos: async (turmaId: string | number, disciplina: string): Promise<Lancamento[]> => {
     const tid = getTid(turmaId);
+    const discTrimmed = (disciplina || '').trim();
+    const isGeral = !discTrimmed || discTrimmed.toUpperCase() === 'TODAS' || discTrimmed.toUpperCase() === 'GERAL';
 
-    // Construir queries com filtro server-side de disciplina
-    let freqQuery = supabase.from('frequencias')
-      .select('data, tempo, disciplina')
-      .eq('turma_id', tid);
-    if (disciplina) freqQuery = freqQuery.ilike('disciplina', disciplina);
+    // 1. Tentar obter pares únicos (data, tempo) via RPC no PostgreSQL para evitar download massivo
+    let freqDatas: Array<{ data: string; tempo: string }> = [];
+    try {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('get_lancamentos_datas_frequencias', {
+        p_turma_id: tid,
+        p_disciplina: isGeral ? null : discTrimmed
+      });
+      if (!rpcError && rpcData) {
+        freqDatas = rpcData;
+      } else {
+        throw rpcError || new Error('RPC fallback');
+      }
+    } catch {
+      // Fallback resiliente com query direta indexada
+      let freqQuery = supabase.from('frequencias')
+        .select('data, tempo')
+        .eq('turma_id', tid);
+      if (!isGeral) freqQuery = freqQuery.eq('disciplina', discTrimmed);
+      const { data: fbData } = await freqQuery;
+      if (fbData) {
+        const uniqueFreqs = new Set(fbData.map(f => `${f.data}|${f.tempo}`));
+        uniqueFreqs.forEach(val => {
+          const [d, t] = val.split('|');
+          freqDatas.push({ data: d, tempo: t });
+        });
+      }
+    }
 
+    // 2. Buscar conteúdos já lançados
     let contQuery = supabase.from('conteudos')
-      .select('data, tempo, disciplina')
+      .select('data, tempo')
       .eq('turma_id', tid);
-    if (disciplina) contQuery = contQuery.ilike('disciplina', disciplina);
-
-    const [freqRes, contRes] = await Promise.all([freqQuery, contQuery]);
+    if (!isGeral) contQuery = contQuery.eq('disciplina', discTrimmed);
+    const { data: contData } = await contQuery;
 
     const novosLancamentos: Lancamento[] = [];
-
-    if (freqRes.data) {
-      const uniqueFreqs = new Set(freqRes.data.map(f => `${f.data}|${f.tempo}`));
-      uniqueFreqs.forEach(val => {
-        const [data, tempo] = val.split('|');
-        novosLancamentos.push({ turmaId: tid, data, tempo, tipo: 'frequencia' });
-      });
-    }
-
-    if (contRes.data) {
-      contRes.data.forEach(c => {
-        novosLancamentos.push({ turmaId: tid, data: c.data, tempo: c.tempo, tipo: 'conteudo' });
-      });
-    }
+    freqDatas.forEach(f => {
+      novosLancamentos.push({ turmaId: tid, data: f.data, tempo: f.tempo, tipo: 'frequencia' });
+    });
+    (contData || []).forEach(c => {
+      novosLancamentos.push({ turmaId: tid, data: c.data, tempo: c.tempo, tipo: 'conteudo' });
+    });
 
     return novosLancamentos;
   },
@@ -125,7 +141,7 @@ export const TurmaService = {
       .eq('turma_id', tid)
       .order('data', { ascending: true });
     if (disciplina && disciplina.trim() !== '' && disciplina.trim().toUpperCase() !== 'GERAL' && disciplina.trim().toUpperCase() !== 'TODAS') {
-      avQuery = avQuery.ilike('disciplina', disciplina.trim());
+      avQuery = avQuery.eq('disciplina', disciplina.trim());
     }
 
     const { data: avData, error: avError } = await avQuery;
@@ -249,15 +265,21 @@ export const TurmaService = {
     return (freqData || []) as FrequenciaRecord[];
   },
 
-  fetchAllFrequencias: async (turmaId: string | number, disciplina: string): Promise<FrequenciaRecord[]> => {
+  fetchAllFrequencias: async (turmaId: string | number, disciplina: string, apenasFaltas: boolean = true): Promise<FrequenciaRecord[]> => {
     const tid = getTid(turmaId);
 
     let query = supabase
       .from('frequencias')
       .select('data, tempo, aluno_id, status, participacao, disciplina')
       .eq('turma_id', tid);
+
+    // Otimização Crítica C1: Filtro server-side de faltas por padrão
+    if (apenasFaltas) {
+      query = query.in('status', ['F', 'FJ']);
+    }
+
     if (disciplina && disciplina.toUpperCase() !== 'TODAS' && disciplina.toUpperCase() !== 'GERAL') {
-      query = query.ilike('disciplina', disciplina);
+      query = query.eq('disciplina', disciplina);
     }
 
     const { data: freqData, error } = await query;
@@ -274,7 +296,7 @@ export const TurmaService = {
       .select('aluno_id, status, disciplina')
       .eq('turma_id', tid)
       .eq('data', dataISO);
-    if (disciplina) query = query.ilike('disciplina', disciplina);
+    if (disciplina) query = query.eq('disciplina', disciplina);
 
     const { data: freqData, error } = await query;
     if (error) throw error;
@@ -291,7 +313,7 @@ export const TurmaService = {
       .eq('turma_id', tid)
       .eq('data', dataISO)
       .eq('tempo', tempo);
-    if (disciplina) query = query.ilike('disciplina', disciplina);
+    if (disciplina) query = query.eq('disciplina', disciplina);
 
     const { data: contData, error } = await query;
 
@@ -350,7 +372,7 @@ export const TurmaService = {
       .eq('turma_id', tid)
       .order('data', { ascending: false });
     if (disciplina && disciplina.toUpperCase() !== 'TODAS' && disciplina.toUpperCase() !== 'GERAL') {
-      query = query.ilike('disciplina', disciplina);
+      query = query.eq('disciplina', disciplina);
     }
 
     const { data, error } = await query;
@@ -476,7 +498,7 @@ export const TurmaService = {
     if (user.role === 'ADMIN' || user.role === 'GESTOR' || user.role === 'SECRETARIO') {
       let query = supabase
         .from('turmas')
-        .select('*, escolas(nome)')
+        .select('id, nome, turno, ensino, turma_codigo, escola_id, escolas(nome)')
         .order('nome');
 
       if (user.role === 'SECRETARIO' || user.role === 'GESTOR') {

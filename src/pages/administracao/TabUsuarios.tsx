@@ -38,7 +38,7 @@ export default function TabUsuarios() {
       
       const { data: usuData, error: usuError } = await supabase
         .from('usuarios')
-        .select('*')
+        .select('id, nome_completo, email, cargo, escola_id, criado_em')
         .order('criado_em', { ascending: false });
         
       if (usuError) throw usuError;

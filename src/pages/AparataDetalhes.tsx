@@ -25,6 +25,9 @@ export default function AparataDetalhes() {
   const [fechamentosLocais, setFechamentosLocais] = useState<Record<string, boolean>>({});
   const [disciplinasTurma, setDisciplinasTurma] = useState<string[]>([]);
   const [disciplinaEscolhidaReabrir, setDisciplinaEscolhidaReabrir] = useState<string>(componenteAtivo);
+  const [isReabrirModalOpen, setIsReabrirModalOpen] = useState(false);
+  const [escopoReabertura, setEscopoReabertura] = useState<'COMPONENTE' | 'TODAS'>('COMPONENTE');
+  const [reabrindo, setReabrindo] = useState(false);
 
   useEffect(() => {
     async function carregarFechamentosEDisciplinas() {
@@ -161,10 +164,6 @@ export default function AparataDetalhes() {
   const meses = `${new Date(bimestreInfo.dataInicio).toLocaleDateString('pt-BR', { month: 'long' })} - ${new Date(bimestreInfo.dataFim).toLocaleDateString('pt-BR', { month: 'long' })}`;
 
   const isAparataFechada = !!fechamentos[bimestreInfo.id] || !!fechamentosLocais[bimestreInfo.id];
-
-  const [isReabrirModalOpen, setIsReabrirModalOpen] = useState(false);
-  const [escopoReabertura, setEscopoReabertura] = useState<'COMPONENTE' | 'TODAS'>('COMPONENTE');
-  const [reabrindo, setReabrindo] = useState(false);
 
   const handleFecharAparata = async () => {
     if (window.confirm(`Tem certeza que deseja FECHAR a aparata do ${periodo} (${componenteAtivo})? Não será mais possível fazer lançamentos de frequência, conteúdos e notas neste período.`)) {
