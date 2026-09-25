@@ -265,6 +265,36 @@ export const TurmaService = {
     return (freqData || []) as FrequenciaRecord[];
   },
 
+  fetchFaltasPeriodo: async (
+    turmaId: string | number,
+    disciplina: string,
+    dataInicio?: string,
+    dataFim?: string,
+    statusList: string[] = ['F']
+  ): Promise<FrequenciaRecord[]> => {
+    const tid = getTid(turmaId);
+
+    let query = supabase
+      .from('frequencias')
+      .select('data, tempo, aluno_id, status, participacao, disciplina')
+      .eq('turma_id', tid)
+      .in('status', statusList);
+
+    if (disciplina && disciplina.toUpperCase() !== 'TODAS' && disciplina.toUpperCase() !== 'GERAL') {
+      query = query.eq('disciplina', disciplina);
+    }
+    if (dataInicio) {
+      query = query.gte('data', normalizarDataISO(dataInicio));
+    }
+    if (dataFim) {
+      query = query.lte('data', normalizarDataISO(dataFim));
+    }
+
+    const { data: freqData, error } = await query;
+    if (error) throw error;
+    return (freqData || []) as FrequenciaRecord[];
+  },
+
   fetchAllFrequencias: async (turmaId: string | number, disciplina: string, apenasFaltas: boolean = true): Promise<FrequenciaRecord[]> => {
     const tid = getTid(turmaId);
 
@@ -361,6 +391,44 @@ export const TurmaService = {
     .eq('tempo', tempo)
     .eq('disciplina', disciplina);
     if (error) throw error;
+  },
+
+  fetchConteudosPeriodo: async (
+    turmaId: string | number,
+    disciplina: string,
+    dataInicio?: string,
+    dataFim?: string
+  ): Promise<Conteudo[]> => {
+    const tid = getTid(turmaId);
+
+    let query = supabase
+      .from('conteudos')
+      .select('id, turma_id, data, tempo, objetos, habilidades, descricao, disciplina')
+      .eq('turma_id', tid)
+      .order('data', { ascending: false });
+
+    if (disciplina && disciplina.toUpperCase() !== 'TODAS' && disciplina.toUpperCase() !== 'GERAL') {
+      query = query.eq('disciplina', disciplina);
+    }
+    if (dataInicio) {
+      query = query.gte('data', normalizarDataISO(dataInicio));
+    }
+    if (dataFim) {
+      query = query.lte('data', normalizarDataISO(dataFim));
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    return (data || []).map(c => ({
+      id: c.id.toString(),
+      turmaId: c.turma_id,
+      data: c.data,
+      tempo: c.tempo,
+      objetos: c.objetos || [],
+      habilidades: c.habilidades || [],
+      descricao: c.descricao || ''
+    }));
   },
 
   fetchAllConteudos: async (turmaId: string | number, disciplina: string): Promise<Conteudo[]> => {

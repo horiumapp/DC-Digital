@@ -107,7 +107,69 @@ export const fetchPendenciasPorEscola = async (
   professorEmail?: string
 ): Promise<PaginatedPendencias> => {
   try {
-    // FIX #16: Limitar a query para evitar payloads gigantes em escolas grandes
+    // 1. Tentar executar a agregação server-side via RPC no PostgreSQL (elimina download massivo de tabelas)
+    try {
+      const periodosPayload = periodosSelecionados.map(pId => {
+        const cfg = APP_CONFIG.PERIODOS.find(p => p.id === pId || p.label === pId || p.nome === pId);
+        return {
+          id: pId,
+          data_inicio: cfg?.dataInicio || '2026-02-05',
+          data_fim: cfg?.dataFim || '2026-12-14'
+        };
+      });
+
+      const { data: rpcData, error: rpcError } = await supabase.rpc('get_pendencias_docentes', {
+        p_escola_id: escolaId === 'TODAS' ? null : escolaId,
+        p_periodos: periodosPayload,
+        p_professor_email: professorEmail ? professorEmail.toLowerCase().trim() : null
+      });
+
+      if (!rpcError && rpcData) {
+        interface RpcRow {
+          professor: string;
+          turma: string;
+          componente: string;
+          periodo: string;
+          turno: string;
+          ensino: string;
+          fase: string;
+          pend_notas: number | string;
+          pend_freq: number | string;
+          pend_objeto: number | string;
+        }
+
+        const mapped: PendenciaDocente[] = (rpcData as RpcRow[]).map(row => ({
+          professor: row.professor,
+          dataLotacao: APP_CONFIG.PERIODOS[0]?.dataInicio
+            ? APP_CONFIG.PERIODOS[0].dataInicio.split('-').reverse().join('/')
+            : '01/01/' + APP_CONFIG.YEAR,
+          periodo: row.periodo,
+          turno: row.turno,
+          ensino: row.ensino,
+          fase: row.fase,
+          turma: row.turma,
+          componente: row.componente,
+          pendFreq: Number(row.pend_freq) || 0,
+          pendObjeto: Number(row.pend_objeto) || 0,
+          pendNotas: Number(row.pend_notas) || 0
+        }));
+
+        const totalConsolidado = mapped.length;
+        const offset = (page - 1) * pageSize;
+        const resultadoPaginado = mapped
+          .sort((a, b) => a.professor.localeCompare(b.professor))
+          .slice(offset, offset + pageSize);
+
+        return {
+          data: resultadoPaginado,
+          total: totalConsolidado
+        };
+      }
+    } catch (rpcErr) {
+      console.warn('[pendenciasService] RPC get_pendencias_docentes indisponível, usando fallback client-side:', rpcErr);
+    }
+
+    // 2. Fallback client-side caso a RPC ainda não esteja disponível no banco
     const HORARIOS_LIMIT = 5000;
 
     let query = supabase
@@ -121,8 +183,6 @@ export const fetchPendenciasPorEscola = async (
 
     const professorEmailLower = professorEmail?.toLowerCase().trim();
     if (professorEmailLower) {
-      // FIX: filtro aplicado no SERVIDOR (antes era client-side após baixar
-      // todos os horários, trafegando dados desnecessários).
       query = query.ilike('professores.email', professorEmailLower);
     }
 

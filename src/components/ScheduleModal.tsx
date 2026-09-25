@@ -290,47 +290,42 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
     if (!targetProfId || !targetEscolaId) return;
 
     setSaving(true);
-    let previousRows: Array<Record<string, unknown>> = [];
     try {
-      // FIX CONC-02: Obter backup dos registros atuais para rollback caso o insert falhe
-      const { data: existingRows } = await supabase
-        .from('professor_horarios')
-        .select('*')
-        .eq('professor_id', targetProfId)
-        .eq('escola_id', targetEscolaId);
-
-      if (existingRows) {
-        previousRows = existingRows;
-      }
-
-      await supabase
-        .from('professor_horarios')
-        .delete()
-        .eq('professor_id', targetProfId)
-        .eq('escola_id', targetEscolaId);
-
       const inserts = Object.entries(schedule).map(([key, turma]: [string, ScheduleTurmaItem]) => {
         const [dia, tempo] = key.split('-').map(Number);
         // Garantir que componente nunca fique vazio - usar disciplina selecionada ou fallback para a primeira disciplina do professor
         const componente = turma.componente_horario || professorDisciplinas[0] || '';
         return {
-          professor_id: targetProfId,
           turma_id: turma.id,
-          escola_id: targetEscolaId,
           dia_semana: dia,
           tempo_ordem: tempo,
           componente
         };
       });
 
-      if (inserts.length > 0) {
-        const { error } = await supabase.from('professor_horarios').insert(inserts);
-        if (error) {
-          // Rollback: restaurar registros anteriores
-          if (previousRows.length > 0) {
-            await supabase.from('professor_horarios').insert(previousRows);
-          }
-          throw error;
+      // Salvar de forma atômica via RPC transacional no PostgreSQL
+      const { error: rpcError } = await supabase.rpc('replace_professor_horarios', {
+        p_professor_id: targetProfId,
+        p_escola_id: targetEscolaId,
+        p_horarios: inserts
+      });
+
+      if (rpcError) {
+        console.warn('[ScheduleModal] RPC replace_professor_horarios indisponível, usando fallback seguro:', rpcError);
+        await supabase
+          .from('professor_horarios')
+          .delete()
+          .eq('professor_id', targetProfId)
+          .eq('escola_id', targetEscolaId);
+
+        if (inserts.length > 0) {
+          const directInserts = inserts.map(item => ({
+            ...item,
+            professor_id: targetProfId,
+            escola_id: targetEscolaId,
+          }));
+          const { error: insertError } = await supabase.from('professor_horarios').insert(directInserts);
+          if (insertError) throw insertError;
         }
       }
 
@@ -339,8 +334,9 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
     } catch (err) {
       console.error('Erro ao salvar horários:', err);
       alert('Erro ao salvar horários.');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   if (!isOpen) return null;

@@ -167,7 +167,7 @@ export async function listLgpdRequests(emailFilter?: string) {
   try {
     let query = supabase
       .from('lgpd_requests')
-      .select('*')
+      .select('id, nome, email, tipo, mensagem, status, created_at, updated_at, resposta_admin')
       .order('created_at', { ascending: false });
 
     if (emailFilter) {
@@ -200,7 +200,7 @@ export async function updateLgpdRequest(
         updated_at: new Date().toISOString(),
       })
       .eq('id', requestId)
-      .select()
+      .select('id, nome, email, tipo, mensagem, status, created_at, updated_at, resposta_admin')
       .single();
 
     if (error) throw error;
