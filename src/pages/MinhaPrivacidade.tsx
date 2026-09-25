@@ -11,11 +11,7 @@ import { translateSupabaseError } from '../utils/supabaseErrors';
 import DataExportButton from '../components/DataExportButton';
 import ConsentToggle from '../components/ConsentToggle';
 
-interface EscolaRelation {
-  nome: string;
-}
-
-interface TurmaRelation {
+interface RelationWithName {
   nome: string;
 }
 
@@ -79,8 +75,8 @@ export default function MinhaPrivacidade() {
               telefone: a.telefone || '---',
               endereco: a.endereco || '---',
               matricula: a.matricula || '---',
-              escola: (Array.isArray(a.escolas) ? a.escolas[0]?.nome : (a.escolas as any)?.nome) || '---',
-              turma: (Array.isArray(a.turmas) ? a.turmas[0]?.nome : (a.turmas as any)?.nome) || '---',
+              escola: (Array.isArray(a.escolas) ? a.escolas[0]?.nome : (a.escolas as unknown as RelationWithName | null)?.nome) || '---',
+              turma: (Array.isArray(a.turmas) ? a.turmas[0]?.nome : (a.turmas as unknown as RelationWithName | null)?.nome) || '---',
             },
           });
         }
@@ -108,7 +104,7 @@ export default function MinhaPrivacidade() {
           documento: p?.cpf || '---',
           perfil: user.role,
           outrosDados: {
-            escola: (Array.isArray(u?.escolas) ? u?.escolas[0]?.nome : (u?.escolas as any)?.nome) || '---',
+            escola: (Array.isArray(u?.escolas) ? u?.escolas[0]?.nome : (u?.escolas as RelationWithName | null)?.nome) || '---',
             cargo_sistema: u?.cargo || '---',
             telefone: p?.telefone || '---',
             vinculo: p?.vinculo || '---',
