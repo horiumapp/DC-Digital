@@ -71,6 +71,7 @@ export default function TabAlunos() {
       setAlunos([]);
       setTodasTurmas([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedEscola]);
 
   async function fetchTodasTurmas(escolaId: string) {
