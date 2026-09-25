@@ -46,7 +46,7 @@ export async function saveUserConsent(input: UserConsentInput) {
         data_hora_aceite: new Date().toISOString(),
         data_hora_revogacao: input.status === 'revogado' ? new Date().toISOString() : null,
       })
-      .select()
+      .select('id, user_id, finalidade, status, versao_politica, data_hora_aceite')
       .single();
 
     if (error) throw error;
