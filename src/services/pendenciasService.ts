@@ -225,16 +225,31 @@ export const fetchPendenciasPorEscola = async (
       interface AlunoLote { id: string; turma_id: string; }
       interface NotaLote { avaliacao_id: string; }
 
+      const fetchFreqsPromise = (async (): Promise<FrequenciaLote[]> => {
+        try {
+          const { data: rpcFreqs, error: rpcErr } = await supabase.rpc('get_frequencias_distinct_lote', {
+            p_turma_ids: batchTurmaIds,
+            p_disciplinas: batchComponentes,
+            p_start: minDateISO,
+            p_end: maxDateISO,
+          });
+          if (!rpcErr && rpcFreqs) return rpcFreqs;
+          throw rpcErr || new Error('RPC fallback');
+        } catch {
+          return fetchAllPaginated<FrequenciaLote>(() => {
+            let q = supabase.from('frequencias')
+              .select('turma_id, disciplina, tempo, data')
+              .in('turma_id', batchTurmaIds)
+              .in('disciplina', batchComponentes);
+            if (minDateISO) q = q.gte('data', minDateISO);
+            if (maxDateISO) q = q.lte('data', maxDateISO);
+            return q as unknown as PostgrestQueryBuilder;
+          });
+        }
+      })();
+
       const [fAll, cAll, avAll, aluAll] = await Promise.all([
-        fetchAllPaginated<FrequenciaLote>(() => {
-          let q = supabase.from('frequencias')
-            .select('turma_id, disciplina, tempo, data')
-            .in('turma_id', batchTurmaIds)
-            .in('disciplina', batchComponentes);
-          if (minDateISO) q = q.gte('data', minDateISO);
-          if (maxDateISO) q = q.lte('data', maxDateISO);
-          return q as unknown as PostgrestQueryBuilder;
-        }),
+        fetchFreqsPromise,
         fetchAllPaginated<ConteudoLote>(() => {
           let q = supabase.from('conteudos')
             .select('turma_id, disciplina, tempo, data')

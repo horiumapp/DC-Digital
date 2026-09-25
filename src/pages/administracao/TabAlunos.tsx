@@ -62,17 +62,21 @@ export default function TabAlunos() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Carregar turmas da escola selecionada
+  // Carregar turmas e alunos da escola selecionada sob demanda
   useEffect(() => {
     if (selectedEscola) {
       fetchTodasTurmas(selectedEscola.id);
+      fetchAlunos(selectedEscola.id);
+    } else {
+      setAlunos([]);
+      setTodasTurmas([]);
     }
   }, [selectedEscola]);
 
   async function fetchTodasTurmas(escolaId: string) {
     const { data, error: _error } = await supabase
       .from('turmas')
-      .select('*')
+      .select('id, nome, escola_id, turno')
       .eq('escola_id', escolaId)
       .order('nome');
     
@@ -91,10 +95,7 @@ export default function TabAlunos() {
 
   async function fetchInitialData() {
     setLoading(true);
-    await Promise.all([
-      fetchEscolas(),
-      fetchAlunos()
-    ]);
+    await fetchEscolas();
     setLoading(false);
   }
 
@@ -141,11 +142,25 @@ export default function TabAlunos() {
     }
   }
 
-  async function fetchAlunos() {
-    const { data, error } = await supabase
+  async function fetchAlunos(escolaId?: string) {
+    const targetEscolaId = escolaId || selectedEscola?.id;
+    let query = supabase
       .from('alunos')
       .select('id, nome, cpf, turma_id, escola_id, data_nascimento, sexo, nome_responsavel, telefone, endereco, status, escolas(nome), turmas(nome, turno)')
       .order('nome');
+
+    if (targetEscolaId) {
+      query = query.eq('escola_id', targetEscolaId);
+    } else if (user?.role === 'GESTOR' || user?.role === 'SECRETARIO') {
+      if (user.escola_id) {
+        query = query.eq('escola_id', user.escola_id);
+      } else {
+        setAlunos([]);
+        return;
+      }
+    }
+
+    const { data, error } = await query;
       
     if (error) {
       console.error("Erro ao carregar alunos:", error);
