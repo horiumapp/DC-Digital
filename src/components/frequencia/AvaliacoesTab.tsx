@@ -167,54 +167,95 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
     loadCurriculo();
   }, [turmaAtiva, selectedDate, periodoLetivo, currentBimestre]);
 
+  // Conteúdos ministrados até a data da avaliação
+  // Filtra para mostrar apenas conteúdos já ministrados, não todos do bimestre
+  const conteudosAteData = React.useMemo(() => {
+    if (!selectedDate || !conteudos) return [];
+    const bim = periodoLetivo || getBimestrePorData(selectedDate);
+    const dataLimiteISO = formatarDataParaISO(selectedDate);
+    return conteudos.filter(c => {
+      const dataConteudoISO = formatarDataParaISO(c.data);
+      return getBimestrePorData(c.data) === bim && dataConteudoISO <= dataLimiteISO;
+    });
+  }, [conteudos, selectedDate, periodoLetivo]);
+
   // Memos para opções de objetos de conhecimento
+  // Mostra apenas unidades e objetos de conteúdos ministrados até a data da avaliação
   const unidadesOpcoes = React.useMemo(() => {
     const list: string[] = [];
+
+    // Unidades do currículo base que possuem conteúdos ministrados até a data
+    const unidadesComConteudo = new Set<string>();
+    conteudosAteData.forEach(c => {
+      if (c.habilidades && c.habilidades[0]) {
+        unidadesComConteudo.add(c.habilidades[0]);
+      }
+      // Também considerar os objetos ministrados para mapear unidades do currículo
+      (c.objetos || []).forEach(obj => {
+        unidadesBD.forEach(u => {
+          if (u.objetos?.some((o: CurriculoObjeto | string) => {
+            const desc = typeof o === 'object' && o !== null ? (o.descricao || '') : String(o);
+            return desc.toUpperCase() === obj.toUpperCase();
+          })) {
+            unidadesComConteudo.add(u.nome);
+          }
+        });
+      });
+    });
+
+    // Adicionar unidades do currículo que tiveram conteúdos ministrados
     unidadesBD.forEach(u => {
-      if (u.nome && !list.includes(u.nome)) {
+      if (u.nome && unidadesComConteudo.has(u.nome) && !list.includes(u.nome)) {
         list.push(u.nome);
       }
     });
-    if (selectedDate && conteudos) {
-      const bim = periodoLetivo || getBimestrePorData(selectedDate);
-      conteudos
-        .filter(c => getBimestrePorData(c.data) === bim)
-        .forEach(c => {
-          if (c.habilidades && c.habilidades[0] && !list.includes(c.habilidades[0])) {
-            list.push(c.habilidades[0]);
-          }
-        });
-    }
+
+    // Adicionar unidades de conteúdos ministrados (que podem não estar no currículo BD)
+    conteudosAteData.forEach(c => {
+      if (c.habilidades && c.habilidades[0] && !list.includes(c.habilidades[0])) {
+        list.push(c.habilidades[0]);
+      }
+    });
+
     return list;
-  }, [unidadesBD, selectedDate, periodoLetivo, conteudos]);
+  }, [unidadesBD, conteudosAteData]);
 
   const objetosOpcoes = React.useMemo(() => {
     if (!unidadeDidatica) return [];
     const list: string[] = [];
 
+    // Coletar objetos que foram efetivamente ministrados até a data
+    const objetosMinistrados = new Set<string>();
+    conteudosAteData
+      .filter(c => c.habilidades && c.habilidades[0] === unidadeDidatica)
+      .flatMap(c => c.objetos || [])
+      .forEach(desc => {
+        if (desc) objetosMinistrados.add(desc.toUpperCase());
+      });
+
+    // Adicionar objetos do currículo BD que foram ministrados até a data
     const matchedUnidade = unidadesBD.find(u => u.nome === unidadeDidatica);
     if (matchedUnidade && matchedUnidade.objetos) {
       matchedUnidade.objetos.forEach((o: CurriculoObjeto | string) => {
         const desc = typeof o === 'object' && o !== null ? (o.descricao || '') : String(o);
-        if (desc && !list.includes(desc)) {
+        if (desc && objetosMinistrados.has(desc.toUpperCase()) && !list.includes(desc)) {
           list.push(desc);
         }
       });
     }
 
-    if (conteudos) {
-      conteudos
-        .filter(c => c.habilidades && c.habilidades[0] === unidadeDidatica)
-        .flatMap(c => c.objetos || [])
-        .forEach(desc => {
-          if (desc && !list.includes(desc)) {
-            list.push(desc);
-          }
-        });
-    }
+    // Adicionar objetos dos conteúdos ministrados (que podem não estar no currículo BD)
+    conteudosAteData
+      .filter(c => c.habilidades && c.habilidades[0] === unidadeDidatica)
+      .flatMap(c => c.objetos || [])
+      .forEach(desc => {
+        if (desc && !list.includes(desc)) {
+          list.push(desc);
+        }
+      });
 
     return list;
-  }, [unidadeDidatica, unidadesBD, conteudos]);
+  }, [unidadeDidatica, unidadesBD, conteudosAteData]);
 
   // Alunos filtrados para notas:
   // - 2ª Chamada (2CH): alunos faltosos na data original OU sem nota lançada na original OU que já tenham nota nesta 2CH
