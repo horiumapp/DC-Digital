@@ -465,6 +465,48 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
   }
 }
 
+export async function fetchFaltasPeriodo(
+  turmaId: string | number,
+  disciplina: string,
+  dataInicio?: string,
+  dataFim?: string,
+  statusList: string[] = ['F']
+): Promise<FrequenciaRecord[]> {
+  const tid = getTid(turmaId);
+  try {
+    if (!_isOnline) throw new Error('Offline');
+    const result = await TurmaService.fetchFaltasPeriodo(turmaId, disciplina, dataInicio, dataFim, statusList);
+    // Cache
+    await OfflineStorage.cacheFrequencias(tid, result.map(f => ({
+      turma_id: tid,
+      aluno_id: f.aluno_id,
+      data: f.data || '',
+      tempo: f.tempo || '',
+      status: f.status,
+      participacao: f.participacao || 'Presencial',
+      disciplina: f.disciplina || disciplina,
+    })));
+    return result;
+  } catch {
+    const local = await OfflineStorage.getAllFrequenciasLocal(tid, disciplina);
+    return local
+      .filter(f => {
+        if (!statusList.includes(f.status)) return false;
+        if (dataInicio && f.data < dataInicio) return false;
+        if (dataFim && f.data > dataFim) return false;
+        return true;
+      })
+      .map(f => ({
+        aluno_id: f.aluno_id,
+        status: f.status,
+        data: f.data,
+        tempo: f.tempo,
+        participacao: f.participacao,
+        disciplina: f.disciplina,
+      }));
+  }
+}
+
 export async function fetchAllFrequencias(turmaId: string | number, disciplina: string): Promise<FrequenciaRecord[]> {
   const tid = getTid(turmaId);
   try {
@@ -491,6 +533,47 @@ export async function fetchAllFrequencias(turmaId: string | number, disciplina: 
       participacao: f.participacao,
       disciplina: f.disciplina,
     }));
+  }
+}
+
+export async function fetchConteudosPeriodo(
+  turmaId: string | number,
+  disciplina: string,
+  dataInicio?: string,
+  dataFim?: string
+): Promise<Conteudo[]> {
+  const tid = getTid(turmaId);
+  try {
+    if (!_isOnline) throw new Error('Offline');
+    const result = await TurmaService.fetchConteudosPeriodo(turmaId, disciplina, dataInicio, dataFim);
+    // Cache
+    await OfflineStorage.cacheConteudos(tid, result.map(c => ({
+      turma_id: tid,
+      data: c.data,
+      tempo: c.tempo,
+      objetos: c.objetos,
+      habilidades: c.habilidades,
+      descricao: c.descricao,
+      disciplina,
+    })));
+    return result;
+  } catch {
+    const local = await OfflineStorage.getAllConteudosLocal(tid, disciplina);
+    return local
+      .filter(c => {
+        if (dataInicio && c.data < dataInicio) return false;
+        if (dataFim && c.data > dataFim) return false;
+        return true;
+      })
+      .map(c => ({
+        id: c.serverId || `local_${c.localId}`,
+        turmaId: c.turma_id,
+        data: c.data,
+        tempo: c.tempo,
+        objetos: c.objetos,
+        habilidades: c.habilidades,
+        descricao: c.descricao,
+      }));
   }
 }
 

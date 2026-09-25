@@ -54,14 +54,19 @@ export default function AparataDetalhes() {
       if (!turmaAtiva) return;
       try {
         const rawId = turmaAtiva.id.toString().split('||')[0];
-        const frequenciasAtuais = await OfflineTurmaService.fetchAllFrequencias(rawId, componenteAtivo);
+        const frequenciasAtuais = OfflineTurmaService.fetchFaltasPeriodo
+          ? await OfflineTurmaService.fetchFaltasPeriodo(rawId, componenteAtivo, bimestreInfo.dataInicio, bimestreInfo.dataFim, ['F', 'FJ'])
+          : await OfflineTurmaService.fetchAllFrequencias(rawId, componenteAtivo);
         const alunosDaTurma = new Set(alunos.map(aluno => String(aluno.id)));
-        // Histórico permanece na turma de origem; para o aparata, consolidamos por aluno.
+        // Histórico permanece na turma de origem; para o aparata, consolidamos por aluno no período do bimestre.
         const { data: frequenciasHistoricas } = await supabase
           .from('frequencias')
           .select('data, aluno_id, status, disciplina')
           .in('aluno_id', [...alunosDaTurma])
-          .eq('disciplina', componenteAtivo);
+          .eq('disciplina', componenteAtivo)
+          .gte('data', bimestreInfo.dataInicio)
+          .lte('data', bimestreInfo.dataFim)
+          .in('status', ['F', 'FJ']);
         const frequencias = frequenciasHistoricas || frequenciasAtuais;
         const map: Record<string, number> = {};
         const pStart = new Date(bimestreInfo.dataInicio + 'T00:00:00');

@@ -215,8 +215,8 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
             OfflineTurmaService.fetchLancamentos(rawId, turmaAtiva.componente),
             OfflineTurmaService.fetchHorario(rawId, turmaAtiva.componente),
             OfflineTurmaService.fetchAlunos(rawId),
-            OfflineTurmaService.fetchAllConteudos(rawId, turmaAtiva.componente),
-            OfflineTurmaService.fetchAllFrequencias(rawId, turmaAtiva.componente),
+            OfflineTurmaService.fetchConteudosPeriodo(rawId, turmaAtiva.componente),
+            OfflineTurmaService.fetchFaltasPeriodo(rawId, turmaAtiva.componente, undefined, undefined, ['F']),
             OfflineTurmaService.fetchFechamentos(rawId, turmaAtiva.componente)
           ]);
           
@@ -465,7 +465,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     try {
       await OfflineTurmaService.salvarConteudo(rawId, turmaAtiva.componente, cont);
       registrarLancamento({ turmaId: rawId, data: cont.data, tipo: 'conteudo', tempo: cont.tempo });
-      const conts = await OfflineTurmaService.fetchAllConteudos(rawId, turmaAtiva.componente);
+      const conts = await OfflineTurmaService.fetchConteudosPeriodo(rawId, turmaAtiva.componente);
       setConteudos(conts);
       showSuccessRef.current('Conteúdo salvo!');
     } catch (err) {
@@ -531,7 +531,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     try {
       await OfflineTurmaService.removerConteudo(rawId, turmaAtiva.componente, data, tempo);
       removerLancamento({ turmaId: rawId, data, tipo: 'conteudo', tempo });
-      const conts = await OfflineTurmaService.fetchAllConteudos(rawId, turmaAtiva.componente);
+      const conts = await OfflineTurmaService.fetchConteudosPeriodo(rawId, turmaAtiva.componente);
       setConteudos(conts);
       showSuccessRef.current('Conteúdo removido.');
     } catch {
