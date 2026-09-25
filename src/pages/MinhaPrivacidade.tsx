@@ -104,7 +104,7 @@ export default function MinhaPrivacidade() {
           documento: p?.cpf || '---',
           perfil: user.role,
           outrosDados: {
-            escola: (Array.isArray(u?.escolas) ? u?.escolas[0]?.nome : (u?.escolas as RelationWithName | null)?.nome) || '---',
+            escola: (Array.isArray(u?.escolas) ? u?.escolas[0]?.nome : (u?.escolas as unknown as RelationWithName | null)?.nome) || '---',
             cargo_sistema: u?.cargo || '---',
             telefone: p?.telefone || '---',
             vinculo: p?.vinculo || '---',
