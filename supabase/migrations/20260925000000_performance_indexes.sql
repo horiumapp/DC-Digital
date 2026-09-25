@@ -134,3 +134,37 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.get_alunos_count_por_escola() TO authenticated;
+
+-- -------------------------------------------------------------
+-- 9. RPC: get_frequencias_distinct_lote
+-- -------------------------------------------------------------
+-- Retorna os pares únicos (turma_id, disciplina, tempo, data) para um lote
+-- de turmas e disciplinas, evitando o download duplicado por aluno
+-- no cálculo de pendências da escola.
+CREATE OR REPLACE FUNCTION public.get_frequencias_distinct_lote(
+  p_turma_ids uuid[],
+  p_disciplinas text[],
+  p_start text DEFAULT NULL,
+  p_end text DEFAULT NULL
+)
+RETURNS TABLE (turma_id uuid, disciplina text, tempo text, data text)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Acesso negado: usuário não autenticado';
+  END IF;
+
+  RETURN QUERY
+  SELECT DISTINCT f.turma_id, f.disciplina, f.tempo, f.data
+  FROM public.frequencias f
+  WHERE f.turma_id = ANY(p_turma_ids)
+    AND f.disciplina = ANY(p_disciplinas)
+    AND (p_start IS NULL OR f.data >= p_start)
+    AND (p_end IS NULL OR f.data <= p_end);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_frequencias_distinct_lote(uuid[], text[], text, text) TO authenticated;
