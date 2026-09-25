@@ -54,9 +54,7 @@ export default function AparataDetalhes() {
       if (!turmaAtiva) return;
       try {
         const rawId = turmaAtiva.id.toString().split('||')[0];
-        const frequenciasAtuais = OfflineTurmaService.fetchFaltasPeriodo
-          ? await OfflineTurmaService.fetchFaltasPeriodo(rawId, componenteAtivo, bimestreInfo.dataInicio, bimestreInfo.dataFim, ['F', 'FJ'])
-          : await OfflineTurmaService.fetchAllFrequencias(rawId, componenteAtivo);
+        const frequenciasAtuais = await OfflineTurmaService.fetchAllFrequencias(rawId, componenteAtivo);
         const alunosDaTurma = new Set(alunos.map(aluno => String(aluno.id)));
         // Histórico permanece na turma de origem; para o aparata, consolidamos por aluno no período do bimestre.
         const { data: frequenciasHistoricas } = await supabase
