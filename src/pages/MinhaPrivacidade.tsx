@@ -61,7 +61,7 @@ export default function MinhaPrivacidade() {
 
         const { data: alunos } = await supabase
           .from('alunos')
-          .select('*, escolas(*), turmas(*)')
+          .select('nome, cpf, data_nascimento, sexo, nome_responsavel, telefone, endereco, matricula, escolas(nome), turmas(nome)')
           .or(`cpf.eq.${cpfFormatado},cpf.eq.${cpfDigits}`)
           .limit(1);
 
@@ -88,14 +88,14 @@ export default function MinhaPrivacidade() {
         // Servidor / Professor
         const { data: usuarios } = await supabase
           .from('usuarios')
-          .select('*, escolas(*)')
+          .select('nome_completo, cargo, escolas(nome)')
           .eq('id', user.id)
           .limit(1);
 
         // check if has matching record in professores
         const { data: professores } = await supabase
           .from('professores')
-          .select('*')
+          .select('nome, cpf, telefone, vinculo, departamento, disciplinas')
           .eq('email', user.email)
           .limit(1);
 

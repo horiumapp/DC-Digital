@@ -112,15 +112,25 @@ export default function TabAlunos() {
     }
 
     if (escolasData) {
-      // Contar alunos por escola
-      const { data: countsData } = await supabase
-        .from('alunos')
-        .select('escola_id');
-      
+      // Contar alunos por escola de forma eficiente via RPC no banco, com fallback
       const counts: Record<string, number> = {};
-      countsData?.forEach(a => {
-        counts[a.escola_id] = (counts[a.escola_id] || 0) + 1;
-      });
+      try {
+        const { data: rpcCounts, error: rpcErr } = await supabase.rpc('get_alunos_count_por_escola');
+        if (!rpcErr && rpcCounts) {
+          rpcCounts.forEach((r: { escola_id: string; total_alunos: number }) => {
+            counts[r.escola_id] = Number(r.total_alunos) || 0;
+          });
+        } else {
+          throw rpcErr || new Error('RPC indisponível');
+        }
+      } catch {
+        const { data: countsData } = await supabase
+          .from('alunos')
+          .select('escola_id');
+        countsData?.forEach(a => {
+          counts[a.escola_id] = (counts[a.escola_id] || 0) + 1;
+        });
+      }
 
       const processed = escolasData.map(e => ({
         ...e,
@@ -134,7 +144,7 @@ export default function TabAlunos() {
   async function fetchAlunos() {
     const { data, error } = await supabase
       .from('alunos')
-      .select('*, escolas(nome), turmas(nome, turno)')
+      .select('id, nome, cpf, turma_id, escola_id, data_nascimento, sexo, nome_responsavel, telefone, endereco, status, escolas(nome), turmas(nome, turno)')
       .order('nome');
       
     if (error) {
