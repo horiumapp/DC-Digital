@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ChevronDown, Search, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 import { APP_CONFIG } from '../config/appConfig';
 import type { NotaRecord } from '../services/turmaService';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';

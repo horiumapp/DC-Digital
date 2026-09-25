@@ -112,7 +112,7 @@ export const fetchPendenciasPorEscola = async (
 
     let query = supabase
       .from('professor_horarios')
-      .select('*, turmas(id, nome, turno), professores(id, nome, email)')
+      .select('id, escola_id, turma_id, professor_id, dia_semana, tempo_ordem, componente, turmas(id, nome, turno, ensino), professores(id, nome, email)')
       .limit(HORARIOS_LIMIT);
 
     if (escolaId !== 'TODAS') {
