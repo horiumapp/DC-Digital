@@ -91,7 +91,7 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
       // 1. Buscar Turmas desta escola
       const { data: turmasData } = await supabase
         .from('turmas')
-        .select('*')
+        .select('id, nome, turno, escola_id')
         .eq('escola_id', targetEscolaId);
       
       if (turmasData) {
@@ -114,7 +114,7 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
       // 3. Buscar Horários atuais de TODOS os perfis vinculados
       const { data: scheduleData } = await supabase
         .from('professor_horarios')
-        .select('*, turmas(*)')
+        .select('dia_semana, tempo_ordem, componente, turmas(id, nome, turno, escola_id)')
         .in('professor_id', targetProfIds)
         .eq('escola_id', targetEscolaId);
 
