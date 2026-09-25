@@ -577,7 +577,7 @@ export const TurmaService = {
             fase: fase,
             numero: t.turma_codigo || numero,
             escolaId: t.escola_id,
-            escolaNome: t.escolas?.nome || 'ESCOLA NÃO IDENTIFICADA'
+            escolaNome: (Array.isArray(t.escolas) ? t.escolas[0]?.nome : (t.escolas as any)?.nome) || 'ESCOLA NÃO IDENTIFICADA'
           });
         });
       });

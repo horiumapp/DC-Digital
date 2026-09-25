@@ -152,7 +152,7 @@ export default function TabAlunos() {
     }
     
     if (data) {
-      setAlunos(data);
+      setAlunos(data as unknown as AlunoRow[]);
     }
   }
 

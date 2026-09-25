@@ -79,8 +79,8 @@ export default function MinhaPrivacidade() {
               telefone: a.telefone || '---',
               endereco: a.endereco || '---',
               matricula: a.matricula || '---',
-              escola: (a.escolas as EscolaRelation | null)?.nome || '---',
-              turma: (a.turmas as TurmaRelation | null)?.nome || '---',
+              escola: (Array.isArray(a.escolas) ? a.escolas[0]?.nome : (a.escolas as any)?.nome) || '---',
+              turma: (Array.isArray(a.turmas) ? a.turmas[0]?.nome : (a.turmas as any)?.nome) || '---',
             },
           });
         }
@@ -108,7 +108,7 @@ export default function MinhaPrivacidade() {
           documento: p?.cpf || '---',
           perfil: user.role,
           outrosDados: {
-            escola: (u?.escolas as EscolaRelation | null)?.nome || '---',
+            escola: (Array.isArray(u?.escolas) ? u?.escolas[0]?.nome : (u?.escolas as any)?.nome) || '---',
             cargo_sistema: u?.cargo || '---',
             telefone: p?.telefone || '---',
             vinculo: p?.vinculo || '---',

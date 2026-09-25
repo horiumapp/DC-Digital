@@ -167,19 +167,21 @@ export const fetchPendenciasPorEscola = async (
         const key = `${h.turma_id}-${h.componente}-${periodoNome}`;
         
         if (!mapConsolidado[key]) {
-          const nomeCompleto = h.turmas?.nome || 'N/D';
+          const tObj = (Array.isArray(h.turmas) ? h.turmas[0] : h.turmas) as { nome?: string; turno?: string; ensino?: string } | null;
+          const pObj = (Array.isArray(h.professores) ? h.professores[0] : h.professores) as { nome?: string; email?: string } | null;
+          const nomeCompleto = tObj?.nome || 'N/D';
           const partes = nomeCompleto.split(' ');
           const turmaPart = partes.length > 1 ? partes.pop() : '';
           const fasePart = partes.join(' ') || nomeCompleto;
 
           mapConsolidado[key] = {
-            professor: h.professores?.nome || 'N/D',
+            professor: pObj?.nome || 'N/D',
             turmaId: h.turma_id,
             turma: turmaPart || 'N/D',
             componente: h.componente,
             periodo: periodoNome,
-            turno: h.turmas?.turno || 'N/D',
-            ensino: h.turmas?.ensino || 'Ensino Fundamental',
+            turno: tObj?.turno || 'N/D',
+            ensino: tObj?.ensino || 'Ensino Fundamental',
             fase: fasePart,
             tempos: new Set([h.tempo_ordem.toString() + 'º TEMPO']),
             totalAulasEsperadas: 0,

@@ -99,7 +99,7 @@ export default function PortalAluno() {
 
     const { data: alunos, error: alunoError } = await supabase
       .from('alunos')
-      .select('id, nome, cpf, data_nascimento, turma_id, escola_id, status, certidao_nascimento, matricula, foto_url, escolas(id, nome, logo_url, inep, diretor, distrito, secretario), turmas(id, nome, turno, escola_id, ensino, ano_letivo)')
+      .select('id, nome, cpf, data_nascimento, sexo, nome_responsavel, endereco, turma_id, escola_id, status, certidao_nascimento, matricula, foto_url, escolas(id, nome, logo_url, inep, diretor, distrito, secretario), turmas(id, nome, turno, escola_id, ensino, ano_letivo)')
       .or(`cpf.eq.${cpfFormatado},cpf.eq.${cpfDigits}`)
       .limit(5);
 
