@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Plus, Edit2, Trash2, Building2, MapPin, User, UserCheck } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Building2, MapPin, User, UserCheck, Download, Upload } from 'lucide-react';
 import NovaEscolaModal from '../../components/NovaEscolaModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import EscolaDetalhes from './EscolaDetalhes';
+import ImportCsvModal, { type PreviewColumn } from '../../components/common/ImportCsvModal';
+import {
+  exportEscolasToCsv,
+  getEscolaTemplateCsv,
+  parseEscolasCsv,
+  downloadCsvFile
+} from '../../utils/csvImportExport';
 
 import { useToast } from '../../components/common/Toast';
 
@@ -31,9 +38,10 @@ export interface EscolaFormData {
 
 export default function TabEscolas() {
   const { user: _user } = useAuth();
-  const { showError } = useToast();
+  const { showError, showSuccess, showWarning } = useToast();
   const [buscaEscola, setBuscaEscola] = useState('');
   const [isNovaEscolaModalOpen, setIsNovaEscolaModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [escolaParaEditar, setEscolaParaEditar] = useState<EscolaRow & EscolaFormData | null>(null);
   const [escolaParaExcluir, setEscolaParaExcluir] = useState<EscolaRow | null>(null);
   const [escolaSelecionada, setEscolaSelecionada] = useState<EscolaRow | null>(null);
@@ -130,6 +138,65 @@ export default function TabEscolas() {
     }
   };
 
+  const handleExportEscolas = () => {
+    if (escolas.length === 0) {
+      showWarning('Nenhuma escola disponível para exportar.');
+      return;
+    }
+    const csvContent = exportEscolasToCsv(escolas);
+    const dateStr = new Date().toISOString().split('T')[0];
+    downloadCsvFile(csvContent, `escolas_${dateStr}.csv`);
+    showSuccess(`Escolas exportadas com sucesso (${escolas.length} registros)!`);
+  };
+
+  const handleSaveImportEscolas = async (items: Array<{
+    nome: string;
+    distrito?: string;
+    inep?: string;
+    diretor?: string;
+    secretario?: string;
+    status: string;
+  }>) => {
+    const payload = items.map(item => ({
+      nome: item.nome,
+      distrito: item.distrito || null,
+      inep: item.inep || null,
+      diretor: item.diretor || null,
+      secretario: item.secretario || null,
+      status: item.status || 'Ativa'
+    }));
+
+    const { error } = await supabase.from('escolas').insert(payload);
+    if (error) {
+      console.error('Erro ao importar escolas:', error);
+      throw new Error(error.message || 'Erro ao salvar escolas importadas.');
+    }
+    await fetchEscolas();
+  };
+
+  const escolaPreviewColumns: PreviewColumn<{
+    nome: string;
+    distrito?: string;
+    inep?: string;
+    diretor?: string;
+    secretario?: string;
+    status: string;
+  }>[] = [
+    { header: 'Nome da Escola', accessor: (item) => <span className="font-semibold text-slate-800">{item.nome}</span> },
+    { header: 'Distrito / Endereço', accessor: (item) => <span className="text-slate-600">{item.distrito || '—'}</span> },
+    { header: 'INEP', accessor: (item) => <span className="font-mono text-xs">{item.inep || '—'}</span> },
+    { header: 'Diretor(a)', accessor: (item) => <span className="text-slate-600">{item.diretor || '—'}</span> },
+    { header: 'Secretário(a)', accessor: (item) => <span className="text-slate-600">{item.secretario || '—'}</span> },
+    {
+      header: 'Status',
+      accessor: (item) => (
+        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${item.status === 'Inativa' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+          {item.status || 'Ativa'}
+        </span>
+      )
+    }
+  ];
+
   const escolasFiltradas = escolas.filter(e => 
     e.nome.toLowerCase().includes(buscaEscola.toLowerCase()) || 
     (e.inep && e.inep.includes(buscaEscola)) ||
@@ -160,7 +227,7 @@ export default function TabEscolas() {
 
   return (
     <div className="flex flex-col h-full bg-slate-50/50">
-      <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 gap-4 bg-white">
+      <div className="p-6 flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 gap-4 bg-white">
         <div>
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             Gerenciamento de Escolas
@@ -170,8 +237,8 @@ export default function TabEscolas() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="relative w-full sm:w-64">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full sm:w-56">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-slate-400" />
             </div>
@@ -183,6 +250,23 @@ export default function TabEscolas() {
               className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f2851] focus:border-[#0f2851] bg-slate-50/50 transition-all font-bold text-[#0f2851]"
             />
           </div>
+          <button
+            onClick={handleExportEscolas}
+            disabled={escolas.length === 0}
+            className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 border border-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 h-[38px]"
+            title="Exportar escolas cadastradas para CSV"
+          >
+            <Download className="w-4 h-4 text-emerald-600" />
+            Exportar CSV
+          </button>
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 border border-blue-200 shrink-0 h-[38px]"
+            title="Importar escolas em lote via CSV ou TXT"
+          >
+            <Upload className="w-4 h-4 text-blue-600" />
+            Importar TXT / Planilha
+          </button>
           <button
             onClick={() => {
               setEscolaParaEditar(null);
@@ -313,6 +397,19 @@ export default function TabEscolas() {
             Tem certeza que deseja excluir a escola <strong>{escolaParaExcluir?.nome}</strong>? Esta ação não pode ser desfeita.
           </>
         }
+      />
+
+      <ImportCsvModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        title="Importação de Escolas em Lote"
+        subtitle="Importe dados cadastrais de escolas a partir de arquivo Excel (.csv) ou texto tabulado"
+        templateFileName="modelo_importacao_escolas.csv"
+        templateCsvContent={getEscolaTemplateCsv()}
+        parseFn={parseEscolasCsv}
+        onSave={handleSaveImportEscolas}
+        previewColumns={escolaPreviewColumns}
+        entityNamePlural="escolas"
       />
     </div>
   );
