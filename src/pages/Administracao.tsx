@@ -70,6 +70,15 @@ export default function Administracao() {
           )}
           {user?.role === 'ADMIN' && (
             <button
+              onClick={() => setActiveTab('calendario')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'calendario' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
+            >
+              <CalendarDays className="w-5 h-5" />
+              Calendário
+            </button>
+          )}
+          {user?.role === 'ADMIN' && (
+            <button
               onClick={() => setActiveTab('lgpd')}
               className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'lgpd' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
             >
@@ -82,6 +91,7 @@ export default function Administracao() {
         {/* Content Area */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           {user?.role === 'ADMIN' && activeTab === 'escolas' && <TabEscolas />}
+          {user?.role === 'ADMIN' && activeTab === 'calendario' && <TabCalendario />}
           {user?.role === 'ADMIN' && activeTab === 'usuarios' && <TabUsuarios />}
           {user?.role === 'ADMIN' && activeTab === 'lgpd' && <TabLgpd />}
           {activeTab === 'alunos' && <TabAlunos />}
