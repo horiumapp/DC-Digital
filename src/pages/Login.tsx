@@ -109,7 +109,7 @@ export default function Login() {
       }
       email = `${matricula}@${ALUNO_EMAIL_DOMAIN}`;
     } else {
-      email = formData.get('email') as string;
+      email = ((formData.get('email') as string) || '').trim().toLowerCase();
     }
 
     try {
