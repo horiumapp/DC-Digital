@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Plus, Edit2, Trash2, Building2, User, ArrowLeft, Users, ChevronRight, Calendar, Clock, X } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Building2, User, ArrowLeft, Users, ChevronRight, Calendar, Clock, X, Download, Upload } from 'lucide-react';
 import NovoProfessorModal, { type NovoProfessorFormData } from '../../components/NovoProfessorModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import GerenciarAlocacoesModal from '../../components/GerenciarAlocacoesModal';
 import ScheduleModal from '../../components/ScheduleModal';
+import ImportCsvModal, { type PreviewColumn } from '../../components/common/ImportCsvModal';
+import {
+  exportProfessoresToCsv,
+  getProfessoresTemplateCsv,
+  parseProfessoresCsv,
+  downloadCsvFile
+} from '../../utils/csvImportExport';
 import { gerarSenhaTemporaria } from '../../utils/formatters';
-
 
 const DEPARTAMENTOS = ['Geral', 'BIOLÓGICAS', 'HUMANAS', 'EXATAS', 'LINGUAGENS'];
 const DISCIPLINAS = [
@@ -17,7 +23,6 @@ const DISCIPLINAS = [
 
 import { useToast } from '../../components/common/Toast';
 import { readAllRows } from '../../services/pagination';
-
 
 export interface ProfessorRow {
   id: string;
@@ -47,6 +52,7 @@ export default function TabProfessores() {
   const { showError, showWarning, showSuccess } = useToast();
   const [buscaProfessor, setBuscaProfessor] = useState('');
   const [isNovoProfessorModalOpen, setIsNovoProfessorModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [professorParaEditar, setProfessorParaEditar] = useState<ProfessorRow | null>(null);
   const [professorParaExcluir, setProfessorParaExcluir] = useState<ProfessorRow | null>(null);
   const [isAlocacoesModalOpen, setIsAlocacoesModalOpen] = useState(false);
@@ -341,11 +347,106 @@ export default function TabProfessores() {
       )
     : [];
 
+  const handleExportProfessores = () => {
+    const listToExport = selectedEscola ? professoresDaEscola : professores;
+    if (listToExport.length === 0) {
+      showWarning('Nenhum professor disponível para exportar.');
+      return;
+    }
+    const csvContent = exportProfessoresToCsv(listToExport);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const fileName = selectedEscola
+      ? `professores_${selectedEscola.nome.replace(/\s+/g, '_')}_${dateStr}.csv`
+      : `professores_todos_${dateStr}.csv`;
+    downloadCsvFile(csvContent, fileName);
+    showSuccess(`Professores exportados com sucesso (${listToExport.length} registros)!`);
+  };
+
+  const handleSaveImportProfessores = async (items: Array<{
+    nome: string;
+    email: string;
+    cpf?: string;
+    telefone?: string;
+    departamento: string;
+    disciplinas: string[];
+    vinculo: string;
+    status: string;
+  }>) => {
+    const payload = items.map(p => ({
+      nome: p.nome,
+      email: p.email || null,
+      cpf: p.cpf || null,
+      telefone: p.telefone || null,
+      departamento: p.departamento || 'Geral',
+      disciplinas: p.disciplinas || [],
+      vinculo: p.vinculo || 'Concursado',
+      status: p.status || 'Ativo'
+    }));
+
+    const { data: insertedData, error } = await supabase
+      .from('professores')
+      .insert(payload)
+      .select('id');
+
+    if (error) {
+      console.error('Erro ao importar professores:', error);
+      throw new Error(error.message || 'Erro ao importar professores.');
+    }
+
+    if (selectedEscola && insertedData && insertedData.length > 0) {
+      const alocacoes = insertedData.map(p => ({
+        professor_id: p.id,
+        escola_id: selectedEscola.id,
+        turno: 'Manhã'
+      }));
+      const { error: alocError } = await supabase
+        .from('professor_alocacoes')
+        .insert(alocacoes);
+      if (alocError) {
+        console.warn('Aviso ao alocar professores na escola selecionada:', alocError);
+      }
+    }
+
+    await fetchProfessores();
+  };
+
+  const professorPreviewColumns: PreviewColumn<{
+    nome: string;
+    email: string;
+    cpf?: string;
+    telefone?: string;
+    departamento: string;
+    disciplinas: string[];
+    vinculo: string;
+    status: string;
+  }>[] = [
+    { header: 'Professor', accessor: (item) => <span className="font-semibold text-slate-800">{item.nome}</span> },
+    { header: 'E-mail', accessor: (item) => <span className="text-slate-600 font-mono text-xs">{item.email}</span> },
+    { header: 'Departamento', accessor: (item) => <span className="text-slate-600 text-xs font-medium">{item.departamento}</span> },
+    {
+      header: 'Disciplinas',
+      accessor: (item) => (
+        <span className="text-slate-500 text-xs">
+          {item.disciplinas.length > 0 ? item.disciplinas.join(', ') : 'Geral'}
+        </span>
+      )
+    },
+    { header: 'Vínculo', accessor: (item) => <span className="text-slate-600 text-xs">{item.vinculo}</span> },
+    {
+      header: 'Status',
+      accessor: (item) => (
+        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${item.status === 'Inativo' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+          {item.status || 'Ativo'}
+        </span>
+      )
+    }
+  ];
+
   return (
     <div className="flex flex-col h-full bg-slate-50/50 overflow-hidden">
       {/* Header */}
       {!selectedEscola ? (
-        <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 gap-4 bg-white shrink-0">
+        <div className="p-6 flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 gap-4 bg-white shrink-0">
           <div>
             <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
               Gerenciamento de Professores
@@ -354,8 +455,8 @@ export default function TabProfessores() {
               Selecione uma escola para gerenciar seu corpo docente.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="relative w-full sm:w-64">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative w-full sm:w-56">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search className="h-4 w-4 text-slate-400" />
               </div>
@@ -367,6 +468,23 @@ export default function TabProfessores() {
                 className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f2851] focus:border-[#0f2851] bg-slate-50/50 transition-all font-medium"
               />
             </div>
+            <button
+              onClick={handleExportProfessores}
+              disabled={professores.length === 0}
+              className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 border border-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 h-[38px]"
+              title="Exportar todos os professores cadastrados para CSV"
+            >
+              <Download className="w-4 h-4 text-emerald-600" />
+              Exportar CSV
+            </button>
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 border border-blue-200 shrink-0 h-[38px]"
+              title="Importar professores em lote via CSV ou TXT"
+            >
+              <Upload className="w-4 h-4 text-blue-600" />
+              Importar TXT / Planilha
+            </button>
           </div>
         </div>
       ) : (
@@ -513,13 +631,32 @@ export default function TabProfessores() {
                 </div>
               </div>
 
-              {/* Botão */}
-              <button 
-                onClick={handleInlineSubmit}
-                className="w-full bg-[#0f2851] hover:bg-[#1a3a6d] text-white py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-all shadow-lg shadow-[#0f2851]/20 active:scale-[0.98]"
-              >
-                Cadastrar Professor
-              </button>
+              {/* Botões */}
+              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                <button 
+                  onClick={handleInlineSubmit}
+                  className="flex-1 w-full sm:w-auto bg-[#0f2851] hover:bg-[#1a3a6d] text-white py-3.5 px-6 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-[#0f2851]/20 active:scale-[0.98] min-h-[46px]"
+                >
+                  Cadastrar Professor
+                </button>
+                <button
+                  onClick={handleExportProfessores}
+                  disabled={professoresDaEscola.length === 0}
+                  className="flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-5 py-3 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 border border-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed min-h-[46px] w-full sm:w-auto"
+                  title="Exportar professores desta unidade para CSV"
+                >
+                  <Download className="w-4 h-4 text-emerald-600" />
+                  Exportar CSV
+                </button>
+                <button
+                  onClick={() => setIsImportModalOpen(true)}
+                  className="flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 px-5 py-3 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 border border-blue-200 min-h-[46px] w-full sm:w-auto"
+                  title="Importar professores em lote via CSV ou TXT"
+                >
+                  <Upload className="w-4 h-4 text-blue-600" />
+                  Importar TXT / Planilha
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -703,6 +840,19 @@ export default function TabProfessores() {
             <>Tem certeza que deseja desvincular o(a) professor(a) <strong>{professorParaExcluir?.nome}</strong> da escola <strong>{selectedEscola?.nome}</strong>? As aulas e alocações nesta unidade serão removidas, preservando o cadastro nas demais escolas.</>
           )
         }
+      />
+
+      <ImportCsvModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        title={selectedEscola ? `Importação de Professores — ${selectedEscola.nome}` : "Importação de Professores em Lote"}
+        subtitle="Importe corpo docente a partir de arquivo Excel (.csv) ou texto tabulado"
+        templateFileName={selectedEscola ? `modelo_importacao_professores_${selectedEscola.nome.replace(/\s+/g, '_')}.csv` : "modelo_importacao_professores.csv"}
+        templateCsvContent={getProfessoresTemplateCsv()}
+        parseFn={parseProfessoresCsv}
+        onSave={handleSaveImportProfessores}
+        previewColumns={professorPreviewColumns}
+        entityNamePlural="professores"
       />
     </div>
   );
