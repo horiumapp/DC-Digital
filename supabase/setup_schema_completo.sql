@@ -2065,23 +2065,27 @@ REVOKE EXECUTE ON FUNCTION public.cleanup_old_logs(INTEGER) FROM anon;
 --    Se não disponível, chamar cleanup_old_logs() manualmente via
 --    painel SQL do Supabase ou script de manutenção mensal.
 -- ---------------------------------------------------------------
-DO $$
+DO $do$
 BEGIN
   -- Verificar se pg_cron está disponível
   IF EXISTS (
     SELECT 1 FROM pg_extension WHERE extname = 'pg_cron'
   ) THEN
     -- Agendar para rodar toda segunda-feira às 03:00 UTC
-    PERFORM cron.schedule(
-      'dc-digital-log-cleanup',              -- nome único do job
-      '0 3 * * 1',                           -- cron: toda segunda às 03:00 UTC
-      $$SELECT public.cleanup_old_logs(365)$$
-    );
-    RAISE NOTICE 'pg_cron: job de limpeza de logs agendado com sucesso.';
+    BEGIN
+      PERFORM cron.schedule(
+        'dc-digital-log-cleanup',              -- nome único do job
+        '0 3 * * 1',                           -- cron: toda segunda às 03:00 UTC
+        'SELECT public.cleanup_old_logs(365)'
+      );
+      RAISE NOTICE 'pg_cron: job de limpeza de logs agendado com sucesso.';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'pg_cron schedule falhou: %', SQLERRM;
+    END;
   ELSE
     RAISE NOTICE 'pg_cron não disponível. Agendar cleanup_old_logs() manualmente via painel do Supabase.';
   END IF;
-END $$;
+END $do$;
 
 -- ---------------------------------------------------------------
 -- 4. COMENTÁRIOS PARA DOCUMENTAÇÃO DO SCHEMA
