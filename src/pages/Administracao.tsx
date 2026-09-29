@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Building2, Users, User, GraduationCap, ShieldAlert } from 'lucide-react';
+import { Building2, Users, User, GraduationCap, ShieldAlert, CalendarDays } from 'lucide-react';
 import TabEscolas from './administracao/TabEscolas';
 import TabAlunos from './administracao/TabAlunos';
 import TabTurmas from './administracao/TabTurmas';
 import TabProfessores from './administracao/TabProfessores';
 import TabUsuarios from './administracao/TabUsuarios';
 import TabLgpd from './administracao/TabLgpd';
+import TabCalendario from './administracao/TabCalendario';
 
 export default function Administracao() {
   const { user } = useAuth();
