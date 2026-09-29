@@ -11,212 +11,16 @@
 -- DC Digital — Banco de Dados Schema Inicial
 
 -- ==========================================
--- 0. EXTENSÕES
+-- 0. EXTENSÕES E SEQUÊNCIAS
 -- ==========================================
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ==========================================
--- 1. FUNÇÕES AUXILIARES
--- ==========================================
-
-CREATE OR REPLACE FUNCTION public.check_lgpd_rate_limit()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-DECLARE
-  recent_count INTEGER;
-BEGIN
-  SELECT COUNT(*) INTO recent_count
-  FROM lgpd_requests
-  WHERE email = NEW.email
-    AND created_at > NOW() - INTERVAL '1 hour';
-
-  IF recent_count >= 5 THEN
-    RAISE EXCEPTION 'Limite de solicitações LGPD excedido. Máximo de 5 por hora por e-mail. Tente novamente mais tarde.'
-      USING ERRCODE = 'P0001';
-  END IF;
-
-  RETURN NEW;
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.fn_audit_log_changes()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-DECLARE
-  v_record_id TEXT;
-BEGIN
-  -- Determina o ID do registro afetado
-  IF TG_OP = 'DELETE' THEN
-    v_record_id := OLD.id::TEXT;
-  ELSE
-    v_record_id := NEW.id::TEXT;
-  END IF;
-
-  INSERT INTO audit_log (user_id, user_email, action, table_name, record_id)
-  VALUES (
-    auth.uid(),
-    auth.email(),
-    TG_OP,
-    TG_TABLE_NAME,
-    v_record_id
-  );
-
-  RETURN COALESCE(NEW, OLD);
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.gerar_matricula_aluno()
- RETURNS trigger
- LANGUAGE plpgsql
- SET search_path TO 'public'
-AS $function$
-DECLARE
-  ano_atual INT := EXTRACT(YEAR FROM NOW());
-  seq_num TEXT;
-BEGIN
-  IF NEW.matricula IS NULL OR NEW.matricula = '' THEN
-    seq_num := LPAD(
-      (EXTRACT(EPOCH FROM NOW())::bigint % 9999999)::text,
-      7, '0'
-    );
-    NEW.matricula := ano_atual::text || '/' || seq_num;
-  END IF;
-  RETURN NEW;
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.get_user_escola_id()
- RETURNS uuid
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-BEGIN
-  RETURN (SELECT escola_id FROM public.usuarios WHERE id = auth.uid());
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.get_user_role()
- RETURNS text
- LANGUAGE sql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-  SELECT COALESCE(
-    ((SELECT auth.jwt()) -> 'app_metadata' ->> 'role'),
-    (SELECT cargo FROM public.usuarios WHERE id = (SELECT auth.uid()))
-    -- SEGURANÇA: fallback 'PROFESSOR' removido. Usuário sem role é bloqueado pelo RLS.
-    -- Consistente com migration 20260712000002_security_fixes.sql.
-  );
-$function$;
-
-CREATE OR REPLACE FUNCTION public.get_user_role_secure()
- RETURNS text
- LANGUAGE sql
- STABLE
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-  SELECT COALESCE(
-    ((SELECT auth.jwt()) -> 'app_metadata' ->> 'role'),
-    (SELECT cargo FROM public.usuarios WHERE id = (SELECT auth.uid()))
-    -- SEGURANÇA: fallback 'PROFESSOR' removido. Usuário sem role é bloqueado pelo RLS.
-    -- Consistente com migration 20260712000002_security_fixes.sql.
-  );
-$function$;
-
-CREATE OR REPLACE FUNCTION public.handle_admin_promotion()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-BEGIN
-  -- Evitar recursão de triggers
-  IF pg_trigger_depth() > 1 THEN
-    RETURN NEW;
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM public.admin_whitelist WHERE email = NEW.email) THEN
-    -- Apenas promove se o role no app_metadata não for GESTOR ou SECRETARIO
-    IF COALESCE(NEW.raw_app_meta_data->>'role', '') NOT IN ('GESTOR', 'SECRETARIO') THEN
-      NEW.raw_app_meta_data := COALESCE(NEW.raw_app_meta_data, '{}'::jsonb) || '{"role": "ADMIN"}'::jsonb;
-      UPDATE public.usuarios SET cargo = 'ADMIN' WHERE id = NEW.id;
-    END IF;
-  END IF;
-  RETURN NEW;
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.handle_new_user()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-DECLARE
-  v_nome text;
-  v_cpf text;
-  v_telefone text;
-  v_vinculo text;
-  v_cargo text;
-BEGIN
-  v_nome    := COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email);
-  v_cpf     := COALESCE(NEW.raw_user_meta_data->>'cpf', '');
-  v_telefone := COALESCE(NEW.raw_user_meta_data->>'telefone', '');
-  v_vinculo := COALESCE(NEW.raw_user_meta_data->>'vinculo', 'A Definir');
-  v_cargo   := COALESCE(NEW.raw_app_meta_data->>'role', 'PROFESSOR');
-
-  -- Insere na tabela pública de usuários com o cargo correto
-  INSERT INTO public.usuarios (id, email, nome_completo, cargo)
-  VALUES (NEW.id, NEW.email, v_nome, v_cargo)
-  ON CONFLICT (id) DO UPDATE 
-  SET email = EXCLUDED.email, 
-      nome_completo = EXCLUDED.nome_completo, 
-      cargo = EXCLUDED.cargo;
-
-  -- Apenas insere na tabela de professores se for PROFESSOR
-  IF v_cargo = 'PROFESSOR' THEN
-    INSERT INTO public.professores (nome, email, cpf, telefone, vinculo, status)
-    VALUES (v_nome, NEW.email, v_cpf, v_telefone, v_vinculo, 'Inativo')
-    ON CONFLICT (email) DO NOTHING;
-  END IF;
-
-  RETURN NEW;
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.is_admin_or_staff()
- RETURNS boolean
- LANGUAGE sql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-  SELECT (SELECT public.get_user_role()) IN ('ADMIN', 'GESTOR', 'SECRETARIO');
-$function$;
-
-CREATE OR REPLACE FUNCTION public.sync_user_cargo_to_auth()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-BEGIN
-  -- Evitar recursão de triggers
-  IF pg_trigger_depth() > 1 THEN
-    RETURN NEW;
-  END IF;
-
-  IF OLD.cargo IS DISTINCT FROM NEW.cargo THEN
-    UPDATE auth.users
-    SET raw_app_meta_data = COALESCE(raw_app_meta_data, '{}'::jsonb) || jsonb_build_object('role', NEW.cargo)
-    WHERE id = NEW.id;
-  END IF;
-  RETURN NEW;
-END;
-$function$;
+CREATE SEQUENCE IF NOT EXISTS public.audit_log_id_seq;
+CREATE SEQUENCE IF NOT EXISTS public.avaliacoes_id_seq;
+CREATE SEQUENCE IF NOT EXISTS public.conteudos_id_seq;
+CREATE SEQUENCE IF NOT EXISTS public.frequencias_id_seq;
+CREATE SEQUENCE IF NOT EXISTS public.notas_id_seq;
 
 -- ==========================================
 -- 2. TABELAS E ESTRUTURA
@@ -500,6 +304,208 @@ ALTER TABLE public.turmas DROP CONSTRAINT IF EXISTS turmas_escola_id_fkey;
 ALTER TABLE public.turmas ADD CONSTRAINT turmas_escola_id_fkey FOREIGN KEY (escola_id) REFERENCES public.escolas(id);
 ALTER TABLE public.usuarios DROP CONSTRAINT IF EXISTS usuarios_escola_id_fkey;
 ALTER TABLE public.usuarios ADD CONSTRAINT usuarios_escola_id_fkey FOREIGN KEY (escola_id) REFERENCES public.escolas(id);
+
+-- ==========================================
+-- 1. FUNÇÕES AUXILIARES
+-- ==========================================
+
+CREATE OR REPLACE FUNCTION public.check_lgpd_rate_limit()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+  recent_count INTEGER;
+BEGIN
+  SELECT COUNT(*) INTO recent_count
+  FROM lgpd_requests
+  WHERE email = NEW.email
+    AND created_at > NOW() - INTERVAL '1 hour';
+
+  IF recent_count >= 5 THEN
+    RAISE EXCEPTION 'Limite de solicitações LGPD excedido. Máximo de 5 por hora por e-mail. Tente novamente mais tarde.'
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.fn_audit_log_changes()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_record_id TEXT;
+BEGIN
+  -- Determina o ID do registro afetado
+  IF TG_OP = 'DELETE' THEN
+    v_record_id := OLD.id::TEXT;
+  ELSE
+    v_record_id := NEW.id::TEXT;
+  END IF;
+
+  INSERT INTO audit_log (user_id, user_email, action, table_name, record_id)
+  VALUES (
+    auth.uid(),
+    auth.email(),
+    TG_OP,
+    TG_TABLE_NAME,
+    v_record_id
+  );
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.gerar_matricula_aluno()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  ano_atual INT := EXTRACT(YEAR FROM NOW());
+  seq_num TEXT;
+BEGIN
+  IF NEW.matricula IS NULL OR NEW.matricula = '' THEN
+    seq_num := LPAD(
+      (EXTRACT(EPOCH FROM NOW())::bigint % 9999999)::text,
+      7, '0'
+    );
+    NEW.matricula := ano_atual::text || '/' || seq_num;
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_user_escola_id()
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+  RETURN (SELECT escola_id FROM public.usuarios WHERE id = auth.uid());
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_user_role()
+ RETURNS text
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  SELECT COALESCE(
+    ((SELECT auth.jwt()) -> 'app_metadata' ->> 'role'),
+    (SELECT cargo FROM public.usuarios WHERE id = (SELECT auth.uid()))
+    -- SEGURANÇA: fallback 'PROFESSOR' removido. Usuário sem role é bloqueado pelo RLS.
+    -- Consistente com migration 20260712000002_security_fixes.sql.
+  );
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_user_role_secure()
+ RETURNS text
+ LANGUAGE sql
+ STABLE
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  SELECT COALESCE(
+    ((SELECT auth.jwt()) -> 'app_metadata' ->> 'role'),
+    (SELECT cargo FROM public.usuarios WHERE id = (SELECT auth.uid()))
+    -- SEGURANÇA: fallback 'PROFESSOR' removido. Usuário sem role é bloqueado pelo RLS.
+    -- Consistente com migration 20260712000002_security_fixes.sql.
+  );
+$function$;
+
+CREATE OR REPLACE FUNCTION public.handle_admin_promotion()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+  -- Evitar recursão de triggers
+  IF pg_trigger_depth() > 1 THEN
+    RETURN NEW;
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM public.admin_whitelist WHERE email = NEW.email) THEN
+    -- Apenas promove se o role no app_metadata não for GESTOR ou SECRETARIO
+    IF COALESCE(NEW.raw_app_meta_data->>'role', '') NOT IN ('GESTOR', 'SECRETARIO') THEN
+      NEW.raw_app_meta_data := COALESCE(NEW.raw_app_meta_data, '{}'::jsonb) || '{"role": "ADMIN"}'::jsonb;
+      UPDATE public.usuarios SET cargo = 'ADMIN' WHERE id = NEW.id;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+  v_nome text;
+  v_cpf text;
+  v_telefone text;
+  v_vinculo text;
+  v_cargo text;
+BEGIN
+  v_nome    := COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email);
+  v_cpf     := COALESCE(NEW.raw_user_meta_data->>'cpf', '');
+  v_telefone := COALESCE(NEW.raw_user_meta_data->>'telefone', '');
+  v_vinculo := COALESCE(NEW.raw_user_meta_data->>'vinculo', 'A Definir');
+  v_cargo   := COALESCE(NEW.raw_app_meta_data->>'role', 'PROFESSOR');
+
+  -- Insere na tabela pública de usuários com o cargo correto
+  INSERT INTO public.usuarios (id, email, nome_completo, cargo)
+  VALUES (NEW.id, NEW.email, v_nome, v_cargo)
+  ON CONFLICT (id) DO UPDATE 
+  SET email = EXCLUDED.email, 
+      nome_completo = EXCLUDED.nome_completo, 
+      cargo = EXCLUDED.cargo;
+
+  -- Apenas insere na tabela de professores se for PROFESSOR
+  IF v_cargo = 'PROFESSOR' THEN
+    INSERT INTO public.professores (nome, email, cpf, telefone, vinculo, status)
+    VALUES (v_nome, NEW.email, v_cpf, v_telefone, v_vinculo, 'Inativo')
+    ON CONFLICT (email) DO NOTHING;
+  END IF;
+
+  RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.is_admin_or_staff()
+ RETURNS boolean
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  SELECT (SELECT public.get_user_role()) IN ('ADMIN', 'GESTOR', 'SECRETARIO');
+$function$;
+
+CREATE OR REPLACE FUNCTION public.sync_user_cargo_to_auth()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+  -- Evitar recursão de triggers
+  IF pg_trigger_depth() > 1 THEN
+    RETURN NEW;
+  END IF;
+
+  IF OLD.cargo IS DISTINCT FROM NEW.cargo THEN
+    UPDATE auth.users
+    SET raw_app_meta_data = COALESCE(raw_app_meta_data, '{}'::jsonb) || jsonb_build_object('role', NEW.cargo)
+    WHERE id = NEW.id;
+  END IF;
+  RETURN NEW;
+END;
+$function$;
 
 -- ==========================================
 -- 4. HABILITAÇÃO RLS
@@ -1179,7 +1185,6 @@ CREATE TRIGGER on_usuario_cargo_changed
   ON public.usuarios
   FOR EACH ROW
   EXECUTE FUNCTION sync_user_cargo_to_auth();
-
 
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
