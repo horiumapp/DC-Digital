@@ -36,15 +36,36 @@ export interface CalendarPeriodItem {
   dataInicio: string;
   dataFim: string;
   escolaId?: string | null;
+  ano?: number;
 }
 
-/** Busca os períodos cadastrados no banco para o ano letivo ativo */
-export async function fetchCalendarPeriods(escolaId?: string | null): Promise<CalendarPeriodItem[]> {
+/** Retorna a lista de anos com calendário já cadastrado no banco */
+export async function fetchAvailableCalendarYears(): Promise<number[]> {
+  try {
+    const { data } = await supabase.from('periodos_letivos').select('ano');
+    const dbYears = (data || []).map(r => r.ano);
+    const yearsSet = new Set<number>([
+      APP_CONFIG.YEAR - 1,
+      APP_CONFIG.YEAR,
+      APP_CONFIG.YEAR + 1,
+      ...dbYears
+    ]);
+    return Array.from(yearsSet).sort((a, b) => a - b);
+  } catch {
+    return [APP_CONFIG.YEAR - 1, APP_CONFIG.YEAR, APP_CONFIG.YEAR + 1];
+  }
+}
+
+/** Busca os períodos cadastrados no banco para o ano letivo especificado */
+export async function fetchCalendarPeriods(
+  escolaId?: string | null,
+  ano: number = APP_CONFIG.YEAR
+): Promise<CalendarPeriodItem[]> {
   try {
     let query = supabase
       .from('periodos_letivos')
-      .select('id, escola_id, periodo, data_inicio, data_fim')
-      .eq('ano', APP_CONFIG.YEAR);
+      .select('id, escola_id, periodo, data_inicio, data_fim, ano')
+      .eq('ano', ano);
 
     query = escolaId ? query.eq('escola_id', escolaId) : query.is('escola_id', null);
 
@@ -56,34 +77,40 @@ export async function fetchCalendarPeriods(escolaId?: string | null): Promise<Ca
       dbMap.set(row.periodo, { id: row.id, data_inicio: row.data_inicio, data_fim: row.data_fim });
     });
 
-    // Mescla com os períodos definidos por padrão no sistema para garantir que todos existam
+    // Mescla com os períodos base do sistema, adaptando o ano caso seja diferente
     return bundled.map(bp => {
       const dbEntry = dbMap.get(bp.id);
+      const defaultStart = bp.dataInicio.replace(/^\d{4}/, String(ano));
+      const defaultEnd = bp.dataFim.replace(/^\d{4}/, String(ano));
+
       return {
         id: dbEntry?.id,
         periodo: bp.id,
         nome: bp.nome,
-        dataInicio: dbEntry?.data_inicio || bp.dataInicio,
-        dataFim: dbEntry?.data_fim || bp.dataFim,
+        dataInicio: dbEntry?.data_inicio || defaultStart,
+        dataFim: dbEntry?.data_fim || defaultEnd,
         escolaId: escolaId || null,
+        ano: ano,
       };
     });
   } catch (err) {
-    console.warn('[Calendário] Erro ao buscar períodos do banco, usando padrão local:', err);
+    console.warn(`[Calendário] Erro ao buscar períodos do ano ${ano} do banco, usando padrão:`, err);
     return bundled.map(bp => ({
       periodo: bp.id,
       nome: bp.nome,
-      dataInicio: bp.dataInicio,
-      dataFim: bp.dataFim,
+      dataInicio: bp.dataInicio.replace(/^\d{4}/, String(ano)),
+      dataFim: bp.dataFim.replace(/^\d{4}/, String(ano)),
       escolaId: escolaId || null,
+      ano: ano,
     }));
   }
 }
 
-/** Salva as alterações de datas no Supabase e atualiza o calendário da aplicação */
+/** Salva as alterações de datas no Supabase para o ano especificado */
 export async function saveAcademicCalendar(
   items: CalendarPeriodItem[],
-  escolaId?: string | null
+  escolaId?: string | null,
+  ano: number = APP_CONFIG.YEAR
 ): Promise<void> {
   for (const item of items) {
     if (item.id) {
@@ -92,6 +119,7 @@ export async function saveAcademicCalendar(
         .update({
           data_inicio: item.dataInicio,
           data_fim: item.dataFim,
+          ano: ano,
         })
         .eq('id', item.id);
       if (error) throw error;
@@ -100,7 +128,7 @@ export async function saveAcademicCalendar(
         .from('periodos_letivos')
         .insert({
           escola_id: escolaId || null,
-          ano: APP_CONFIG.YEAR,
+          ano: ano,
           periodo: item.periodo,
           data_inicio: item.dataInicio,
           data_fim: item.dataFim,
@@ -112,7 +140,10 @@ export async function saveAcademicCalendar(
     }
   }
 
-  // Recarrega o calendário ativo em memória e atualiza cache local
-  await loadAcademicCalendar(escolaId || undefined);
+  // Recarrega o calendário ativo em memória e atualiza cache local se for o ano vigente
+  if (ano === APP_CONFIG.YEAR) {
+    await loadAcademicCalendar(escolaId || undefined);
+  }
 }
+
 
