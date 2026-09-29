@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Edit2, Trash2, Building2, ChevronRight, GraduationCap, Users, ArrowLeft, Folder } from 'lucide-react';
+import { Search, Edit2, Trash2, Building2, ChevronRight, GraduationCap, Users, ArrowLeft, Folder, Download, Upload } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTurma, type Turma } from '../../contexts/TurmaContext';
 import NovaTurmaModal from '../../components/NovaTurmaModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
+import ImportCsvModal, { type PreviewColumn } from '../../components/common/ImportCsvModal';
+import {
+  exportTurmasToCsv,
+  getTurmasTemplateCsv,
+  parseTurmasCsv,
+  downloadCsvFile
+} from '../../utils/csvImportExport';
 
 import { useToast } from '../../components/common/Toast';
 import { readAllRows } from '../../services/pagination';
@@ -35,11 +42,12 @@ export interface NovaTurmaData {
 
 export default function TabTurmas() {
   const { user } = useAuth();
-  const { showError } = useToast();
+  const { showError, showSuccess, showWarning } = useToast();
   const { selecionarTurma } = useTurma();
   const navigate = useNavigate();
   const [buscaTurma, setBuscaTurma] = useState('');
   const [isNovaTurmaModalOpen, setIsNovaTurmaModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [turmaParaEditar, setTurmaParaEditar] = useState<TurmaRow | null>(null);
   const [turmaParaExcluir, setTurmaParaExcluir] = useState<TurmaRow | null>(null);
   const [turmas, setTurmas] = useState<TurmaRow[]>([]);
@@ -225,6 +233,67 @@ export default function TabTurmas() {
     return ordensTurno.indexOf(a) - ordensTurno.indexOf(b);
   });
 
+  const handleExportTurmas = () => {
+    const listToExport = selectedEscola ? turmasFiltradas : turmas;
+    if (listToExport.length === 0) {
+      showWarning('Nenhuma turma disponível para exportar.');
+      return;
+    }
+    const csvContent = exportTurmasToCsv(listToExport);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const fileName = selectedEscola
+      ? `turmas_${selectedEscola.nome.replace(/\s+/g, '_')}_${dateStr}.csv`
+      : `turmas_todas_${dateStr}.csv`;
+    downloadCsvFile(csvContent, fileName);
+    showSuccess(`Turmas exportadas com sucesso (${listToExport.length} registros)!`);
+  };
+
+  const handleSaveImportTurmas = async (items: Array<{
+    nome: string;
+    turno: string;
+    ano_letivo: string;
+    ensino: string;
+    escola_id: string;
+  }>) => {
+    const payload = items.map(item => ({
+      nome: item.nome,
+      turno: item.turno,
+      ano_letivo: item.ano_letivo,
+      escola_id: item.escola_id
+    }));
+
+    const { error } = await supabase.from('turmas').insert(payload);
+    if (error) {
+      console.error('Erro ao importar turmas:', error);
+      throw new Error(error.message || 'Erro ao importar turmas.');
+    }
+    await Promise.all([fetchTurmas(), fetchEscolas()]);
+  };
+
+  const parseTurmas = (text: string) => {
+    return parseTurmasCsv(text, escolas, selectedEscola?.id);
+  };
+
+  const turmaPreviewColumns: PreviewColumn<{
+    nome: string;
+    turno: string;
+    ano_letivo: string;
+    ensino: string;
+    escola_id: string;
+  }>[] = [
+    { header: 'Turma', accessor: (item) => <span className="font-semibold text-slate-800">{item.nome}</span> },
+    { header: 'Turno', accessor: (item) => <span className="text-slate-600">{item.turno}</span> },
+    { header: 'Ano Letivo', accessor: (item) => <span className="font-mono text-xs text-slate-600">{item.ano_letivo}</span> },
+    { header: 'Segmento', accessor: (item) => <span className="text-slate-500 text-xs">{item.ensino}</span> },
+    {
+      header: 'Escola',
+      accessor: (item) => {
+        const esc = escolas.find(e => e.id === item.escola_id);
+        return <span className="text-slate-700 font-medium text-xs">{esc?.nome || item.escola_id}</span>;
+      }
+    }
+  ];
+
   if (loading) {
     return (
       <div className="p-12 text-center">
@@ -238,7 +307,7 @@ export default function TabTurmas() {
     <div className="flex flex-col h-full bg-slate-50/50">
       {/* Header Condicional */}
       {!selectedEscola ? (
-        <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 gap-4 bg-white">
+        <div className="p-6 flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 gap-4 bg-white">
           <div>
             <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
               Gerenciamento de Turmas
@@ -247,17 +316,36 @@ export default function TabTurmas() {
               Selecione uma escola para gerenciar suas turmas e horários.
             </p>
           </div>
-          <div className="relative w-full sm:w-64">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-slate-400" />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative w-full sm:w-56">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-slate-400" />
+              </div>
+              <input
+                type="text"
+                value={buscaTurma}
+                onChange={(e) => setBuscaTurma(e.target.value)}
+                placeholder="Filtrar escolas..."
+                className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f2851] focus:border-[#0f2851] bg-slate-50/50 font-bold text-[#0f2851]"
+              />
             </div>
-            <input
-              type="text"
-              value={buscaTurma}
-              onChange={(e) => setBuscaTurma(e.target.value)}
-              placeholder="Filtrar escolas..."
-              className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f2851] focus:border-[#0f2851] bg-slate-50/50 font-bold text-[#0f2851]"
-            />
+            <button
+              onClick={handleExportTurmas}
+              disabled={turmas.length === 0}
+              className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 border border-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 h-[38px]"
+              title="Exportar todas as turmas para CSV"
+            >
+              <Download className="w-4 h-4 text-emerald-600" />
+              Exportar CSV
+            </button>
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 border border-blue-200 shrink-0 h-[38px]"
+              title="Importar turmas via CSV ou TXT"
+            >
+              <Upload className="w-4 h-4 text-blue-600" />
+              Importar TXT / Planilha
+            </button>
           </div>
         </div>
       ) : (
@@ -312,7 +400,7 @@ export default function TabTurmas() {
 
           {/* Barra de Pesquisa e Botão (Estilo Referência) */}
           <div className="px-8 -mt-6 relative z-20">
-            <div className="bg-white p-5 rounded-2xl shadow-xl shadow-blue-900/5 border border-slate-100 flex flex-col sm:flex-row items-end gap-4">
+            <div className="bg-white p-5 rounded-2xl shadow-xl shadow-blue-900/5 border border-slate-100 flex flex-col sm:flex-row items-end gap-3 sm:gap-4">
               <div className="flex-1 space-y-1.5 w-full">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
                   IDENTIFICAÇÃO DA TURMA
@@ -331,17 +419,37 @@ export default function TabTurmas() {
                 </div>
               </div>
               
-              {(user?.role === 'ADMIN' || user?.role === 'GESTOR' || user?.role === 'SECRETARIO') && (
-                <button 
-                  onClick={() => {
-                    setTurmaParaEditar(null);
-                    setIsNovaTurmaModalOpen(true);
-                  }}
-                  className="bg-[#0f2851] hover:bg-[#1a3a6d] text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-[#0f2851]/20 active:scale-95 whitespace-nowrap h-[54px]"
+              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
+                <button
+                  onClick={handleExportTurmas}
+                  disabled={turmasFiltradas.length === 0}
+                  className="flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-5 py-3 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 border border-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed h-[54px] flex-1 sm:flex-none"
+                  title="Exportar turmas desta escola para CSV"
                 >
-                  Adicionar Turma
+                  <Download className="w-4 h-4 text-emerald-600" />
+                  Exportar CSV
                 </button>
-              )}
+                <button
+                  onClick={() => setIsImportModalOpen(true)}
+                  className="flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 px-5 py-3 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 border border-blue-200 h-[54px] flex-1 sm:flex-none"
+                  title="Importar turmas para esta escola via CSV ou TXT"
+                >
+                  <Upload className="w-4 h-4 text-blue-600" />
+                  Importar TXT / Planilha
+                </button>
+
+                {(user?.role === 'ADMIN' || user?.role === 'GESTOR' || user?.role === 'SECRETARIO') && (
+                  <button 
+                    onClick={() => {
+                      setTurmaParaEditar(null);
+                      setIsNovaTurmaModalOpen(true);
+                    }}
+                    className="bg-[#0f2851] hover:bg-[#1a3a6d] text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-[#0f2851]/20 active:scale-95 whitespace-nowrap h-[54px] w-full sm:w-auto"
+                  >
+                    Adicionar Turma
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -512,6 +620,19 @@ export default function TabTurmas() {
             Tem certeza que deseja excluir a turma <strong>{turmaParaExcluir?.nome}</strong> da escola <strong>{turmaParaExcluir?.escolas?.nome || 'N/A'}</strong>? Esta ação não pode ser desfeita.
           </>
         }
+      />
+
+      <ImportCsvModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        title={selectedEscola ? `Importação de Turmas — ${selectedEscola.nome}` : "Importação de Turmas em Lote"}
+        subtitle="Importe turmas escolares a partir de arquivo Excel (.csv) ou texto tabulado"
+        templateFileName={selectedEscola ? `modelo_importacao_turmas_${selectedEscola.nome.replace(/\s+/g, '_')}.csv` : "modelo_importacao_turmas.csv"}
+        templateCsvContent={getTurmasTemplateCsv()}
+        parseFn={parseTurmas}
+        onSave={handleSaveImportTurmas}
+        previewColumns={turmaPreviewColumns}
+        entityNamePlural="turmas"
       />
     </div>
   );
