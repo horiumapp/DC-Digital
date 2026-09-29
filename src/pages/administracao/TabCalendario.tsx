@@ -10,13 +10,18 @@ import {
   Building2, 
   ChevronDown, 
   ChevronUp,
-  Info
+  ChevronLeft,
+  ChevronRight,
+  Info,
+  Calendar,
+  Copy
 } from 'lucide-react';
 import { useToast } from '../../components/common/Toast';
 import { APP_CONFIG } from '../../config/appConfig';
 import { 
   fetchCalendarPeriods, 
   saveAcademicCalendar, 
+  fetchAvailableCalendarYears,
   type CalendarPeriodItem 
 } from '../../services/academicCalendar';
 
@@ -33,36 +38,61 @@ export default function TabCalendario() {
   const [escolas, setEscolas] = useState<EscolaSimple[]>([]);
   const [selectedEscolaId, setSelectedEscolaId] = useState<string>(''); // '' = Geral da Rede
   
+  // Controle de Ano Selecionado
+  const [selectedYear, setSelectedYear] = useState<number>(APP_CONFIG.YEAR);
+  const [availableYears, setAvailableYears] = useState<number[]>([
+    APP_CONFIG.YEAR - 1, 
+    APP_CONFIG.YEAR, 
+    APP_CONFIG.YEAR + 1
+  ]);
+
   const [periodos, setPeriodos] = useState<CalendarPeriodItem[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [showOtherPeriods, setShowOtherPeriods] = useState(false);
 
-  // Carrega escolas para permitir calendário específico por escola se desejado
+  // Carrega escolas e lista de anos existentes
   useEffect(() => {
-    async function loadEscolas() {
-      const { data } = await supabase.from('escolas').select('id, nome').order('nome');
-      if (data) setEscolas(data);
+    async function initMetadata() {
+      const { data: escData } = await supabase.from('escolas').select('id, nome').order('nome');
+      if (escData) setEscolas(escData);
+
+      const years = await fetchAvailableCalendarYears();
+      if (years.length) setAvailableYears(years);
     }
-    loadEscolas();
+    initMetadata();
   }, []);
 
-  const loadData = useCallback(async (escolaId?: string) => {
+  const loadData = useCallback(async (ano: number, escolaId?: string) => {
     setLoading(true);
     try {
-      const data = await fetchCalendarPeriods(escolaId ? escolaId : null);
+      const data = await fetchCalendarPeriods(escolaId ? escolaId : null, ano);
       setPeriodos(data);
       setHasChanges(false);
     } catch (err) {
       console.error(err);
-      showError('Não foi possível carregar os períodos letivos.');
+      showError(`Não foi possível carregar os períodos letivos do ano ${ano}.`);
     } finally {
       setLoading(false);
     }
   }, [showError]);
 
   useEffect(() => {
-    loadData(selectedEscolaId);
-  }, [selectedEscolaId, loadData]);
+    loadData(selectedYear, selectedEscolaId);
+  }, [selectedYear, selectedEscolaId, loadData]);
+
+  const handleYearChange = (newYear: number) => {
+    if (newYear < 2000 || newYear > 2100) return;
+    if (hasChanges) {
+      const confirmChange = window.confirm(
+        'Você possui alterações não salvas no ano atual. Deseja trocar de ano e descartar as alterações?'
+      );
+      if (!confirmChange) return;
+    }
+    setSelectedYear(newYear);
+    if (!availableYears.includes(newYear)) {
+      setAvailableYears(prev => [...prev, newYear].sort((a, b) => a - b));
+    }
+  };
 
   const handleDateChange = (periodoId: string, field: 'dataInicio' | 'dataFim', value: string) => {
     setPeriodos(prev => prev.map(p => {
@@ -78,12 +108,40 @@ export default function TabCalendario() {
     setPeriodos(prev => prev.map(p => {
       const bundled = APP_CONFIG.PERIODOS.find(bp => bp.id === p.periodo);
       if (bundled) {
-        return { ...p, dataInicio: bundled.dataInicio, dataFim: bundled.dataFim };
+        return { 
+          ...p, 
+          dataInicio: bundled.dataInicio.replace(/^\d{4}/, String(selectedYear)), 
+          dataFim: bundled.dataFim.replace(/^\d{4}/, String(selectedYear)) 
+        };
       }
       return p;
     }));
     setHasChanges(true);
-    showWarning('Datas redefinidas para o padrão da aplicação. Clique em "Salvar" para confirmar.');
+    showWarning(`Datas adaptadas para o padrão do ano ${selectedYear}. Clique em "Salvar" para confirmar.`);
+  };
+
+  const handleCopyFromPreviousYear = async () => {
+    const prevYear = selectedYear - 1;
+    try {
+      const prevData = await fetchCalendarPeriods(selectedEscolaId ? selectedEscolaId : null, prevYear);
+      if (prevData && prevData.length) {
+        setPeriodos(prev => prev.map(p => {
+          const match = prevData.find(pd => pd.periodo === p.periodo);
+          if (match) {
+            return {
+              ...p,
+              dataInicio: match.dataInicio.replace(/^\d{4}/, String(selectedYear)),
+              dataFim: match.dataFim.replace(/^\d{4}/, String(selectedYear))
+            };
+          }
+          return p;
+        }));
+        setHasChanges(true);
+        showSuccess(`Datas copiadas do ano ${prevYear} com os meses preservados para ${selectedYear}! Clique em "Salvar".`);
+      }
+    } catch {
+      showError(`Não foi possível carregar as datas do ano ${prevYear}.`);
+    }
   };
 
   const handleSave = async () => {
@@ -101,9 +159,14 @@ export default function TabCalendario() {
 
     setSaving(true);
     try {
-      await saveAcademicCalendar(periodos, selectedEscolaId ? selectedEscolaId : null);
+      await saveAcademicCalendar(periodos, selectedEscolaId ? selectedEscolaId : null, selectedYear);
       setHasChanges(false);
-      showSuccess('Calendário letivo salvo e atualizado com sucesso!');
+      showSuccess(`Calendário do ano letivo ${selectedYear} salvo com sucesso!`);
+      
+      // Atualiza lista de anos disponíveis caso seja um novo ano
+      if (!availableYears.includes(selectedYear)) {
+        setAvailableYears(prev => [...prev, selectedYear].sort((a, b) => a - b));
+      }
     } catch (err: unknown) {
       console.error(err);
       const msg = err instanceof Error ? err.message : 'Erro ao salvar no banco.';
@@ -143,27 +206,80 @@ export default function TabCalendario() {
     return diff > 0 ? diff : 0;
   };
 
+  const isCurrentActiveYear = selectedYear === APP_CONFIG.YEAR;
+
   return (
     <div className="p-6 space-y-6">
-      {/* Top Banner & Scope Selector */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200">
+      {/* Top Banner & Multi-Year Selector */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2">
             <div className="p-2 bg-[#0f2851]/10 rounded-lg text-[#0f2851]">
               <CalendarDays className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-800">
-                Calendário Letivo — Ano {APP_CONFIG.YEAR}
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-bold text-slate-800">
+                  Calendário Letivo
+                </h2>
+                {isCurrentActiveYear ? (
+                  <span className="px-2 py-0.5 text-xs font-bold bg-blue-100 text-blue-800 rounded-md">
+                    Ano Vigente ({selectedYear})
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600 rounded-md">
+                    Ano {selectedYear}
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-slate-500">
-                Configure manualmente as datas de início e término de cada bimestre e período letivo.
+                Selecione o ano letivo para consultar ou alterar as datas oficiais de cada bimestre.
               </p>
             </div>
           </div>
         </div>
 
+        {/* Controles de Ano, Escopo e Ações */}
         <div className="flex flex-wrap items-center gap-3">
+          {/* Seletor de Ano com Stepper */}
+          <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 shadow-xs">
+            <button
+              type="button"
+              onClick={() => handleYearChange(selectedYear - 1)}
+              className="p-1.5 hover:bg-slate-100 rounded text-slate-600 transition"
+              title="Ano anterior"
+              aria-label="Ano anterior"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-1.5 px-2">
+              <Calendar className="w-4 h-4 text-[#0f2851]" />
+              <select
+                aria-label="Selecionar ano letivo"
+                value={selectedYear}
+                onChange={(e) => handleYearChange(parseInt(e.target.value, 10))}
+                className="bg-transparent text-sm font-bold text-slate-800 focus:outline-none cursor-pointer py-1"
+              >
+                {availableYears.map(yr => (
+                  <option key={yr} value={yr}>
+                    Ano Letivo {yr} {yr === APP_CONFIG.YEAR ? '★' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleYearChange(selectedYear + 1)}
+              className="p-1.5 hover:bg-slate-100 rounded text-slate-600 transition"
+              title="Próximo ano"
+              aria-label="Próximo ano"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
           {/* Seletor de Escopo (Rede vs Escola específica) */}
           {escolas.length > 0 && (
             <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
@@ -185,13 +301,23 @@ export default function TabCalendario() {
           )}
 
           <button
+            onClick={handleCopyFromPreviousYear}
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
+            title={`Copiar datas do ano ${selectedYear - 1} ajustando para ${selectedYear}`}
+          >
+            <Copy className="w-3.5 h-3.5" />
+            Copiar de {selectedYear - 1}
+          </button>
+
+          <button
             onClick={handleResetToDefault}
             disabled={saving}
-            className="inline-flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
-            title="Redefinir para as datas padrão da aplicação"
+            className="inline-flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
+            title="Redefinir para as datas sugeridas da aplicação"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            Restaurar Padrão
+            Padrão
           </button>
 
           <button
@@ -204,7 +330,7 @@ export default function TabCalendario() {
             }`}
           >
             <Save className="w-4 h-4" />
-            {saving ? 'Salvando...' : 'Salvar Alterações'}
+            {saving ? 'Salvando...' : `Salvar Ano ${selectedYear}`}
           </button>
         </div>
       </div>
@@ -213,23 +339,25 @@ export default function TabCalendario() {
       <div className="flex items-start gap-3 p-4 bg-sky-50/60 border border-sky-200/80 rounded-xl text-sky-900 text-sm">
         <Info className="w-5 h-5 text-sky-600 shrink-0 mt-0.5" />
         <div>
-          <p className="font-semibold text-sky-950">Aviso sobre o Fechamento de Bimestres</p>
+          <p className="font-semibold text-sky-950">
+            Gerenciamento Multi-Ano ({selectedYear})
+          </p>
           <p className="text-xs text-sky-800 mt-0.5">
-            As datas configuradas abaixo são utilizadas pelos professores no diário eletrônico para lançar frequências e notas no bimestre correspondente. Alterações aqui são sincronizadas instantaneamente com o banco e o modo offline.
+            Você pode planejar o calendário de anos futuros ou consultar o histórico de anos anteriores. Ao salvar, as datas ficam registradas especificamente para o ano letivo <strong>{selectedYear}</strong> no banco de dados.
           </p>
         </div>
       </div>
 
       {loading ? (
         <div className="py-16 text-center text-slate-400 text-sm">
-          Carregando períodos letivos...
+          Carregando períodos letivos do ano {selectedYear}...
         </div>
       ) : (
         <div className="space-y-6">
           {/* Seção 1: Bimestres Oficiais */}
           <div>
             <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <span>Bimestres Regulares</span>
+              <span>Bimestres de {selectedYear}</span>
               <span className="text-xs font-normal text-slate-400">({bimestres.length} períodos)</span>
             </h3>
 
@@ -251,7 +379,7 @@ export default function TabCalendario() {
                         </span>
                         <div>
                           <h4 className="font-bold text-slate-800 text-base">{item.nome}</h4>
-                          <span className="text-[11px] text-slate-400 font-mono">{item.periodo}</span>
+                          <span className="text-[11px] text-slate-400 font-mono">{item.periodo} • {selectedYear}</span>
                         </div>
                       </div>
 
@@ -318,7 +446,7 @@ export default function TabCalendario() {
               className="flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-slate-800 transition py-2"
             >
               {showOtherPeriods ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              {showOtherPeriods ? 'Ocultar outros períodos' : 'Ver outros períodos (Semestres, Período Único e Recuperação)'}
+              {showOtherPeriods ? 'Ocultar outros períodos' : `Ver outros períodos de ${selectedYear} (Semestres, Período Único e Recuperação)`}
             </button>
 
             {showOtherPeriods && (
@@ -372,7 +500,7 @@ export default function TabCalendario() {
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
                 <span className="text-sm font-semibold">
-                  Você possui alterações de datas não salvas no calendário escolar.
+                  Você possui alterações de datas não salvas no ano letivo {selectedYear}.
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -381,7 +509,7 @@ export default function TabCalendario() {
                   disabled={saving}
                   className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg shadow-sm transition"
                 >
-                  {saving ? 'Gravando...' : 'Confirmar e Salvar'}
+                  {saving ? 'Gravando...' : `Salvar Ano ${selectedYear}`}
                 </button>
               </div>
             </div>
