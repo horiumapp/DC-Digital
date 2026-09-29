@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Edit2, Trash2, Building2, Users, GraduationCap, ChevronRight, ArrowLeft, ArrowRightLeft, KeyRound } from 'lucide-react';
+import { Search, Edit2, Trash2, Building2, Users, GraduationCap, ChevronRight, ArrowLeft, ArrowRightLeft, KeyRound, Download, Upload } from 'lucide-react';
 import RemanejarAlunoModal from '../../components/RemanejarAlunoModal';
 import NovoAlunoModal from '../../components/NovoAlunoModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
+import ImportCsvModal, { type PreviewColumn } from '../../components/common/ImportCsvModal';
+import {
+  exportAlunosToCsv,
+  getAlunosTemplateCsv,
+  parseAlunosCsv,
+  downloadCsvFile
+} from '../../utils/csvImportExport';
 import { formatMatricula, getMatriculaLogin, formatCpfObscured } from '../../utils/formatters';
 
 import { readAllRows } from '../../services/pagination';
@@ -59,6 +66,7 @@ export default function TabAlunos() {
   const { showError, showSuccess, showWarning } = useToast();
   const [busca, setBusca] = useState('');
   const [isNovoAlunoModalOpen, setIsNovoAlunoModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [alunoParaEditar, setAlunoParaEditar] = useState<AlunoRow | null>(null);
   const [alunoParaExcluir, setAlunoParaExcluir] = useState<AlunoRow | null>(null);
   const [alunoParaRemanejar, setAlunoParaRemanejar] = useState<AlunoRow | null>(null);
