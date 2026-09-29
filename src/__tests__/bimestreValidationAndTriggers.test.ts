@@ -1,3 +1,4 @@
+vi.mock('../services/offlineIdentity', () => ({offlineOwner: () => 'owner'}));
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getBimestreNumero, getPeriodoInfoPorData, getBimestrePorData } from '../utils/dateUtils';
 import type { SyncQueueItem } from '../lib/db';
@@ -107,7 +108,7 @@ describe('Recuperação de Itens da Dead Letter Queue (offlineQueue.ts)', () => 
   it('deve reprocessar itens que falharam permanentemente (dead_letter -> pending)', async () => {
     mockQueue = [
       {
-        id: 87,
+        id: 87, ownerUserId: 'owner',
         hash: 'hash-87',
         table: 'frequencias',
         operation: 'UPSERT',
@@ -119,7 +120,7 @@ describe('Recuperação de Itens da Dead Letter Queue (offlineQueue.ts)', () => 
         updatedAt: new Date().toISOString(),
       },
       {
-        id: 88,
+        id: 88, ownerUserId: 'owner',
         hash: 'hash-88',
         table: 'notas',
         operation: 'UPSERT',

@@ -46,7 +46,7 @@ export async function saveUserConsent(input: UserConsentInput) {
         data_hora_aceite: new Date().toISOString(),
         data_hora_revogacao: input.status === 'revogado' ? new Date().toISOString() : null,
       })
-      .select()
+      .select('id, user_id, finalidade, status, versao_politica, data_hora_aceite')
       .single();
 
     if (error) throw error;
@@ -167,7 +167,7 @@ export async function listLgpdRequests(emailFilter?: string) {
   try {
     let query = supabase
       .from('lgpd_requests')
-      .select('*')
+      .select('id, nome, email, tipo, mensagem, status, created_at, updated_at, resposta_admin')
       .order('created_at', { ascending: false });
 
     if (emailFilter) {
@@ -200,7 +200,7 @@ export async function updateLgpdRequest(
         updated_at: new Date().toISOString(),
       })
       .eq('id', requestId)
-      .select()
+      .select('id, nome, email, tipo, mensagem, status, created_at, updated_at, resposta_admin')
       .single();
 
     if (error) throw error;

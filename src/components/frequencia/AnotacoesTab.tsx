@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Save } from 'lucide-react';
-import Captcha from '../common/Captcha';
-import { useCaptcha } from '../../hooks/useCaptcha';
+import { useToast } from '../common/Toast';
 
 interface AnotacoesTabProps {
   turmaAtiva: { id: string | number; nome?: string } | null;
@@ -23,42 +22,30 @@ export default function AnotacoesTab({
   const [anotacoes, setAnotacoes] = useState<{ id: string; texto: string; tempo: string; data: string }[]>([]);
   const [textoAnotacao, setTextoAnotacao] = useState('');
 
-  const {
-    generatedCaptcha,
-    captchaInput,
-    setCaptchaInput,
-    captchaError,
-    generateNewCaptcha,
-    validateCaptcha
-  } = useCaptcha();
+  const { showWarning, showSuccess } = useToast();
 
   const handleSave = () => {
-    if (validateCaptcha()) {
-      if (!textoAnotacao.trim()) {
-        alert('Por favor, descreva a anotação.');
-        return;
-      }
-      
-      const sanitizedText = textoAnotacao
-        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-        .replace(/<[^>]+>/g, '')
-        .trim();
-
-      const novaAnotacao = {
-        id: Math.random().toString(36).substr(2, 9),
-        texto: sanitizedText,
-        tempo: tempoAula,
-        data: new Date().toLocaleDateString('pt-BR')
-      };
-
-      setAnotacoes(prev => [novaAnotacao, ...prev]);
-      setIsAddingAnotacao(false);
-      setTextoAnotacao('');
-      setCaptchaInput('');
-      generateNewCaptcha();
-    } else {
-      alert('Código incorreto!');
+    if (!textoAnotacao.trim()) {
+      showWarning('Por favor, descreva a anotação.');
+      return;
     }
+    
+    const sanitizedText = textoAnotacao
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<[^>]+>/g, '')
+      .trim();
+
+    const novaAnotacao = {
+      id: Math.random().toString(36).substr(2, 9),
+      texto: sanitizedText,
+      tempo: tempoAula,
+      data: new Date().toLocaleDateString('pt-BR')
+    };
+
+    setAnotacoes(prev => [novaAnotacao, ...prev]);
+    setIsAddingAnotacao(false);
+    setTextoAnotacao('');
+    showSuccess('Anotação salva com sucesso!');
   };
 
   return (
@@ -151,20 +138,12 @@ export default function AnotacoesTab({
           </div>
 
           <div className="pt-2">
-            <Captcha
-              generatedCaptcha={generatedCaptcha}
-              captchaInput={captchaInput}
-              setCaptchaInput={setCaptchaInput}
-              captchaError={captchaError}
-              generateNewCaptcha={generateNewCaptcha}
-              className="mb-6"
-            />
              <div className="flex items-center gap-3">
                <button onClick={handleSave} className="flex items-center gap-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-bold hover:bg-[#e0e7ff] transition shadow-sm active:scale-95">
                  <Save className="w-4 h-4" /> Salvar anotação
                </button>
                <button
-                 onClick={() => { setIsAddingAnotacao(false); setCaptchaInput(''); generateNewCaptcha(); }}
+                 onClick={() => { setIsAddingAnotacao(false); }}
                  className="bg-white text-slate-600 border border-slate-200 px-6 py-2 rounded text-sm font-medium hover:bg-slate-50 transition"
                >
                  Cancelar

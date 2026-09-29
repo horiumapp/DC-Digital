@@ -19,6 +19,8 @@ export default function ConnectionStatus() {
   const [visible, setVisible] = useState(false);
   const [showOnlineBrief, setShowOnlineBrief] = useState(false);
   const [showDeadLetterModal, setShowDeadLetterModal] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [isDiscarding, setIsDiscarding] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
 
@@ -41,9 +43,14 @@ export default function ConnectionStatus() {
 
   const handleDiscard = async () => {
     setIsDiscarding(true);
+    setActionError(null);
     try {
       await discardDeadLetters();
       setShowDeadLetterModal(false);
+      setConfirmDiscard(false);
+      window.location.reload();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : String(error));
     } finally {
       setIsDiscarding(false);
     }
@@ -64,47 +71,49 @@ export default function ConnectionStatus() {
 
   const configs = {
     ONLINE: {
-      bg: deadLetterCount > 0 ? 'bg-amber-600/95' : 'bg-emerald-500/90',
+      bg: deadLetterCount > 0 ? 'bg-amber-600/95' : 'bg-emerald-600/95',
       icon: deadLetterCount > 0 ? <AlertTriangle className="w-4 h-4" /> : <Check className="w-4 h-4" />,
       text: deadLetterCount > 0
-        ? `Atenção: ${deadLetterCount} item(ns) com erro permanente de sync`
-        : pendingCount > 0 ? `Conectado • ${pendingCount} pendente(s)` : 'Conectado',
+        ? `Falha na sincronização: ${deadLetterCount} item(ns) requerem atenção`
+        : pendingCount > 0 
+        ? `Aguardando sincronização • ${pendingCount} alteração(ões) pendente(s)` 
+        : 'Sincronizado • Todos os registros atualizados com a nuvem',
       action: deadLetterCount > 0 ? (
         <button
           onClick={() => setShowDeadLetterModal(true)}
-          className="ml-2 px-2 py-0.5 bg-white/20 hover:bg-white/30 rounded text-xs font-bold transition-colors cursor-pointer"
+          className="ml-2 px-2.5 py-0.5 bg-white/20 hover:bg-white/30 rounded text-xs font-bold transition-colors cursor-pointer"
         >
           Ver erros
         </button>
       ) : pendingCount > 0 ? (
         <button
           onClick={syncNow}
-          className="ml-2 px-2 py-0.5 bg-white/20 rounded-md text-xs font-semibold hover:bg-white/30 transition-colors cursor-pointer"
+          className="ml-2 px-2.5 py-0.5 bg-white/20 rounded-md text-xs font-semibold hover:bg-white/30 transition-colors cursor-pointer"
         >
-          Sincronizar
+          Sincronizar agora
         </button>
       ) : null,
     },
     OFFLINE: {
-      bg: isNearCapacity ? 'bg-amber-600/95 font-bold' : 'bg-amber-500/95',
+      bg: isNearCapacity ? 'bg-amber-600/95 font-bold' : 'bg-[#0b1f3f]/95 border-b border-white/10',
       icon: isNearCapacity ? <AlertTriangle className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />,
       text: isNearCapacity
-        ? `Atenção: Fila offline próxima do limite (${pendingCount}/5000) • Conecte-se à internet para sincronizar!`
+        ? `Atenção: Fila offline próxima do limite (${pendingCount}/5000) • Conecte-se para sincronizar!`
         : pendingCount > 0
-        ? `Sem conexão • ${pendingCount} alteração(ões) salva(s) localmente`
-        : 'Sem conexão — trabalhando offline',
+        ? `Salvo neste dispositivo • Aguardando sincronização (${pendingCount} alteração${pendingCount > 1 ? 'ões' : ''})`
+        : 'Salvo neste dispositivo • Modo offline ativo (você pode continuar trabalhando normalmente)',
       action: null,
     },
     SYNCING: {
-      bg: 'bg-blue-500/95',
+      bg: 'bg-blue-600/95',
       icon: <RefreshCw className="w-4 h-4 animate-spin" />,
-      text: `Sincronizando ${pendingCount} item(ns)...`,
+      text: pendingCount > 0 ? `Sincronizando... (${pendingCount} item${pendingCount > 1 ? 'ns' : ''})` : 'Sincronizando...',
       action: null,
     },
     ERROR: {
-      bg: 'bg-red-500/95',
+      bg: 'bg-rose-600/95',
       icon: <AlertCircle className="w-4 h-4" />,
-      text: lastError || 'Erro na sincronização',
+      text: lastError ? `Falha na sincronização • ${lastError}` : 'Falha na sincronização',
       action: (
         <div className="flex items-center gap-1.5 ml-2">
           <button
@@ -114,14 +123,14 @@ export default function ConnectionStatus() {
                 setShowDeadLetterModal(true);
               }
             }}
-            className="px-2 py-0.5 bg-white/20 rounded-md text-xs font-semibold hover:bg-white/30 transition-colors cursor-pointer"
+            className="px-2.5 py-0.5 bg-white/20 rounded-md text-xs font-semibold hover:bg-white/30 transition-colors cursor-pointer"
           >
             Tentar novamente
           </button>
           {deadLetterCount > 0 && (
             <button
               onClick={() => setShowDeadLetterModal(true)}
-              className="px-2 py-0.5 bg-white/30 hover:bg-white/40 rounded text-xs font-bold transition-colors cursor-pointer"
+              className="px-2.5 py-0.5 bg-white/30 hover:bg-white/40 rounded text-xs font-bold transition-colors cursor-pointer"
             >
               Ver {deadLetterCount} erro(s)
             </button>
@@ -192,6 +201,12 @@ export default function ConnectionStatus() {
                 Os itens abaixo encontraram impedimentos que impedem a gravação automática no servidor (ex: violação de permissão, regra de negócio ou duplicidade).
               </p>
 
+              <p className="text-xs text-slate-600">Conflitos entre dispositivos não são reenviados automaticamente. Exporte uma cópia, revise os dados e descarte a pendência para carregar a versão do servidor antes de lançar novamente.</p>
+              <button type="button" className="text-xs font-bold underline" onClick={() => {
+                const url = URL.createObjectURL(new Blob([JSON.stringify(deadLetterItems, null, 2)], {type:'application/json'}));
+                const link = document.createElement('a'); link.href=url; link.download='pendencias-diario.json'; link.click();
+                setTimeout(() => URL.revokeObjectURL(url),1000);
+              }}>Exportar cópia das pendências</button>
               <div className="space-y-2">
                 {deadLetterItems.map((item, idx) => (
                   <div key={item.id || idx} className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1">
@@ -207,32 +222,64 @@ export default function ConnectionStatus() {
               </div>
             </div>
 
+            {actionError && (
+              <div className="px-6 py-2 bg-rose-50 border-t border-rose-100 text-xs text-rose-700 font-bold">
+                {actionError}
+              </div>
+            )}
+
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowDeadLetterModal(false)}
-                className="px-4 py-2 border border-slate-200 text-slate-700 font-bold rounded-lg text-xs hover:bg-white transition-all cursor-pointer"
-              >
-                Fechar
-              </button>
-              <button
-                type="button"
-                onClick={handleRetry}
-                disabled={isRetrying || isDiscarding}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-bold rounded-lg text-xs transition-all shadow-sm cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isRetrying ? 'animate-spin' : ''}`} />
-                {isRetrying ? 'Reenviando...' : 'Tentar Novamente'}
-              </button>
-              <button
-                type="button"
-                onClick={handleDiscard}
-                disabled={isDiscarding || isRetrying}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-slate-400 text-white font-bold rounded-lg text-xs transition-all shadow-sm cursor-pointer"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                {isDiscarding ? 'Descartando...' : 'Descartar Pendências'}
-              </button>
+              {confirmDiscard ? (
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-xs text-rose-600 font-bold">Confirma apagar as pendências locais?</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDiscard(false)}
+                      disabled={isDiscarding}
+                      className="px-3 py-1.5 border border-slate-200 text-slate-700 font-bold rounded-lg text-xs hover:bg-white transition-all cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDiscard}
+                      disabled={isDiscarding}
+                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-400 text-white font-bold rounded-lg text-xs transition-all shadow-sm cursor-pointer"
+                    >
+                      {isDiscarding ? 'Descartando...' : 'Sim, descartar'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => { setShowDeadLetterModal(false); setConfirmDiscard(false); setActionError(null); }}
+                    className="px-4 py-2 border border-slate-200 text-slate-700 font-bold rounded-lg text-xs hover:bg-white transition-all cursor-pointer"
+                  >
+                    Fechar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRetry}
+                    disabled={isRetrying || isDiscarding}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-bold rounded-lg text-xs transition-all shadow-sm cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRetrying ? 'animate-spin' : ''}`} />
+                    {isRetrying ? 'Reenviando...' : 'Tentar Novamente'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDiscard(true)}
+                    disabled={isDiscarding || isRetrying}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-slate-400 text-white font-bold rounded-lg text-xs transition-all shadow-sm cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Descartar Pendências
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

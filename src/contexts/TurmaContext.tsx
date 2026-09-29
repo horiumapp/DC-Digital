@@ -57,6 +57,8 @@ export interface ObjetoAvaliacao {
 }
 
 export interface Avaliacao {
+  disciplina?: string;
+  serverRevision?: number;
   id: string;
   turmaId: string;
   tipo: string;
@@ -69,6 +71,8 @@ export interface Avaliacao {
 }
 
 export interface Conteudo {
+  disciplina?: string;
+  serverRevision?: number;
   id?: string;
   turmaId: string;
   data: string;
@@ -97,16 +101,16 @@ interface TurmaContextType {
   salvarAvaliacao: (av: Avaliacao) => Promise<string>;
   removerAvaliacao: (id: string) => Promise<void>;
   salvarNotas: (avaliacaoId: string, notas: { alunoId: string, valor: string }[], alunoIdsRemovidos?: string[]) => Promise<void>;
-  salvarFrequencia: (data: string, tempo: string, alunosFreq: Aluno[]) => Promise<void>;
+  salvarFrequencia: (data: string, tempo: string, alunosFreq: Aluno[]) => Promise<boolean>;
   salvarConteudo: (cont: Conteudo) => Promise<void>;
   buscarFrequencia: (data: string, tempo: string) => Promise<void>;
   buscarConteudo: (data: string, tempo: string) => Promise<Conteudo | null>;
-  removerFrequencia: (data: string, tempo: string) => Promise<void>;
+  removerFrequencia: (data: string, tempo: string) => Promise<boolean>;
   removerConteudo: (data: string, tempo: string) => Promise<void>;
   carregarFaltasDaData: (data: string) => Promise<void>;
   faltasPorData: Record<string, Set<string>>;
   fechamentos: Record<string, boolean>;
-  salvarFechamento: (bimestre: string, status: 'ABERTO' | 'FECHADO') => Promise<void>;
+  salvarFechamento: (bimestre: string, status: 'ABERTO' | 'FECHADO', disciplinaOverride?: string) => Promise<void>;
   verificarPeriodoFechado: (dateOrBimestreId: string) => boolean;
 }
 
@@ -215,8 +219,8 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
             OfflineTurmaService.fetchLancamentos(rawId, turmaAtiva.componente),
             OfflineTurmaService.fetchHorario(rawId, turmaAtiva.componente),
             OfflineTurmaService.fetchAlunos(rawId),
-            OfflineTurmaService.fetchAllConteudos(rawId, turmaAtiva.componente),
-            OfflineTurmaService.fetchAllFrequencias(rawId, turmaAtiva.componente),
+            OfflineTurmaService.fetchConteudosPeriodo(rawId, turmaAtiva.componente),
+            OfflineTurmaService.fetchFaltasPeriodo(rawId, turmaAtiva.componente, undefined, undefined, ['F']),
             OfflineTurmaService.fetchFechamentos(rawId, turmaAtiva.componente)
           ]);
           
@@ -275,32 +279,35 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const registrarLancamento = useCallback((novo: Lancamento) => {
+    const tidNovo = getTid(novo.turmaId);
     setLancamentos(prev => {
       const existe = prev.some(l => 
-        String(l.turmaId) === String(novo.turmaId) && 
+        getTid(l.turmaId) === tidNovo && 
         l.data === novo.data && 
         l.tipo === novo.tipo && 
         l.tempo === novo.tempo
       );
       if (existe) return prev;
-      return [...prev, novo];
+      return [...prev, { ...novo, turmaId: tidNovo }];
     });
   }, []);
 
   const removerLancamento = useCallback((filtro: Lancamento) => {
+    const tidFiltro = getTid(filtro.turmaId);
     setLancamentos(prev => prev.filter(l => 
-      !(String(l.turmaId) === String(filtro.turmaId) && 
+      !(getTid(l.turmaId) === tidFiltro && 
         l.data === filtro.data && 
         l.tipo === filtro.tipo && 
         l.tempo === filtro.tempo)
     ));
   }, []);
 
-  const salvarFechamento = useCallback(async (bimestre: string, status: 'ABERTO' | 'FECHADO') => {
+  const salvarFechamento = useCallback(async (bimestre: string, status: 'ABERTO' | 'FECHADO', disciplinaOverride?: string) => {
     if (!turmaAtiva || !user) return;
     const rawId = getTid(turmaAtiva.id);
+    const disc = disciplinaOverride || turmaAtiva.componente;
     try {
-      await OfflineTurmaService.salvarFechamento(rawId, turmaAtiva.componente, bimestre, status, user.id);
+      await OfflineTurmaService.salvarFechamento(rawId, disc, bimestre, status, user.id);
       setFechamentos(prev => ({ ...prev, [bimestre]: status === 'FECHADO' }));
       showSuccessRef.current(`Aparata ${status === 'FECHADO' ? 'fechada' : 'reaberta'} com sucesso!`);
     } catch (err) {
@@ -329,7 +336,12 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       // causado pelo padrão anterior de update otimista + re-fetch que sobrescrevia.
       await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunosRef.current);
       setAvaliacoes(prev => {
-        const exists = prev.some(a => a.id === avaliacaoSalva.id);
+        const exists = prev.some(a => 
+          a.id === avaliacaoSalva.id || 
+          a.id === createdId || 
+          a.id === av.id ||
+          (a.tipo === avaliacaoSalva.tipo && a.data === avaliacaoSalva.data && String(a.parent_id || '') === String(avaliacaoSalva.parent_id || ''))
+        );
         if (exists) return prev;
         return [...prev, avaliacaoSalva];
       });
@@ -420,28 +432,30 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     }
   }, [turmaAtiva]);
 
-  const salvarFrequencia = useCallback(async (data: string, tempo: string, alunosFreq: Aluno[]) => {
-    if (!turmaAtiva) return;
+  const salvarFrequencia = useCallback(async (data: string, tempo: string, alunosFreq: Aluno[]): Promise<boolean> => {
+    if (!turmaAtiva) return false;
     if (verificarPeriodoFechado(data)) {
       showErrorRef.current('Operação bloqueada: O período correspondente a esta data está fechado.');
-      return;
+      return false;
     }
     const rawId = getTid(turmaAtiva.id);
     try {
       await OfflineTurmaService.salvarFrequencia(rawId, turmaAtiva.componente, data, tempo, alunosFreq);
       
       registrarLancamento({
-        turmaId: turmaAtiva.id,
+        turmaId: rawId,
         data,
         tipo: 'frequencia',
         tempo
       });
 
       await carregarFaltasDaData(data);
-      showSuccessRef.current('Frequência salva!');
+      showSuccessRef.current('Frequência salva com sucesso!');
+      return true;
     } catch (err) {
       console.error('Erro ao salvar frequência:', err);
       showErrorRef.current('Erro ao salvar a frequência.');
+      return false;
     }
   }, [turmaAtiva, verificarPeriodoFechado, registrarLancamento, carregarFaltasDaData]);
 
@@ -455,7 +469,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     try {
       await OfflineTurmaService.salvarConteudo(rawId, turmaAtiva.componente, cont);
       registrarLancamento({ turmaId: rawId, data: cont.data, tipo: 'conteudo', tempo: cont.tempo });
-      const conts = await OfflineTurmaService.fetchAllConteudos(rawId, turmaAtiva.componente);
+      const conts = await OfflineTurmaService.fetchConteudosPeriodo(rawId, turmaAtiva.componente);
       setConteudos(conts);
       showSuccessRef.current('Conteúdo salvo!');
     } catch (err) {
@@ -491,11 +505,11 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     return contData;
   }, [turmaAtiva, registrarLancamento]);
 
-  const removerFrequencia = useCallback(async (data: string, tempo: string) => {
-    if (!turmaAtiva) return;
+  const removerFrequencia = useCallback(async (data: string, tempo: string): Promise<boolean> => {
+    if (!turmaAtiva) return false;
     if (verificarPeriodoFechado(data)) {
       showErrorRef.current('Operação bloqueada: O período correspondente a esta data está fechado.');
-      return;
+      return false;
     }
     const rawId = getTid(turmaAtiva.id);
     try {
@@ -503,9 +517,11 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       removerLancamento({ turmaId: rawId, data, tipo: 'frequencia', tempo });
       setAlunos(prev => prev.map(a => ({ ...a, freq: '', part: 'Presencial' })));
       await carregarFaltasDaData(data);
-      showSuccessRef.current('Lançamento de frequência removido.');
+      showSuccessRef.current('Frequência excluída com sucesso.');
+      return true;
     } catch {
       showErrorRef.current('Não foi possível remover a frequência.');
+      return false;
     }
   }, [turmaAtiva, verificarPeriodoFechado, removerLancamento, carregarFaltasDaData]);
 
@@ -519,7 +535,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     try {
       await OfflineTurmaService.removerConteudo(rawId, turmaAtiva.componente, data, tempo);
       removerLancamento({ turmaId: rawId, data, tipo: 'conteudo', tempo });
-      const conts = await OfflineTurmaService.fetchAllConteudos(rawId, turmaAtiva.componente);
+      const conts = await OfflineTurmaService.fetchConteudosPeriodo(rawId, turmaAtiva.componente);
       setConteudos(conts);
       showSuccessRef.current('Conteúdo removido.');
     } catch {

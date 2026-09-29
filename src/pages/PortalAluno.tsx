@@ -1,11 +1,13 @@
+import { readAllRows } from '../services/pagination';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { GraduationCap, BookOpen, CalendarCheck, BarChart3, Loader2, LogOut, User, ChevronRight, Calendar, Shield } from 'lucide-react';
+import { GraduationCap, BookOpen, CalendarCheck, BarChart3, Loader2, LogOut, User, ChevronRight, Calendar, Shield, Key, Lock, X } from 'lucide-react';
 import PrivacyLinksFooter from '../components/PrivacyLinksFooter';
 import { APP_CONFIG } from '../config/appConfig';
 import { formatMatriculaCpf } from '../utils/formatters';
+import { useToast } from '../components/common/Toast';
 
 import BoletimTab from '../components/portal/BoletimTab';
 
@@ -15,6 +17,7 @@ interface AlunoData {
   escola_nome: string;
   escola_inep: string;
   escola_diretor: string;
+  escola_secretario?: string;
   escola_endereco: string;
   turma_nome: string;
   turma_turno: string;
@@ -52,6 +55,13 @@ export default function PortalAluno() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'notas' | 'frequencia' | 'boletim'>('notas');
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+
+  // Modal de troca de senha do próprio aluno
+  const { showSuccess, showError, showWarning } = useToast();
+  const [isSenhaModalOpen, setIsSenhaModalOpen] = useState(false);
+  const [novaSenha, setNovaSenha] = useState('');
+  const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [isSavingSenha, setIsSavingSenha] = useState(false);
 
   const toggleMonth = (monthKey: string) => {
     const newExpanded = new Set(expandedMonths);
@@ -98,7 +108,7 @@ export default function PortalAluno() {
 
     const { data: alunos, error: alunoError } = await supabase
       .from('alunos')
-      .select('*, escolas(*), turmas(*)')
+      .select('id, nome, cpf, data_nascimento, sexo, nome_responsavel, endereco, turma_id, escola_id, status, matricula, escolas(id, nome, logo_url, inep, diretor, distrito, secretario), turmas(id, nome, turno, escola_id, ano_letivo)')
       .or(`cpf.eq.${cpfFormatado},cpf.eq.${cpfDigits}`)
       .limit(5);
 
@@ -118,27 +128,101 @@ export default function PortalAluno() {
       return;
     }
 
-    const escolaData = (Array.isArray(alunoEncontrado.escolas) ? alunoEncontrado.escolas[0] : alunoEncontrado.escolas) as { nome?: string; logo_url?: string; inep?: string; diretor?: string; distrito?: string } | null;
+    const escolaData = (Array.isArray(alunoEncontrado.escolas) ? alunoEncontrado.escolas[0] : alunoEncontrado.escolas) as { id?: string; nome?: string; logo_url?: string; inep?: string; diretor?: string; distrito?: string; secretario?: string } | null;
     const turmaData = (Array.isArray(alunoEncontrado.turmas) ? alunoEncontrado.turmas[0] : alunoEncontrado.turmas) as { nome?: string; turno?: string; escola_id?: string; ensino?: string; ano_letivo?: string | number } | null;
 
-    // Buscar colegas para calcular o número de chamada (por ordem alfabética)
-    const { data: colegas } = await supabase
-      .from('alunos')
-      .select('id, nome')
-      .eq('turma_id', alunoEncontrado.turma_id)
-      .order('nome', { ascending: true });
-    
-    const numeroAluno = colegas ? colegas.findIndex(c => c.id === alunoEncontrado.id) + 1 : 0;
+    // Buscar número de chamada do aluno via RPC segura no banco (sem violar RLS dos colegas)
+    let numeroAluno = 1;
+    try {
+      const { data: numChamada } = await supabase.rpc('get_aluno_numero_chamada', {
+        p_aluno_id: alunoEncontrado.id,
+      });
+      if (typeof numChamada === 'number' && numChamada > 0) {
+        numeroAluno = numChamada;
+      }
+    } catch {
+      numeroAluno = 1;
+    }
 
     // Determinar Modalidade de Ensino pelo campo ensino da tabela turmas
     const modalidade = turmaData?.ensino || 'ENSINO FUNDAMENTAL I (EF1) 1º AO 5º ANO';
+
+    // Buscar Secretário(a) da escola de forma segura e resiliente
+    // 1. Prioriza o secretário registrado diretamente no cadastro da escola
+    let secretarioNome = escolaData?.secretario?.trim() || '';
+    const escolaId = alunoEncontrado.escola_id || escolaData?.id;
+
+    if (!secretarioNome && escolaId) {
+      // 2. Se não houver campo direto, tenta via função segura RPC get_secretario_escola
+      try {
+        const { data: secRpc, error: rpcErr } = await supabase
+          .rpc('get_secretario_escola', { p_escola_id: escolaId });
+        if (!rpcErr && secRpc && typeof secRpc === 'string') {
+          secretarioNome = secRpc.trim();
+        }
+      } catch {
+        // Fallback silencioso
+      }
+
+      // 3. Fallback: buscar diretamente em usuarios pelo perfil SECRETARIO
+      if (!secretarioNome) {
+        try {
+          const { data: secUsers, error: secErr } = await supabase
+            .from('usuarios')
+            .select('nome_completo')
+            .eq('escola_id', escolaId)
+            .eq('cargo', 'SECRETARIO')
+            .order('criado_em', { ascending: true })
+            .limit(1);
+
+          if (!secErr && secUsers && secUsers.length > 0 && secUsers[0].nome_completo) {
+            secretarioNome = secUsers[0].nome_completo.trim();
+          }
+        } catch {
+          // Fallback silencioso
+        }
+      }
+    }
+
+    // Buscar Diretor(a) / Gestor(a) se não preenchido em escolaData.diretor
+    let diretorNome = escolaData?.diretor?.trim() || '';
+    if (!diretorNome && escolaId) {
+      try {
+        const { data: dirRpc } = await supabase
+          .rpc('get_diretor_escola', { p_escola_id: escolaId });
+        if (dirRpc && typeof dirRpc === 'string') {
+          diretorNome = dirRpc.trim();
+        }
+      } catch {
+        // Fallback silencioso
+      }
+
+      if (!diretorNome) {
+        try {
+          const { data: gestorUsers } = await supabase
+            .from('usuarios')
+            .select('nome_completo')
+            .eq('escola_id', escolaId)
+            .eq('cargo', 'GESTOR')
+            .order('criado_em', { ascending: true })
+            .limit(1);
+
+          if (gestorUsers && gestorUsers.length > 0 && gestorUsers[0].nome_completo) {
+            diretorNome = gestorUsers[0].nome_completo.trim();
+          }
+        } catch {
+          // Fallback silencioso
+        }
+      }
+    }
 
     setAlunoData({
       id: alunoEncontrado.id,
       nome: alunoEncontrado.nome,
       escola_nome: escolaData?.nome || 'N/D',
       escola_inep: escolaData?.inep || '---',
-      escola_diretor: escolaData?.diretor || '---',
+      escola_diretor: diretorNome || '---',
+      escola_secretario: secretarioNome || '',
       escola_endereco: escolaData?.distrito || '---',
       turma_nome: turmaData?.nome || 'Sem turma',
       turma_turno: turmaData?.turno || '',
@@ -154,10 +238,10 @@ export default function PortalAluno() {
     });
 
     // Buscar notas do aluno
-    const { data: notasData } = await supabase
+    const { data: notasData } = await readAllRows(supabase
       .from('notas')
       .select('valor, avaliacao_id, avaliacoes(tipo, disciplina, bimestre, valor_maximo)')
-      .eq('aluno_id', alunoEncontrado.id);
+      .eq('aluno_id', alunoEncontrado.id).order('id'));
 
     if (notasData) {
       interface NotaRowSelect {
@@ -176,13 +260,12 @@ export default function PortalAluno() {
       }));
     }
 
-    // Buscar frequências do aluno
-    const { data: freqData } = await supabase
+    // Buscar frequências do aluno (histórico completo para cálculo preciso de faltas no boletim)
+    const { data: freqData } = await readAllRows(supabase
       .from('frequencias')
       .select('data, disciplina, status, participacao')
       .eq('aluno_id', alunoEncontrado.id)
-      .order('data', { ascending: false })
-      .limit(50);
+      .order('data', { ascending: false }).order('id'));
 
     if (freqData) {
       setFrequencias(freqData);
@@ -198,24 +281,95 @@ export default function PortalAluno() {
   const faltasJustificadas = frequencias.filter(f => f.status === 'FJ').length;
   const percentual = totalAulas > 0 ? Math.round((presencas / totalAulas) * 100) : 0;
 
-  // Agrupar notas por disciplina e bimestre
+  // Agrupar notas por disciplina
   const notasPorDisciplina = notas.reduce((acc, nota) => {
     if (!acc[nota.disciplina]) acc[nota.disciplina] = [];
     acc[nota.disciplina].push(nota);
     return acc;
   }, {} as Record<string, NotaItem[]>);
 
-  // Ordenar notas por tipo (AV1, RP1, AV2, RP2...) dentro de cada disciplina
+  // Ordenar notas por Bimestre (1º, 2º, 3º, 4º) e dentro de cada bimestre por tipo (AV01, 2ª CH, RP01, AV02...)
+  const getBimestreNum = (bimestreStr: string): number => {
+    const match = String(bimestreStr || '').match(/(\d+)/);
+    return match ? parseInt(match[1], 10) : 99;
+  };
+
+  const getBimestreEstilo = (bimestreStr: string) => {
+    const num = getBimestreNum(bimestreStr);
+    switch (num) {
+      case 1:
+        return {
+          rowBg: 'bg-emerald-50/50 hover:bg-emerald-100/70',
+          badge: 'bg-emerald-100 text-emerald-900 border border-emerald-300/70',
+        };
+      case 2:
+        return {
+          rowBg: 'bg-red-50/50 hover:bg-red-100/70',
+          badge: 'bg-red-100 text-red-900 border border-red-300/70',
+        };
+      case 3:
+        return {
+          rowBg: 'bg-amber-50/50 hover:bg-amber-100/70',
+          badge: 'bg-amber-100 text-amber-900 border border-amber-300/70',
+        };
+      case 4:
+        return {
+          rowBg: 'bg-blue-50/50 hover:bg-blue-100/70',
+          badge: 'bg-blue-100 text-blue-900 border border-blue-300/70',
+        };
+      default:
+        return {
+          rowBg: 'hover:bg-slate-50',
+          badge: 'bg-slate-100 text-slate-700 border border-slate-200',
+        };
+    }
+  };
+
+  const getPesoTipo = (tipo: string): number => {
+    const t = String(tipo || '').toUpperCase().trim();
+
+    // Extrair o número da avaliação principal (ex: AV01 -> 1, 2ª CH (AV01) -> 1, RP01 -> 1, AV02 -> 2)
+    let avNum = 0;
+    const avMatch = t.match(/AV\s*0*(\d+)/i);
+    if (avMatch) {
+      avNum = parseInt(avMatch[1], 10);
+    } else {
+      const isSecondCall = t.includes('2CH') || t.includes('CH') || t.includes('CHAMADA');
+      if (!isSecondCall) {
+        const numMatch = t.match(/(\d+)/);
+        if (numMatch) avNum = parseInt(numMatch[1], 10);
+      }
+    }
+
+    // Sub-ordem:
+    // AV principal = 1
+    // 2ª Chamada (2CH) = 2
+    // Recuperação Paralela (RP) = 3
+    // Outros = 4
+    let subOrdem = 4;
+    if (t.startsWith('AV')) {
+      subOrdem = 1;
+    } else if (t.includes('2CH') || t.includes('CH') || t.includes('CHAMADA')) {
+      subOrdem = 2;
+    } else if (t.startsWith('RP') || t.includes('RECUPERA')) {
+      subOrdem = 3;
+    }
+
+    if (avNum > 0) {
+      return avNum * 10 + subOrdem;
+    }
+
+    return 900 + subOrdem;
+  };
+
   Object.keys(notasPorDisciplina).forEach(disciplina => {
     notasPorDisciplina[disciplina].sort((a, b) => {
-      const getPeso = (tipo: string) => {
-        const t = tipo.toUpperCase();
-        const num = parseInt(t.replace(/\D/g, '')) || 0;
-        if (t.startsWith('AV')) return num * 10;     // AV1=10, AV2=20
-        if (t.startsWith('RP')) return num * 10 + 5; // RP1=15, RP2=25
-        return 900 + num;                            // Outros tipos no final
-      };
-      return getPeso(a.tipo) - getPeso(b.tipo);
+      const bimA = getBimestreNum(a.bimestre);
+      const bimB = getBimestreNum(b.bimestre);
+      if (bimA !== bimB) {
+        return bimA - bimB;
+      }
+      return getPesoTipo(a.tipo) - getPesoTipo(b.tipo);
     });
   });
 
@@ -243,7 +397,7 @@ export default function PortalAluno() {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <header className="bg-[#0f2851] text-white shadow-lg">
-        <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
               <GraduationCap className="w-6 h-6" />
@@ -268,6 +422,17 @@ export default function PortalAluno() {
               <Shield className="w-5 h-5" />
             </Link>
             <button
+              onClick={() => {
+                setNovaSenha('');
+                setConfirmarSenha('');
+                setIsSenhaModalOpen(true);
+              }}
+              className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/10 cursor-pointer text-white flex items-center justify-center"
+              title="Alterar Minha Senha"
+            >
+              <Key className="w-5 h-5" />
+            </button>
+            <button
               onClick={logout}
               className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/10 cursor-pointer"
               title="Sair"
@@ -278,14 +443,14 @@ export default function PortalAluno() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+      <main className="max-w-5xl mx-auto px-4 py-6 sm:px-6 sm:py-8 space-y-5 sm:space-y-6">
         {/* Info Card */}
         {alunoData && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm sm:p-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-1">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aluno</span>
-                <p className="text-sm font-bold text-slate-800">{alunoData.nome}</p>
+                <p className="text-sm font-bold text-slate-800 uppercase">{alunoData.nome}</p>
               </div>
               <div className="space-y-1">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Escola</span>
@@ -366,32 +531,37 @@ export default function PortalAluno() {
                         <table className="w-full">
                           <thead>
                             <tr>
-                              <th className="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3">Avaliação</th>
-                              <th className="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3">Bimestre</th>
-                              <th className="text-right text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3">Nota</th>
+                              <th className="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3 px-3">Avaliação</th>
+                              <th className="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3 px-3">Bimestre</th>
+                              <th className="text-right text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3 px-3">Nota</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-slate-50">
-                            {notasDisc.map((nota, i) => (
-                              <tr key={i} className="group">
-                                <td className="py-2.5 text-sm font-medium text-slate-700">{nota.tipo}</td>
-                                <td className="py-2.5">
-                                  <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-                                    {nota.bimestre}
-                                  </span>
-                                </td>
-                                <td className="py-2.5 text-right">
-                                  <span className={`text-sm font-black ${
-                                    nota.valor >= (nota.valor_maximo * 0.6)
-                                      ? 'text-emerald-600'
-                                      : 'text-red-500'
-                                  }`}>
-                                    {nota.valor.toFixed(1)}
-                                  </span>
-                                  <span className="text-[10px] text-slate-400 font-medium"> / {nota.valor_maximo}</span>
-                                </td>
-                              </tr>
-                            ))}
+                          <tbody className="divide-y divide-slate-100">
+                            {notasDisc.map((nota, i) => {
+                              const estilo = getBimestreEstilo(nota.bimestre);
+                              const isAprovado = nota.valor >= (nota.valor_maximo * 0.5);
+
+                              return (
+                                <tr key={i} className={`group transition-colors ${estilo.rowBg}`}>
+                                  <td className="py-2.5 px-3 text-sm font-semibold text-slate-700 first:rounded-l-lg">{nota.tipo}</td>
+                                  <td className="py-2.5 px-3">
+                                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-md ${estilo.badge}`}>
+                                      {nota.bimestre}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right last:rounded-r-lg">
+                                    <span className={`text-sm font-black ${
+                                      isAprovado
+                                        ? 'text-blue-600'
+                                        : 'text-red-500'
+                                    }`}>
+                                      {nota.valor.toFixed(1)}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 font-medium"> / {nota.valor_maximo}</span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -546,6 +716,115 @@ export default function PortalAluno() {
       </main>
 
       <PrivacyLinksFooter className="py-6" />
+
+      {/* Modal de Alteração de Senha do Aluno */}
+      {isSenhaModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-5 border border-slate-100 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#0f2851] flex items-center justify-center">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-800">Alterar Minha Senha</h3>
+                  <p className="text-xs text-slate-500">Cadastre uma senha pessoal para acesso</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSenhaModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (novaSenha.length < 8) {
+                  showWarning('A senha deve ter no mínimo 8 caracteres.');
+                  return;
+                }
+                if (!/[a-zA-Z]/.test(novaSenha) || !/\d/.test(novaSenha)) {
+                  showWarning('A senha deve conter pelo menos uma letra e um número.');
+                  return;
+                }
+                if (novaSenha !== confirmarSenha) {
+                  showError('As senhas não coincidem. Digite novamente.');
+                  return;
+                }
+
+                setIsSavingSenha(true);
+                try {
+                  const { error: pwdErr } = await supabase.auth.updateUser({ password: novaSenha });
+                  if (pwdErr) throw pwdErr;
+                  showSuccess('Sua senha foi alterada com sucesso!');
+                  setIsSenhaModalOpen(false);
+                  setNovaSenha('');
+                  setConfirmarSenha('');
+                } catch (err: unknown) {
+                  const msg = err instanceof Error ? err.message : 'Não foi possível alterar a senha.';
+                  showError(msg);
+                } finally {
+                  setIsSavingSenha(false);
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Nova Senha (mínimo 8 caracteres)
+                </label>
+                <input
+                  type="password"
+                  value={novaSenha}
+                  onChange={(e) => setNovaSenha(e.target.value)}
+                  placeholder="Nova senha secreta"
+                  required
+                  minLength={8}
+                  disabled={isSavingSenha}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Confirmar Nova Senha
+                </label>
+                <input
+                  type="password"
+                  value={confirmarSenha}
+                  onChange={(e) => setConfirmarSenha(e.target.value)}
+                  placeholder="Repita a nova senha"
+                  required
+                  minLength={8}
+                  disabled={isSavingSenha}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSenhaModalOpen(false)}
+                  disabled={isSavingSenha}
+                  className="flex-1 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingSenha}
+                  className="flex-1 py-2.5 bg-[#0f2851] hover:bg-[#1a3a6d] text-white rounded-xl text-sm font-bold shadow-md shadow-[#0f2851]/20 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingSenha ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar Senha'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

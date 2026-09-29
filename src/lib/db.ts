@@ -33,6 +33,9 @@ export interface LocalAluno {
   cpf?: string;
   status?: string;
   turma_id: string;
+  telefone?: string;
+  endereco?: string;
+  nome_responsavel?: string;
   /** Q2 FIX: escola_id adicionado para permitir isolamento por escola no modo offline */
   escola_id?: string;
   syncStatus: SyncStatus;
@@ -54,6 +57,7 @@ export interface LocalFrequencia {
   createdAt: string;
   updatedAt: string;
   version: number;
+  serverRevision?: number;
 }
 
 /** Conteúdo ministrado (operação diária) */
@@ -71,6 +75,7 @@ export interface LocalConteudo {
   createdAt: string;
   updatedAt: string;
   version: number;
+  serverRevision?: number;
 }
 
 /** Avaliação */
@@ -95,6 +100,7 @@ export interface LocalAvaliacao {
   createdAt: string;
   updatedAt: string;
   version: number;
+  serverRevision?: number;
 }
 
 /** Nota */
@@ -108,6 +114,7 @@ export interface LocalNota {
   createdAt: string;
   updatedAt: string;
   version: number;
+  serverRevision?: number;
 }
 
 /** Horário do professor (somente leitura/cache) */
@@ -134,6 +141,7 @@ export interface LocalFechamento {
   createdAt: string;
   updatedAt: string;
   version: number;
+  serverRevision?: number;
 }
 
 /** Unidade curricular cacheada para consulta BNCC offline (somente leitura). */
@@ -150,6 +158,10 @@ export interface LocalCurriculoUnidade {
 }
 /** Fila de sincronização */
 export interface SyncQueueItem {
+  ownerUserId?: string;
+  operationId?: string;
+  attempted?: boolean;
+  requestPayload?: string;
   id?: number;
   table: string;
   operation: QueueOperation;
@@ -367,6 +379,19 @@ export class DCDigitalDB extends Dexie {
       cachedUsers: 'id',
       files:       '++localId, syncStatus, relatedTable, relatedId',
       userSalts:   'userId',
+    });
+    this.version(8).stores({
+      syncQueue: '++id, table, status, createdAt, hash, ownerUserId, operationId',
+    }).upgrade(tx => {
+      const owner = localStorage.getItem('dc_last_user_id');
+      return tx.table('syncQueue').toCollection().modify(item => {
+        item.ownerUserId = item.ownerUserId || owner || undefined;
+        item.operationId = item.operationId || crypto.randomUUID();
+        if (!item.ownerUserId) {
+          item.status = 'error';
+          item.lastError = '[QUARANTINE] Operação legada sem proprietário identificado. Exporte para revisão.';
+        }
+      });
     });
   }
 }

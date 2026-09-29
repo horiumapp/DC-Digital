@@ -117,6 +117,7 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
         distrito: dadosEscola.localizacao,
         inep: dadosEscola.inep,
         diretor: dadosEscola.gestor,
+        secretario: dadosEscola.secretario || null,
         status: dadosEscola.ativo ? 'Ativa' : 'Inativa',
         logo_url: dadosEscola.logo_url
       })
@@ -135,6 +136,7 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
     ...escola,
     localizacao: escola.distrito,
     gestor: escola.diretor,
+    secretario: escola.secretario,
     ativo: escola.status === 'Ativa',
     logo_url: escola.logo_url
   };
@@ -378,6 +380,10 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
                   <div className="space-y-1">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Diretor (Texto)</span>
                     <p className="text-sm font-bold text-slate-800">{escola.diretor || '—'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Secretário (Texto)</span>
+                    <p className="text-sm font-bold text-slate-800">{escola.secretario || '—'}</p>
                   </div>
                 </div>
               </div>

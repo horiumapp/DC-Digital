@@ -1,3 +1,10 @@
+-- Baseline: deferred body validation permits functions preceding their tables.
+SET check_function_bodies = off;
+CREATE SEQUENCE IF NOT EXISTS public.audit_log_id_seq;
+CREATE SEQUENCE IF NOT EXISTS public.avaliacoes_id_seq;
+CREATE SEQUENCE IF NOT EXISTS public.conteudos_id_seq;
+CREATE SEQUENCE IF NOT EXISTS public.frequencias_id_seq;
+CREATE SEQUENCE IF NOT EXISTS public.notas_id_seq;
 -- DC Digital — Banco de Dados Schema Inicial
 
 -- ==========================================
@@ -390,7 +397,7 @@ CREATE TABLE IF NOT EXISTS public.professores (
   status text DEFAULT 'Ativo'::text,
   criado_em timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
   departamento text DEFAULT 'Geral'::text,
-  disciplinas ARRAY DEFAULT '{}'::text[],
+  disciplinas text[] DEFAULT '{}'::text[],
   CONSTRAINT professores_pkey PRIMARY KEY (id),
   CONSTRAINT professores_email_key UNIQUE (email)
 );
@@ -1164,3 +1171,5 @@ CREATE TRIGGER on_usuario_cargo_changed
   FOR EACH ROW
   EXECUTE FUNCTION sync_user_cargo_to_auth();
 
+
+SET check_function_bodies = on;

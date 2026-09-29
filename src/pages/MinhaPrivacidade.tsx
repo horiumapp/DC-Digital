@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Shield, User, AlertTriangle, ShieldCheck, Loader2, KeyRound } from 'lucide-react';
+import { ArrowLeft, Shield, User, AlertTriangle, ShieldCheck, Loader2, KeyRound, Eye, EyeOff } from 'lucide-react';
 import Background from '../components/Background';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -11,11 +11,7 @@ import { translateSupabaseError } from '../utils/supabaseErrors';
 import DataExportButton from '../components/DataExportButton';
 import ConsentToggle from '../components/ConsentToggle';
 
-interface EscolaRelation {
-  nome: string;
-}
-
-interface TurmaRelation {
+interface RelationWithName {
   nome: string;
 }
 
@@ -39,6 +35,9 @@ export default function MinhaPrivacidade() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
@@ -58,7 +57,7 @@ export default function MinhaPrivacidade() {
 
         const { data: alunos } = await supabase
           .from('alunos')
-          .select('*, escolas(*), turmas(*)')
+          .select('nome, cpf, data_nascimento, sexo, nome_responsavel, telefone, endereco, matricula, escolas(nome), turmas(nome)')
           .or(`cpf.eq.${cpfFormatado},cpf.eq.${cpfDigits}`)
           .limit(1);
 
@@ -76,8 +75,8 @@ export default function MinhaPrivacidade() {
               telefone: a.telefone || '---',
               endereco: a.endereco || '---',
               matricula: a.matricula || '---',
-              escola: (a.escolas as EscolaRelation | null)?.nome || '---',
-              turma: (a.turmas as TurmaRelation | null)?.nome || '---',
+              escola: (Array.isArray(a.escolas) ? a.escolas[0]?.nome : (a.escolas as unknown as RelationWithName | null)?.nome) || '---',
+              turma: (Array.isArray(a.turmas) ? a.turmas[0]?.nome : (a.turmas as unknown as RelationWithName | null)?.nome) || '---',
             },
           });
         }
@@ -85,14 +84,14 @@ export default function MinhaPrivacidade() {
         // Servidor / Professor
         const { data: usuarios } = await supabase
           .from('usuarios')
-          .select('*, escolas(*)')
+          .select('nome_completo, cargo, escolas(nome)')
           .eq('id', user.id)
           .limit(1);
 
         // check if has matching record in professores
         const { data: professores } = await supabase
           .from('professores')
-          .select('*')
+          .select('nome, cpf, telefone, vinculo, departamento, disciplinas')
           .eq('email', user.email)
           .limit(1);
 
@@ -105,7 +104,7 @@ export default function MinhaPrivacidade() {
           documento: p?.cpf || '---',
           perfil: user.role,
           outrosDados: {
-            escola: (u?.escolas as EscolaRelation | null)?.nome || '---',
+            escola: (Array.isArray(u?.escolas) ? u?.escolas[0]?.nome : (u?.escolas as unknown as RelationWithName | null)?.nome) || '---',
             cargo_sistema: u?.cargo || '---',
             telefone: p?.telefone || '---',
             vinculo: p?.vinculo || '---',
@@ -227,6 +226,11 @@ export default function MinhaPrivacidade() {
       return;
     }
 
+    if (password === currentPassword) {
+      setPasswordError('A nova senha deve ser diferente da senha atual.');
+      return;
+    }
+
     const forcaError = validarForcaSenha(password);
     if (forcaError) {
       setPasswordError(forcaError);
@@ -246,7 +250,10 @@ export default function MinhaPrivacidade() {
         return;
       }
 
-      const { error } = await supabase.auth.updateUser({ password });
+      const { error } = await supabase.auth.updateUser({
+        password,
+        current_password: currentPassword,
+      });
 
       if (error) throw error;
 
@@ -264,8 +271,7 @@ export default function MinhaPrivacidade() {
       setPassword('');
       setConfirmPassword('');
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      setPasswordError(translateSupabaseError(errMsg));
+      setPasswordError(translateSupabaseError(err));
     } finally {
       setPasswordLoading(false);
     }
@@ -280,13 +286,13 @@ export default function MinhaPrivacidade() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 p-6 md:p-12 relative flex flex-col justify-between">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-4 py-6 sm:p-8 lg:p-12 relative flex flex-col justify-between">
       <Background />
       <div className="absolute inset-0 bg-gradient-to-b from-white/80 to-slate-50/40 dark:from-slate-900/80 dark:to-slate-900/40 pointer-events-none" />
 
       <div className="max-w-4xl mx-auto w-full relative z-10 mb-8 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+        <div className="flex flex-col items-start justify-between gap-4 bg-white dark:bg-slate-800 p-5 sm:flex-row sm:items-center sm:p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex items-center gap-4">
             <Link
               to={backUrl}
@@ -313,7 +319,7 @@ export default function MinhaPrivacidade() {
         {/* Grid de Seções */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Dados Pessoais Cadastrados */}
-          <div className="md:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 space-y-4">
+          <div className="md:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
             <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
               <User className="w-5 h-5 text-[#0f2851] dark:text-blue-400" />
               Dados Cadastrados no Sistema
@@ -367,7 +373,7 @@ export default function MinhaPrivacidade() {
           </div>
 
           {/* Ações Rápidas de Privacidade */}
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-between gap-6">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-between gap-6">
             <div className="space-y-4">
               <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
                 <ShieldCheck className="w-5 h-5 text-[#0f2851] dark:text-blue-400" />
@@ -414,7 +420,7 @@ export default function MinhaPrivacidade() {
         </div>
 
         {/* Alterar Senha (Segurança) */}
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 space-y-4">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
           <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
             <KeyRound className="w-5 h-5 text-[#0f2851] dark:text-blue-400" />
             Alterar Senha de Acesso
@@ -438,43 +444,73 @@ export default function MinhaPrivacidade() {
           <form onSubmit={handlePasswordChange} className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl pt-2">
             <div className="space-y-1 sm:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Senha Atual</label>
-              <input
-                type="password"
+              <div className="relative max-w-sm">
+                <input type={showCurrentPassword ? 'text' : 'password'}
                 required
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="Digite sua senha atual"
                 autoComplete="current-password"
-                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] dark:bg-slate-750 dark:text-white transition-all text-sm font-medium max-w-sm"
-              />
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] dark:bg-slate-750 dark:text-white transition-all text-sm font-medium max-w-sm pr-12"
+               />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword((visible) => !visible)}
+                  className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#0f2851] dark:hover:text-blue-300"
+                  aria-label={showCurrentPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  title={showCurrentPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Nova Senha</label>
-              <input
-                type="password"
+              <div className="relative">
+                <input type={showPassword ? 'text' : 'password'}
                 required
                 minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Mínimo 8 caracteres"
                 autoComplete="new-password"
-                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] dark:bg-slate-750 dark:text-white transition-all text-sm font-medium"
-              />
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] dark:bg-slate-750 dark:text-white transition-all text-sm font-medium pr-12"
+               />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#0f2851] dark:hover:text-blue-300"
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Confirmar Nova Senha</label>
-              <input
-                type="password"
+              <div className="relative">
+                <input type={showConfirmPassword ? 'text' : 'password'}
                 required
                 minLength={8}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Repita a nova senha"
                 autoComplete="new-password"
-                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] dark:bg-slate-750 dark:text-white transition-all text-sm font-medium"
-              />
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] dark:bg-slate-750 dark:text-white transition-all text-sm font-medium pr-12"
+               />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((visible) => !visible)}
+                  className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#0f2851] dark:hover:text-blue-300"
+                  aria-label={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  title={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <div className="sm:col-span-2 flex justify-end">
@@ -497,7 +533,7 @@ export default function MinhaPrivacidade() {
         </div>
 
         {/* Gerenciamento de Consentimentos */}
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 space-y-4">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
           <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
             <Shield className="w-5 h-5 text-[#0f2851] dark:text-blue-400" />
             Controle de Consentimentos

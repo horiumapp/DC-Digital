@@ -111,65 +111,26 @@ export default function ImportarCurriculoModal({
     setProgress({ current: 0, total, percentage: 0 });
 
     try {
-      // Processar em lotes de 5 para otimização e feedback em tempo real
-      const BATCH_SIZE = 5;
-      for (let i = 0; i < total; i += BATCH_SIZE) {
-        const batch = records.slice(i, i + BATCH_SIZE);
+      const itemsPayload = records.map((item: ParsedCurriculoItem) => ({
+        modalidade: item.modalidade,
+        ano: item.ano,
+        disciplina: item.disciplina,
+        bimestre: item.bimestre,
+        nome: item.nome || 'Conteúdo Ministrado',
+        objetos: item.objetos,
+      }));
 
-        await Promise.all(batch.map(async (item: ParsedCurriculoItem) => {
-          if (substituirExistentes) {
-            // Remove registros anteriores com a mesma modalidade, ano, disciplina e bimestre
-            const { data: existing } = await supabase
-              .from('curriculo_unidades')
-              .select('id')
-              .eq('modalidade', item.modalidade)
-              .eq('ano', item.ano)
-              .eq('disciplina', item.disciplina)
-              .eq('bimestre', item.bimestre);
+      setProgress({ current: Math.floor(total / 2), total, percentage: 50 });
 
-            if (existing && existing.length > 0) {
-              const ids = existing.map(e => e.id);
-              await supabase.from('curriculo_objetos').delete().in('unidade_id', ids);
-              await supabase.from('curriculo_unidades').delete().in('id', ids);
-            }
-          }
+      const { error: rpcError } = await supabase.rpc('import_curriculo_batch', {
+        p_items: itemsPayload,
+        p_substituir: substituirExistentes,
+      });
 
-          // 1. Inserir Unidade
-          const { data: unitData, error: unitError } = await supabase
-            .from('curriculo_unidades')
-            .insert([{
-              modalidade: item.modalidade,
-              ano: item.ano,
-              disciplina: item.disciplina,
-              bimestre: item.bimestre,
-              nome: item.nome || 'Conteúdo Ministrado'
-            }])
-            .select('id')
-            .single();
+      if (rpcError) throw rpcError;
 
-          if (unitError) throw unitError;
-
-          // 2. Inserir Objetos de conhecimento
-          if (item.objetos.length > 0 && unitData?.id) {
-            const objectsToInsert = item.objetos.map(desc => ({
-              unidade_id: unitData.id,
-              descricao: desc
-            }));
-
-            const { error: objError } = await supabase
-              .from('curriculo_objetos')
-              .insert(objectsToInsert);
-
-            if (objError) throw objError;
-          }
-        }));
-
-        const currentCount = Math.min(i + BATCH_SIZE, total);
-        const percent = Math.round((currentCount / total) * 100);
-        setProgress({ current: currentCount, total, percentage: percent });
-      }
-
-      showSuccess(`Sucesso! ${total} unidades e ${parseResult.totalObjetos} conteúdos foram importados.`);
+      setProgress({ current: total, total, percentage: 100 });
+      showSuccess(`Sucesso! ${total} unidades e ${parseResult.totalObjetos} conteúdos foram importados atomicamente.`);
       onSuccess();
       onClose();
     } catch (err: unknown) {

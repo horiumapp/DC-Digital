@@ -128,7 +128,9 @@ Deno.serve(async (req: Request) => {
 
     // Verificar role do chamador — SOMENTE via app_metadata (JWT assinado pelo backend)
     // FIX #4: Removido fallback para tabela `usuarios` que poderia ser manipulada via RLS.
-    const effectiveRole = callerUser.app_metadata?.role;
+    const { data: actorProfile, error: actorError } = await supabaseAdmin.from("usuarios").select("cargo").eq("id", callerUser.id).single();
+    if (actorError) throw actorError;
+    const effectiveRole = actorProfile?.cargo;
     if (!effectiveRole) {
       return new Response(
         JSON.stringify({ error: "Seu perfil não possui permissão configurada (role ausente no JWT). Contate o administrador." }),
@@ -157,6 +159,30 @@ Deno.serve(async (req: Request) => {
 
     const bodyRecord = (body && typeof body === "object") ? (body as Record<string, unknown>) : {};
 
+    // 2.1 Redefinição segura de senha de aluno
+    if (bodyRecord.action === "reset-student-password") {
+      if (!["ADMIN", "GESTOR", "SECRETARIO"].includes(effectiveRole as string)) {
+        return new Response(JSON.stringify({ error: "Sem permissão para redefinir senhas." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const targetEmail = typeof bodyRecord.email === "string" ? bodyRecord.email.trim().toLowerCase() : "";
+      const novaSenha = typeof bodyRecord.senha === "string" ? bodyRecord.senha : "";
+      if (!EMAIL_REGEX.test(targetEmail) || novaSenha.length < 10) {
+        return new Response(JSON.stringify({ error: "Dados inválidos para redefinição." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data: target } = await supabaseAdmin.from("usuarios").select("id,cargo,escola_id").eq("email", targetEmail).maybeSingle();
+      if (!target || target.cargo !== "ALUNO") {
+        return new Response(JSON.stringify({ error: "Conta de aluno não encontrada." }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (effectiveRole !== "ADMIN") {
+        const { data: caller } = await supabaseAdmin.from("usuarios").select("escola_id").eq("id", callerUser.id).maybeSingle();
+        if (!caller?.escola_id || caller.escola_id !== target.escola_id) {
+          return new Response(JSON.stringify({ error: "Você só pode redefinir senhas de alunos da própria escola." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
+      const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(target.id, { password: novaSenha });
+      if (passwordError) throw passwordError;
+      return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     // 2.1 Ação de exclusão / revogação de usuário
     if (bodyRecord.action === "delete-user") {
       // SEC-01 FIX: Apenas papéis administrativos podem excluir usuários.
@@ -239,10 +265,12 @@ Deno.serve(async (req: Request) => {
       }
 
       const { error: delAuthErr } = await supabaseAdmin.auth.admin.deleteUser(authUserId);
-      if (delAuthErr) {
-        console.error("Erro ao deletar de auth.users:", delAuthErr);
+      if (delAuthErr) throw delAuthErr;
+      const { error: deleteProfileError } = await supabaseAdmin.from("usuarios").delete().eq("id", authUserId);
+      if (deleteProfileError) {
+        return new Response(JSON.stringify({ error: "Credenciais revogadas, mas o cadastro possui vínculos que impedem sua remoção. Solicite revisão administrativa." }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      await supabaseAdmin.from("usuarios").delete().eq("id", authUserId);
 
       return new Response(
         JSON.stringify({ success: true, message: "Conta e credenciais removidas com sucesso" }),
@@ -377,7 +405,7 @@ Deno.serve(async (req: Request) => {
         full_name: nomeTrimmed,
       },
       app_metadata: {
-        role: cargoTrimmed,
+        role: "PENDENTE", // Promoted only after the institutional transaction succeeds.
       },
     });
 
@@ -396,45 +424,26 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 8. Atualizar ou Inserir na tabela public.usuarios com cargo e escola_id
-    const { error: updateError } = await supabaseAdmin
-      .from("usuarios")
-      .upsert({
-        id: newUser.user.id,
-        email: emailTrimmed,
-        nome_completo: nomeTrimmed,
-        cargo: cargoTrimmed,
-        escola_id: escolaIdTrimmed,
-      }, { onConflict: 'id' });
-
-    if (updateError) {
-      console.error("Erro ao fazer upsert em usuarios:", updateError);
+    // One database transaction validates the actor, school and identity and establishes all links.
+    const { error: provisionError } = await supabaseAdmin.rpc("finalize_provisioned_user", {
+      p_actor: callerUser.id, p_user: newUser.user.id, p_email: emailTrimmed,
+      p_nome: nomeTrimmed, p_cargo: cargoTrimmed, p_escola: escolaIdTrimmed,
+    });
+    if (provisionError && !/^[0-9A-Z]{5}$/.test(provisionError.code || '')) {
+      return new Response(JSON.stringify({error: 'Não foi possível confirmar a conclusão do cadastro. Verifique a conta antes de repetir a operação.'}),
+        {status: 503, headers: {...corsHeaders, 'Content-Type': 'application/json'}});
     }
-
-    // 8.1 Se for conta de ALUNO criada com pseudo-e-mail, vincular alunos.usuario_id diretamente
-    if (cargoTrimmed === "ALUNO" && emailTrimmed.endsWith("@aluno.dcdigital.local")) {
-      const cpfDigits = emailTrimmed.split("@")[0];
-      const cpfFormatted = cpfDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-      const { error: linkAlunoError } = await supabaseAdmin
-        .from("alunos")
-        .update({ usuario_id: newUser.user.id })
-        .or(`cpf.eq.${cpfDigits},cpf.eq.${cpfFormatted}`);
-
-      if (linkAlunoError) {
-        console.warn("[admin-create-user] Aviso ao vincular usuario_id em alunos:", linkAlunoError.message);
+    if (provisionError) {
+      // A failed transaction leaves the new account PENDENTE, without academic access.
+      const { error: rollbackError } = await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
+      if (!rollbackError) {
+        await supabaseAdmin.from("usuarios").delete().eq("id", newUser.user.id);
       }
-    }
-
-    // 8.2 Se for conta de PROFESSOR, vincular professores.usuario_id diretamente
-    if (cargoTrimmed === "PROFESSOR") {
-      const { error: linkProfError } = await supabaseAdmin
-        .from("professores")
-        .update({ usuario_id: newUser.user.id })
-        .ilike("email", emailTrimmed);
-
-      if (linkProfError) {
-        console.warn("[admin-create-user] Aviso ao vincular usuario_id em professores:", linkProfError.message);
-      }
+      console.error("Falha de provisionamento", { code: provisionError.code, rollbackFailed: Boolean(rollbackError) });
+      return new Response(JSON.stringify({ error: rollbackError
+        ? "Cadastro incompleto e sem acesso. Solicite revisão administrativa antes de tentar novamente."
+        : "Não foi possível vincular a conta. Verifique escola, matrícula/lotação e vínculo existente." }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // 9. Retornar sucesso

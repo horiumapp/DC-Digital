@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Plus, Edit2, Trash2, Building2, MapPin, User } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Building2, MapPin, User, UserCheck } from 'lucide-react';
 import NovaEscolaModal from '../../components/NovaEscolaModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import EscolaDetalhes from './EscolaDetalhes';
@@ -14,6 +14,7 @@ export interface EscolaRow {
   distrito?: string;
   inep?: string;
   diretor?: string;
+  secretario?: string;
   status?: string;
   logo_url?: string;
 }
@@ -23,6 +24,7 @@ export interface EscolaFormData {
   localizacao?: string;
   inep?: string;
   gestor?: string;
+  secretario?: string;
   ativo?: boolean;
   logo_url?: string;
 }
@@ -46,7 +48,7 @@ export default function TabEscolas() {
   async function fetchEscolas() {
     const { data, error } = await supabase
       .from('escolas')
-      .select('*')
+      .select('id, nome, distrito, inep, diretor, secretario, status, logo_url')
       .order('nome');
     
     if (!error && data) {
@@ -64,6 +66,7 @@ export default function TabEscolas() {
           distrito: novaEscola.localizacao,
           inep: novaEscola.inep,
           diretor: novaEscola.gestor,
+          secretario: novaEscola.secretario || null,
           status: novaEscola.ativo ? 'Ativa' : 'Inativa',
           logo_url: novaEscola.logo_url
         })
@@ -85,6 +88,7 @@ export default function TabEscolas() {
           distrito: novaEscola.localizacao,
           inep: novaEscola.inep,
           diretor: novaEscola.gestor,
+          secretario: novaEscola.secretario || null,
           status: novaEscola.ativo ? 'Ativa' : 'Inativa',
           logo_url: novaEscola.logo_url
         }]);
@@ -106,6 +110,7 @@ export default function TabEscolas() {
       ...escola,
       localizacao: escola.distrito,
       gestor: escola.diretor,
+      secretario: escola.secretario,
       ativo: escola.status === 'Ativa',
       logo_url: escola.logo_url
     };
@@ -128,7 +133,8 @@ export default function TabEscolas() {
   const escolasFiltradas = escolas.filter(e => 
     e.nome.toLowerCase().includes(buscaEscola.toLowerCase()) || 
     (e.inep && e.inep.includes(buscaEscola)) ||
-    (e.diretor && e.diretor.toLowerCase().includes(buscaEscola.toLowerCase()))
+    (e.diretor && e.diretor.toLowerCase().includes(buscaEscola.toLowerCase())) ||
+    (e.secretario && e.secretario.toLowerCase().includes(buscaEscola.toLowerCase()))
   );
 
   if (_user?.role !== 'ADMIN') return null;
@@ -200,7 +206,7 @@ export default function TabEscolas() {
                 className="group relative flex flex-col bg-white border border-slate-200 rounded-2xl p-5 text-left hover:border-blue-300 hover:shadow-xl hover:shadow-blue-600/5 transition-all duration-300 transform hover:-translate-y-1 overflow-hidden cursor-pointer"
               >
                 {/* Actions (Top Right - Hover Only) */}
-                <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all translate-y-[-10px] group-hover:translate-y-0 duration-300 z-10">
+                <div className="absolute top-3 right-3 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-y-[-10px] group-hover:translate-y-0 duration-300 z-10">
                   <button 
                     onClick={(e) => { e.stopPropagation(); handleEditEscola(escola); }}
                     className="p-2 bg-white/80 backdrop-blur-sm text-slate-400 hover:text-[#0f2851] shadow-sm border border-slate-100 rounded-lg transition-colors"
@@ -269,6 +275,12 @@ export default function TabEscolas() {
                     <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <span className="text-[11px] font-bold text-slate-600 truncate">{escola.diretor || 'Diretor N/D'}</span>
                   </div>
+                  {escola.secretario && (
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="text-[11px] font-medium text-slate-600 truncate">Sec: {escola.secretario}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))

@@ -29,7 +29,7 @@ BEGIN
 
   IF recent_count >= 5 THEN
     RAISE EXCEPTION
-      'RATE_LIMIT_EXCEEDED: Muitas solicitações LGPD do email % na última hora. Aguarde 15 minutos.'
+      'RATE_LIMIT_EXCEEDED: Muitas solicitações LGPD do email na última hora. Aguarde 15 minutos.'
       USING
         ERRCODE = 'P0001', -- raise_exception
         DETAIL = format('Email: %s, Solicitações recentes: %s', NEW.email, recent_count);

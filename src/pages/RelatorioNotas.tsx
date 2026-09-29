@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ChevronDown, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 import { APP_CONFIG } from '../config/appConfig';
-import { TurmaService, NotaRecord } from '../services/turmaService';
+import type { NotaRecord } from '../services/turmaService';
+import * as OfflineTurmaService from '../services/turmaServiceOffline';
 import { Aluno, Avaliacao } from '../contexts/TurmaContext';
 
 import { useToast } from '../components/common/Toast';
@@ -65,127 +65,12 @@ export default function RelatorioNotas() {
     setLoading(true);
     try {
       if (!user) return;
-
-      if (user.role === 'ADMIN' || user.role === 'GESTOR' || user.role === 'SECRETARIO') {
-        const { data: todasTurmas, error } = await supabase
-          .from('turmas')
-          .select('*, escolas(nome)')
-          .order('nome');
-        
-        if (error) throw error;
-
-        if (todasTurmas) {
-          const finalTurmas: TurmaRelatorio[] = [];
-          todasTurmas.forEach(t => {
-            let fase = t.nome;
-            let numero = '01';
-
-            const match = t.nome.match(/(.+)\s+([A-Za-z0-9]+)$/);
-            if (match) {
-              fase = match[1].trim();
-              numero = match[2].trim();
-            } else {
-              const matchNum = t.nome.match(/(\d+)$/);
-              if (matchNum) numero = matchNum[1];
-            }
-
-            finalTurmas.push({
-              id: `${t.id}|GERAL`,
-              nome: t.nome,
-              turno: t.turno,
-              componente: 'GERAL',
-              ensino: t.ensino || 'Fundamental Anos Iniciais (1° ao 5° ANO)',
-              fase: fase,
-              numero: t.turma_codigo || numero,
-              escolaId: t.escola_id,
-              escolaNome: t.escolas?.nome || 'ESCOLA NÃO IDENTIFICADA'
-            });
-          });
-
-          setTurmas(finalTurmas);
-          if (finalTurmas.length > 0) {
-            setSelectedTurma(finalTurmas[0].id);
-          }
-        }
+      const finalTurmas = await OfflineTurmaService.fetchTurmasRelatorio(user);
+      setTurmas(finalTurmas);
+      if (finalTurmas.length > 0) {
+        setSelectedTurma(`${finalTurmas[0].id}|${finalTurmas[0].componente}`);
       } else {
-        const emailLimpo = user.email.trim();
-        const { data: profs, error: profError } = await supabase
-          .from('professores')
-          .select('id, disciplinas')
-          .or(`usuario_id.eq.${user.id},email.ilike.${emailLimpo}`);
-
-        if (profError) throw profError;
-
-        if (profs && profs.length > 0) {
-          let allDisciplinas: string[] = [];
-          profs.forEach(p => {
-            if (p.disciplinas && Array.isArray(p.disciplinas)) {
-              allDisciplinas = [...allDisciplinas, ...p.disciplinas];
-            }
-          });
-          // Garantir valores únicos de disciplinas ou POLIVALENTE
-          let componentes = [...new Set(allDisciplinas)];
-          if (componentes.length === 0) componentes = ['POLIVALENTE'];
-
-          const profIds = profs.map(p => p.id);
-
-          const { data: alocs, error: alocError } = await supabase
-            .from('professor_alocacoes')
-            .select('escola_id, turno')
-            .in('professor_id', profIds);
-
-          if (alocError) throw alocError;
-
-          if (alocs && alocs.length > 0) {
-            const orConditions = alocs.map(a => `and(escola_id.eq.${a.escola_id},turno.eq.${a.turno})`).join(',');
-            const { data: turmasAlocadas, error: turmasError } = await supabase
-              .from('turmas')
-              .select('*, escolas(nome)')
-              .or(orConditions)
-              .order('nome');
-
-            if (turmasError) throw turmasError;
-
-            if (turmasAlocadas) {
-              const finalTurmas: TurmaRelatorio[] = [];
-              turmasAlocadas.forEach(t => {
-                // Criar uma entrada para cada disciplina alocada àquela turma
-                componentes.forEach(comp => {
-                  let fase = t.nome;
-                  let numero = '01';
-
-                  const match = t.nome.match(/(.+)\s+([A-Za-z0-9]+)$/);
-                  if (match) {
-                    fase = match[1].trim();
-                    numero = match[2].trim();
-                  } else {
-                    const matchNum = t.nome.match(/(\d+)$/);
-                    if (matchNum) numero = matchNum[1];
-                  }
-
-                  finalTurmas.push({
-                    id: `${t.id}|${comp}`,
-                    nome: t.nome,
-                    turno: t.turno,
-                    componente: comp,
-                    ensino: t.ensino || 'Fundamental Anos Iniciais (1° ao 5° ANO)',
-                    fase: fase,
-                    numero: t.turma_codigo || numero,
-                    escolaId: t.escola_id,
-                    escolaNome: t.escolas?.nome || 'ESCOLA NÃO IDENTIFICADA'
-                  });
-                });
-              });
-              
-              setTurmas(finalTurmas);
-              if (finalTurmas.length > 0) {
-                setSelectedTurma(finalTurmas[0].id);
-              }
-            }
-          } else {
-            setTurmas([]);
-          }
-        }
+        setSelectedTurma('');
       }
     } catch (err) {
       console.error('Erro ao buscar turmas para o relatório:', err);
@@ -208,14 +93,17 @@ export default function RelatorioNotas() {
     setDataLoading(true);
     setHasSearched(true);
     try {
-      const [turmaId, componente] = selectedTurma.split('|');
+      const [turmaId, rawComp] = selectedTurma.split('|');
+      const turmaObj = turmas.find(t => `${t.id}|${t.componente}` === selectedTurma) || turmas.find(t => t.id === turmaId);
+      const componente = (rawComp || turmaObj?.componente || '').trim();
       const tid = turmaId.split('||')[0];
       
-      const alunosData = await TurmaService.fetchAlunos(tid);
+      const alunosData = await OfflineTurmaService.fetchAlunos(tid);
       setAlunos(alunosData);
 
-      const { avaliacoes: avsData, notasData } = await TurmaService.fetchAvaliacoes(tid, componente);
-      const filteredAvs = avsData.filter(a => a.bimestre === periodo);
+      const { avaliacoes: avsData, notasData } = await OfflineTurmaService.fetchAvaliacoes(tid, componente);
+      const bimChar = periodo[0];
+      const filteredAvs = avsData.filter(a => a.bimestre === periodo || (a.bimestre && a.bimestre[0] === bimChar));
       setAvaliacoes(filteredAvs);
       setNotas(notasData);
     } catch (err) {
@@ -226,7 +114,20 @@ export default function RelatorioNotas() {
     }
   };
 
-  const principalAvs = avaliacoes.filter(a => a.tipo.startsWith('AV') && !a.tipo.startsWith('RP')).sort((a,b) => a.tipo.localeCompare(b.tipo));
+  const isSecondCall = (tipo?: string) => {
+    if (!tipo) return false;
+    return (tipo.includes('2CH') || tipo.includes('CH') || tipo.toLowerCase().includes('chamada')) && !tipo.includes('RP') && !tipo.toLowerCase().includes('recupera');
+  };
+
+  const isRecuperacao = (tipo?: string) => {
+    if (!tipo) return false;
+    return tipo.includes('RP') || tipo.toLowerCase().includes('recupera');
+  };
+
+  const principalAvs = avaliacoes
+    .filter(a => !a.parent_id && a.tipo.startsWith('AV') && !isRecuperacao(a.tipo) && !isSecondCall(a.tipo))
+    .sort((a,b) => a.tipo.localeCompare(b.tipo));
+  const hasAnySecondCall = avaliacoes.some(a => isSecondCall(a.tipo));
 
   const getNota = (alunoId: string, avaliacaoId: string) => {
     const notaRow = notas.find(n => n.aluno_id?.toString() === alunoId?.toString() && n.avaliacao_id?.toString() === avaliacaoId?.toString());
@@ -237,10 +138,17 @@ export default function RelatorioNotas() {
     if (principalAvs.length === 0) return null;
     let soma = 0;
     principalAvs.forEach(av => {
-      const rp = avaliacoes.find(a => a.parent_id?.toString() === av.id?.toString());
-      const valAv = getNota(alunoId, av.id) ?? 0;
-      const valRp = rp ? (getNota(alunoId, rp.id) ?? 0) : 0;
-      soma += Math.max(valAv, valRp);
+      const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && isRecuperacao(a.tipo));
+      const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && isSecondCall(a.tipo));
+      const valAv = getNota(alunoId, av.id);
+      const valCh = ch ? getNota(alunoId, ch.id) : null;
+      const valRp = rp ? getNota(alunoId, rp.id) : null;
+
+      const numAv = valAv !== null ? Number(valAv) : 0;
+      const numCh = valCh !== null ? Number(valCh) : 0;
+      const numRp = valRp !== null ? Number(valRp) : 0;
+
+      soma += Math.max(numAv, numCh, numRp);
     });
     
     const bimNumber = parseInt(periodo[0]);
@@ -249,7 +157,7 @@ export default function RelatorioNotas() {
     return Math.min(soma, maxLimit);
   };
 
-  const selectedTurmaObj = turmas.find(t => t.id === selectedTurma);
+  const selectedTurmaObj = turmas.find(t => `${t.id}|${t.componente}` === selectedTurma) || turmas.find(t => t.id === selectedTurma);
 
   return (
     <div className="min-h-screen bg-slate-50 relative">
@@ -267,8 +175,8 @@ export default function RelatorioNotas() {
       </div>
 
       {/* MainContent */}
-      <main className="p-8 flex justify-center">
-        <div className="w-full max-w-7xl bg-white rounded-xl shadow-lg border border-slate-200 min-h-[600px] overflow-hidden">
+      <main className="px-4 py-6 sm:p-8 flex justify-center">
+        <div className="w-full max-w-7xl bg-white rounded-xl shadow-sm border border-slate-200 min-h-[600px] overflow-hidden">
           {/* Card Header Area */}
           <div className="p-6 pb-0 flex justify-between items-start">
             <h3 className="text-xl font-semibold text-[#0f2851]">Pesquisa</h3>
@@ -395,8 +303,10 @@ export default function RelatorioNotas() {
                           </div>
                         </th>
                         {principalAvs.map(av => {
-                          const rp = avaliacoes.find(a => a.parent_id?.toString() === av.id?.toString());
+                          const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && isRecuperacao(a.tipo));
+                          const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && isSecondCall(a.tipo));
                           const diaMesAv = formatDiaMes(av.data);
+                          const diaMesCh = ch ? formatDiaMes(ch.data) : '';
                           const diaMesRp = rp ? formatDiaMes(rp.data) : '';
                           return (
                             <React.Fragment key={av.id}>
@@ -412,7 +322,27 @@ export default function RelatorioNotas() {
                                   </div>
                                 </div>
                               </th>
-                              <th className="px-2 py-4 border-b border-slate-200 text-center min-w-[80px] hover:bg-slate-50 transition-colors">
+                              {hasAnySecondCall && (
+                                <th className="px-2 py-4 border-b border-slate-200 border-l border-slate-100 text-center min-w-[80px] hover:bg-slate-50 transition-colors">
+                                  <div className="flex flex-col items-center justify-center relative">
+                                    {ch ? (
+                                      <>
+                                        {diaMesCh ? <span className="text-[13px] text-[#0f2851] font-bold tracking-tight mb-1">{diaMesCh}</span> : <div className="h-[20px] mb-1"></div>}
+                                        <div className="w-[80%] h-[1px] bg-slate-200 mb-1"></div>
+                                        <div className="flex items-center justify-center w-full relative">
+                                          <span className="text-[13px] text-[#0f2851] font-bold">2ª CH</span>
+                                          <div className="absolute right-0 flex flex-col text-[10px] text-slate-300 opacity-60 font-black leading-[6px] gap-[1px]">
+                                            <span>▲</span><span>▼</span>
+                                          </div>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <span className="text-slate-300 font-black tracking-wide text-xs">-</span>
+                                    )}
+                                  </div>
+                                </th>
+                              )}
+                              <th className="px-2 py-4 border-b border-slate-200 border-l border-slate-100 text-center min-w-[80px] hover:bg-slate-50 transition-colors">
                                 <div className="flex flex-col items-center justify-center relative">
                                   {rp ? (
                                     <>
@@ -464,8 +394,10 @@ export default function RelatorioNotas() {
                             <td className="px-4 py-4 text-slate-500 font-semibold">{numStr}</td>
                             <td className="px-6 py-4 text-slate-700 font-medium border-l border-slate-100">{aluno.nome}</td>
                             {principalAvs.map(av => {
-                              const rp = avaliacoes.find(a => a.parent_id?.toString() === av.id?.toString());
+                              const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && isRecuperacao(a.tipo));
+                              const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && isSecondCall(a.tipo));
                               const vAv = getNota(aluno.id, av.id);
+                              const vCh = ch ? getNota(aluno.id, ch.id) : null;
                               const vRp = rp ? getNota(aluno.id, rp.id) : null;
                               
                               return (
@@ -479,7 +411,20 @@ export default function RelatorioNotas() {
                                       <span className="inline-flex min-w-[50px] justify-center bg-slate-100 text-slate-400 px-3 py-1 rounded-full text-[13px] font-bold">S/N</span>
                                     )}
                                   </td>
-                                  <td className="px-2 py-4 text-center border-l border-transparent">
+                                  {hasAnySecondCall && (
+                                    <td className="px-2 py-4 text-center border-l border-slate-100">
+                                      {ch && vCh !== null ? (
+                                        <span className="inline-flex min-w-[50px] justify-center bg-[#0f2851] text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm shadow-blue-200/50 tracking-wide">
+                                          {Number(vCh).toFixed(2).replace('.', ',')}
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex min-w-[50px] justify-center bg-slate-100 text-slate-400 px-3 py-1 rounded-full text-[13px] font-bold">
+                                          {ch ? 'S/N' : '-'}
+                                        </span>
+                                      )}
+                                    </td>
+                                  )}
+                                  <td className="px-2 py-4 text-center border-l border-slate-100">
                                     {rp && vRp !== null ? (
                                       <span className="inline-flex min-w-[50px] justify-center bg-[#0f2851] text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm shadow-blue-200/50 tracking-wide">
                                         {Number(vRp).toFixed(2).replace('.', ',')}
@@ -659,6 +604,9 @@ export default function RelatorioNotas() {
                   {principalAvs.map((av) => (
                     <React.Fragment key={av.id}>
                       <th style={{ textAlign: 'center' }}>{av.tipo?.toUpperCase()}</th>
+                      {hasAnySecondCall && (
+                        <th style={{ textAlign: 'center' }}>2ª CH {av.tipo?.toUpperCase()}</th>
+                      )}
                       <th style={{ textAlign: 'center' }}>REC. {av.tipo?.toUpperCase()}</th>
                     </React.Fragment>
                   ))}
@@ -676,14 +624,21 @@ export default function RelatorioNotas() {
                       <td style={{ textAlign: 'center' }}>{selectedTurmaObj.numero}</td>
                       <td style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{aluno.nome}</td>
                       {principalAvs.map(av => {
-                        const rp = avaliacoes.find(a => a.parent_id?.toString() === av.id?.toString());
+                        const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && isRecuperacao(a.tipo));
+                        const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && isSecondCall(a.tipo));
                         const vAv = getNota(aluno.id, av.id);
+                        const vCh = ch ? getNota(aluno.id, ch.id) : null;
                         const vRp = rp ? getNota(aluno.id, rp.id) : null;
                         return (
                           <React.Fragment key={av.id}>
                             <td style={{ textAlign: 'center' }}>
                               {vAv !== null ? Number(vAv).toFixed(1).replace('.', ',') : '-'}
                             </td>
+                            {hasAnySecondCall && (
+                              <td style={{ textAlign: 'center' }}>
+                                {ch && vCh !== null ? Number(vCh).toFixed(1).replace('.', ',') : '-'}
+                              </td>
+                            )}
                             <td style={{ textAlign: 'center' }}>
                               {rp && vRp !== null ? Number(vRp).toFixed(1).replace('.', ',') : '-'}
                             </td>

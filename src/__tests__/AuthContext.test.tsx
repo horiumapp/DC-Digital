@@ -36,6 +36,7 @@ const {
     if (authStateCallback) {
       authStateCallback('SIGNED_OUT', null);
     }
+    return {error:null};
   });
 
   const maybeSingle = vi.fn(async () => ({ data: { escola_id: 'escola-123' }, error: null }));
@@ -77,6 +78,7 @@ vi.mock('../utils/network', () => ({
 }));
 
 vi.mock('../services/syncEngine', () => ({
+  cancelSync: vi.fn(),
   syncAll: vi.fn(async () => ({ synced: 0, failed: 0, total: 0, remaining: 0, errors: [] })),
 }));
 
@@ -86,6 +88,7 @@ vi.mock('../services/offlineStorage', () => ({
   getCachedUser: mockGetCachedUser,
   clearAllLocalData: mockClearAllLocalData,
   getPendingCount: async () => 0,
+  getLocalPendingCount: async () => 0,
 }));
 
 // ---------- Mock crypto ----------
@@ -282,6 +285,51 @@ describe('AuthContext', () => {
     expect(screen.getByText('Não autenticado')).toBeDefined();
 
     window.confirm = originalConfirm;
+  });
+
+  it('deve purgar sessão local do Supabase via scope local se signOut remoto falhar no logout offline', async () => {
+    setSessionVal({
+      user: {
+        id: 'user-offline-123',
+        email: 'gestor@escola.com',
+        user_metadata: { full_name: 'Gestor Offline' },
+        app_metadata: { role: 'GESTOR' },
+      },
+    });
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('loading-fallback')).toBeNull();
+    });
+
+    // Simula falha na chamada remota do signOut (offline / timeout)
+    mockSignOut.mockRejectedValueOnce(new Error('Network error (offline)'));
+
+    const logoutBtn = screen.getByText('Deslogar');
+
+    await act(async () => {
+      logoutBtn.click();
+    });
+
+    // Modal de confirmação offline deve aparecer com 'Limpar e sair'
+    await waitFor(() => {
+      expect(screen.getByText('Limpar e sair')).toBeDefined();
+    });
+
+    const confirmBtn = screen.getByText('Limpar e sair');
+    await act(async () => {
+      confirmBtn.click();
+    });
+
+    // Verifica que signOut com { scope: 'local' } foi chamado para purgar o storage local do Supabase
+    expect(mockSignOut).toHaveBeenCalledWith({ scope: 'local' });
+    expect(mockClearAllLocalData).toHaveBeenCalledWith(true, false);
+    expect(screen.getByText('Não autenticado')).toBeDefined();
   });
 
   it('deve se recuperar graciosamente e finalizar loading se getSession falhar com erro de rede ou 502', async () => {

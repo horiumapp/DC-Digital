@@ -83,3 +83,22 @@ export const formatarDataParaExibicao = (dataStr: string): string => {
   if (!dia || !mes || !ano) return dataStr;
   return `${dia.padStart(2, '0')}/${mes.padStart(2, '0')}/${ano}`;
 };
+
+export const formatarDiaMes = (dataStr: string): string => {
+  if (!dataStr) return '';
+  const iso = formatarDataParaISO(dataStr);
+  if (iso && iso.includes('-')) {
+    const parts = iso.split('T')[0].split('-');
+    if (parts.length >= 3) {
+      return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}`;
+    }
+  }
+  if (dataStr.includes('/')) {
+    const parts = dataStr.split('/');
+    if (parts.length >= 2) {
+      return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}`;
+    }
+  }
+  return dataStr;
+};
+

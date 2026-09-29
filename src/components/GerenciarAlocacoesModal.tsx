@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Building2, Clock, Plus, Trash2, MapPin } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useToast } from './common/Toast';
 
 interface EscolaItem {
   id: string;
@@ -22,6 +23,7 @@ interface GerenciarAlocacoesModalProps {
 }
 
 const GerenciarAlocacoesModal = React.memo(function GerenciarAlocacoesModal({ isOpen, onClose, professor, onAlocacoesChanged }: GerenciarAlocacoesModalProps) {
+  const { showError, showSuccess } = useToast();
   const [escolas, setEscolas] = useState<EscolaItem[]>([]);
   const [alocacoes, setAlocacoes] = useState<AlocacaoRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -90,9 +92,10 @@ const GerenciarAlocacoesModal = React.memo(function GerenciarAlocacoesModal({ is
 
     if (error) {
       console.error(error);
-      alert("Erro ao adicionar alocação. Certifique-se de ter criado a tabela professor_alocacoes primeiro.");
+      showError("Erro ao adicionar alocação: " + error.message);
     } else {
       setNovaAlocacao({ escola_id: '', turno: 'Manhã' });
+      showSuccess("Alocação adicionada com sucesso!");
       await fetchAlocacoes();
       onAlocacoesChanged();
     }
@@ -103,8 +106,9 @@ const GerenciarAlocacoesModal = React.memo(function GerenciarAlocacoesModal({ is
     setLoading(true);
     const { error } = await supabase.from('professor_alocacoes').delete().eq('id', id);
     if (error) {
-      alert("Erro ao remover alocação.");
+      showError("Erro ao remover alocação.");
     } else {
+      showSuccess("Alocação removida com sucesso!");
       await fetchAlocacoes();
       onAlocacoesChanged();
     }

@@ -1,9 +1,11 @@
+import { loadAcademicCalendar } from '../services/academicCalendar';
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import LoadingFallback from '../components/common/LoadingFallback';
-import { cacheUser, getCachedUser, clearAllLocalData, getPendingCount } from '../services/offlineStorage';
-import { syncAll } from '../services/syncEngine';
+import { cacheUser, getCachedUser, clearAllLocalData, getLocalPendingCount } from '../services/offlineStorage';
+import { setOfflineOwner } from '../services/offlineIdentity';
+import { syncAll, cancelSync } from '../services/syncEngine';
 import { clearKeyCache } from '../lib/crypto';
 import { pingInternet } from '../utils/network';
 import { useToast } from '../components/common/Toast';
@@ -135,15 +137,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // FIX #1: Segurança: Prioriza app_metadata (assinado pelo JWT, não alterável pelo cliente)
       // NUNCA usar role do cache IndexedDB — ele pode ser manipulado via DevTools.
-      const role: UserRole = (authUser.app_metadata?.role as UserRole);
+      let role: UserRole = (authUser.app_metadata?.role as UserRole);
       let escolaId: string | undefined;
       let name = metadata?.full_name || authUser.email?.split('@')[0] || 'Usuário';
 
       // FIX M2: Executar ping e leitura de cache em PARALELO para eliminar o
       // atraso sequencial de até 3s. Antes: ping(3s) → cache → Supabase.
       // Agora: ping + cache + escola_id em paralelo (P2 FIX).
-      // SEGURANÇA: A role NUNCA é sobrescrita pelo servidor — app_metadata (JWT)
-      // é a fonte definitiva, pois é assinada pelo backend.
+      // Online, o perfil institucional prevalece sobre claims emitidas antes de uma revogação.
       // P2 FIX: Iniciar a busca de escola_id em paralelo com ping e cache.
       // Se estiver offline, o fetch falhará silenciosamente (.catch) e usamos
       // o valor do cache. Isso elimina a latência sequencial de ~200-500ms.
@@ -157,7 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         Promise.resolve(
           supabase
             .from('usuarios')
-            .select('escola_id')
+            .select('escola_id, cargo')
             .eq('id', authUser.id)
             .maybeSingle()
         ).catch(() => ({ data: null, error: null })),
@@ -171,12 +172,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name = cacheResult.name;
       }
       const cached = cacheResult;
+      if (userDataResult.data?.cargo) role = userDataResult.data.cargo as UserRole;
 
       // P2 FIX: Usar o resultado da busca paralela apenas se online e sem erro.
       // Se offline, o resultado é { data: null, error: null } (silenciado pelo .catch).
       if (isReallyOnline && userDataResult && !userDataResult.error && userDataResult.data?.escola_id) {
         escolaId = userDataResult.data.escola_id;
       }
+
+      await loadAcademicCalendar(escolaId);
+      if (isCancelled()) return;
 
       // FIX #1: Se não temos role (nem do JWT, nem do servidor), negar acesso
       // Isso impede escalação via cache IndexedDB manipulado
@@ -211,6 +216,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         escola_id: escolaId,
       };
 
+      const isolate = async () => {
+        const previous = localStorage.getItem('dc_last_user_id');
+        if (previous && previous !== authUser.id) {
+          await clearAllLocalData(false, false);
+          clearKeyCache();
+        }
+        if (isCancelled()) return;
+        localStorage.setItem('dc_last_user_id',authUser.id);
+        setOfflineOwner(authUser.id);
+      };
+      cancelSync();
+      if (navigator.locks) await navigator.locks.request('dc-digital-sync-lock',isolate);
+      else await isolate();
+      if (isCancelled()) return;
       setUser(userObj);
 
       // 3. Salvar/Atualizar no cache (reutiliza resultado do passo 1)
@@ -229,8 +248,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           alocacoes,
           professorDisciplinas,
         });
+
+
       } catch (err) {
-        console.error('[AuthContext] Erro ao salvar usuário no cache:', err);
+        console.error('[AuthContext] Erro ao salvar usuário no cache / isolar dados:', err);
       }
 
       } finally {
@@ -325,6 +346,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       // Evento que encerra a sessão — limpar estado imediatamente
       if (event === 'SIGNED_OUT') {
+        cancelSync();
+        setOfflineOwner(null);
         activeAbortController?.abort();
         setUser(null);
         setLoading(false);
@@ -335,7 +358,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // a menos que seja um login novo ou mudança explícita
       // Usa userRef (sempre atualizado) para evitar closure stale
       if (userRef.current && session?.user?.id === userRef.current.id) {
-        if (event !== 'PASSWORD_RECOVERY') {
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
           return;
         }
       }
@@ -369,7 +392,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      const pending = await getPendingCount();
+      const pending = await getLocalPendingCount();
       if (pending > 0) {
         // FIX: Substituir window.confirm() bloqueante por modal React
         const confirmed = await askConfirmation('pending', pending);
@@ -380,22 +403,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Só limpar dados locais se signOut funcionou, para evitar perda de dados pendentes offline.
       let signOutSuccess = false;
       try {
-        await supabase.auth.signOut();
+        cancelSync();
+        const {error: signOutError} = await supabase.auth.signOut();
+        if (signOutError) throw signOutError;
         signOutSuccess = true;
       } catch (err) {
         console.error('[AuthContext] Erro ao deslogar (possivelmente offline):', err);
         // FIX: Substituir window.confirm() por modal React
         const forceClean = await askConfirmation('offline', 0);
+        if (!forceClean) return;
         signOutSuccess = forceClean;
+        // Garantir que a sessão local do Supabase seja purgada mesmo com a falha na chamada remota
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
       }
 
       if (signOutSuccess) {
+        // Assegurar remoção de tokens locais do Supabase no storage
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
         // Limpa dados locais e cache de chaves em memória
         clearKeyCache();
         // Preserva userSalts (indexado por userId) para permitir acesso a dados offline no re-login
         await clearAllLocalData(true, false);
         sessionStorage.removeItem('activeEscolaId');
         sessionStorage.removeItem('activeTurno');
+        localStorage.removeItem('dc_last_user_id');
       }
 
       setUser(null);
@@ -421,7 +452,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     icon: <AlertTriangle className="w-6 h-6" />,
   } : {
     title: 'Sem conexão com a internet',
-    message: 'Não foi possível desconectar do servidor. Deseja limpar os dados locais mesmo assim?',
+    message: (
+      <span>
+        Não foi possível desconectar do servidor porque você está offline.
+        Ao sair e limpar os dados locais, qualquer dado não sincronizado será <strong>perdido permanentemente</strong> e o acesso offline neste dispositivo será encerrado.
+        Deseja limpar os dados locais e sair mesmo assim?
+      </span>
+    ),
     confirmLabel: 'Limpar e sair',
     icon: <WifiOff className="w-6 h-6" />,
   };

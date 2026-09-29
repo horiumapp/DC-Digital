@@ -130,12 +130,12 @@ export default function RedefinirSenha() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="dd-auth-shell min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       <Background />
       <div className="absolute inset-0 bg-gradient-to-b from-white/80 to-slate-50/40 pointer-events-none" />
 
-      <main className="relative w-full max-w-md z-10">
-        <section className="bg-white p-8 md:p-10 shadow-xl border border-slate-100 rounded-xl">
+      <main className="relative w-full max-w-md z-10 dd-auth-content">
+        <section className="dd-auth-card bg-white p-8 md:p-10 border rounded-2xl">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-6">
               <img src="/logo.png" alt="Logo Diário Digital" className="h-20 w-auto object-contain" />

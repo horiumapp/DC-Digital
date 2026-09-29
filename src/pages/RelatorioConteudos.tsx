@@ -8,6 +8,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { formatarDataParaISO, getBimestrePorData, getDayOfWeek } from '../utils/dateUtils';
 import { APP_CONFIG } from '../config/appConfig';
+import * as OfflineTurmaService from '../services/turmaServiceOffline';
+import * as OfflineStorage from '../services/offlineStorage';
+import { readAllRows } from '../services/pagination';
 
 import { useToast } from '../components/common/Toast';
 
@@ -68,80 +71,12 @@ export default function RelatorioConteudos() {
     setLoading(true);
     try {
       if (!user) return;
-
-      const emailLimpo = user.email.trim();
-      const { data: profs, error: profError } = await supabase
-        .from('professores')
-        .select('id, disciplinas')
-        .or(`usuario_id.eq.${user.id},email.ilike.${emailLimpo}`);
-
-      if (profError) throw profError;
-
-      if (profs && profs.length > 0) {
-        let allDisciplinas: string[] = [];
-        profs.forEach(p => {
-          if (p.disciplinas && Array.isArray(p.disciplinas)) {
-            allDisciplinas = [...allDisciplinas, ...p.disciplinas];
-          }
-        });
-        let componentes = [...new Set(allDisciplinas)];
-        if (componentes.length === 0) componentes = ['POLIVALENTE'];
-
-        const profIds = profs.map(p => p.id);
-
-        const { data: alocs, error: alocError } = await supabase
-          .from('professor_alocacoes')
-          .select('escola_id, turno')
-          .in('professor_id', profIds);
-
-        if (alocError) throw alocError;
-
-        if (alocs && alocs.length > 0) {
-          const orConditions = alocs.map(a => `and(escola_id.eq.${a.escola_id},turno.eq.${a.turno})`).join(',');
-          const { data: turmasAlocadas, error: turmasError } = await supabase
-            .from('turmas')
-            .select('*, escolas(nome)')
-            .or(orConditions)
-            .order('nome');
-
-          if (turmasError) throw turmasError;
-
-          if (turmasAlocadas) {
-            const finalTurmas: TurmaRelatorio[] = [];
-            turmasAlocadas.forEach(t => {
-              componentes.forEach(comp => {
-                let fase = t.nome;
-                let numero = '01';
-
-                const match = t.nome.match(/(.+)\s+([A-Za-z0-9]+)$/);
-                if (match) {
-                  fase = match[1].trim();
-                  numero = match[2].trim();
-                } else {
-                  const matchNum = t.nome.match(/(\d+)$/);
-                  if (matchNum) numero = matchNum[1];
-                }
-
-                finalTurmas.push({
-                  id: `${t.id}|${comp}`,
-                  nome: t.nome,
-                  turno: t.turno,
-                  componente: comp,
-                  ensino: t.ensino || 'Fundamental Anos Iniciais (1° ao 5° ANO)',
-                  fase: fase,
-                  numero: t.turma_codigo || numero,
-                  escolaId: t.escola_id,
-                  escolaNome: t.escolas?.nome || 'ESCOLA NÃO IDENTIFICADA'
-                });
-              });
-            });
-
-            setTurmas(finalTurmas);
-            if (finalTurmas.length > 0) {
-              setSelectedTurmaId(finalTurmas[0].id);
-            }
-          }
-        }
+      const finalTurmas = await OfflineTurmaService.fetchTurmasRelatorio(user);
+      setTurmas(finalTurmas);
+      if (finalTurmas.length > 0) {
+        setSelectedTurmaId(`${finalTurmas[0].id}|${finalTurmas[0].componente}`);
+      } else {
+        setSelectedTurmaId('');
       }
     } catch (err) {
       console.error('Erro ao buscar turmas para o relatório:', err);
@@ -165,7 +100,11 @@ export default function RelatorioConteudos() {
 
     setDataLoading(true);
     try {
-      const [turmaId, componente] = selectedTurmaId.split('|');
+      const [turmaId, rawComp] = selectedTurmaId.split('|');
+      const turmaObj = turmas.find(t => `${t.id}|${t.componente}` === selectedTurmaId) || turmas.find(t => t.id === turmaId);
+      const componente = (rawComp || turmaObj?.componente || '').trim();
+      const tid = turmaId.split('||')[0];
+
       let dateStart = '';
       let dateEnd = '';
 
@@ -192,17 +131,30 @@ export default function RelatorioConteudos() {
         }
       }
 
+      // Busca Primária por UUID (com suporte online / fallback local offline)
+      let rawContents: Array<{ id?: string | number; turma_id?: string; data: string; tempo: string; disciplina?: string; descricao?: string; objetos?: string[] }> = [];
+      if (navigator.onLine) {
+        try {
+          let contQuery = supabase
+            .from('conteudos')
+            .select('id, turma_id, data, tempo, disciplina, descricao, objetos')
+            .eq('turma_id', tid)
+            .gte('data', dateStart)
+            .lte('data', dateEnd);
 
+          if (componente && componente.toUpperCase() !== 'TODAS' && componente.toUpperCase() !== 'GERAL') {
+            contQuery = contQuery.eq('disciplina', componente);
+          }
 
-      // Busca Primária por UUID (Sem filtro agressivo de data no SQL para evitar problemas de formato string)
-      const { data: rawContents, error } = await supabase
-        .from('conteudos')
-        .select('*')
-        .eq('turma_id', turmaId);
-
-      if (error) throw error;
-
-
+          const { data } = await readAllRows<typeof rawContents[0]>(contQuery.order('id'));
+          rawContents = (data || []) as typeof rawContents;
+        } catch (netErr) {
+          console.warn('[RelatorioConteudos] Falha ao consultar Supabase, usando dados locais:', netErr);
+          rawContents = await OfflineStorage.getAllConteudosLocal(tid, componente);
+        }
+      } else {
+        rawContents = await OfflineStorage.getAllConteudosLocal(tid, componente);
+      }
 
       // Filtragem Inteligente em Memória (JS) usando normalização de datas
       const filtered = (rawContents || []).filter(c => {
@@ -210,30 +162,33 @@ export default function RelatorioConteudos() {
         if (!cDateISO || cDateISO === 'Invalid Date') return false;
 
         const matchDate = cDateISO >= dateStart && cDateISO <= dateEnd;
-        const matchComp = String(c.disciplina || '').trim().toUpperCase() === componente.trim().toUpperCase();
+        const matchComp = !componente || String(c.disciplina || '').trim().toUpperCase() === componente.toUpperCase();
         return matchDate && matchComp;
       });
 
-
-
       let contentsRes = filtered;
 
-      // Fallback: Se não achou nada pelo ID, tentamos buscar pelo NOME da disciplina em todo o período
-      if (contentsRes.length === 0) {
-        const { data: fallbackData } = await supabase
-          .from('conteudos')
-          .select('*')
-          .ilike('disciplina', componente)
-          .gte('data', dateStart.split('-').reverse().join('/')) // Tenta formato BR caso o GTE funcione
-          .lte('data', dateEnd.split('-').reverse().join('/'));
+      // Fallback: Se não achou nada pelo ID e estiver online, tentamos buscar pelo NOME da disciplina
+      if (contentsRes.length === 0 && componente && navigator.onLine) {
+        try {
+          const { data: fallbackData } = await readAllRows<typeof rawContents[0]>(supabase
+            .from('conteudos')
+            .select('id, turma_id, data, tempo, disciplina, descricao, objetos')
+            .eq('disciplina', componente)
+            .gte('data', dateStart)
+            .lte('data', dateEnd)
+            .order('id'));
 
-        const fallbackFiltered = (fallbackData || []).filter(c => {
-          const cDateISO = formatarDataParaISO(c.data);
-          return cDateISO >= dateStart && cDateISO <= dateEnd;
-        });
+          const fallbackFiltered = (fallbackData || []).filter(c => {
+            const cDateISO = formatarDataParaISO(c.data);
+            return cDateISO >= dateStart && cDateISO <= dateEnd;
+          });
 
-        if (fallbackFiltered.length > 0) {
-          contentsRes = fallbackFiltered;
+          if (fallbackFiltered.length > 0) {
+            contentsRes = fallbackFiltered;
+          }
+        } catch (e) {
+          console.warn('[RelatorioConteudos] Falha no fallback online:', e);
         }
       }
 
@@ -276,7 +231,7 @@ export default function RelatorioConteudos() {
       // Definir o nome do arquivo PDF (via título do documento)
       const oldTitle = document.title;
       const turmaNome = selectedTurmaObj?.nome?.replace(/\s+/g, '_') || 'Turma';
-      const disciplinaNome = componente?.replace(/\s+/g, '_') || 'Disciplina';
+      const disciplinaNome = (componente || 'Disciplina').replace(/\s+/g, '_');
       const periodoLimpo = periodoSelecionado.replace(/\s+/g, '');
        
       document.title = `CM_${periodoLimpo}_${turmaNome}_${disciplinaNome}`;
@@ -295,7 +250,7 @@ export default function RelatorioConteudos() {
     }
   };
 
-  const selectedTurmaObj = turmas.find(t => t.id === selectedTurmaId);
+  const selectedTurmaObj = turmas.find(t => `${t.id}|${t.componente}` === selectedTurmaId) || turmas.find(t => t.id === selectedTurmaId);
 
   const filteredTurmas = turmas.filter(t =>
     t.nome.toLowerCase().includes(buscaTurma.toLowerCase()) ||
@@ -317,8 +272,8 @@ export default function RelatorioConteudos() {
         </div>
       </div>
 
-      <main className="p-8 flex justify-center">
-        <div className="w-full max-w-[1400px] space-y-8">
+      <main className="px-4 py-6 sm:p-8 flex justify-center">
+        <div className="w-full max-w-[1400px] space-y-6 sm:space-y-8">
 
           {/* Main Card: Turmas */}
           <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
@@ -362,28 +317,32 @@ export default function RelatorioConteudos() {
                         <td colSpan={4} className="px-4 py-8 text-center text-slate-400">Nenhuma turma encontrada.</td>
                       </tr>
                     ) : (
-                      filteredTurmas.map((t) => (
-                        <tr
-                          key={t.id}
-                          className={`hover:bg-[#f8faff] transition-colors cursor-pointer ${selectedTurmaId === t.id ? 'bg-[#eef2ff]' : ''}`}
-                          onClick={() => setSelectedTurmaId(t.id)}
-                        >
-                          <td className="px-6 py-4 border-r border-slate-100 text-slate-600">{t.ensino}</td>
-                          <td className="px-6 py-4 border-r border-slate-100 text-slate-600 font-bold">{t.fase} {t.numero}</td>
-                          <td className="px-6 py-4 border-r border-slate-100 text-slate-600 uppercase font-black text-[12px]">{t.componente}</td>
-                          <td className="px-6 py-4 text-center">
-                            <div className="flex justify-center">
-                              <input
-                                type="radio"
-                                name="turma-select"
-                                checked={selectedTurmaId === t.id}
-                                onChange={() => setSelectedTurmaId(t.id)}
-                                className="w-5 h-5 text-[#0f2851] border-slate-300 focus:ring-[#0f2851]"
-                              />
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                      filteredTurmas.map((t) => {
+                        const rowKey = `${t.id}|${t.componente}`;
+                        const isSelected = selectedTurmaId === rowKey || (Boolean(selectedTurmaId) && selectedTurmaId === t.id);
+                        return (
+                          <tr
+                            key={`${t.id}-${t.componente}`}
+                            className={`hover:bg-[#f8faff] transition-colors cursor-pointer ${isSelected ? 'bg-[#eef2ff]' : ''}`}
+                            onClick={() => setSelectedTurmaId(rowKey)}
+                          >
+                            <td className="px-6 py-4 border-r border-slate-100 text-slate-600">{t.ensino}</td>
+                            <td className="px-6 py-4 border-r border-slate-100 text-slate-600 font-bold">{t.fase} {t.numero}</td>
+                            <td className="px-6 py-4 border-r border-slate-100 text-slate-600 uppercase font-black text-[12px]">{t.componente}</td>
+                            <td className="px-6 py-4 text-center">
+                              <div className="flex justify-center">
+                                <input
+                                  type="radio"
+                                  name="turma-select"
+                                  checked={isSelected}
+                                  onChange={() => setSelectedTurmaId(rowKey)}
+                                  className="w-5 h-5 text-[#0f2851] border-slate-300 focus:ring-[#0f2851]"
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>

@@ -1,3 +1,4 @@
+import { readAllRows } from './pagination';
 import { supabase } from '../lib/supabase';
 import { APP_CONFIG } from '../config/appConfig';
 
@@ -16,12 +17,6 @@ export interface PendenciaDocente {
   unidade?: string;
 }
 
-const PERIOD_DATES: Record<string, { start: Date; end: Date }> = Object.create(null);
-APP_CONFIG.PERIODOS.forEach(p => {
-  const [sy, sm, sd] = p.dataInicio.split('-').map(Number);
-  const [ey, em, ed] = p.dataFim.split('-').map(Number);
-  PERIOD_DATES[p.id] = { start: new Date(sy, sm - 1, sd), end: new Date(ey, em - 1, ed) };
-});
 
 /**
  * Conta quantos dias de aula existem para um dia da semana (0-6) em um intervalo.
@@ -106,14 +101,82 @@ export const fetchPendenciasPorEscola = async (
   pageSize: number = 20,
   professorEmail?: string
 ): Promise<PaginatedPendencias> => {
+  const PERIOD_DATES: Record<string, { start: Date; end: Date }> = Object.create(null);
+  APP_CONFIG.PERIODOS.forEach(p => {
+    const [sy, sm, sd] = p.dataInicio.split('-').map(Number);
+    const [ey, em, ed] = p.dataFim.split('-').map(Number);
+    PERIOD_DATES[p.id] = { start: new Date(sy, sm - 1, sd), end: new Date(ey, em - 1, ed) };
+  });
+  
   try {
-    // FIX #16: Limitar a query para evitar payloads gigantes em escolas grandes
-    const HORARIOS_LIMIT = 5000;
+    // 1. Tentar executar a agregação server-side via RPC no PostgreSQL (elimina download massivo de tabelas)
+    try {
+      const periodosPayload = periodosSelecionados.map(pId => {
+        const cfg = APP_CONFIG.PERIODOS.find(p => p.id === pId || p.label === pId || p.nome === pId);
+        return {
+          id: pId,
+          data_inicio: cfg?.dataInicio || '2026-02-05',
+          data_fim: cfg?.dataFim || '2026-12-14'
+        };
+      });
+
+      const { data: rpcData, error: rpcError } = await readAllRows(supabase.rpc('get_pendencias_docentes', {
+        p_escola_id: escolaId === 'TODAS' ? null : escolaId,
+        p_periodos: periodosPayload,
+        p_professor_email: professorEmail ? professorEmail.toLowerCase().trim() : null
+      }).order('professor').order('turma_id').order('componente').order('periodo'));
+
+      if (!rpcError && rpcData) {
+        interface RpcRow {
+          professor: string;
+          turma: string;
+          componente: string;
+          periodo: string;
+          turno: string;
+          ensino: string;
+          fase: string;
+          pend_notas: number | string;
+          pend_freq: number | string;
+          pend_objeto: number | string;
+        }
+
+        const mapped: PendenciaDocente[] = (rpcData as RpcRow[]).map(row => ({
+          professor: row.professor,
+          dataLotacao: APP_CONFIG.PERIODOS[0]?.dataInicio
+            ? APP_CONFIG.PERIODOS[0].dataInicio.split('-').reverse().join('/')
+            : '01/01/' + APP_CONFIG.YEAR,
+          periodo: row.periodo,
+          turno: row.turno,
+          ensino: row.ensino,
+          fase: row.fase,
+          turma: row.turma,
+          componente: row.componente,
+          pendFreq: Number(row.pend_freq) || 0,
+          pendObjeto: Number(row.pend_objeto) || 0,
+          pendNotas: Number(row.pend_notas) || 0
+        }));
+
+        const totalConsolidado = mapped.length;
+        const offset = (page - 1) * pageSize;
+        const resultadoPaginado = mapped
+          .sort((a, b) => a.professor.localeCompare(b.professor))
+          .slice(offset, offset + pageSize);
+
+        return {
+          data: resultadoPaginado,
+          total: totalConsolidado
+        };
+      }
+    } catch (rpcErr) {
+      console.warn('[pendenciasService] RPC get_pendencias_docentes indisponível, usando fallback client-side:', rpcErr);
+    }
+
+    // 2. Fallback client-side caso a RPC ainda não esteja disponível no banco
 
     let query = supabase
       .from('professor_horarios')
-      .select('*, turmas(id, nome, turno), professores(id, nome, email)')
-      .limit(HORARIOS_LIMIT);
+      .select('id, escola_id, turma_id, professor_id, dia_semana, tempo_ordem, componente, turmas(id, nome, turno, ensino), professores(id, nome, email)')
+      .order('id');
 
     if (escolaId !== 'TODAS') {
       query = query.eq('escola_id', escolaId);
@@ -121,19 +184,13 @@ export const fetchPendenciasPorEscola = async (
 
     const professorEmailLower = professorEmail?.toLowerCase().trim();
     if (professorEmailLower) {
-      // FIX: filtro aplicado no SERVIDOR (antes era client-side após baixar
-      // todos os horários, trafegando dados desnecessários).
       query = query.ilike('professores.email', professorEmailLower);
     }
 
-    const { data: horarios, error: hError } = await query;
+    const { data: horarios, error: hError } = await readAllRows(query);
 
     if (hError) throw hError;
     if (!horarios) return { data: [], total: 0 };
-
-    if (horarios.length >= HORARIOS_LIMIT) {
-      console.warn(`[pendenciasService] Dados truncados: ${HORARIOS_LIMIT} horários atingidos. Considere implementar lógica server-side.`);
-    }
 
     const horariosFiltrados = horarios;
 
@@ -167,19 +224,21 @@ export const fetchPendenciasPorEscola = async (
         const key = `${h.turma_id}-${h.componente}-${periodoNome}`;
         
         if (!mapConsolidado[key]) {
-          const nomeCompleto = h.turmas?.nome || 'N/D';
+          const tObj = (Array.isArray(h.turmas) ? h.turmas[0] : h.turmas) as { nome?: string; turno?: string; ensino?: string } | null;
+          const pObj = (Array.isArray(h.professores) ? h.professores[0] : h.professores) as { nome?: string; email?: string } | null;
+          const nomeCompleto = tObj?.nome || 'N/D';
           const partes = nomeCompleto.split(' ');
           const turmaPart = partes.length > 1 ? partes.pop() : '';
           const fasePart = partes.join(' ') || nomeCompleto;
 
           mapConsolidado[key] = {
-            professor: h.professores?.nome || 'N/D',
+            professor: pObj?.nome || 'N/D',
             turmaId: h.turma_id,
             turma: turmaPart || 'N/D',
             componente: h.componente,
             periodo: periodoNome,
-            turno: h.turmas?.turno || 'N/D',
-            ensino: h.turmas?.ensino || 'Ensino Fundamental',
+            turno: tObj?.turno || 'N/D',
+            ensino: tObj?.ensino || 'Ensino Fundamental',
             fase: fasePart,
             tempos: new Set([h.tempo_ordem.toString() + 'º TEMPO']),
             totalAulasEsperadas: 0,
@@ -223,16 +282,31 @@ export const fetchPendenciasPorEscola = async (
       interface AlunoLote { id: string; turma_id: string; }
       interface NotaLote { avaliacao_id: string; }
 
+      const fetchFreqsPromise = (async (): Promise<FrequenciaLote[]> => {
+        try {
+          const { data: rpcFreqs, error: rpcErr } = await readAllRows<FrequenciaLote>(supabase.rpc('get_frequencias_distinct_lote', {
+            p_turma_ids: batchTurmaIds,
+            p_disciplinas: batchComponentes,
+            p_start: minDateISO,
+            p_end: maxDateISO,
+          }).order('turma_id').order('disciplina').order('data').order('tempo'));
+          if (!rpcErr && rpcFreqs) return rpcFreqs;
+          throw rpcErr || new Error('RPC fallback');
+        } catch {
+          return fetchAllPaginated<FrequenciaLote>(() => {
+            let q = supabase.from('frequencias')
+              .select('turma_id, disciplina, tempo, data')
+              .in('turma_id', batchTurmaIds)
+              .in('disciplina', batchComponentes);
+            if (minDateISO) q = q.gte('data', minDateISO);
+            if (maxDateISO) q = q.lte('data', maxDateISO);
+            return q.order('id') as unknown as PostgrestQueryBuilder;
+          });
+        }
+      })();
+
       const [fAll, cAll, avAll, aluAll] = await Promise.all([
-        fetchAllPaginated<FrequenciaLote>(() => {
-          let q = supabase.from('frequencias')
-            .select('turma_id, disciplina, tempo, data')
-            .in('turma_id', batchTurmaIds)
-            .in('disciplina', batchComponentes);
-          if (minDateISO) q = q.gte('data', minDateISO);
-          if (maxDateISO) q = q.lte('data', maxDateISO);
-          return q as unknown as PostgrestQueryBuilder;
-        }),
+        fetchFreqsPromise,
         fetchAllPaginated<ConteudoLote>(() => {
           let q = supabase.from('conteudos')
             .select('turma_id, disciplina, tempo, data')
@@ -240,15 +314,15 @@ export const fetchPendenciasPorEscola = async (
             .in('disciplina', batchComponentes);
           if (minDateISO) q = q.gte('data', minDateISO);
           if (maxDateISO) q = q.lte('data', maxDateISO);
-          return q as unknown as PostgrestQueryBuilder;
+          return q.order('id') as unknown as PostgrestQueryBuilder;
         }),
         fetchAllPaginated<AvaliacaoLote>(() => supabase.from('avaliacoes')
           .select('id, turma_id, disciplina, bimestre')
           .in('turma_id', batchTurmaIds)
-          .in('disciplina', batchComponentes) as unknown as PostgrestQueryBuilder),
+          .in('disciplina', batchComponentes).order('id') as unknown as PostgrestQueryBuilder),
         fetchAllPaginated<AlunoLote>(() => supabase.from('alunos')
           .select('id, turma_id')
-          .in('turma_id', batchTurmaIds) as unknown as PostgrestQueryBuilder)
+          .in('turma_id', batchTurmaIds).order('id') as unknown as PostgrestQueryBuilder)
       ]);
 
       // Alias para compatibilidade com o código abaixo
@@ -260,7 +334,7 @@ export const fetchPendenciasPorEscola = async (
       // Buscar notas em lote para todas as avaliações encontradas
       const avIds = avAll.map(av => av.id);
       const nData = avIds.length > 0
-        ? await fetchAllPaginated<NotaLote>(() => supabase.from('notas').select('avaliacao_id').in('avaliacao_id', avIds) as unknown as PostgrestQueryBuilder)
+        ? await fetchAllPaginated<NotaLote>(() => supabase.from('notas').select('avaliacao_id').in('avaliacao_id', avIds).order('id') as unknown as PostgrestQueryBuilder)
         : [];
 
       // Helper: converte 'DD/MM/YYYY' ou 'YYYY-MM-DD' para Date para comparação

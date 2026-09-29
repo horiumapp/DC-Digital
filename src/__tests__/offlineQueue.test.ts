@@ -1,221 +1,87 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-// ---------- Mock do Dexie (IndexedDB) ----------
-// vi.mock é hoisted, então a factory inline é obrigatória
-
-import type { SyncQueueItem } from '../lib/db';
-
-let mockQueue: SyncQueueItem[] = [];
-let autoId = 1;
-
-vi.mock('../lib/db', () => {
-  // Funções precisam ser inline no factory
-  return {
-    db: {
-      // FIX M2: mock de transaction — executa a callback diretamente (sem transação real em ambiente de teste)
-      transaction: async (_mode: string, _tables: unknown, callback: () => Promise<unknown>) => {
-        return await callback();
-      },
-      syncQueue: {
-        add: async (item: Omit<SyncQueueItem, 'id'>) => {
-          const id = autoId++;
-          mockQueue.push({ ...item, id });
-          return id;
-        },
-        get: async (id: number) => mockQueue.find(i => i.id === id),
-        update: async (id: number, changes: Partial<SyncQueueItem>) => {
-          const idx = mockQueue.findIndex(i => i.id === id);
-          if (idx >= 0) mockQueue[idx] = { ...mockQueue[idx], ...changes };
-        },
-        delete: async (id: number) => {
-          mockQueue = mockQueue.filter(i => i.id !== id);
-        },
-        clear: async () => { mockQueue = []; },
-        where: (field: keyof SyncQueueItem) => ({
-          equals: (val: string) => ({
-            filter: (fn: (item: SyncQueueItem) => boolean) => ({
-              first: async () => mockQueue.filter(i => (i[field] as unknown) === val).filter(fn)[0],
-              toArray: async () => mockQueue.filter(i => (i[field] as unknown) === val).filter(fn),
-            }),
-            count: async () => mockQueue.filter(i => (i[field] as unknown) === val).length,
-            toArray: async () => mockQueue.filter(i => (i[field] as unknown) === val),
-            sortBy: async (sortField: keyof SyncQueueItem) =>
-              mockQueue
-                .filter(i => (i[field] as unknown) === val)
-                .sort((a, b) => {
-                  const aVal = a[sortField] ?? '';
-                  const bVal = b[sortField] ?? '';
-                  return aVal > bVal ? 1 : -1;
-                }),
-          }),
-          anyOf: (vals: string[]) => ({
-            count: async () => mockQueue.filter(i => vals.includes(String(i[field]))).length,
-          }),
-        }),
-        orderBy: () => ({
-          toArray: async () => [...mockQueue].sort((a, b) => (a.createdAt > b.createdAt ? 1 : -1)),
-        }),
-      },
-    },
-    now: () => new Date().toISOString(),
-    hashOperation: async (_t: string, _o: string, p: Record<string, unknown>) =>
-      `hash_${JSON.stringify(p).slice(0, 16)}`,
-  };
-});
-
-// ---------- Import sob teste ----------
-import {
-  enqueue, dequeue, peek, getPendingCount,
-  markProcessing, markDone,
-  retry, fail, retryAllErrors, resetStuckItems,
-  clearQueue, getQueueStats,
-} from '../services/offlineQueue';
-
-describe('offlineQueue', () => {
-  beforeEach(() => {
-    mockQueue = [];
-    autoId = 1;
+﻿// @vitest-environment node
+import 'fake-indexeddb/auto';
+import { beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
+import { db, now } from '../lib/db';
+import * as Queue from '../services/offlineQueue';
+import { setOfflineOwner } from '../services/offlineIdentity';
+import { acknowledgeMutation } from '../services/syncProtocol';
+const storage = new Map<string,string>();
+vi.stubGlobal('localStorage',{getItem:(k:string)=>storage.get(k)||null,setItem:(k:string,v:string)=>storage.set(k,v),removeItem:(k:string)=>storage.delete(k)});
+const owner='00000000-0000-0000-0000-000000000001';
+const other='00000000-0000-0000-0000-000000000002';
+const freq={turma_id:owner,aluno_id:other,data:'2026-03-01',tempo:'1',disciplina:'MAT',status:'P',participacao:'Presencial'};
+beforeEach(async()=>{ await db.open(); await Promise.all(db.tables.map(t=>t.clear())); storage.set('dc_last_user_id',owner);setOfflineOwner(owner); });
+afterAll(()=>db.close());
+describe('offlineQueue com IndexedDB real',()=>{
+ it('persiste identidade, deduplica somente operação nunca enviada e captura revisão',async()=>{
+  await db.frequencias.add({...freq,syncStatus:'pending',version:2,serverRevision:4,createdAt:now(),updatedAt:now()});
+  const id=await Queue.enqueue('frequencias','UPSERT',{records:[freq]});
+  expect(await Queue.enqueue('frequencias','UPSERT',{records:[{...freq,status:'F'}]})).toBe(id);
+  const row=await db.syncQueue.get(id);
+  expect(row?.ownerUserId).toBe(owner); expect(row?.operationId).toMatch(/^[a-f0-9-]{36}$/);
+  expect(JSON.parse(row!.payload).records[0]._expected_revision).toBe(4);
+ });
+ it('claim e enqueue concorrentes não perdem o payload mais novo',async()=>{
+  await Queue.enqueue('frequencias','UPSERT',{records:[freq]});
+  const [claimed] = await Promise.all([Queue.claimNext(owner),Queue.enqueue('frequencias','UPSERT',{records:[{...freq,status:'F'}]})]);
+  expect(claimed).toBeDefined();
+  await Queue.markDone(claimed!.id!);
+  const left=await db.syncQueue.toArray();
+  if (JSON.parse(claimed!.payload).records[0].status==='P') expect(left).toHaveLength(1);
+  else expect(left).toHaveLength(0);
+ });
+ it('não modifica requisição que pode já ter sido aplicada',async()=>{
+  const id=await Queue.enqueue('frequencias','UPSERT',{records:[freq]});
+  await db.syncQueue.update(id,{attempted:true,status:'pending'});
+  expect(await Queue.enqueue('frequencias','UPSERT',{records:[{...freq,status:'F'}]})).not.toBe(id);
+ });
+ it('confirma versão enviada sem promover edição posterior a synced',async()=>{
+  const localId=await db.frequencias.add({...freq,syncStatus:'pending',version:1,createdAt:now(),updatedAt:now()});
+  await Queue.enqueue('frequencias','UPSERT',{records:[freq]});
+  const claimed=(await Queue.claimNext(owner))!;
+  await db.frequencias.update(localId,{version:2,status:'F'});
+  await Queue.enqueue('frequencias','UPSERT',{records:[{...freq,status:'F'}]});
+  await db.transaction('rw',[db.frequencias,db.syncQueue],async()=>{
+   await acknowledgeMutation('frequencias',JSON.parse(claimed.payload),[{...freq,sync_revision:1}]);
+   await Queue.markDone(claimed.id!);
   });
-
-  // ====== enqueue ======
-  it('deve adicionar um item à fila e retornar um id', async () => {
-    const id = await enqueue('frequencias', 'UPSERT', { turma_id: '1' });
-    expect(id).toBe(1);
-    expect(mockQueue).toHaveLength(1);
-    expect(mockQueue[0].table).toBe('frequencias');
-    expect(mockQueue[0].status).toBe('pending');
-  });
-
-  it('deve deduplica operações com mesmo hash (status pending)', async () => {
-    await enqueue('frequencias', 'UPSERT', { turma_id: '1' });
-    const id2 = await enqueue('frequencias', 'UPSERT', { turma_id: '1' });
-    // O segundo enqueue deve atualizar o existente, não criar novo
-    expect(mockQueue).toHaveLength(1);
-    expect(id2).toBe(1);
-  });
-
-  it('deve lançar erro quando a fila atinge o limite máximo', async () => {
-    // Preencher fila com 5000 itens
-    for (let i = 0; i < 5000; i++) {
-      mockQueue.push({
-        id: autoId++,
-        table: 'test', operation: 'UPSERT', payload: '{}',
-        status: 'pending', hash: `unique_hash_${i}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        retryCount: 0,
-      });
-    }
-
-    await expect(
-      enqueue('frequencias', 'UPSERT', { turma_id: 'novo_unico' })
-    ).rejects.toThrow(/Limite de operações pendentes/);
-  });
-
-  // ====== dequeue ======
-  it('deve remover item da fila', async () => {
-    const id = await enqueue('conteudos', 'INSERT', { data: '2026-01-01' });
-    expect(mockQueue).toHaveLength(1);
-    await dequeue(id);
-    expect(mockQueue).toHaveLength(0);
-  });
-
-  // ====== peek ======
-  it('deve retornar o primeiro item pendente', async () => {
-    await enqueue('conteudos', 'INSERT', { data: 'a' });
-    await enqueue('notas', 'UPSERT', { data: 'b' });
-    const item = await peek();
-    expect(item).toBeDefined();
-    expect(item?.table).toBe('conteudos');
-  });
-
-  // ====== getPendingCount ======
-  it('deve contar itens pendentes e em processamento', async () => {
-    await enqueue('t1', 'INSERT', { x: 1 });
-    await enqueue('t2', 'INSERT', { x: 2 });
-    const count = await getPendingCount();
-    expect(count).toBeGreaterThanOrEqual(2);
-  });
-
-  // ====== markProcessing ======
-  it('deve marcar item como processing', async () => {
-    const id = await enqueue('t', 'INSERT', { x: 1 });
-    await markProcessing(id);
-    expect(mockQueue.find(i => i.id === id)?.status).toBe('processing');
-  });
-
-  // ====== markDone ======
-  it('deve remover item ao marcar como done', async () => {
-    const id = await enqueue('t', 'INSERT', { x: 1 });
-    await markDone(id);
-    expect(mockQueue.find(i => i.id === id)).toBeUndefined();
-  });
-
-  // ====== retry ======
-  it('deve incrementar retryCount e calcular backoff', async () => {
-    const id = await enqueue('t', 'INSERT', { x: 1 });
-    const willRetry = await retry(id, 'Erro temporário');
-    expect(willRetry).toBe(true);
-    const item = mockQueue.find(i => i.id === id);
-    expect(item?.retryCount).toBe(1);
-    expect(item?.lastError).toBe('Erro temporário');
-    expect(item?.retryAfter).toBeDefined();
-  });
-
-  it('deve marcar como error após MAX_RETRIES (5)', async () => {
-    const id = await enqueue('t', 'INSERT', { x: 1 });
-    for (let i = 0; i < 5; i++) {
-      await retry(id, `Erro ${i + 1}`);
-    }
-    const item = mockQueue.find(i => i.id === id);
-    expect(item?.status).toBe('error');
-  });
-
-  // ====== fail ======
-  it('deve marcar item como erro permanente', async () => {
-    const id = await enqueue('t', 'INSERT', { x: 1 });
-    await fail(id, 'Erro fatal');
-    const item = mockQueue.find(i => i.id === id);
-    expect(item?.status).toBe('error');
-    expect(item?.lastError).toBe('Erro fatal');
-  });
-
-  // ====== retryAllErrors ======
-  it('deve resetar itens com erro para pending', async () => {
-    const id = await enqueue('t', 'INSERT', { x: 1 });
-    await fail(id, 'Erro');
-    const count = await retryAllErrors();
-    expect(count).toBe(1);
-    const item = mockQueue.find(i => i.id === id);
-    expect(item?.status).toBe('pending');
-    expect(item?.retryCount).toBe(0);
-  });
-
-  // ====== resetStuckItems ======
-  it('deve resetar itens "processing" travados há mais de 60s', async () => {
-    const id = await enqueue('t', 'INSERT', { x: 1 });
-    await markProcessing(id);
-    // Simular que foi atualizado há 2 minutos
-    const item = mockQueue.find(i => i.id === id);
-    if (item) item.updatedAt = new Date(Date.now() - 130_000).toISOString();
-    const count = await resetStuckItems();
-    expect(count).toBe(1);
-    expect(mockQueue.find(i => i.id === id)?.status).toBe('pending');
-  });
-
-  // ====== clearQueue ======
-  it('deve limpar toda a fila', async () => {
-    await enqueue('t1', 'INSERT', { x: 1 });
-    await enqueue('t2', 'INSERT', { x: 2 });
-    await clearQueue();
-    expect(mockQueue).toHaveLength(0);
-  });
-
-  // ====== getQueueStats ======
-  it('deve retornar contagem por status', async () => {
-    const stats = await getQueueStats();
-    expect(stats).toHaveProperty('pending');
-    expect(stats).toHaveProperty('processing');
-    expect(stats).toHaveProperty('error');
-  });
+  const local=await db.frequencias.get(localId); expect(local?.status).toBe('F');expect(local?.syncStatus).toBe('pending');
+  const pending=(await db.syncQueue.toArray())[0];expect(JSON.parse(pending.payload).records[0]._expected_revision).toBe(1);
+ });
+ it('não reserva operação de outra pessoa',async()=>{
+  await Queue.enqueue('frequencias','UPSERT',{records:[freq]});
+  storage.set('dc_last_user_id',other);setOfflineOwner(other);
+  expect(await Queue.claimNext(other)).toBeUndefined();
+  expect(await db.syncQueue.count()).toBe(1);
+ });
+ it('rejeita gravação de aba cuja sessão foi trocada',async()=>{
+  storage.set('dc_last_user_id',other);
+  await expect(Queue.enqueue('frequencias','UPSERT',{records:[freq]})).rejects.toThrow('Sessão offline');
+ });
+ it('transação com SHA-256 permanece ativa e reverte em erro',async()=>{
+  await expect(db.transaction('rw',[db.frequencias,db.syncQueue],async()=>{
+   await db.frequencias.add({...freq,syncStatus:'pending',version:1,createdAt:now(),updatedAt:now()});
+   await Queue.enqueue('frequencias','UPSERT',{records:[freq]});
+   throw new Error('rollback');
+  })).rejects.toThrow('rollback');
+  expect(await db.frequencias.count()).toBe(0);expect(await db.syncQueue.count()).toBe(0);
+ });
+ it('aplica backoff e não revive conflitos automaticamente',async()=>{
+  const id=await Queue.enqueue('frequencias','UPSERT',{records:[freq]});
+  await Queue.retry(id,'rede');expect((await db.syncQueue.get(id))?.retryAfter).toBeDefined();
+  await Queue.fail(id,'[DEAD_LETTER] CONFLICT: revisão');
+  expect(await Queue.retryAllErrors(true)).toBe(0);expect(await Queue.retryDeadLetterItems()).toBe(0);
+ });
+ it('limita tentativas e recupera operações interrompidas',async()=>{
+  const id=await Queue.enqueue('frequencias','UPSERT',{records:[freq]});
+  for(let i=0;i<5;i++) await Queue.retry(id,'rede');
+  expect((await db.syncQueue.get(id))?.status).toBe('error');
+  expect(await Queue.retryAllErrors()).toBe(0);expect(await Queue.retryAllErrors(true)).toBe(1);
+  await db.syncQueue.update(id,{status:'processing',updatedAt:'2020-01-01T00:00:00Z'});
+  expect(await Queue.resetStuckItems()).toBe(1);
+ });
+ it('não excede capacidade da fila',async()=>{
+  await db.syncQueue.bulkAdd(Array.from({length:5000},(_,i)=>({ownerUserId:owner,table:'notas',operation:'UPSERT' as const,payload:'{}',status:'pending' as const,createdAt:now(),updatedAt:now(),retryCount:0,hash:String(i)})));
+  await expect(Queue.enqueue('frequencias','UPSERT',{records:[freq]})).rejects.toThrow('Limite');
+ }, 30000);
 });

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Check, Pencil, Trash2, X } from 'lucide-react';
-import Captcha from '../common/Captcha';
+import { useToast } from '../common/Toast';
 import { useTurma } from '../../contexts/TurmaContext';
-import { useCaptcha } from '../../hooks/useCaptcha';
 import { supabase } from '../../lib/supabase';
 import * as OfflineStorage from '../../services/offlineStorage';
 import { getBimestrePorData } from '../../utils/dateUtils';
@@ -180,14 +179,7 @@ export default function ObjetoConhecimentoTab({
     carregar();
   }, [selectedDate, tempoAula, turmaAtiva, buscarConteudo, unidadesDisponiveis, curriculoIndisponivel]);
 
-  const {
-    generatedCaptcha,
-    captchaInput,
-    setCaptchaInput,
-    captchaError,
-    generateNewCaptcha,
-    validateCaptcha
-  } = useCaptcha();
+  const { showWarning, showSuccess } = useToast();
 
   const handleExcluirObjeto = async () => {
     await removerConteudo(selectedDate, tempoAula);
@@ -195,50 +187,44 @@ export default function ObjetoConhecimentoTab({
     setObjetoData(null);
     setShowObjetoTable(false);
     setObjetoObservacao('');
-    setCaptchaInput('');
-    generateNewCaptcha();
     setShowDeleteObjetoModal(false);
+    showSuccess('Conteúdo ministrado excluído com sucesso.');
   };
 
   const handleSave = async () => {
     // Validação: todos os campos obrigatórios devem estar preenchidos
     if (!objetoConhecimento || (typeof objetoConhecimento === 'string' && objetoConhecimento.trim() === '')) {
-      alert('Por favor, preencha o Conteúdo Ministrado antes de salvar.');
+      showWarning('Por favor, preencha o Conteúdo Ministrado antes de salvar.');
       return;
     }
 
-    if (validateCaptcha()) {
-      // Garantir que objetoConhecimento seja string ao salvar
-      const objParaSalvar = typeof objetoConhecimento === 'object' && objetoConhecimento !== null
-        ? ((objetoConhecimento as Record<string, unknown>).descricao as string || (objetoConhecimento as Record<string, unknown>).titulo_oc as string || JSON.stringify(objetoConhecimento))
-        : objetoConhecimento;
+    // Garantir que objetoConhecimento seja string ao salvar
+    const objParaSalvar = typeof objetoConhecimento === 'object' && objetoConhecimento !== null
+      ? ((objetoConhecimento as Record<string, unknown>).descricao as string || (objetoConhecimento as Record<string, unknown>).titulo_oc as string || JSON.stringify(objetoConhecimento))
+      : objetoConhecimento;
 
-      await salvarConteudo({
-        turmaId: String(turmaAtiva?.id || ''),
-        data: selectedDate,
-        tempo: tempoAula,
-        objetos: [objParaSalvar],
-        habilidades: [],
-        descricao: objetoObservacao
-      });
+    await salvarConteudo({
+      turmaId: String(turmaAtiva?.id || ''),
+      data: selectedDate,
+      tempo: tempoAula,
+      objetos: [objParaSalvar],
+      habilidades: [],
+      descricao: objetoObservacao
+    });
 
-      setObjetoData({ descricao: objParaSalvar, observacao: objetoObservacao, status: objetoStatus });
-      setObjetoSalvo(true);
-      setShowObjetoTable(false);
-      setIsAddingObjeto(false);
-      setCaptchaInput('');
-      generateNewCaptcha();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    setObjetoData({ descricao: objParaSalvar, observacao: objetoObservacao, status: objetoStatus });
+    setObjetoSalvo(true);
+    setShowObjetoTable(false);
+    setIsAddingObjeto(false);
+    showSuccess('Conteúdo ministrado gravado com sucesso!');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
-      // Auto-advance to the next tempo that doesn't have content yet
-      const nextPendingTempo = disponiveisTempos.find(t => 
-        t !== tempoAula && !lancamentos.some(l => l.data === selectedDate && l.tempo === t && l.tipo === 'conteudo')
-      );
-      if (nextPendingTempo) {
-        setTempoAula(nextPendingTempo);
-      }
-    } else {
-      alert('Código incorreto!');
+    // Auto-advance to the next tempo that doesn't have content yet
+    const nextPendingTempo = disponiveisTempos.find(t => 
+      t !== tempoAula && !lancamentos.some(l => l.data === selectedDate && l.tempo === t && l.tipo === 'conteudo')
+    );
+    if (nextPendingTempo) {
+      setTempoAula(nextPendingTempo);
     }
   };
 
@@ -246,8 +232,8 @@ export default function ObjetoConhecimentoTab({
     <div className="animate-in fade-in slide-in-from-top-4 duration-300 relative">
       {!isAddingObjeto ? (
         <>
-          <div className="flex items-end gap-4 mb-6">
-            <div className="w-64">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4 mb-6">
+            <div className="w-full sm:w-64">
               <label className="block text-sm text-slate-600 mb-1">Tempo da aula</label>
               <select
                 className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500"
@@ -259,32 +245,34 @@ export default function ObjetoConhecimentoTab({
                 ))}
               </select>
             </div>
-            <button
-               onClick={() => {
-                 if (objetoSalvo && objetoData) {
-                   setShowObjetoTable(true);
-                   setShowNoRecordsObjeto(false);
-                 } else {
-                   setShowNoRecordsObjeto(true);
-                   setShowObjetoTable(false);
-                 }
-               }}
-               className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] shadow-sm active:scale-95"
-             >
-               Exibir
-             </button>
-              {!disabled && (
-                <button
-                  onClick={() => {
-                    setShowObjetoTable(false);
-                    setShowNoRecordsObjeto(false);
-                    setIsAddingObjeto(true);
-                  }}
-                  className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] flex items-center gap-2 shadow-sm active:scale-95"
-                >
-                  <span className="text-lg leading-none">+</span> Adicionar Conteúdo Ministrado
-                </button>
-              )}
+            <div className="flex items-center gap-3">
+              <button
+                 onClick={() => {
+                   if (objetoSalvo && objetoData) {
+                     setShowObjetoTable(true);
+                     setShowNoRecordsObjeto(false);
+                   } else {
+                     setShowNoRecordsObjeto(true);
+                     setShowObjetoTable(false);
+                   }
+                 }}
+                 className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] shadow-sm active:scale-95 whitespace-nowrap"
+               >
+                 Exibir
+               </button>
+                {!disabled && (
+                  <button
+                    onClick={() => {
+                      setShowObjetoTable(false);
+                      setShowNoRecordsObjeto(false);
+                      setIsAddingObjeto(true);
+                    }}
+                    className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-4 sm:px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] flex items-center gap-2 shadow-sm active:scale-95 whitespace-nowrap"
+                  >
+                    <span className="text-lg leading-none">+</span> Adicionar Conteúdo
+                  </button>
+                )}
+            </div>
           </div>
 
           {showNoRecordsObjeto && !showObjetoTable && (
@@ -356,8 +344,8 @@ export default function ObjetoConhecimentoTab({
               </div>
             </div>
           )}
-          <div className="grid grid-cols-12 gap-4">
-            <div className="col-span-8">
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+            <div className="sm:col-span-8">
               <label className="block text-sm text-slate-600 mb-1">Conteúdo ministrado</label>
               {todosConteudos.length > 0 && !modoTextoLivre ? (
                 <select
@@ -401,29 +389,31 @@ export default function ObjetoConhecimentoTab({
                 </div>
               )}
             </div>
-            <div className="col-span-2">
-              <label className="block text-sm text-slate-600 mb-1">Tempo de aula</label>
-              <select
-                className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 bg-white"
-                value={tempoAula}
-                onChange={(e) => setTempoAula(e.target.value)}
-              >
-                {disponiveisTempos.map((t: string) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm text-slate-600 mb-1">Status</label>
-              <select
-                className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 bg-white"
-                value={objetoStatus}
-                onChange={(e) => setObjetoStatus(e.target.value)}
-              >
-                <option>Ministrado</option>
-                <option>Planejado</option>
-                <option>Em andamento</option>
-              </select>
+            <div className="grid grid-cols-2 gap-4 sm:col-span-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm text-slate-600 mb-1">Tempo de aula</label>
+                <select
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 bg-white"
+                  value={tempoAula}
+                  onChange={(e) => setTempoAula(e.target.value)}
+                >
+                  {disponiveisTempos.map((t: string) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-slate-600 mb-1">Status</label>
+                <select
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 bg-white"
+                  value={objetoStatus}
+                  onChange={(e) => setObjetoStatus(e.target.value)}
+                >
+                  <option>Ministrado</option>
+                  <option>Planejado</option>
+                  <option>Em andamento</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -437,15 +427,6 @@ export default function ObjetoConhecimentoTab({
           </div>
 
           <div className="pt-2">
-            <Captcha
-              generatedCaptcha={generatedCaptcha}
-              captchaInput={captchaInput}
-              setCaptchaInput={setCaptchaInput}
-              captchaError={captchaError}
-              generateNewCaptcha={generateNewCaptcha}
-              className="mb-6"
-            />
-
              <div className="flex items-center gap-3">
                <button
                  onClick={handleSave}

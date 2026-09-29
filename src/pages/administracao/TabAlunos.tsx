@@ -1,14 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Edit2, Trash2, Building2, Users, GraduationCap, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Search, Edit2, Trash2, Building2, Users, GraduationCap, ChevronRight, ArrowLeft, ArrowRightLeft, KeyRound } from 'lucide-react';
+import RemanejarAlunoModal from '../../components/RemanejarAlunoModal';
 import NovoAlunoModal from '../../components/NovoAlunoModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
-import { formatMatricula, getMatriculaLogin, formatCpfObscured, gerarSenhaTemporaria } from '../../utils/formatters';
+import { formatMatricula, getMatriculaLogin, formatCpfObscured } from '../../utils/formatters';
 
+import { readAllRows } from '../../services/pagination';
 import { useToast } from '../../components/common/Toast';
 
 const ALUNO_EMAIL_DOMAIN = 'aluno.dcdigital.local';
+
+/** Gera senha temporária aleatória e segura para primeiro acesso do aluno */
+function gerarSenhaTemporaria(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  let pwd = '';
+  const arr = new Uint8Array(8);
+  crypto.getRandomValues(arr);
+  for (let i = 0; i < 8; i++) {
+    pwd += chars[arr[i] % chars.length];
+  }
+  return `${pwd}1A`;
+}
 
 export interface AlunoRow {
   id: string;
@@ -22,8 +36,8 @@ export interface AlunoRow {
   telefone?: string;
   endereco?: string;
   status?: string;
-  turmas?: { nome: string; turno?: string };
-  escolas?: { nome: string };
+  turmas?: { nome?: string; turno?: string } | { nome?: string; turno?: string }[] | null;
+  escolas?: { nome?: string } | { nome?: string }[] | null;
 }
 
 export interface EscolaItem {
@@ -47,6 +61,7 @@ export default function TabAlunos() {
   const [isNovoAlunoModalOpen, setIsNovoAlunoModalOpen] = useState(false);
   const [alunoParaEditar, setAlunoParaEditar] = useState<AlunoRow | null>(null);
   const [alunoParaExcluir, setAlunoParaExcluir] = useState<AlunoRow | null>(null);
+  const [alunoParaRemanejar, setAlunoParaRemanejar] = useState<AlunoRow | null>(null);
   const [alunos, setAlunos] = useState<AlunoRow[]>([]);
   const [escolas, setEscolas] = useState<EscolaItem[]>([]);
   const [selectedEscola, setSelectedEscola] = useState<EscolaItem | null>(null);
@@ -59,17 +74,22 @@ export default function TabAlunos() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Carregar turmas da escola selecionada
+  // Carregar turmas e alunos da escola selecionada sob demanda
   useEffect(() => {
     if (selectedEscola) {
       fetchTodasTurmas(selectedEscola.id);
+      fetchAlunos(selectedEscola.id);
+    } else {
+      setAlunos([]);
+      setTodasTurmas([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedEscola]);
 
   async function fetchTodasTurmas(escolaId: string) {
     const { data, error: _error } = await supabase
       .from('turmas')
-      .select('*')
+      .select('id, nome, escola_id, turno')
       .eq('escola_id', escolaId)
       .order('nome');
     
@@ -88,10 +108,7 @@ export default function TabAlunos() {
 
   async function fetchInitialData() {
     setLoading(true);
-    await Promise.all([
-      fetchEscolas(),
-      fetchAlunos()
-    ]);
+    await fetchEscolas();
     setLoading(false);
   }
 
@@ -109,15 +126,25 @@ export default function TabAlunos() {
     }
 
     if (escolasData) {
-      // Contar alunos por escola
-      const { data: countsData } = await supabase
-        .from('alunos')
-        .select('escola_id');
-      
+      // Contar alunos por escola de forma eficiente via RPC no banco, com fallback
       const counts: Record<string, number> = {};
-      countsData?.forEach(a => {
-        counts[a.escola_id] = (counts[a.escola_id] || 0) + 1;
-      });
+      try {
+        const { data: rpcCounts, error: rpcErr } = await supabase.rpc('get_alunos_count_por_escola');
+        if (!rpcErr && rpcCounts) {
+          rpcCounts.forEach((r: { escola_id: string; total_alunos: number }) => {
+            counts[r.escola_id] = Number(r.total_alunos) || 0;
+          });
+        } else {
+          throw rpcErr || new Error('RPC indisponível');
+        }
+      } catch {
+        const { data: countsData } = await supabase
+          .from('alunos')
+          .select('escola_id');
+        countsData?.forEach(a => {
+          counts[a.escola_id] = (counts[a.escola_id] || 0) + 1;
+        });
+      }
 
       const processed = escolasData.map(e => ({
         ...e,
@@ -128,18 +155,31 @@ export default function TabAlunos() {
     }
   }
 
-  async function fetchAlunos() {
-    const { data, error } = await supabase
+  async function fetchAlunos(escolaId?: string) {
+    const targetEscolaId = escolaId || selectedEscola?.id;
+    let query = supabase
       .from('alunos')
-      .select('*, escolas(nome), turmas(nome, turno)')
+      .select('id, nome, cpf, turma_id, escola_id, data_nascimento, sexo, nome_responsavel, telefone, endereco, status, escolas(nome), turmas(nome, turno)')
       .order('nome');
-      
-    if (error) {
-      console.error("Erro ao carregar alunos:", error);
+
+    if (targetEscolaId) {
+      query = query.eq('escola_id', targetEscolaId);
+    } else if (user?.role === 'GESTOR' || user?.role === 'SECRETARIO') {
+      if (user.escola_id) {
+        query = query.eq('escola_id', user.escola_id);
+      } else {
+        setAlunos([]);
+        return;
+      }
     }
-    
-    if (data) {
-      setAlunos(data);
+
+    try {
+      const { data } = await readAllRows<AlunoRow>(query.order('id'));
+      if (data) {
+        setAlunos(data);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar alunos:", error);
     }
   }
 
@@ -166,14 +206,24 @@ export default function TabAlunos() {
       if (error) {
         showError("Erro ao editar aluno: " + error.message);
       } else {
-        // Sincronizar escola_id na tabela usuarios (para transferências)
+        // Ao incluir ou alterar CPF, cria a conta do portal se ela ainda não existia.
         if (novoAluno.cpf) {
           const cpfDigits = getMatriculaLogin(novoAluno.cpf);
           const pseudoEmail = `${cpfDigits}@${ALUNO_EMAIL_DOMAIN}`;
-          await supabase
-            .from('usuarios')
-            .update({ escola_id: novoAluno.escola_id })
-            .eq('email', pseudoEmail);
+          const cpfAnterior = getMatriculaLogin(alunoParaEditar.cpf || '');
+          if (cpfAnterior !== cpfDigits) {
+            const senhaTemporaria = gerarSenhaTemporaria();
+            const { data: authData, error: authError } = await supabase.functions.invoke('admin-create-user', {
+              body: { nome: novoAluno.nome, email: pseudoEmail, senha: senhaTemporaria, cargo: 'ALUNO', escola_id: novoAluno.escola_id },
+            });
+            if (authError || authData?.error) {
+              showWarning(`Dados atualizados, mas a conta do portal não foi criada: ${authData?.error || authError?.message || 'erro desconhecido'}`);
+            } else {
+              showSuccess(`Conta do portal criada. Senha temporária: ${senhaTemporaria}`);
+            }
+          } else {
+            await supabase.from('usuarios').update({ escola_id: novoAluno.escola_id }).eq('email', pseudoEmail);
+          }
         }
         
         fetchAlunos();
@@ -200,7 +250,7 @@ export default function TabAlunos() {
           const pseudoEmail = `${cpfDigits}@${ALUNO_EMAIL_DOMAIN}`;
           
           try {
-            // FIX C2: senha temporária aleatória forte — nunca mais "Aluno2026"
+            // Senha temporária gerada de forma segura para o aluno.
             const senhaTemporaria = gerarSenhaTemporaria();
             const { data: authData, error: authError } = await supabase.functions.invoke('admin-create-user', {
               body: {
@@ -234,6 +284,40 @@ export default function TabAlunos() {
     }
   };
 
+  const handleResetSenhaAluno = async (aluno: AlunoRow) => {
+    if (!aluno.cpf) { showWarning('Cadastre o CPF antes de criar o acesso do aluno.'); return; }
+    if (!aluno.escola_id) { showError('Não foi possível identificar a escola do aluno.'); return; }
+    const senha = gerarSenhaTemporaria();
+    const email = `${getMatriculaLogin(aluno.cpf)}@${ALUNO_EMAIL_DOMAIN}`;
+    const { data, error } = await supabase.functions.invoke('admin-create-user', { body: { action: 'reset-student-password', email, senha } });
+    if (error || data?.error) {
+      let message = data?.error || error?.message || 'Não foi possível redefinir a senha.';
+      if (error && 'context' in error && error.context) {
+        try { const response = await error.context.json(); message = response?.error || message; } catch { /* usa a mensagem padrão */ }
+      }
+
+      // Alunos antigos podem já ter CPF, mas não possuir conta no Auth. Neste caso,
+      // a mesma ação de "redefinir" conclui o cadastro da conta de acesso.
+      if (message === 'Conta de aluno não encontrada.') {
+        const { data: createData, error: createError } = await supabase.functions.invoke('admin-create-user', {
+          body: { nome: aluno.nome, email, senha, cargo: 'ALUNO', escola_id: aluno.escola_id },
+        });
+
+        if (!createError && !createData?.error) {
+          showSuccess(`Conta do portal criada para ${aluno.nome}. Senha temporária: ${senha}. Anote-a agora; ela não será exibida novamente.`);
+          return;
+        }
+
+        message = createData?.error || createError?.message || 'Não foi possível criar a conta do aluno.';
+        if (createError && 'context' in createError && createError.context) {
+          try { const response = await createError.context.json(); message = response?.error || message; } catch { /* usa a mensagem padrão */ }
+        }
+      }
+      showError(message);
+      return;
+    }
+    showSuccess(`Nova senha temporária de ${aluno.nome}: ${senha}. Anote-a agora; ela não será exibida novamente.`);
+  };
   const handleEditAluno = (aluno: AlunoRow) => {
     setAlunoParaEditar(aluno);
     setIsNovoAlunoModalOpen(true);
@@ -249,23 +333,33 @@ export default function TabAlunos() {
       if (error) {
         showError("Erro ao excluir aluno: " + error.message);
       } else {
+        let authRemoved = true;
         // Revogar conta Auth correspondente se o aluno tiver CPF
         if (alunoParaExcluir.cpf) {
           const cpfDigits = getMatriculaLogin(alunoParaExcluir.cpf);
           const pseudoEmail = `${cpfDigits}@${ALUNO_EMAIL_DOMAIN}`;
           try {
-            await supabase.functions.invoke('admin-create-user', {
+            const { data: authData, error: authError } = await supabase.functions.invoke('admin-create-user', {
               body: { action: 'delete-user', email: pseudoEmail },
             });
+            if (authError || authData?.error) {
+              console.warn('Aviso ao remover conta Auth do aluno:', authError || authData?.error);
+              authRemoved = false;
+              showWarning('Aluno excluído do banco, mas a conta de autenticação requer remoção manual ou não existia.');
+            }
           } catch (e) {
             console.warn('Erro ao remover conta Auth do aluno excluído:', e);
+            authRemoved = false;
+            showWarning('Aluno excluído do banco, mas ocorreu falha ao remover a conta de autenticação.');
           }
         }
 
         fetchAlunos();
         fetchEscolas();
         setAlunoParaExcluir(null);
-        showSuccess("Aluno excluído com sucesso!");
+        if (authRemoved) {
+          showSuccess("Aluno excluído com sucesso!");
+        }
       }
     }
   };
@@ -274,14 +368,27 @@ export default function TabAlunos() {
     e.nome.toLowerCase().includes(busca.toLowerCase())
   );
 
+  const getTurmaNome = (turmas?: { nome?: string; turno?: string } | { nome?: string; turno?: string }[] | null) => {
+    if (Array.isArray(turmas)) return turmas[0]?.nome || '';
+    return turmas?.nome || '';
+  };
+
+  const getTurmaTurno = (turmas?: { nome?: string; turno?: string } | { nome?: string; turno?: string }[] | null) => {
+    if (Array.isArray(turmas)) return turmas[0]?.turno || 'N/A';
+    return turmas?.turno || 'N/A';
+  };
+
   const alunosDaEscola = selectedEscola 
-    ? alunos.filter(a => 
-        a.escola_id === selectedEscola.id &&
-        (a.nome.toLowerCase().includes(busca.toLowerCase()) ||
-         (a.cpf && a.cpf.includes(busca)) ||
-         (a.nome_responsavel && a.nome_responsavel.toLowerCase().includes(busca.toLowerCase())) ||
-         (a.turmas?.nome && a.turmas.nome.toLowerCase().includes(busca.toLowerCase())))
-      )
+    ? alunos.filter(a => {
+        const turmaNome = getTurmaNome(a.turmas);
+        return (
+          a.escola_id === selectedEscola.id &&
+          (a.nome.toLowerCase().includes(busca.toLowerCase()) ||
+           (a.cpf && a.cpf.includes(busca)) ||
+           (a.nome_responsavel && a.nome_responsavel.toLowerCase().includes(busca.toLowerCase())) ||
+           (turmaNome && turmaNome.toLowerCase().includes(busca.toLowerCase())))
+        );
+      })
     : [];
 
   // Agrupar alunos por turma e turno
@@ -290,8 +397,8 @@ export default function TabAlunos() {
     if (!acc[turmaKey]) {
       acc[turmaKey] = {
         id: turmaKey,
-        nome: a.turmas?.nome || 'Sem Turma',
-        turno: a.turmas?.turno || 'N/A',
+        nome: getTurmaNome(a.turmas) || 'Sem Turma',
+        turno: getTurmaTurno(a.turmas),
         alunos: []
       };
     }
@@ -605,7 +712,11 @@ export default function TabAlunos() {
                                             </span>
                                           </td>
                                           <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                                            <div className="flex items-center justify-end gap-1">
+                                              <button onClick={() => handleResetSenhaAluno(aluno)} className="p-2 text-slate-400 hover:text-violet-700 hover:bg-violet-50 rounded-lg transition-colors" title="Redefinir senha do portal"><KeyRound className="w-4 h-4" /></button>
+                                              <button onClick={() => setAlunoParaRemanejar(aluno)} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100 transition-colors" title="Remanejar aluno">
+                                                <ArrowRightLeft className="w-4 h-4" /><span className="hidden xl:inline">Remanejar</span>
+                                              </button>
                                               <button 
                                                 onClick={() => handleEditAluno(aluno)}
                                                 className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -682,7 +793,7 @@ export default function TabAlunos() {
                                     {aluno.nome}
                                   </span>
                                   <span className="text-[10px] font-bold text-red-400 uppercase tracking-tight">
-                                    ⚠ SEM TURMA ATRIBUÍDA
+                                    ⚠  SEM TURMA ATRIBUÍDA
                                   </span>
                                 </div>
                               </div>
@@ -707,7 +818,11 @@ export default function TabAlunos() {
                               </span>
                             </td>
                             <td className="px-6 py-4 text-right">
-                              <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                              <div className="flex items-center justify-end gap-1">
+                                              <button onClick={() => handleResetSenhaAluno(aluno)} className="p-2 text-slate-400 hover:text-violet-700 hover:bg-violet-50 rounded-lg transition-colors" title="Redefinir senha do portal"><KeyRound className="w-4 h-4" /></button>
+                                              <button onClick={() => setAlunoParaRemanejar(aluno)} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100 transition-colors" title="Remanejar aluno">
+                                                <ArrowRightLeft className="w-4 h-4" /><span className="hidden xl:inline">Remanejar</span>
+                                              </button>
                                 <button 
                                   onClick={() => handleEditAluno(aluno)}
                                   className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -747,7 +862,7 @@ export default function TabAlunos() {
         fixedEscolaId={selectedEscola?.id}
       />
 
-      <ConfirmActionModal
+      <RemanejarAlunoModal aluno={alunoParaRemanejar} onClose={() => setAlunoParaRemanejar(null)} onSuccess={() => { fetchAlunos(); fetchEscolas(); }} />      <ConfirmActionModal
         isOpen={!!alunoParaExcluir}
         onClose={() => setAlunoParaExcluir(null)}
         onConfirm={confirmDeleteAluno}

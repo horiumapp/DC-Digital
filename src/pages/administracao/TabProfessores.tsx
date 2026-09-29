@@ -16,6 +16,7 @@ const DISCIPLINAS = [
 ];
 
 import { useToast } from '../../components/common/Toast';
+import { readAllRows } from '../../services/pagination';
 
 
 export interface ProfessorRow {
@@ -119,19 +120,22 @@ export default function TabProfessores() {
 
   async function fetchProfessores() {
     // SEC-04 FIX: especificar campos em vez de select('*') para evitar expor CPF e dados desnecessários
-    const { data, error } = await supabase
-      .from('professores')
-      .select('id, nome, email, status, departamento, disciplinas, vinculo, telefone, professor_alocacoes(id, escola_id, turno, escolas(nome)), professor_horarios(id, escola_id)')
-      .order('nome');
-      
-    if (error) {
+    try {
+      const query = supabase
+        .from('professores')
+        .select('id, nome, email, status, departamento, disciplinas, vinculo, telefone, professor_alocacoes(id, escola_id, turno, escolas(nome)), professor_horarios(id, escola_id)')
+        .order('nome');
+        
+      const { data } = await readAllRows<ProfessorRow>(query.order('id'));
+      if (data) {
+        setProfessores(data);
+      }
+    } catch (error) {
       console.error("Erro ao carregar professores e alocações:", error);
+      showError("Não foi possível carregar a lista de professores.");
+    } finally {
+      setLoading(false);
     }
-    
-    if (data) {
-      setProfessores(data);
-    }
-    setLoading(false);
   };
 
   const handleSaveProfessor = async (novoProfessor: NovoProfessorFormData | ProfessorRow) => {
@@ -166,27 +170,24 @@ export default function TabProfessores() {
       if (!dataToInsert.cpf) dataToInsert.cpf = null;
       if (!dataToInsert.email) dataToInsert.email = null;
 
-      const { data: newProfList, error } = await supabase
-        .from('professores')
-        .insert([dataToInsert])
-        .select();
+      const { data: newProfData, error: rpcError } = await supabase.rpc('criar_professor_com_alocacao', {
+        p_nome: dataToInsert.nome,
+        p_email: dataToInsert.email || null,
+        p_telefone: dataToInsert.telefone || null,
+        p_departamento: dataToInsert.departamento || 'Geral',
+        p_disciplinas: dataToInsert.disciplinas || [],
+        p_escola_id: selectedEscola?.id || null,
+        p_turno: 'Manhã',
+        p_cpf: dataToInsert.cpf || null,
+        p_vinculo: (dataToInsert.vinculo as string) || 'Efetivo',
+        p_status: (dataToInsert.status as string) || 'Ativo',
+      });
 
-      if (error) {
-        console.error("Erro ao inserir:", error);
-        showError("Erro ao criar professor: " + error.message);
+      if (rpcError) {
+        console.error("Erro ao inserir:", rpcError);
+        showError("Erro ao criar professor: " + rpcError.message);
       } else {
-        const newProf = newProfList?.[0];
-        // Se existe uma escola selecionada, alocamos ele automaticamente nela!
-        if (selectedEscola && newProf) {
-          const { error: alocError } = await supabase
-            .from('professor_alocacoes')
-            .insert({
-               professor_id: newProf.id,
-               escola_id: selectedEscola.id,
-               turno: 'Manhã'
-            });
-          if (alocError) console.error("Erro ao alocar:", alocError);
-        }
+        const _newProf = newProfData as unknown as ProfessorRow | null;
 
         // Fase 2: Se forneceu e-mail, criar conta de acesso via Edge Function
         if (novoProfessor.email && selectedEscola) {
@@ -265,42 +266,44 @@ export default function TabProfessores() {
         console.error("Erro ao deletar:", error);
         showError("Erro ao deletar professor: " + error.message);
       } else {
+        let authRemoved = true;
         // Revogar conta Auth correspondente se o professor tiver email cadastrado
         if (professorParaExcluir.email) {
           try {
-            await supabase.functions.invoke('admin-create-user', {
+            const { data: authData, error: authError } = await supabase.functions.invoke('admin-create-user', {
               body: { action: 'delete-user', email: professorParaExcluir.email.trim().toLowerCase() },
             });
+            if (authError || authData?.error) {
+              console.warn('Aviso ao remover conta Auth do professor:', authError || authData?.error);
+              authRemoved = false;
+              showWarning('Professor excluído do banco, mas a conta de autenticação requer remoção manual ou não existia.');
+            }
           } catch (e) {
             console.warn('Erro ao remover conta Auth do professor excluído:', e);
+            authRemoved = false;
+            showWarning('Professor excluído do banco, mas houve falha ao remover a conta de autenticação.');
           }
         }
 
         fetchProfessores();
         setProfessorParaExcluir(null);
-        showSuccess("Professor excluído com sucesso do sistema!");
+        if (authRemoved) {
+          showSuccess("Professor excluído com sucesso do sistema!");
+        }
       }
     } else if (selectedEscola?.id) {
       // NÃO-ADMIN (GESTOR / SECRETARIO): Remove a alocação e horários do professor apenas nesta escola
-      // Preserva o cadastro global e os vínculos com outras escolas da rede municipal
-      const { error: alocError } = await supabase
-        .from('professor_alocacoes')
-        .delete()
-        .eq('professor_id', professorParaExcluir.id)
-        .eq('escola_id', selectedEscola.id);
+      // Preserva o cadastro global e os vínculos com outras escolas da rede municipal via RPC atômica
+      const { error: rpcError } = await supabase.rpc('desvincular_professor_escola', {
+        p_professor_id: professorParaExcluir.id,
+        p_escola_id: selectedEscola.id,
+      });
 
-      if (alocError) {
-        console.error("Erro ao desvincular professor da escola:", alocError);
-        showError("Erro ao desvincular professor: " + alocError.message);
+      if (rpcError) {
+        console.error("Erro ao desvincular professor da escola:", rpcError);
+        showError("Erro ao desvincular professor: " + rpcError.message);
         return;
       }
-
-      // Remover também horários do professor vinculados a esta escola
-      await supabase
-        .from('professor_horarios')
-        .delete()
-        .eq('professor_id', professorParaExcluir.id)
-        .eq('escola_id', selectedEscola.id);
 
       fetchProfessores();
       setProfessorParaExcluir(null);

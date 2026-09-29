@@ -39,6 +39,7 @@ interface AvaliacaoFormProps {
   onGenerateNewCaptcha: () => void;
   onSetCalendarMonth: (val: number) => void;
   onSetCalendarYear: (val: number) => void;
+  isSaving?: boolean;
 }
 
 const AvaliacaoForm = React.memo(function AvaliacaoForm({
@@ -73,21 +74,27 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
   onSetCaptchaInput,
   onGenerateNewCaptcha,
   onSetCalendarMonth,
-  onSetCalendarYear
+  onSetCalendarYear,
+  isSaving = false
 }: AvaliacaoFormProps) {
   const displayDate = selectedDate.includes('-') ? selectedDate.split('-').reverse().join('/') : selectedDate;
+  const [modoManualUnidade, setModoManualUnidade] = React.useState(false);
+  const [modoManualObjeto, setModoManualObjeto] = React.useState(false);
+
+  const isManualUnidade = modoManualUnidade || unidadesOpcoes.length === 0;
+  const isManualObjeto = modoManualObjeto || isManualUnidade || objetosOpcoes.length === 0;
 
   return (
     <div className="space-y-6">
-      <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
-        <div className="flex justify-between items-center mb-8">
+      <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-8 shadow-sm">
+        <div className="flex flex-wrap justify-between items-center gap-3 mb-6 sm:mb-8">
           <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
             <div className="w-10 h-10 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center">
               <Pencil className="w-5 h-5" />
             </div>
             {selectedAvaliacao ? (selectedAvaliacao.parent_id ? 'Agendar Recuperação Paralela (RP)' : 'Alterar Avaliação') : 'Cadastrar Nova Avaliação'}
           </h3>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {selectedAvaliacao && (
               <div className="px-4 py-2 bg-[#eef2ff] border border-blue-100 rounded-xl">
                 <span className="text-[10px] font-bold text-[#0f2851]/60 uppercase tracking-widest block leading-none mb-1">Tipo</span>
@@ -98,7 +105,7 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-8">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Data da avaliação</label>
             <div className="relative">
@@ -168,7 +175,7 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
       </div>
 
       {/* Objetos de Conhecimento da Avaliação */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
+      <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-8 shadow-sm">
         <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6">
           <div className="w-10 h-10 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center">
             <List className="w-5 h-5" />
@@ -188,9 +195,14 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Período letivo</label>
                   <select
                     value={periodoLetivo}
-                    onChange={(e) => { onSetPeriodoLetivo(e.target.value); onSetUnidadeDidatica(''); onSetObjetoConhecimento(''); }}
+                    onChange={(e) => {
+                      onSetPeriodoLetivo(e.target.value);
+                      onSetUnidadeDidatica('');
+                      onSetObjetoConhecimento('');
+                      setModoManualUnidade(false);
+                      setModoManualObjeto(false);
+                    }}
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer"
-                    disabled
                   >
                     <option value="">Selecione...</option>
                     {Object.entries(PERIODOS_LABELS).map(([bim, label]) => (
@@ -198,36 +210,105 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
                     ))}
                   </select>
                 </div>
+
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Unidade didática</label>
-                  <select
-                    value={unidadeDidatica}
-                    onChange={(e) => { onSetUnidadeDidatica(e.target.value); onSetObjetoConhecimento(''); }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer"
-                    disabled={!periodoLetivo || unidadesOpcoes.length === 0}
-                  >
-                    <option value="">{unidadesOpcoes.length > 0 ? "Selecione..." : "Nenhuma unidade lançada"}</option>
-                    {unidadesOpcoes.map(u => <option key={u} value={u}>{u}</option>)}
-                  </select>
+                  <div className="flex justify-between items-center pl-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade didática</label>
+                    {unidadesOpcoes.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModoManualUnidade(!isManualUnidade);
+                          onSetUnidadeDidatica('');
+                          onSetObjetoConhecimento('');
+                        }}
+                        className="text-[11px] font-bold text-[#0f2851] hover:underline"
+                      >
+                        {isManualUnidade ? '← Escolher da lista' : '+ Digitar manual'}
+                      </button>
+                    )}
+                  </div>
+                  {!isManualUnidade ? (
+                    <select
+                      value={unidadeDidatica}
+                      onChange={(e) => {
+                        if (e.target.value === '__MANUAL__') {
+                          setModoManualUnidade(true);
+                          onSetUnidadeDidatica('');
+                          onSetObjetoConhecimento('');
+                        } else {
+                          onSetUnidadeDidatica(e.target.value);
+                          onSetObjetoConhecimento('');
+                        }
+                      }}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer"
+                    >
+                      <option value="">Selecione a unidade...</option>
+                      {unidadesOpcoes.map(u => <option key={u} value={u}>{u}</option>)}
+                      <option value="__MANUAL__">-- Outra Unidade (Digitar manual) --</option>
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={unidadeDidatica}
+                      onChange={(e) => onSetUnidadeDidatica(e.target.value)}
+                      placeholder="Digite a unidade didática (ex: Geometria, Álgebra...)"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10"
+                    />
+                  )}
                 </div>
               </div>
-              <div className="flex gap-4 items-end">
+
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-end">
                 <div className="flex-1 space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Objeto de Conhecimento</label>
-                  <select
-                    value={objetoConhecimento}
-                    onChange={(e) => onSetObjetoConhecimento(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer"
-                    disabled={!unidadeDidatica || objetosOpcoes.length === 0}
-                  >
-                    <option value="">{objetosOpcoes.length > 0 ? "Selecione..." : "Nenhum objeto lançado"}</option>
-                    {objetosOpcoes.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
+                  <div className="flex justify-between items-center pl-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Objeto de Conhecimento</label>
+                    {objetosOpcoes.length > 0 && !isManualUnidade && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModoManualObjeto(!isManualObjeto);
+                          onSetObjetoConhecimento('');
+                        }}
+                        className="text-[11px] font-bold text-[#0f2851] hover:underline"
+                      >
+                        {isManualObjeto ? '← Escolher da lista' : '+ Digitar manual'}
+                      </button>
+                    )}
+                  </div>
+                  {!isManualObjeto && !isManualUnidade ? (
+                    <select
+                      value={objetoConhecimento}
+                      onChange={(e) => {
+                        if (e.target.value === '__MANUAL__') {
+                          setModoManualObjeto(true);
+                          onSetObjetoConhecimento('');
+                        } else {
+                          onSetObjetoConhecimento(e.target.value);
+                        }
+                      }}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer"
+                      disabled={!unidadeDidatica}
+                    >
+                      <option value="">{unidadeDidatica ? 'Selecione o objeto...' : 'Selecione primeiro a unidade'}</option>
+                      {objetosOpcoes.map(o => <option key={o} value={o}>{o}</option>)}
+                      <option value="__MANUAL__">-- Outro Objeto (Digitar manual) --</option>
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={objetoConhecimento}
+                      onChange={(e) => onSetObjetoConhecimento(e.target.value)}
+                      placeholder="Digite o objeto de conhecimento da avaliação..."
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10"
+                    />
+                  )}
                 </div>
                 <button
+                  type="button"
                   onClick={onAddObjeto}
-                  disabled={!objetoConhecimento}
-                  className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-3.5 rounded-2xl text-sm font-bold hover:bg-[#e0e7ff] transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm active:scale-95 whitespace-nowrap"
+                  disabled={!objetoConhecimento || objetoConhecimento.trim().length === 0}
+                  className="w-full sm:w-auto bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-3.5 rounded-2xl text-sm font-bold hover:bg-[#e0e7ff] transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm active:scale-95 whitespace-nowrap"
                 >
                   <Plus className="w-4 h-4" /> Adicionar
                 </button>
@@ -235,45 +316,47 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
             </div>
 
             <div className="border border-slate-200 rounded-2xl overflow-hidden">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase">
-                  <tr>
-                    <th className="px-6 py-3 font-black text-[10px] tracking-widest">Unidade Didática</th>
-                    <th className="px-6 py-3 font-black text-[10px] tracking-widest">Objeto de Conhecimento da avaliação</th>
-                    <th className="px-6 py-3 font-black text-[10px] tracking-widest text-center w-28">Ação</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {objetosAvaliacao.length === 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[460px] text-sm text-left">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase">
                     <tr>
-                      <td colSpan={3} className="px-6 py-5 text-center text-slate-400 text-sm font-medium">
-                        Clique em Adicionar para inserir os Objetos de conhecimento na tabela
-                      </td>
+                      <th className="px-6 py-3 font-black text-[10px] tracking-widest">Unidade Didática</th>
+                      <th className="px-6 py-3 font-black text-[10px] tracking-widest">Objeto de Conhecimento da avaliação</th>
+                      <th className="px-6 py-3 font-black text-[10px] tracking-widest text-center w-28">Ação</th>
                     </tr>
-                  ) : (
-                    objetosAvaliacao.map((obj, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4 text-slate-700 font-bold text-xs">{obj.unidade}</td>
-                        <td className="px-6 py-4 text-slate-600 text-xs">{obj.objeto}</td>
-                        <td className="px-6 py-4 text-center">
-                          <button
-                            onClick={() => onRemoveObjeto(idx)}
-                            className="bg-red-600 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase hover:bg-red-700 transition flex items-center gap-1.5 mx-auto shadow-md shadow-red-600/20"
-                          >
-                            Excluir <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {objetosAvaliacao.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="px-6 py-5 text-center text-slate-400 text-sm font-medium">
+                          Clique em Adicionar para inserir os Objetos de conhecimento na tabela
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      objetosAvaliacao.map((obj, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-6 py-4 text-slate-700 font-bold text-xs">{obj.unidade}</td>
+                          <td className="px-6 py-4 text-slate-600 text-xs">{obj.objeto}</td>
+                          <td className="px-6 py-4 text-center">
+                            <button
+                              onClick={() => onRemoveObjeto(idx)}
+                              className="bg-red-600 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase hover:bg-red-700 transition flex items-center gap-1.5 mx-auto shadow-md shadow-red-600/20"
+                            >
+                              Excluir <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
+      <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-8 shadow-sm">
         <Captcha 
           generatedCaptcha={generatedCaptcha} 
           captchaInput={captchaInput} 
@@ -282,14 +365,15 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
           generateNewCaptcha={onGenerateNewCaptcha} 
           className="mb-8" 
         />
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <button 
             onClick={onSave} 
-            className="flex-1 bg-[#0f2851] text-white py-4 rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20 flex items-center justify-center gap-3 active:scale-95"
+            disabled={isSaving}
+            className="flex-1 bg-[#0f2851] text-white py-4 rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Check className="w-5 h-5 text-emerald-400" /> Salvar Avaliação
+            <Check className="w-5 h-5 text-emerald-400" /> {isSaving ? 'Salvando...' : 'Salvar Avaliação'}
           </button>
-          <button onClick={onCancel} className="px-10 bg-slate-100 text-slate-500 py-4 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-slate-200 transition">Sair</button>
+          <button onClick={onCancel} className="w-full sm:w-auto px-10 bg-slate-100 text-slate-500 py-4 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-slate-200 transition">Sair</button>
         </div>
       </div>
     </div>

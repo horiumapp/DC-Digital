@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getBimestrePorData, getDayOfWeek, formatarDataParaISO, formatarDataParaExibicao } from '../utils/dateUtils';
+import { getBimestrePorData, getDayOfWeek, formatarDataParaISO, formatarDataParaExibicao, formatarDiaMes } from '../utils/dateUtils';
 import { getPeriodoPorData } from '../config/appConfig';
 
 describe('Utilitários de Data (dateUtils.ts)', () => {
@@ -13,6 +13,14 @@ describe('Utilitários de Data (dateUtils.ts)', () => {
     expect(formatarDataParaExibicao('2026-05-30')).toBe('30/05/2026');
     expect(formatarDataParaExibicao('30/05/2026')).toBe('30/05/2026');
     expect(formatarDataParaExibicao('')).toBe('');
+  });
+
+  it('deve formatar data para formato dia/mês (DD/MM)', () => {
+    expect(formatarDiaMes('2026-09-01')).toBe('01/09');
+    expect(formatarDiaMes('2026-09-18')).toBe('18/09');
+    expect(formatarDiaMes('01/09/2026')).toBe('01/09');
+    expect(formatarDiaMes('5/3/2026')).toBe('05/03');
+    expect(formatarDiaMes('')).toBe('');
   });
 
   it('deve obter o bimestre correto a partir de datas no formato ISO ou brasileiro', () => {

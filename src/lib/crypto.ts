@@ -142,7 +142,11 @@ export function looksEncrypted(value: string): boolean {
   if (value.length < 40) return false;
   try {
     const decoded = atob(value);
-    return decoded.length >= 29;
+    const looksLegacy = decoded.length >= 29;
+    if (looksLegacy && typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
+      console.warn('[crypto] Dado detectado via heurística legada (sem prefixo enc:v1:). Recomenda-se re-criptografar.');
+    }
+    return looksLegacy;
   } catch {
     return false;
   }

@@ -13,7 +13,8 @@
     "lint": "eslint . && tsc --noEmit",
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:db": "node scripts/test-database.mjs"
   },
   "dependencies": {
     "@sentry/react": "^10.67.0",
@@ -28,6 +29,7 @@
     "react-router-dom": "^7.18.2"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.1.14",
     "@testing-library/react": "^16.3.2",
@@ -40,6 +42,7 @@
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
+    "fake-indexeddb": "^6.2.5",
     "globals": "^17.6.0",
     "happy-dom": "^20.10.6",
     "tailwindcss": "^4.1.14",

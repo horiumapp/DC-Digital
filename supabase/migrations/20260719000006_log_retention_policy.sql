@@ -89,7 +89,7 @@ BEGIN
     PERFORM cron.schedule(
       'dc-digital-log-cleanup',              -- nome único do job
       '0 3 * * 1',                           -- cron: toda segunda às 03:00 UTC
-      $$SELECT public.cleanup_old_logs(365)$$
+      $job$SELECT public.cleanup_old_logs(365)$job$
     );
     RAISE NOTICE 'pg_cron: job de limpeza de logs agendado com sucesso.';
   ELSE

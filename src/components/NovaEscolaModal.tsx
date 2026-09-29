@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Building2, MapPin, Hash, User, Activity, Image as ImageIcon } from 'lucide-react';
+import { X, Building2, MapPin, Hash, User, UserCheck, Activity, Image as ImageIcon } from 'lucide-react';
 import logosLocais from '../config/logos.json';
 
 export interface NovaEscolaData {
@@ -7,6 +7,7 @@ export interface NovaEscolaData {
   localizacao: string;
   inep: string;
   gestor: string;
+  secretario?: string;
   ativo: boolean;
   logo_url: string;
 }
@@ -17,6 +18,7 @@ export interface EscolaEditTarget {
   distrito?: string;
   inep?: string;
   diretor?: string;
+  secretario?: string;
   status?: string;
   logo_url?: string;
 }
@@ -34,11 +36,11 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
     localizacao: '',
     inep: '',
     gestor: '',
+    secretario: '',
     ativo: true,
     logo_url: '',
   });
 
-   
   useEffect(() => {
     if (escolaParaEditar) {
       setFormData({
@@ -46,6 +48,7 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
         localizacao: escolaParaEditar.distrito || '', // assuming the table uses 'distrito'
         inep: escolaParaEditar.inep || '',
         gestor: escolaParaEditar.diretor || '',
+        secretario: escolaParaEditar.secretario || '',
         ativo: escolaParaEditar.status === 'Ativa',
         logo_url: escolaParaEditar.logo_url || '',
       });
@@ -55,6 +58,7 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
         localizacao: '',
         inep: '',
         gestor: '',
+        secretario: '',
         ativo: true,
         logo_url: '',
       });
@@ -73,6 +77,7 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
       localizacao: '',
       inep: '',
       gestor: '',
+      secretario: '',
       ativo: true,
       logo_url: '',
     });
@@ -153,6 +158,20 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
               onChange={(e) => setFormData({ ...formData, gestor: e.target.value })}
               className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
               placeholder="Nome do diretor(a)"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+              <UserCheck className="w-4 h-4 text-slate-400" />
+              Secretário(a) Escolar
+            </label>
+            <input
+              type="text"
+              value={formData.secretario}
+              onChange={(e) => setFormData({ ...formData, secretario: e.target.value })}
+              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
+              placeholder="Nome do secretário(a) escolar"
             />
           </div>
 

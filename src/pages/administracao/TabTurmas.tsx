@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Edit2, Trash2, Building2, ChevronRight, GraduationCap, Users, ArrowLeft } from 'lucide-react';
+import { Search, Edit2, Trash2, Building2, ChevronRight, GraduationCap, Users, ArrowLeft, Folder } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useTurma, type Turma } from '../../contexts/TurmaContext';
 import NovaTurmaModal from '../../components/NovaTurmaModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 
 import { useToast } from '../../components/common/Toast';
+import { readAllRows } from '../../services/pagination';
 
 export interface TurmaRow {
   id: string;
@@ -33,6 +36,8 @@ export interface NovaTurmaData {
 export default function TabTurmas() {
   const { user } = useAuth();
   const { showError } = useToast();
+  const { selecionarTurma } = useTurma();
+  const navigate = useNavigate();
   const [buscaTurma, setBuscaTurma] = useState('');
   const [isNovaTurmaModalOpen, setIsNovaTurmaModalOpen] = useState(false);
   const [turmaParaEditar, setTurmaParaEditar] = useState<TurmaRow | null>(null);
@@ -41,6 +46,25 @@ export default function TabTurmas() {
   const [escolas, setEscolas] = useState<EscolaItem[]>([]);
   const [selectedEscola, setSelectedEscola] = useState<EscolaItem | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const handleAbrirAparatas = (turma: TurmaRow) => {
+    const turmaObj: Turma = {
+      id: turma.id,
+      ensino: 'Ensino Fundamental',
+      fase: turma.nome,
+      componente: 'TODAS',
+      professor: user?.name || 'Secretaria',
+      escola: turma.escolas?.nome || selectedEscola?.nome || 'Escola',
+      escola_id: turma.escola_id,
+      turno: turma.turno,
+      metricas: { frequencia: 0, objetosMinistrados: 0, objetosPlanejados: 0, avaliacoesCadastradas: 0, avaliacoesPrevistas: 0, notasLancadas: 0, notasPrevistas: 0 },
+      diasDeAula: [1, 2, 3, 4, 5],
+      tempos: ['1º TEMPO', '2º TEMPO']
+    };
+    selecionarTurma(turmaObj);
+    sessionStorage.setItem('turmaAtivaId', turma.id.toString());
+    navigate('/aparata');
+  };
 
   useEffect(() => {
     fetchInitialData();
@@ -74,33 +98,45 @@ export default function TabTurmas() {
       .order('nome');
 
     if (escolasData) {
-      // Para cada escola, vamos contar as turmas (poderia ser feito via SQL join complexo, mas para simplicidade aqui...)
-      const { data: countsData } = await supabase
-        .from('turmas')
-        .select('escola_id');
-      
-      const counts: Record<string, number> = {};
-      countsData?.forEach(t => {
-        counts[t.escola_id] = (counts[t.escola_id] || 0) + 1;
-      });
+      // Contar as turmas por escola sem truncar em 1000
+      try {
+        const { data: countsData } = await readAllRows<{ escola_id: string }>(
+          supabase.from('turmas').select('escola_id').order('id')
+        );
+        
+        const counts: Record<string, number> = {};
+        countsData?.forEach(t => {
+          counts[t.escola_id] = (counts[t.escola_id] || 0) + 1;
+        });
 
-      const processed = escolasData.map(e => ({
-        ...e,
-        turmasCount: counts[e.id] || 0
-      }));
-      
-      setEscolas(processed);
+        const processed = escolasData.map(e => ({
+          ...e,
+          turmasCount: counts[e.id] || 0
+        }));
+        
+        setEscolas(processed);
+      } catch (err) {
+        console.error('Erro ao contar turmas por escola:', err);
+        setEscolas(escolasData.map(e => ({ ...e, turmasCount: 0 })));
+      }
     }
   };
 
   async function fetchTurmas() {
-    const { data, error } = await supabase
-      .from('turmas')
-      .select('*, escolas(nome)')
-      .order('nome');
-      
-    if (!error && data) {
-      setTurmas(data);
+    try {
+      const query = supabase
+        .from('turmas')
+        .select('*, escolas(nome)')
+        .order('id');
+        
+      const { data } = await readAllRows<TurmaRow>(query);
+      if (data) {
+        data.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        setTurmas(data);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar turmas:", error);
+      showError("Não foi possível carregar a lista de turmas.");
     }
   };
 
@@ -390,7 +426,7 @@ export default function TabTurmas() {
                         className="group bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 flex flex-col relative"
                       >
                         {/* Botões de Ação (Hover Only) */}
-                        <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute top-4 right-4 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           <button 
                             onClick={() => handleEditTurma(turma)}
                             className="p-2 bg-slate-50 text-slate-400 hover:text-[#0f2851] hover:bg-[#eef2ff] rounded-lg transition-colors"
@@ -424,6 +460,18 @@ export default function TabTurmas() {
                             <span className="text-sm font-medium">Ano Letivo: {turma.ano_letivo}</span>
                           </div>
                         </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleAbrirAparatas(turma)}
+                          className="w-full mt-auto pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-[#0f2851] hover:text-blue-700 py-1.5 transition group/btn cursor-pointer"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Folder className="w-4 h-4 text-[#0f2851]" />
+                            Gerenciar Aparatas
+                          </span>
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover/btn:translate-x-0.5 transition-transform" />
+                        </button>
                       </div>
                     ))}
                   </div>

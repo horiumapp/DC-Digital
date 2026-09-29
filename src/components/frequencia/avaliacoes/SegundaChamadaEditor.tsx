@@ -71,13 +71,13 @@ const SegundaChamadaEditor = React.memo(function SegundaChamadaEditor({
   };
 
   return (
-    <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 text-left">
-      <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+    <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 text-left">
+      <div className="px-4 sm:px-8 py-4 sm:py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-3">
+          <h2 className="text-lg sm:text-xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-3">
             AVALIAÇÃO DE 2ª CHAMADA
           </h2>
-          <p className="text-slate-500 text-sm font-medium mt-1 uppercase tracking-wider">
+          <p className="text-slate-500 text-xs sm:text-sm font-medium mt-1 uppercase tracking-wider">
             VINCULADA A: <span className="text-[#0f2851] font-bold">{selectedAvaliacao.tipo} - {selectedAvaliacao.instrumento}</span>
           </p>
         </div>
@@ -87,20 +87,20 @@ const SegundaChamadaEditor = React.memo(function SegundaChamadaEditor({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full min-w-[540px]">
           <thead>
             <tr className="bg-slate-50/50 border-b border-slate-100">
-              <th className="px-8 py-4 text-left">
+              <th className="px-4 sm:px-8 py-3.5 sm:py-4 text-left">
                 <input 
                   type="checkbox" 
                   onChange={(e) => handleSelectAll(e.target.checked)}
                   className="rounded border-slate-300 text-[#0f2851] focus:ring-[#0f2851]"
                 />
               </th>
-              <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">Nº</th>
-              <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">ALUNO</th>
-              <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">DATA DA AVALIAÇÃO</th>
-              <th className="px-8 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">
+              <th className="px-4 sm:px-8 py-3.5 sm:py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">Nº</th>
+              <th className="px-4 sm:px-8 py-3.5 sm:py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">ALUNO</th>
+              <th className="px-4 sm:px-8 py-3.5 sm:py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">DATA DA AVALIAÇÃO</th>
+              <th className="px-4 sm:px-8 py-3.5 sm:py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">
                 NOTA (0,00 A {selectedAvaliacao.valorMaximo ? Number(selectedAvaliacao.valorMaximo).toFixed(2).replace('.', ',') : '10,00'})
               </th>
             </tr>
@@ -108,7 +108,7 @@ const SegundaChamadaEditor = React.memo(function SegundaChamadaEditor({
           <tbody className="divide-y divide-slate-50">
             {alunos.map((aluno, index) => (
               <tr key={aluno.id} className={`group hover:bg-blue-50/30 transition-colors ${secondCallRows[aluno.id]?.selected ? 'bg-blue-50/20' : ''}`}>
-                <td className="px-8 py-4">
+                <td className="px-4 sm:px-8 py-3.5 sm:py-4">
                   <input 
                     type="checkbox" 
                     checked={secondCallRows[aluno.id]?.selected}
@@ -116,14 +116,14 @@ const SegundaChamadaEditor = React.memo(function SegundaChamadaEditor({
                     className="rounded border-slate-300 text-[#0f2851] focus:ring-[#0f2851]"
                   />
                 </td>
-                <td className="px-8 py-4 text-slate-400 font-bold tabular-nums">{String(index + 1).padStart(2, '0')}</td>
-                <td className="px-8 py-4">
+                <td className="px-4 sm:px-8 py-3.5 sm:py-4 text-slate-400 font-bold tabular-nums">{String(index + 1).padStart(2, '0')}</td>
+                <td className="px-4 sm:px-8 py-3.5 sm:py-4">
                   <div className="flex flex-col">
                     <div className="font-bold text-slate-800 uppercase tracking-tight">{aluno.nome}</div>
                     <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">MATRÍCULA: {aluno.matricula || '---'}</div>
                   </div>
                 </td>
-                <td className="px-8 py-4">
+                <td className="px-4 sm:px-8 py-3.5 sm:py-4">
                   <div className="relative max-w-[160px]">
                     <input
                       type="date"
@@ -134,7 +134,7 @@ const SegundaChamadaEditor = React.memo(function SegundaChamadaEditor({
                     />
                   </div>
                 </td>
-                <td className="px-8 py-4">
+                <td className="px-4 sm:px-8 py-3.5 sm:py-4">
                   <input
                     type="text"
                     value={secondCallRows[aluno.id]?.grade || ''}
@@ -160,7 +160,7 @@ const SegundaChamadaEditor = React.memo(function SegundaChamadaEditor({
         </table>
       </div>
 
-      <div className="p-8 bg-slate-50 border-t border-slate-100">
+      <div className="p-4 sm:p-8 bg-slate-50 border-t border-slate-100">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-left">
           <div className="w-full md:w-auto">
             <Captcha 

@@ -4,7 +4,9 @@
  * Gerencia a fila de operações pendentes para envio ao servidor.
  * Implementa deduplicação, retry e controle de prioridade FIFO.
  */
-import { db, now, hashOperation, type QueueOperation, type QueueStatus, type SyncQueueItem } from '../lib/db';
+import { offlineOwner } from './offlineIdentity';
+import { snapshotMutation, keepTransactionAlive, matchesMutation, type MutationRecord } from './syncProtocol';
+import { db, getOperationalTable, now, hashOperation, type QueueOperation, type QueueStatus, type SyncQueueItem } from '../lib/db';
 
 const MAX_RETRIES = 5;
 
@@ -27,18 +29,23 @@ export async function enqueue(
 ): Promise<number> {
   // FIX C3: Passar localId como discriminador em INSERTs sem identidade no payload
   // (ex: avaliação criada offline) para evitar colisão de hash na fila.
-  const hash = await hashOperation(table, operation, payload, operation === 'INSERT' ? localId : undefined);
+  const ownerUserId = offlineOwner();
+  if (!ownerUserId) throw new Error('Sessão offline indisponível. Entre novamente antes de salvar.');
+  const hash = await keepTransactionAlive(hashOperation(table, operation, payload, operation === 'INSERT' ? localId : undefined));
   const timestamp = now();
 
   // Deduplicação, check de limite e inserção em uma única transação Dexie atômica
   // evitando race condition entre chamadas concorrentes.
-  return await db.transaction('rw', db.syncQueue, async () => {
+  return await db.transaction('rw', [db.syncQueue, ...[getOperationalTable(table)].filter(t => t !== undefined)], async () => {
+    payload = await snapshotMutation(table, operation, payload, localId);
     const existing = await db.syncQueue
       .where('hash').equals(hash)
-      .filter(item => item.status === 'pending')
+      .filter(item => item.status === 'pending' && !item.attempted && item.ownerUserId === ownerUserId)
       .first();
 
-    if (existing?.id) {
+    const later = existing?.id && await db.syncQueue.where('table').equals(table)
+      .filter(i => i.ownerUserId === ownerUserId && i.id! > existing.id!).count();
+    if (existing?.id && !later) {
       await db.syncQueue.update(existing.id, {
         payload: JSON.stringify(payload),
         updatedAt: timestamp,
@@ -47,7 +54,7 @@ export async function enqueue(
       return existing.id;
     }
 
-    const currentCount = await db.syncQueue.where('status').anyOf(['pending', 'processing']).count();
+    const currentCount = await db.syncQueue.where('status').anyOf(['pending', 'processing']).filter(i => i.ownerUserId === offlineOwner()).count();
     if (currentCount >= MAX_QUEUE_SIZE) {
       throw new Error(
         `Limite de operações pendentes atingido (${MAX_QUEUE_SIZE}). ` +
@@ -56,6 +63,8 @@ export async function enqueue(
     }
 
     return await db.syncQueue.add({
+      ownerUserId,
+      operationId: crypto.randomUUID(),
       table,
       operation,
       payload: JSON.stringify(payload),
@@ -83,7 +92,7 @@ export async function peek(): Promise<SyncQueueItem | undefined> {
   const nowISO = new Date().toISOString();
   return db.syncQueue
     .where('status').equals('pending')
-    .filter(item => !item.retryAfter || item.retryAfter <= nowISO)
+    .filter(item => item.ownerUserId === offlineOwner() && (!item.retryAfter || item.retryAfter <= nowISO))
     .first();
 }
 
@@ -93,21 +102,21 @@ export async function peek(): Promise<SyncQueueItem | undefined> {
 export async function getAllPending(): Promise<SyncQueueItem[]> {
   return db.syncQueue
     .where('status').equals('pending')
-    .sortBy('createdAt');
+    .filter(i => i.ownerUserId === offlineOwner()).sortBy('createdAt');
 }
 
 /**
  * Retorna todos os itens na fila (qualquer status).
  */
 export async function getAll(): Promise<SyncQueueItem[]> {
-  return db.syncQueue.orderBy('createdAt').toArray();
+  return db.syncQueue.orderBy('createdAt').filter(i => i.ownerUserId === offlineOwner()).toArray();
 }
 
 /**
  * Retorna contagem de itens pendentes.
  */
 export async function getPendingCount(): Promise<number> {
-  return db.syncQueue.where('status').anyOf(['pending', 'processing']).count();
+  return db.syncQueue.where('status').anyOf(['pending', 'processing']).filter(i => i.ownerUserId === offlineOwner()).count();
 }
 
 /**
@@ -185,13 +194,13 @@ export async function fail(id: number, error: string): Promise<void> {
  *    todos os itens não-dead-letter novamente.
  */
 export async function retryAllErrors(resetBackoff: boolean = false): Promise<number> {
-  const errors = await db.syncQueue.where('status').equals('error').toArray();
+  const errors = await db.syncQueue.where('status').equals('error').filter(i => i.ownerUserId === offlineOwner()).toArray();
   const timestamp = now();
   let count = 0;
 
   for (const item of errors) {
     // Não reprocessar itens de dead letter — nunca vão sincronizar
-    if (item.lastError?.includes('[DEAD_LETTER]')) continue;
+    if (item.lastError?.includes('[DEAD_LETTER]') || item.lastError?.includes('[QUARANTINE]') || item.lastError?.includes('CONFLICT')) continue;
 
     // Não reviver itens que já esgotaram o limite de retries em ciclo automático
     if (!resetBackoff && (item.retryCount || 0) >= MAX_RETRIES) continue;
@@ -216,8 +225,8 @@ export async function retryAllErrors(resetBackoff: boolean = false): Promise<num
  * Útil para exibir ao usuário na tela de diagnóstico/pendências.
  */
 export async function getDeadLetterItems(): Promise<SyncQueueItem[]> {
-  const errors = await db.syncQueue.where('status').equals('error').toArray();
-  return errors.filter(item => item.lastError?.includes('[DEAD_LETTER]'));
+  const errors = await db.syncQueue.where('status').equals('error').filter(i => i.ownerUserId === offlineOwner()).toArray();
+  return errors.filter(item => item.lastError?.includes('[DEAD_LETTER]') || item.lastError?.includes('CONFLICT'));
 }
 
 /**
@@ -225,12 +234,31 @@ export async function getDeadLetterItems(): Promise<SyncQueueItem[]> {
  * Retorna a quantidade de itens removidos.
  */
 export async function discardDeadLetterItems(): Promise<number> {
-  const deadItems = await getDeadLetterItems();
-  const ids = deadItems.map(i => i.id).filter((id): id is number => id !== undefined);
-  if (ids.length > 0) {
-    await db.syncQueue.bulkDelete(ids);
-  }
-  return ids.length;
+  return db.transaction('rw', [db.syncQueue, db.avaliacoes, db.notas, db.frequencias, db.conteudos, db.fechamentos], async () => {
+    const deadItems = await getDeadLetterItems();
+    for (const item of deadItems) {
+      const table = getOperationalTable(item.table);
+      const body = JSON.parse(item.payload) as MutationRecord;
+      const records = (Array.isArray(body.records) ? body.records : [body]) as MutationRecord[];
+      const later = await db.syncQueue.where('table').equals(item.table)
+        .filter(i => i.ownerUserId === offlineOwner() && i.id! > item.id!).toArray();
+      if (table) {
+        const locals = await table.toArray();
+        for (const local of locals) {
+          const newerEdit = later.some(queued => {
+            const next = JSON.parse(queued.payload) as MutationRecord;
+            const changes = (Array.isArray(next.records) ? next.records : [next]) as MutationRecord[];
+            return changes.some(r => matchesMutation(item.table,local as unknown as MutationRecord,r));
+          });
+          if (!newerEdit && local.localId !== undefined && (local.localId === item.localId || records.some(r => matchesMutation(item.table,local as unknown as MutationRecord,r)))) {
+            await table.delete(local.localId);
+          }
+        }
+      }
+      await db.syncQueue.delete(item.id!);
+    }
+    return deadItems.length;
+  });
 }
 
 /**
@@ -244,6 +272,7 @@ export async function retryDeadLetterItems(): Promise<number> {
   let count = 0;
 
   for (const item of deadItems) {
+    if (item.lastError?.includes('CONFLICT')) continue;
     if (item.id) {
       await db.syncQueue.update(item.id, {
         status: 'pending' as QueueStatus,
@@ -267,7 +296,7 @@ export async function resetStuckItems(): Promise<number> {
   const twoMinutesAgo = new Date(Date.now() - 120_000).toISOString();
   const stuck = await db.syncQueue
     .where('status').equals('processing')
-    .filter(item => item.updatedAt < twoMinutesAgo)
+    .filter(item => item.ownerUserId === offlineOwner() && item.updatedAt < twoMinutesAgo)
     .toArray();
 
   const timestamp = now();
@@ -291,7 +320,7 @@ export async function resetStuckItems(): Promise<number> {
  * Limpa toda a fila.
  */
 export async function clearQueue(): Promise<void> {
-  await db.syncQueue.clear();
+  await db.syncQueue.filter(i => i.ownerUserId === offlineOwner()).delete();
 }
 
 /**
@@ -300,9 +329,9 @@ export async function clearQueue(): Promise<void> {
  */
 export async function getQueueStats(): Promise<Record<Exclude<QueueStatus, 'done'>, number>> {
   const [pending, processing, error] = await Promise.all([
-    db.syncQueue.where('status').equals('pending').count(),
-    db.syncQueue.where('status').equals('processing').count(),
-    db.syncQueue.where('status').equals('error').count(),
+    db.syncQueue.where('status').equals('pending').filter(i => i.ownerUserId === offlineOwner()).count(),
+    db.syncQueue.where('status').equals('processing').filter(i => i.ownerUserId === offlineOwner()).count(),
+    db.syncQueue.where('status').equals('error').filter(i => i.ownerUserId === offlineOwner()).count(),
   ]);
 
   return {
@@ -312,4 +341,21 @@ export async function getQueueStats(): Promise<Record<Exclude<QueueStatus, 'done
     // A contagem era sempre 0, gerando confusão no código de diagnóstico.
     error,
   };
+}
+
+/** Atomically reserve the exact payload being dispatched. */
+export async function claimNext(ownerUserId: string): Promise<SyncQueueItem | undefined> {
+  return db.transaction('rw', db.syncQueue, async () => {
+    const timestamp = now();
+    const queued = await db.syncQueue.orderBy('id').filter(i => i.ownerUserId === ownerUserId).toArray();
+    const seen = new Set<string>();
+    const item = queued.find(i => {
+      if (seen.has(i.table)) return false;
+      seen.add(i.table);
+      return i.status === 'pending' && (!i.retryAfter || i.retryAfter <= timestamp);
+    });
+    if (!item?.id) return undefined;
+    await db.syncQueue.update(item.id, {status:'processing', updatedAt:timestamp});
+    return {...item,status:'processing'};
+  });
 }

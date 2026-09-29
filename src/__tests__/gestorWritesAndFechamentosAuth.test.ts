@@ -38,9 +38,13 @@ function p_acesso_por_turma(user: UserContext, targetTurma: Turma): boolean {
   return false;
 }
 
-// Simula a política RLS staff_delete_fechamentos em fechamentos_bimestres
+// Simula a política RLS staff_delete_fechamentos em fechamentos_bimestres (Migration 20260909000022)
 function canReopenBimestre(user: UserContext, turma: Turma): boolean {
-  return user.role === 'ADMIN' || p_acesso_por_turma(user, turma);
+  if (user.role === 'ADMIN') return true;
+  if (user.role === 'GESTOR' || user.role === 'SECRETARIO') {
+    return !!user.escola_id && user.escola_id === turma.escola_id;
+  }
+  return false;
 }
 
 describe('Regras de Escrita Sistêmica do GESTOR (SEC-03)', () => {
@@ -91,7 +95,7 @@ describe('Regras de Reabertura de Bimestres (SEC-04)', () => {
   const turmaEscolaB: Turma = { id: 'turma-8b', escola_id: escolaB, nome: '8º Ano B' };
 
   const admin: UserContext = { role: 'ADMIN' };
-  const gestor: UserContext = { role: 'GESTOR' };
+  const gestorEscolaA: UserContext = { role: 'GESTOR', escola_id: escolaA };
   const secretarioEscolaA: UserContext = { role: 'SECRETARIO', escola_id: escolaA };
   const professorEscolaA: UserContext = { role: 'PROFESSOR', escola_id: escolaA };
   const alunoEscolaA: UserContext = { role: 'ALUNO', escola_id: escolaA };
@@ -101,9 +105,9 @@ describe('Regras de Reabertura de Bimestres (SEC-04)', () => {
     expect(canReopenBimestre(admin, turmaEscolaB)).toBe(true);
   });
 
-  it('GESTOR deve conseguir reabrir bimestres de qualquer escola da rede', () => {
-    expect(canReopenBimestre(gestor, turmaEscolaA)).toBe(true);
-    expect(canReopenBimestre(gestor, turmaEscolaB)).toBe(true);
+  it('GESTOR deve conseguir reabrir bimestres apenas da sua respectiva escola', () => {
+    expect(canReopenBimestre(gestorEscolaA, turmaEscolaA)).toBe(true);
+    expect(canReopenBimestre(gestorEscolaA, turmaEscolaB)).toBe(false);
   });
 
   it('SECRETARIO da Escola A deve conseguir reabrir bimestre da sua escola', () => {

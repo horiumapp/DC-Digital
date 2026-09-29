@@ -1,3 +1,5 @@
+import { offlineOwner } from './offlineIdentity';
+import { keepTransactionAlive, hidePendingDeletes } from './syncProtocol';
 /**
  * offlineStorage.ts — Camada CRUD sobre o IndexedDB (Dexie)
  * 
@@ -9,7 +11,6 @@ import { db, now, hashOperation, OPERATIONAL_TABLE_NAMES, getOperationalTable, t
 import { supabase } from '../lib/supabase';
 import { encryptFields, decryptFields, getOrCreateKey } from '../lib/crypto';
 import { getTid } from '../utils/turmaUtils';
-import * as Queue from './offlineQueue';
 import type {
   LocalFrequencia,
   LocalConteudo,
@@ -134,6 +135,8 @@ async function getCryptoKey(): Promise<CryptoKey | null> {
   }
 }
 
+const SENSITIVE_ALUNO_FIELDS = ['nome', 'cpf', 'telefone', 'endereco', 'nome_responsavel'];
+
 export async function cacheAlunos(alunos: Omit<LocalAluno, 'syncStatus' | 'updatedAt'>[]): Promise<void> {
   const key = await getCryptoKey();
   if (!key) {
@@ -149,7 +152,7 @@ export async function cacheAlunos(alunos: Omit<LocalAluno, 'syncStatus' | 'updat
       updatedAt: now(),
     };
     // Cast seguro: encryptFields apenas lê/escreve campos por nome
-    const encrypted = await encryptFields(record as unknown as Record<string, unknown>, ['nome', 'cpf'], key);
+    const encrypted = await encryptFields(record as unknown as Record<string, unknown>, SENSITIVE_ALUNO_FIELDS, key);
     return encrypted as unknown as LocalAluno;
   }));
   await db.alunos.bulkPut(records);
@@ -163,7 +166,7 @@ export async function getCachedAlunos(turmaId: string): Promise<{ alunos: LocalA
   let anyDecryptionFailed = false;
   const result = await Promise.all(local.map(async a => {
     // FIX #3: decryptFields agora retorna { data, decryptionFailed }
-    const { data: decrypted, decryptionFailed } = await decryptFields(a as unknown as Record<string, unknown>, ['nome', 'cpf'], key);
+    const { data: decrypted, decryptionFailed } = await decryptFields(a as unknown as Record<string, unknown>, SENSITIVE_ALUNO_FIELDS, key);
     if (decryptionFailed) anyDecryptionFailed = true;
     return decrypted as unknown as LocalAluno;
   }));
@@ -288,7 +291,7 @@ export async function getFrequenciasLocal(turmaId: string, disciplina: string, d
 export async function getAllFrequenciasLocal(turmaId: string, disciplina?: string): Promise<LocalFrequencia[]> {
   const tid = getTid(turmaId);
   const query = db.frequencias.where('turma_id').equals(tid);
-  if (disciplina) {
+  if (disciplina && !['TODAS','GERAL'].includes(disciplina.toUpperCase())) {
     return query.filter(f => f.disciplina.toLowerCase() === disciplina.toLowerCase()).toArray();
   }
   return query.toArray();
@@ -298,11 +301,8 @@ export async function deleteFrequenciasLocal(turmaId: string, disciplina: string
   const tid = getTid(turmaId);
   await db.transaction('rw', [db.frequencias, db.syncQueue], async () => {
     const records = await db.frequencias
-      .where('[turma_id+aluno_id+data+tempo+disciplina]')
-      .between(
-        [tid, Dexie.minKey, data, tempo, disciplina],
-        [tid, Dexie.maxKey, data, tempo, disciplina]
-      )
+      .where('turma_id').equals(tid)
+      .filter(row => row.data === data && row.tempo === tempo && row.disciplina === disciplina)
       .toArray();
 
     const ids = records.map(r => r.localId).filter((id): id is number => id !== undefined);
@@ -313,7 +313,7 @@ export async function deleteFrequenciasLocal(turmaId: string, disciplina: string
     // Purgar operações pendentes de UPSERT na fila para evitar ressuscitar frequência deletada offline
     const pendingQueueItems = await db.syncQueue
       .where('table').equals('frequencias')
-      .filter(item => item.status === 'pending')
+      .filter(item => item.status === 'pending' && !item.attempted && item.operation !== 'DELETE')
       .toArray();
 
     for (const item of pendingQueueItems) {
@@ -360,6 +360,8 @@ export async function deleteFrequenciasLocal(turmaId: string, disciplina: string
 
 /** Cache frequências vindas do servidor (marca como synced) */
 export async function cacheFrequencias(turmaId: string, records: Omit<LocalFrequencia, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
+  return db.transaction('rw', [db.frequencias, db.syncQueue], async () => {
+    records = await hidePendingDeletes('frequencias',records,r=>({...r}));
   if (records.length === 0) return;
   const tid = getTid(turmaId);
   const timestamp = now();
@@ -384,7 +386,7 @@ export async function cacheFrequencias(turmaId: string, records: Omit<LocalFrequ
 
       if (existing && existing.localId) {
         // Só sobrescreve se não tem alteração local pendente
-        if (existing.syncStatus !== 'pending') {
+        if ((await db.frequencias.get(existing.localId))?.syncStatus === 'synced') {
           await db.frequencias.update(existing.localId, {
             ...data,
             syncStatus: 'synced',
@@ -403,6 +405,7 @@ export async function cacheFrequencias(turmaId: string, records: Omit<LocalFrequ
         });
       }
     }
+  });
   });
 }
 
@@ -453,7 +456,7 @@ export async function getConteudoLocal(turmaId: string, disciplina: string, data
 export async function getAllConteudosLocal(turmaId: string, disciplina?: string): Promise<LocalConteudo[]> {
   const tid = getTid(turmaId);
   const query = db.conteudos.where('turma_id').equals(tid);
-  if (disciplina) {
+  if (disciplina && !['TODAS','GERAL'].includes(disciplina.toUpperCase())) {
     return query.filter(c => c.disciplina.toLowerCase() === disciplina.toLowerCase()).toArray();
   }
   return query.toArray();
@@ -471,7 +474,7 @@ export async function deleteConteudoLocal(turmaId: string, disciplina: string, d
     // Purgar qualquer operação pendente de UPSERT para este conteúdo na fila
     const pendingQueueItems = await db.syncQueue
       .where('table').equals('conteudos')
-      .filter(item => item.status === 'pending')
+      .filter(item => item.status === 'pending' && !item.attempted && item.operation !== 'DELETE')
       .toArray();
 
     for (const item of pendingQueueItems) {
@@ -491,21 +494,13 @@ export async function deleteConteudoLocal(turmaId: string, disciplina: string, d
       }
     }
 
-    // FIX C3: Apenas enfileirar DELETE se o registro JÁ FOI sincronizado com o servidor.
-    if (record.syncStatus !== 'pending') {
-      await Queue.enqueue('conteudos', 'DELETE', {
-        turma_id: record.turma_id,
-        data: record.data,
-        tempo: record.tempo,
-        disciplina: record.disciplina,
-      });
-    }
-
     await db.conteudos.delete(record.localId);
   });
 }
 
 export async function cacheConteudos(turmaId: string, records: Omit<LocalConteudo, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
+  return db.transaction('rw', [db.conteudos, db.syncQueue], async () => {
+    records = await hidePendingDeletes('conteudos',records,r=>({...r}));
   if (records.length === 0) return;
   const tid = getTid(turmaId);
   const timestamp = now();
@@ -529,7 +524,7 @@ export async function cacheConteudos(turmaId: string, records: Omit<LocalConteud
       const existing = existingMap.get(key);
 
       if (existing && existing.localId) {
-        if (existing.syncStatus !== 'pending') {
+        if ((await db.conteudos.get(existing.localId))?.syncStatus === 'synced') {
           await db.conteudos.update(existing.localId, {
             ...data,
             syncStatus: 'synced',
@@ -549,6 +544,7 @@ export async function cacheConteudos(turmaId: string, records: Omit<LocalConteud
       }
     }
   });
+  });
 }
 
 // ============================================================
@@ -563,11 +559,37 @@ export async function saveAvaliacaoLocal(data: Omit<LocalAvaliacao, 'localId' | 
     const timestamp = now();
 
     // Se tem server ID, atualizar registro existente
-    if (normalizedData.id) {
+    if (normalizedData.id && !normalizedData.id.startsWith('temp_') && !normalizedData.id.startsWith('local_')) {
       const existing = await db.avaliacoes.where('id').equals(normalizedData.id).first();
       if (existing?.localId) {
         await db.avaliacoes.update(existing.localId, {
           ...normalizedData,
+          syncStatus: 'pending',
+          updatedAt: timestamp,
+          version: (existing.version || 0) + 1,
+        });
+        return existing.localId;
+      }
+    }
+
+    // FIX DATA-01: Se não tem server ID ou é ID temporário da UI, verificar por clientTempId / aliases
+    const tempIdToMatch = normalizedData.clientTempId
+      || (normalizedData.id && (normalizedData.id.startsWith('temp_') || normalizedData.id.startsWith('local_')) ? normalizedData.id : undefined);
+
+    if (tempIdToMatch) {
+      const existing = await db.avaliacoes
+        .filter(a => {
+          const lId = a.localId;
+          return a.clientTempId === tempIdToMatch
+            || a.id === tempIdToMatch
+            || (lId !== undefined && (`temp_${lId}` === tempIdToMatch || `local_${lId}` === tempIdToMatch || String(lId) === tempIdToMatch));
+        })
+        .first();
+
+      if (existing?.localId) {
+        await db.avaliacoes.update(existing.localId, {
+          ...normalizedData,
+          clientTempId: existing.clientTempId || tempIdToMatch,
           syncStatus: 'pending',
           updatedAt: timestamp,
           version: (existing.version || 0) + 1,
@@ -589,14 +611,14 @@ export async function saveAvaliacaoLocal(data: Omit<LocalAvaliacao, 'localId' | 
 export async function getAvaliacoesLocal(turmaId: string, disciplina?: string): Promise<LocalAvaliacao[]> {
   const tid = getTid(turmaId);
   const query = db.avaliacoes.where('turma_id').equals(tid);
-  if (disciplina) {
+  if (disciplina && !['TODAS','GERAL'].includes(disciplina.toUpperCase())) {
     return query.filter(a => a.disciplina.toLowerCase() === disciplina.toLowerCase()).toArray();
   }
   return query.toArray();
 }
 
 export async function deleteAvaliacaoLocal(id: string): Promise<void> {
-  const record = await db.avaliacoes
+  const records = await db.avaliacoes
     .filter(avaliacao => {
       const localId = avaliacao.localId;
       return avaliacao.id === id
@@ -606,13 +628,18 @@ export async function deleteAvaliacaoLocal(id: string): Promise<void> {
           String(localId) === id || `temp_${localId}` === id || `local_${localId}` === id
         ));
     })
-    .first();
+    .toArray();
 
-  if (!record?.localId) return;
+  if (records.length === 0) return;
+
+  const allLocalIds = records.map(r => r.localId).filter((localId): localId is number => localId !== undefined);
+  const localIdSet = new Set(allLocalIds);
 
   const avaliacaoAliases = new Set(
-    [id, record.id, record.clientTempId, record.serverId, String(record.localId), `temp_${record.localId}`, `local_${record.localId}`]
-      .filter((value): value is string => Boolean(value))
+    [
+      id,
+      ...records.flatMap(r => [r.id, r.clientTempId, r.serverId, String(r.localId), `temp_${r.localId}`, `local_${r.localId}`])
+    ].filter((value): value is string => Boolean(value))
   );
 
   await db.transaction('rw', [db.avaliacoes, db.notas, db.syncQueue], async () => {
@@ -626,6 +653,7 @@ export async function deleteAvaliacaoLocal(id: string): Promise<void> {
     // Apenas itens de 'avaliacoes' e 'notas' são relevantes para esta operação.
     const queueItems = await db.syncQueue.where('table').anyOf(['avaliacoes', 'notas']).toArray();
     for (const item of queueItems) {
+      if (item.status === 'processing' || item.attempted || item.operation === 'DELETE') continue;
       let payload: Record<string, unknown>;
       try {
         payload = JSON.parse(item.payload) as Record<string, unknown>;
@@ -634,7 +662,7 @@ export async function deleteAvaliacaoLocal(id: string): Promise<void> {
       }
 
       const isAvaliacaoOperation = item.table === 'avaliacoes'
-        && (item.localId === record.localId || avaliacaoAliases.has(String(payload.id)));
+        && ((item.localId && localIdSet.has(item.localId)) || avaliacaoAliases.has(String(payload.id)));
       if (isAvaliacaoOperation) {
         if (item.id !== undefined) await db.syncQueue.delete(item.id);
         continue;
@@ -664,17 +692,21 @@ export async function deleteAvaliacaoLocal(id: string): Promise<void> {
       if (item.id !== undefined) {
         await db.syncQueue.update(item.id, {
           payload: JSON.stringify(payload),
-          hash: await hashOperation(item.table, item.operation, payload),
+          hash: await keepTransactionAlive(hashOperation(item.table, item.operation, payload)),
           updatedAt: now(),
         });
       }
     }
 
-    await db.avaliacoes.delete(record.localId);
+    for (const lid of allLocalIds) {
+      await db.avaliacoes.delete(lid);
+    }
   });
 }
 
 export async function cacheAvaliacoes(records: Array<Omit<LocalAvaliacao, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'> & { id: string }>): Promise<void> {
+  return db.transaction('rw', [db.avaliacoes, db.syncQueue], async () => {
+    records = await hidePendingDeletes('avaliacoes',records,r=>({...r}));
   if (records.length === 0) return;
   const timestamp = now();
 
@@ -686,16 +718,34 @@ export async function cacheAvaliacoes(records: Array<Omit<LocalAvaliacao, 'local
     if (r.id) existingMap.set(r.id, r);
   }
 
+  // Obter todos os registros locais para buscar por chave de negócio se não encontrado por server ID
+  const allLocal = await db.avaliacoes.toArray();
+
   await db.transaction('rw', db.avaliacoes, async () => {
     for (const data of records) {
-      const existing = existingMap.get(data.id);
+      let existing = existingMap.get(data.id);
+
+      if (!existing) {
+        // Metadata is not identity: two assessments may share date, subject and type.
+        existing = allLocal.find(l => l.id === data.id || l.serverId === data.id);
+      }
+
       if (existing?.localId) {
-        if (existing.syncStatus !== 'pending') {
+        if ((await db.avaliacoes.get(existing.localId))?.syncStatus === 'synced') {
           await db.avaliacoes.update(existing.localId, {
             ...data,
+            id: data.id,
+            serverId: data.id,
             syncStatus: 'synced',
             updatedAt: timestamp,
             version: existing.version || 1,
+          });
+        } else {
+          // Se estava pending, atualizar ID oficial do servidor mantendo alterações locais
+          await db.avaliacoes.update(existing.localId, {
+            id: data.id,
+            serverId: data.id,
+            updatedAt: timestamp,
           });
         }
       } else {
@@ -708,6 +758,7 @@ export async function cacheAvaliacoes(records: Array<Omit<LocalAvaliacao, 'local
         });
       }
     }
+  });
   });
 }
 
@@ -763,17 +814,93 @@ export async function getNotasLocal(avaliacaoIds: string[]): Promise<LocalNota[]
 
 export async function deleteNotasLocal(avaliacaoId: string, alunoIds: string[]): Promise<void> {
   if (alunoIds.length === 0) return;
-  await db.transaction('rw', db.notas, async () => {
-    const existing = await db.notas.where('avaliacao_id').equals(avaliacaoId).toArray();
-    const toDelete = existing.filter(n => alunoIds.includes(n.aluno_id));
+  const alunoIdsSet = new Set(alunoIds.map(String));
+
+  // Buscar possíveis aliases da avaliação para encontrar notas e itens de fila
+  const avRecord = await db.avaliacoes
+    .filter(a => {
+      const lid = a.localId;
+      return a.id === avaliacaoId
+        || a.clientTempId === avaliacaoId
+        || a.serverId === avaliacaoId
+        || (lid !== undefined && (String(lid) === avaliacaoId || `temp_${lid}` === avaliacaoId || `local_${lid}` === avaliacaoId));
+    })
+    .first();
+
+  const avaliacaoAliases = new Set(
+    [
+      avaliacaoId,
+      avRecord?.id,
+      avRecord?.clientTempId,
+      avRecord?.serverId,
+      avRecord?.localId !== undefined ? String(avRecord.localId) : undefined,
+      avRecord?.localId !== undefined ? `temp_${avRecord.localId}` : undefined,
+      avRecord?.localId !== undefined ? `local_${avRecord.localId}` : undefined,
+    ].filter((v): v is string => Boolean(v))
+  );
+
+  await db.transaction('rw', [db.notas, db.syncQueue], async () => {
+    // 1. Remover do Dexie
+    const existing = await db.notas
+      .filter(n => avaliacaoAliases.has(String(n.avaliacao_id)))
+      .toArray();
+    const toDelete = existing.filter(n => alunoIdsSet.has(String(n.aluno_id)));
     const ids = toDelete.map(n => n.localId).filter((id): id is number => id !== undefined);
     if (ids.length > 0) {
       await db.notas.bulkDelete(ids);
+    }
+
+    // 2. Limpar ou expurgar da syncQueue (evitar ressurreição após sync da avaliação)
+    const queueItems = await db.syncQueue
+      .where('table')
+      .equals('notas')
+      .filter(item => item.status === 'pending' && !item.attempted && item.operation !== 'DELETE')
+      .toArray();
+
+    for (const item of queueItems) {
+      if (item.status === 'processing' || item.attempted || item.operation === 'DELETE') continue;
+      let payload: Record<string, unknown>;
+      try {
+        payload = JSON.parse(item.payload) as Record<string, unknown>;
+      } catch {
+        continue;
+      }
+
+      if (Array.isArray(payload.records)) {
+        const records = payload.records as Array<Record<string, unknown>>;
+        const remainingRecords = records.filter(r => {
+          if (!r || typeof r !== 'object') return true;
+          const matchesAv = avaliacaoAliases.has(String(r.avaliacao_id));
+          const matchesAluno = alunoIdsSet.has(String(r.aluno_id));
+          return !(matchesAv && matchesAluno);
+        });
+
+        if (remainingRecords.length === records.length) continue;
+        if (remainingRecords.length === 0) {
+          if (item.id !== undefined) await db.syncQueue.delete(item.id);
+          continue;
+        }
+
+        payload.records = remainingRecords;
+        if (item.id !== undefined) {
+          await db.syncQueue.update(item.id, {
+            payload: JSON.stringify(payload),
+            hash: await keepTransactionAlive(hashOperation(item.table, item.operation, payload)),
+            updatedAt: now(),
+          });
+        }
+      } else if (payload.avaliacao_id && payload.aluno_id) {
+        if (avaliacaoAliases.has(String(payload.avaliacao_id)) && alunoIdsSet.has(String(payload.aluno_id))) {
+          if (item.id !== undefined) await db.syncQueue.delete(item.id);
+        }
+      }
     }
   });
 }
 
 export async function cacheNotas(records: Omit<LocalNota, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
+  return db.transaction('rw', [db.notas, db.syncQueue], async () => {
+    records = await hidePendingDeletes('notas',records,r=>({...r}));
   if (records.length === 0) return;
   const timestamp = now();
 
@@ -792,7 +919,7 @@ export async function cacheNotas(records: Omit<LocalNota, 'localId' | 'syncStatu
       const existing = existingMap.get(key);
 
       if (existing?.localId) {
-        if (existing.syncStatus !== 'pending') {
+        if ((await db.notas.get(existing.localId))?.syncStatus === 'synced') {
           await db.notas.update(existing.localId, {
             ...data,
             syncStatus: 'synced',
@@ -810,6 +937,7 @@ export async function cacheNotas(records: Omit<LocalNota, 'localId' | 'syncStatu
         });
       }
     }
+  });
   });
 }
 
@@ -889,8 +1017,11 @@ export async function saveFechamentoLocal(data: Omit<LocalFechamento, 'localId' 
   });
 }
 
-export async function getFechamentosLocal(turmaId: string, disciplina: string): Promise<LocalFechamento[]> {
+export async function getFechamentosLocal(turmaId: string, disciplina?: string): Promise<LocalFechamento[]> {
   const tid = getTid(turmaId);
+  if (!disciplina || disciplina.toUpperCase() === 'TODAS' || disciplina.toUpperCase() === 'GERAL') {
+    return db.fechamentos.where('turma_id').equals(tid).toArray();
+  }
   return db.fechamentos
     .where('[turma_id+disciplina+bimestre]')
     .between(
@@ -901,32 +1032,26 @@ export async function getFechamentosLocal(turmaId: string, disciplina: string): 
 }
 
 export async function cacheFechamentos(turmaId: string, disciplina: string, records: Omit<LocalFechamento, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
-  if (records.length === 0) return;
+  return db.transaction('rw', [db.fechamentos, db.syncQueue], async () => {
+    records = await hidePendingDeletes('fechamentos',records,r=>({...r}));
   const tid = getTid(turmaId);
   const timestamp = now();
 
-  // FIX N+1: Buscar todos os fechamentos da turma+disciplina de uma vez
-  // em vez de fazer uma query por bimestre dentro do loop.
-  const existingRecords = await db.fechamentos
-    .where('[turma_id+disciplina+bimestre]')
-    .between(
-      [tid, disciplina, Dexie.minKey],
-      [tid, disciplina, Dexie.maxKey]
-    )
-    .toArray();
-
-  const existingMap = new Map<string, LocalFechamento>();
-  for (const r of existingRecords) {
-    existingMap.set(r.bimestre, r);
-  }
+  const isAll = !disciplina || ['TODAS','GERAL'].includes(disciplina.toUpperCase());
+  const existingRecords = await db.fechamentos.where('turma_id').equals(tid)
+    .filter(r => isAll || r.disciplina === disciplina).toArray();
+  const existingMap = new Map(existingRecords.map(r => [r.disciplina+'|'+r.bimestre,r]));
 
   await db.transaction('rw', db.fechamentos, async () => {
+    const remotePeriods = new Set(records.map(r => r.disciplina+'|'+r.bimestre));
+    await db.fechamentos.where('turma_id').equals(tid)
+      .filter(r => (isAll || r.disciplina === disciplina) && r.syncStatus === 'synced' && !remotePeriods.has(r.disciplina+'|'+r.bimestre)).delete();
     for (const rawData of records) {
       const data = { ...rawData, turma_id: tid };
-      const existing = existingMap.get(data.bimestre);
+      const existing = existingMap.get(data.disciplina+'|'+data.bimestre);
 
       if (existing?.localId) {
-        if (existing.syncStatus !== 'pending') {
+        if ((await db.fechamentos.get(existing.localId))?.syncStatus === 'synced') {
           await db.fechamentos.update(existing.localId, {
             ...data,
             syncStatus: 'synced',
@@ -944,6 +1069,7 @@ export async function cacheFechamentos(turmaId: string, disciplina: string, reco
         });
       }
     }
+  });
   });
 }
 
@@ -1007,8 +1133,8 @@ export async function getPendingFiles(): Promise<LocalFile[]> {
 // Utilitários globais
 // ============================================================
 
-/** Retorna contagem de registros pendentes de sincronização em todas as tabelas */
-export async function getPendingCount(): Promise<number> {
+/** Retorna contagem de registros pendentes de sincronização em todas as tabelas locais */
+export async function getLocalPendingCount(): Promise<number> {
   const [freq, cont, aval, notas, fech] = await Promise.all([
     db.frequencias.where('syncStatus').equals('pending').count(),
     db.conteudos.where('syncStatus').equals('pending').count(),
@@ -1016,12 +1142,18 @@ export async function getPendingCount(): Promise<number> {
     db.notas.where('syncStatus').equals('pending').count(),
     db.fechamentos.where('syncStatus').equals('pending').count(),
   ]);
-  return freq + cont + aval + notas + fech;
+  const queued = await db.syncQueue.filter(i => !i.ownerUserId || i.ownerUserId === offlineOwner()).count();
+  return Math.max(freq + cont + aval + notas + fech, queued);
 }
+
+/**
+ * @deprecated Use getLocalPendingCount() para evitar confusão com offlineQueue.getPendingCount() (que conta itens na syncQueue).
+ */
+export const getPendingCount = getLocalPendingCount;
 
 /** Retorna contagem de itens na fila de sync */
 export async function getQueueCount(): Promise<number> {
-  return db.syncQueue.where('status').anyOf(['pending', 'processing']).count();
+  return db.syncQueue.where('status').anyOf(['pending', 'processing']).filter(i => i.ownerUserId === offlineOwner()).count();
 }
 
 /** Limpa dados antigos já sincronizados (mais velhos que maxAgeDays) */
@@ -1038,6 +1170,7 @@ export async function clearOldSyncedData(maxAgeDays: number = 60): Promise<numbe
     const table = getOperationalTable(tableName);
     if (!table) continue;
 
+    await db.transaction('rw', table, async () => {
     try {
       const old = await table
         .where('[syncStatus+updatedAt]')
@@ -1061,6 +1194,7 @@ export async function clearOldSyncedData(maxAgeDays: number = 60): Promise<numbe
         deletedCount += ids.length;
       }
     }
+    });
   }
 
   // Limpa logs antigos
@@ -1069,26 +1203,6 @@ export async function clearOldSyncedData(maxAgeDays: number = 60): Promise<numbe
   if (logIds.length > 0) {
     await db.syncLogs.bulkDelete(logIds);
     deletedCount += logIds.length;
-  }
-
-  // FIX #6: Limpar dead letter (itens com status 'error') mais antigos que maxAgeDays
-  // Sem isso, a tabela syncQueue cresce indefinidamente com itens irrecuperáveis.
-  // FIX F8: Apenas itens marcados [DEAD_LETTER] devem ser removidos. Erros
-  // RECUPERÁVEIS (rede, dependência) podem ainda ser sincronizados após o
-  // backoff — purgá-los causaria perda silenciosa de dados.
-  try {
-    const oldErrors = await db.syncQueue
-      .where('status').equals('error')
-      .filter(item => item.updatedAt < cutoffISO && (item.lastError?.includes('[DEAD_LETTER]') === true))
-      .toArray();
-    const errorIds = oldErrors.map(e => e.id).filter((id): id is number => id !== undefined);
-    if (errorIds.length > 0) {
-      await db.syncQueue.bulkDelete(errorIds);
-      deletedCount += errorIds.length;
-      console.log(`[offlineStorage] Limpeza: ${errorIds.length} itens dead letter removidos da fila`);
-    }
-  } catch (err) {
-    console.warn('[offlineStorage] Erro ao limpar dead letter da syncQueue:', err);
   }
 
   return deletedCount;
@@ -1117,7 +1231,7 @@ export async function clearAllLocalData(clearQueue = false, clearCrypto = false)
     promises.push(db.userSalts.clear());
   }
   if (clearQueue) {
-    promises.push(db.syncQueue.clear());
+    promises.push(db.syncQueue.filter(i => i.ownerUserId === localStorage.getItem('dc_last_user_id')).delete().then(() => {}));
   }
   // FIX: Usar allSettled para garantir que todas as tabelas sejam tentadas
   // mesmo se alguma falhar (ex: IndexedDB corrompido parcialmente)

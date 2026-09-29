@@ -1,359 +1,127 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-// ---------- Mock navigator.onLine ----------
-Object.defineProperty(globalThis, 'navigator', {
-  value: { onLine: true },
-  writable: true,
-  configurable: true,
-});
-
-// ---------- Mock network utility (pingInternet & pingSupabase) ----------
-vi.mock('../utils/network', () => ({
-  pingInternet: vi.fn(async () => true), // Por padrão, simula online
-  pingSupabase: vi.fn(async () => true),
-}));
-
-
-// ---------- Mock offlineQueue (inline para hoisting) ----------
-vi.mock('../services/offlineQueue', () => {
-  const _resetStuckItems = vi.fn(async () => 0);
-  const _peek = vi.fn(async () => {
-    // Acessa diretamente as variáveis do módulo de teste
-    // via import dinâmico — mas vi.mock é hoisted.
-    // Workaround: o mock é configurado em beforeEach via __mocks__
-    return undefined;
-  });
-  const _markProcessing = vi.fn(async () => {});
-  const _markDone = vi.fn(async () => {});
-  const _retry = vi.fn(async () => true);
-  const _fail = vi.fn(async () => {});
-  const _getAllPending = vi.fn(async () => []);
-  const _getPendingCount = vi.fn(async () => 0);
-
-  return {
-    resetStuckItems: _resetStuckItems,
-    peek: _peek,
-    markProcessing: _markProcessing,
-    markDone: _markDone,
-    retry: _retry,
-    fail: _fail,
-    retryAllErrors: vi.fn(async () => 0),
-    getAllPending: _getAllPending,
-    getPendingCount: _getPendingCount,
-  };
-});
-
-// ---------- Mock supabase (inline para hoisting) ----------
-vi.mock('../lib/supabase', () => {
-  const _upsert = vi.fn(async () => ({ data: null, error: null }));
-  const _from = vi.fn(() => ({
-    upsert: _upsert,
-    delete: vi.fn(() => {
-      const chain: Record<string, unknown> = {};
-      const deletePromise = Promise.resolve({ error: null });
-      chain.eq = vi.fn(() => chain);
-      chain.in = vi.fn(() => chain);
-      chain.then = deletePromise.then.bind(deletePromise);
-      chain.catch = deletePromise.catch.bind(deletePromise);
-      return chain;
-    }),
-    insert: vi.fn(async () => ({ data: [{ id: 'server-uuid' }], error: null })),
-    select: vi.fn(() => ({
-      eq: vi.fn(() => ({ single: vi.fn(async () => ({ data: null, error: null })) })),
-    })),
-    update: vi.fn(() => ({
-      eq: vi.fn(async () => ({ error: null })),
-    })),
-  }));
-
-  return {
-    supabase: {
-      from: _from,
-      auth: {
-        refreshSession: vi.fn(async () => ({ data: { session: null }, error: null })),
-      },
-    },
-  };
-});
-
-// ---------- Mock db (inline para hoisting) ----------
-vi.mock('../lib/db', () => {
-  const _modify = vi.fn(async () => 0);
-  const _filter = vi.fn(() => ({ modify: _modify, toArray: vi.fn(async () => []) }));
-  const _equals = vi.fn(() => ({
-    filter: _filter,
-    modify: _modify,
-    toArray: vi.fn(async () => []),
-  }));
-  const _where = vi.fn(() => ({
-    equals: _equals,
-    anyOf: vi.fn(() => ({ modify: _modify, toArray: vi.fn(async () => []) })),
-    below: vi.fn(() => ({ delete: vi.fn(async () => 0) })),
-  }));
-
-  return {
-    db: {
-      syncLogs: { add: vi.fn(async () => 1), where: _where },
-      frequencias: { where: _where },
-      conteudos: { where: _where },
-      avaliacoes: { where: _where },
-      notas: { where: _where },
-      fechamentos: { where: _where },
-      syncQueue: { where: _where, toArray: vi.fn(async () => []) },
-      // FIX H5a: syncFrequencia marca 'synced' por linha dentro de uma transação
-      transaction: vi.fn(async (_mode: string, _tables: unknown, scope: () => Promise<void>) => scope()),
-    },
-    now: () => new Date().toISOString(),
-    hashOperation: vi.fn(async () => 'test-hash'),
-  };
-});
-
-// ---------- Import sob teste (APÓS mocks) ----------
-import type { SyncQueueItem } from '../lib/db';
-import * as SyncEngine from '../services/syncEngine';
+﻿// @vitest-environment node
+import 'fake-indexeddb/auto';
+import {beforeEach,afterEach,afterAll,describe,it,expect,vi} from 'vitest';
+vi.mock('../utils/network',()=>({pingInternet:vi.fn(async()=>true),pingSupabase:vi.fn(async()=>true)}));
+const mock=vi.hoisted(()=>({rpc:vi.fn(),session:vi.fn()}));
+vi.mock('../lib/supabase',()=>({supabase:{rpc:mock.rpc,auth:{getSession:mock.session,refreshSession:vi.fn(async()=>({error:null}))}}}));
+import {db,now} from '../lib/db';
 import * as Queue from '../services/offlineQueue';
-import { supabase } from '../lib/supabase';
-import { pingInternet } from '../utils/network';
-
-// Helper para configurar peek com resultados sequenciais
-function setupPeek(items: (SyncQueueItem | undefined)[]) {
-  let idx = 0;
-  vi.mocked(Queue.peek).mockImplementation(async () => items[idx++] || undefined);
+import {syncAll,cancelSync,getState} from '../services/syncEngine';
+import {setOfflineOwner} from '../services/offlineIdentity';
+import {deleteAvaliacaoLocal, deleteFrequenciasLocal, getLocalPendingCount, cacheFrequencias} from '../services/offlineStorage';
+import {recordKey} from '../services/syncProtocol';
+import {pingInternet} from '../utils/network';
+const storage=new Map<string,string>();
+vi.stubGlobal('localStorage',{getItem:(k:string)=>storage.get(k)||null,setItem:(k:string,v:string)=>storage.set(k,v),removeItem:(k:string)=>storage.delete(k)});
+const owner='00000000-0000-0000-0000-000000000001';
+const row={turma_id:owner,aluno_id:'00000000-0000-0000-0000-000000000002',data:'2026-03-01',tempo:'1',disciplina:'MAT',status:'P',participacao:'Presencial'};
+beforeEach(async()=>{
+ await db.open();await Promise.all(db.tables.map(t=>t.clear()));
+ storage.set('dc_last_user_id',owner);setOfflineOwner(owner);
+ mock.session.mockResolvedValue({data:{session:{user:{id:owner}}},error:null});
+ mock.rpc.mockReset();mock.rpc.mockReturnValue({abortSignal:()=>Promise.resolve({data:[{...row,id:1,sync_revision:1}],error:null})});
+ vi.mocked(pingInternet).mockResolvedValue(true);
+});
+afterEach(()=>{cancelSync();vi.useRealTimers();});afterAll(()=>db.close());
+async function enqueue(){
+ await db.frequencias.add({...row,version:1,syncStatus:'pending',createdAt:now(),updatedAt:now()});
+ return Queue.enqueue('frequencias','UPSERT',{records:[row]});
 }
+describe('syncEngine com fila e transações reais',()=>{
+ it('não processa offline ou sem sessão válida',async()=>{
+  await enqueue();vi.mocked(pingInternet).mockResolvedValue(false);expect((await syncAll()).synced).toBe(0);
+  vi.mocked(pingInternet).mockResolvedValue(true);mock.session.mockResolvedValue({data:{session:null},error:null});
+  expect((await syncAll()).synced).toBe(0);expect(mock.rpc).not.toHaveBeenCalled();
+ });
+ it('confirma local e fila na mesma transação depois de RPC bem sucedida',async()=>{
+  await enqueue();expect((await syncAll()).synced).toBe(1);expect(await db.syncQueue.count()).toBe(0);
+  const local=(await db.frequencias.toArray())[0];expect(local.syncStatus).toBe('synced');expect(local.serverRevision).toBe(1);
+ });
+ it('preserva conflitos como erro acionável',async()=>{
+  const id=await enqueue();mock.rpc.mockReturnValue({abortSignal:()=>Promise.resolve({error:{code:'40001',message:'CONFLICT: revisão'},data:null})});
+  expect((await syncAll()).failed).toBe(1);expect((await db.syncQueue.get(id))?.lastError).toContain('CONFLICT');
+  expect((await db.frequencias.toArray())[0].syncStatus).toBe('pending');
+ });
+ it('reenvia exatamente o mesmo operation_id e payload após resposta perdida',async()=>{
+  const id=await enqueue();mock.rpc.mockReturnValueOnce({abortSignal:()=>Promise.resolve({error:{message:'Failed to fetch'},data:null})});
+  await syncAll();const first=mock.rpc.mock.calls[0][1];
+  await db.syncQueue.update(id,{retryAfter:undefined});await syncAll();
+  expect(mock.rpc.mock.calls[1][1]).toEqual(first);
+ });
+ it('cancelamento aborta a rede e libera o mecanismo',async()=>{
+  await enqueue();
+  let ready!:()=>void;
+  const started=new Promise<void>(resolve=>{ready=resolve;});
+  mock.rpc.mockImplementation(()=>({abortSignal:(signal:AbortSignal)=>new Promise((_,reject)=>{
+    signal.addEventListener('abort',()=>reject(signal.reason));ready();
+  })}));
+  const promise=syncAll();await started;cancelSync();const result=await promise;
+  expect(result.failed).toBe(1);expect(getState()).not.toBe('SYNCING');expect(await db.syncQueue.count()).toBe(1);
+ });
+ it('não envia fila pertencente a outro usuário',async()=>{
+  await enqueue();storage.set('dc_last_user_id',row.aluno_id);setOfflineOwner(row.aluno_id);
+  mock.session.mockResolvedValue({data:{session:{user:{id:row.aluno_id}}},error:null});
+  await syncAll();expect(mock.rpc).not.toHaveBeenCalled();expect(await db.syncQueue.count()).toBe(1);
+ });
+ it('aguarda avaliação temporária sem enviar notas inválidas',async()=>{
+  await Queue.enqueue('notas','UPSERT',{records:[{avaliacao_id:'temp_1',aluno_id:row.aluno_id,valor:7}]});
+  await syncAll();expect(mock.rpc).not.toHaveBeenCalled();expect((await db.syncQueue.toArray())[0].status).toBe('pending');
+ });
+});
 
-// Helper para forçar upsert a falhar
-function forceUpsertError(msg: string, code?: string) {
-  const fromMock = vi.mocked(supabase.from);
-  fromMock.mockReturnValueOnce({
-    upsert: vi.fn(async () => {
-      const err = new Error(msg);
-      if (code) (err as unknown as { code: string }).code = code;
-      throw err;
-    }),
-    delete: vi.fn(() => ({ eq: vi.fn(() => ({ eq: vi.fn(() => ({ eq: vi.fn(() => ({ eq: vi.fn(async () => ({ error: null })) })) })) })) })),
-    insert: vi.fn(async () => ({ data: [{ id: 'x' }], error: null })),
-    select: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn(async () => ({ data: null, error: null })) })) })),
-    update: vi.fn(() => ({ eq: vi.fn(async () => ({ error: null })) })),
-  } as unknown as ReturnType<typeof supabase.from>);
-}
+it('exclusão de frequência preserva outras datas, tempos e disciplinas e continua pendente sem registros locais', async () => {
+ const local = {...row,version:1,syncStatus:'synced' as const,serverRevision:2,createdAt:now(),updatedAt:now()};
+ await db.frequencias.bulkAdd([local,{...local,data:'2026-03-02'},{...local,tempo:'2'},{...local,disciplina:'HIST'}]);
+ await db.transaction('rw',[db.frequencias,db.syncQueue],async()=>{
+  await Queue.enqueue('frequencias','DELETE',{turma_id:row.turma_id,data:row.data,tempo:row.tempo,disciplina:row.disciplina});
+  await deleteFrequenciasLocal(row.turma_id,row.disciplina,row.data,row.tempo);
+ });
+ expect(await db.frequencias.count()).toBe(3);
+ const deletion=(await db.syncQueue.toArray())[0];
+ expect(JSON.parse(deletion.payload)._expected[recordKey('frequencias',row)]).toBe(2);
+ expect(await getLocalPendingCount()).toBeGreaterThan(0);
+});
+it('remapeia e confirma exclusão de avaliação removida localmente durante o INSERT remoto', async () => {
+ const av={turma_id:owner,clientTempId:'temp_ui_123',tipo:'AV01',data:'2026-03-01',disciplina:'MAT',bimestre:'1. BIMESTRE',valor_maximo:10,instrumento:'Prova',objetos:[]};
+ const lid=await db.avaliacoes.add({...av,syncStatus:'pending',version:1,createdAt:now(),updatedAt:now()});
+ await Queue.enqueue('avaliacoes','INSERT',av,lid);
+ let ready!:()=>void; let release!:(v:unknown)=>void;
+ const started=new Promise<void>(resolve=>{ready=resolve;});
+ mock.rpc.mockImplementationOnce(()=>({abortSignal:()=>new Promise(resolve=>{release=resolve;ready();})}));
+ mock.rpc.mockImplementationOnce(()=>({abortSignal:()=>Promise.resolve({data:[{...av,id:99,sync_revision:1,deleted:true}],error:null})}));
+ const running=syncAll();await started;
+ await db.transaction('rw',[db.avaliacoes,db.notas,db.syncQueue],async()=>{
+  await Queue.enqueue('avaliacoes','DELETE',{id:av.clientTempId},lid);
+  await deleteAvaliacaoLocal(av.clientTempId);
+ });
+ release({data:[{...av,id:99,sync_revision:1}],error:null});
+ const result=await running;
+ expect(result.failed).toBe(0);expect(result.synced).toBe(2);
+ const request=mock.rpc.mock.calls[1][1];expect(request.p_payload.id).toBe('99');
+ expect(request.p_payload._expected['["99"]']).toBe(1);
+ expect(await db.avaliacoes.count()).toBe(0);expect(await db.syncQueue.count()).toBe(0);
+});
 
-function makeFreqItem(id: number, payload?: Record<string, unknown>): SyncQueueItem {
-  return {
-    id,
-    table: 'frequencias',
-    operation: 'UPSERT',
-    payload: JSON.stringify(payload ?? {
-      records: [{
-        // FIX M5: usar UUIDs válidos para compatibilidade com assertUUID()
-        turma_id: '00000000-0000-0000-0000-000000000001',
-        aluno_id: 'a1a1a1a1-0000-0000-0000-000000000001',
-        data: '2026-01-15',
-        tempo: '1', status: 'P', participacao: 'Presencial', disciplina: 'Mat',
-      }],
-    }),
-    status: 'pending', retryCount: 0,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    hash: `hash-${id}`,
-  };
-}
-
-describe('syncEngine', () => {
-  beforeEach(() => {
-    Object.defineProperty(globalThis, 'navigator', {
-      value: { onLine: true },
-      configurable: true,
-    });
-    vi.clearAllMocks();
-    // Reset peek para retornar undefined (fila vazia)
-    vi.mocked(Queue.peek).mockResolvedValue(undefined);
-  });
-
-  it('deve retornar erro quando está offline', async () => {
-    vi.mocked(pingInternet).mockResolvedValueOnce(false);
-    const result = await SyncEngine.syncAll();
-    expect(result.errors).toContain('Sem conexão com a internet');
-  });
-
-  it('deve retornar synced=0 quando a fila está vazia', async () => {
-    const result = await SyncEngine.syncAll();
-    expect(result.synced).toBe(0);
-    expect(result.failed).toBe(0);
-  });
-
-  it('deve emitir evento start ao sincronizar', async () => {
-    const events: string[] = [];
-    const unsub = SyncEngine.subscribe((event) => events.push(event));
-    await SyncEngine.syncAll();
-    expect(events).toContain('start');
-    unsub();
-  });
-
-  it('deve processar item de frequência e chamar markDone', async () => {
-    const item = makeFreqItem(1);
-    setupPeek([item]);
-
-    const result = await SyncEngine.syncAll();
-    expect(result.synced).toBe(1);
-    expect(Queue.markProcessing).toHaveBeenCalledWith(1);
-    expect(Queue.markDone).toHaveBeenCalledWith(1);
-  });
-
-  it('deve mover item para dead letter em erro não-recuperável (RLS)', async () => {
-    const item = makeFreqItem(2);
-    setupPeek([item]);
-    forceUpsertError('new row violates row-level security policy');
-
-    const result = await SyncEngine.syncAll();
-    expect(result.failed).toBe(1);
-    expect(result.errors[0]).toContain('DEAD_LETTER');
-    expect(Queue.fail).toHaveBeenCalled();
-  });
-
-  it('deve chamar retry para erros recuperáveis (rede)', async () => {
-    const item = makeFreqItem(3);
-    setupPeek([item]);
-    forceUpsertError('Failed to fetch');
-
-    const result = await SyncEngine.syncAll();
-    expect(result.failed).toBe(1);
-    expect(Queue.retry).toHaveBeenCalled();
-    expect(Queue.fail).not.toHaveBeenCalled();
-  });
-
-  it('deve chamar retry (e não dead letter) para erro de token JWT expirado (PGRST301)', async () => {
-    const item = makeFreqItem(99);
-    setupPeek([item]);
-    forceUpsertError('JWT expired', 'PGRST301');
-
-    const result = await SyncEngine.syncAll();
-    expect(result.failed).toBe(1);
-    expect(Queue.retry).toHaveBeenCalled();
-    expect(Queue.fail).not.toHaveBeenCalled();
-    expect(result.errors[0]).not.toContain('DEAD_LETTER');
-  });
-
-  it('deve tratar payload JSON corrompido como dead letter', async () => {
-    setupPeek([{
-      id: 4, table: 'frequencias', operation: 'UPSERT',
-      payload: '{{invalid json}}',
-      status: 'pending', retryCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      hash: 'hash-4',
-    }]);
-
-    const result = await SyncEngine.syncAll();
-    expect(result.failed).toBe(1);
-    expect(result.errors[0]).toContain('DEAD_LETTER');
-  });
-
-  it('deve chamar resetStuckItems no início do sync', async () => {
-    await SyncEngine.syncAll();
-    expect(Queue.resetStuckItems).toHaveBeenCalled();
-  });
-
-  it('deve processar e sincronizar item da tabela security_logs com sucesso', async () => {
-    const item = {
-      id: 5,
-      table: 'security_logs',
-      operation: 'INSERT' as const,
-      payload: JSON.stringify({
-        user_id: 'user-123',
-        action: 'LOGIN',
-        created_at: new Date().toISOString(),
-      }),
-      status: 'pending' as const,
-      retryCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      hash: 'hash-sec-log',
-    };
-    setupPeek([item]);
-
-    const result = await SyncEngine.syncAll();
-    expect(result.synced).toBe(1);
-    expect(result.failed).toBe(0);
-    expect(Queue.markDone).toHaveBeenCalledWith(5);
-  });
-
-  it('deve sincronizar notas com avaliacao_id numérico (BIGINT) com sucesso', async () => {
-    const item = {
-      id: 6,
-      table: 'notas',
-      operation: 'UPSERT' as const,
-      payload: JSON.stringify({
-        records: [
-          {
-            avaliacao_id: '42', // BIGINT como string
-            aluno_id: 'a1a1a1a1-0000-0000-0000-000000000001',
-            valor: 8.5,
-          },
-        ],
-      }),
-      status: 'pending' as const,
-      retryCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      hash: 'hash-nota-num',
-    };
-    setupPeek([item]);
-
-    const result = await SyncEngine.syncAll();
-    expect(result.synced).toBe(1);
-    expect(result.failed).toBe(0);
-    expect(Queue.markDone).toHaveBeenCalledWith(6);
-  });
-
-  it('deve aguardar avaliação pai quando nota possui avaliacao_id temporário', async () => {
-    const item = {
-      id: 7,
-      table: 'notas',
-      operation: 'UPSERT' as const,
-      payload: JSON.stringify({
-        records: [
-          {
-            avaliacao_id: 'temp_1234567890',
-            aluno_id: 'a1a1a1a1-0000-0000-0000-000000000001',
-            valor: 9.0,
-          },
-        ],
-      }),
-      status: 'pending' as const,
-      retryCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      hash: 'hash-nota-temp',
-    };
-    setupPeek([item]);
-
-    const result = await SyncEngine.syncAll();
-    expect(result.failed).toBe(1);
-    // Erro recuperável de dependência — chama retry e NÃO fail (dead letter)
-    expect(Queue.retry).toHaveBeenCalledWith(7, expect.stringContaining('Aguardando sincronização da avaliação'));
-    expect(Queue.fail).not.toHaveBeenCalled();
-  });
-
-  it('deve processar operação de DELETE de notas com sucesso', async () => {
-    const item = {
-      id: 8,
-      table: 'notas',
-      operation: 'DELETE' as const,
-      payload: JSON.stringify({
-        avaliacao_id: 42,
-        aluno_ids: ['a1a1a1a1-0000-0000-0000-000000000001'],
-      }),
-      status: 'pending' as const,
-      retryCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      hash: 'hash-nota-del',
-    };
-    setupPeek([item]);
-
-    const result = await SyncEngine.syncAll();
-    expect(result.synced).toBe(1);
-    expect(result.failed).toBe(0);
-    expect(Queue.markDone).toHaveBeenCalledWith(8);
-  });
+it('cache concorrente não duplica registros nem restaura uma exclusão pendente',async()=>{
+ const remote={...row,serverRevision:4};
+ await Promise.all([cacheFrequencias(owner,[remote]),cacheFrequencias(owner,[remote])]);
+ expect(await db.frequencias.count()).toBe(1);
+ await db.transaction('rw',[db.frequencias,db.syncQueue],async()=>{
+  await Queue.enqueue('frequencias','DELETE',row);await deleteFrequenciasLocal(owner,row.disciplina,row.data,row.tempo);
+ });
+ await cacheFrequencias(owner,[remote]);expect(await db.frequencias.count()).toBe(0);
+});
+it('a tela pode editar notas e excluir avaliação usando o alias anterior à sincronização',async()=>{
+ vi.stubGlobal('navigator',{onLine:false});
+ const service=await import('../services/turmaServiceOffline');service.setOnlineStatus(false);
+ const av={id:'99',serverId:'99',clientTempId:'temp_ui_old',turma_id:owner,tipo:'AV01',data:'2026-03-01',disciplina:'MAT',bimestre:'1. BIMESTRE',valor_maximo:10,instrumento:'Prova',objetos:[],serverRevision:4,version:1,syncStatus:'synced' as const,createdAt:now(),updatedAt:now()};
+ await db.avaliacoes.add(av);
+ await db.notas.add({avaliacao_id:'99',aluno_id:row.aluno_id,valor:5,serverRevision:6,version:1,syncStatus:'synced',createdAt:now(),updatedAt:now()});
+ await service.salvarNotas('temp_ui_old',[{alunoId:row.aluno_id,valor:'7'}]);
+ const grade=(await db.syncQueue.toArray())[0];const sent=JSON.parse(grade.payload).records[0];
+ expect(sent.avaliacao_id).toBe('99');expect(sent._expected_revision).toBe(6);
+ await service.removerAvaliacao('temp_ui_old');
+ const deleted=(await db.syncQueue.toArray()).find(i=>i.table==='avaliacoes')!;
+ expect(JSON.parse(deleted.payload).id).toBe('99');expect(JSON.parse(deleted.payload)._expected['["99"]']).toBe(4);
+ expect(await db.avaliacoes.count()).toBe(0);
 });

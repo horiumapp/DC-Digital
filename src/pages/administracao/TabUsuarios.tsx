@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Search, Shield, User, GraduationCap, Briefcase, Key, Users, Building2, Mail } from 'lucide-react';
 import { useToast } from '../../components/common/Toast';
+import { readAllRows } from '../../services/pagination';
 
 interface UsuarioRow {
   id: string;
@@ -36,14 +37,16 @@ export default function TabUsuarios() {
       const { data: escData } = await supabase.from('escolas').select('id, nome');
       if (escData) setEscolas(escData);
       
-      const { data: usuData, error: usuError } = await supabase
+      const usuQuery = supabase
         .from('usuarios')
-        .select('*')
-        .order('criado_em', { ascending: false });
+        .select('id, nome_completo, email, cargo, escola_id, criado_em')
+        .order('id');
         
-      if (usuError) throw usuError;
-      
-      if (usuData) setUsuarios(usuData);
+      const { data: usuData } = await readAllRows<UsuarioRow>(usuQuery);
+      if (usuData) {
+        usuData.sort((a, b) => new Date(b.criado_em || 0).getTime() - new Date(a.criado_em || 0).getTime());
+        setUsuarios(usuData);
+      }
     } catch (err: unknown) {
       console.error(err);
       showError('Erro ao carregar usuários.');

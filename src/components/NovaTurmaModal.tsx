@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Building2, Users, Clock, Calendar } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { APP_CONFIG } from '../config/appConfig';
+import { useToast } from './common/Toast';
 
 export interface NovaTurmaFormData {
   escola_id: string;
@@ -32,6 +33,7 @@ interface NovaTurmaModalProps {
 }
 
 export default function NovaTurmaModal({ isOpen, onClose, onSave, turmaParaEditar, fixedEscolaId }: NovaTurmaModalProps) {
+  const { showWarning } = useToast();
   const [escolas, setEscolas] = useState<EscolaSelectOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -89,7 +91,7 @@ export default function NovaTurmaModal({ isOpen, onClose, onSave, turmaParaEdita
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.escola_id) {
-        alert("Por favor, selecione uma escola para essa turma.");
+        showWarning("Por favor, selecione uma escola para essa turma.");
         return;
     }
     onSave(formData);
