@@ -439,6 +439,105 @@ export default function TabAlunos() {
     setExpandedTurmas(newSet);
   };
 
+  const handleExportAlunos = async () => {
+    let listToExport = selectedEscola ? alunosDaEscola : alunos;
+    if (listToExport.length === 0 && !selectedEscola) {
+      const { data } = await supabase
+        .from('alunos')
+        .select('id, nome, cpf, data_nascimento, sexo, nome_responsavel, telefone, endereco, status, escolas(nome), turmas(nome, turno)')
+        .order('nome');
+      if (data && data.length > 0) {
+        listToExport = data as AlunoRow[];
+      }
+    }
+
+    if (listToExport.length === 0) {
+      showWarning('Nenhum aluno disponível para exportar.');
+      return;
+    }
+    const csvContent = exportAlunosToCsv(listToExport);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const fileName = selectedEscola
+      ? `alunos_${selectedEscola.nome.replace(/\s+/g, '_')}_${dateStr}.csv`
+      : `alunos_todos_${dateStr}.csv`;
+    downloadCsvFile(csvContent, fileName);
+    showSuccess(`Alunos exportados com sucesso (${listToExport.length} registros)!`);
+  };
+
+  const handleSaveImportAlunos = async (items: Array<{
+    nome: string;
+    cpf?: string;
+    data_nascimento: string;
+    sexo?: string;
+    nome_responsavel: string;
+    telefone: string;
+    endereco: string;
+    turma_id?: string;
+    escola_id: string;
+    status: string;
+  }>) => {
+    const payload = items.map(a => ({
+      nome: a.nome,
+      cpf: a.cpf || null,
+      data_nascimento: a.data_nascimento || null,
+      sexo: a.sexo || null,
+      nome_responsavel: a.nome_responsavel || null,
+      telefone: a.telefone || null,
+      endereco: a.endereco || null,
+      turma_id: a.turma_id || null,
+      escola_id: a.escola_id,
+      status: a.status || 'Ativo'
+    }));
+
+    const { error } = await supabase.from('alunos').insert(payload);
+    if (error) {
+      console.error('Erro ao importar alunos:', error);
+      throw new Error(error.message || 'Erro ao importar alunos.');
+    }
+
+    if (selectedEscola) {
+      await fetchAlunos(selectedEscola.id);
+    }
+    await fetchEscolas();
+  };
+
+  const parseAlunos = (text: string) => {
+    return parseAlunosCsv(text, todasTurmas, selectedEscola?.id);
+  };
+
+  const alunoPreviewColumns: PreviewColumn<{
+    nome: string;
+    cpf?: string;
+    data_nascimento: string;
+    sexo?: string;
+    nome_responsavel: string;
+    telefone: string;
+    endereco: string;
+    turma_id?: string;
+    escola_id: string;
+    status: string;
+  }>[] = [
+    { header: 'Aluno', accessor: (item) => <span className="font-semibold text-slate-800">{item.nome}</span> },
+    { header: 'CPF', accessor: (item) => <span className="font-mono text-xs text-slate-600">{item.cpf || '—'}</span> },
+    { header: 'Nascimento', accessor: (item) => <span className="text-slate-600 text-xs">{item.data_nascimento || '—'}</span> },
+    {
+      header: 'Turma',
+      accessor: (item) => {
+        const turma = todasTurmas.find(t => t.id === item.turma_id);
+        return <span className="text-slate-700 font-medium text-xs">{turma?.nome || '—'}</span>;
+      }
+    },
+    { header: 'Responsável', accessor: (item) => <span className="text-slate-600 text-xs">{item.nome_responsavel || '—'}</span> },
+    {
+      header: 'Status',
+      accessor: (item) => (
+        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${item.status === 'Inativo' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+          {item.status || 'Ativo'}
+        </span>
+      )
+    }
+  ];
+
   if (loading) {
     return (
       <div className="p-12 text-center">
@@ -452,7 +551,7 @@ export default function TabAlunos() {
     <div className="flex flex-col h-full bg-slate-50/50 overflow-hidden">
       {/* Header Condicional */}
       {!selectedEscola ? (
-        <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 gap-4 bg-white shrink-0">
+        <div className="p-6 flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 gap-4 bg-white shrink-0">
           <div>
             <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
               Gerenciamento de Alunos
@@ -461,17 +560,37 @@ export default function TabAlunos() {
               Selecione uma escola para gerenciar os alunos matriculados.
             </p>
           </div>
-          <div className="relative w-full sm:w-64">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-slate-400" />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative w-full sm:w-56">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-slate-400" />
+              </div>
+              <input
+                type="text"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Filtrar escolas..."
+                className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f2851] focus:border-[#0f2851] bg-slate-50/50 transition-all font-bold text-[#0f2851]"
+              />
             </div>
-            <input
-              type="text"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Filtrar escolas..."
-              className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f2851] focus:border-[#0f2851] bg-slate-50/50 transition-all font-bold text-[#0f2851]"
-            />
+            <button
+              onClick={handleExportAlunos}
+              className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 border border-emerald-200 shrink-0 h-[38px]"
+              title="Exportar alunos cadastrados para CSV"
+            >
+              <Download className="w-4 h-4 text-emerald-600" />
+              Exportar CSV
+            </button>
+            <button
+              onClick={() => {
+                showWarning('Selecione uma escola para realizar a importação de alunos.');
+              }}
+              className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 border border-blue-200 shrink-0 h-[38px]"
+              title="Importar alunos via CSV ou TXT"
+            >
+              <Upload className="w-4 h-4 text-blue-600" />
+              Importar TXT / Planilha
+            </button>
           </div>
         </div>
       ) : (
@@ -546,17 +665,37 @@ export default function TabAlunos() {
                 </div>
               </div>
               
-              {(user?.role === 'ADMIN' || user?.role === 'GESTOR' || user?.role === 'SECRETARIO') && (
-                <button 
-                  onClick={() => {
-                    setAlunoParaEditar(null);
-                    setIsNovoAlunoModalOpen(true);
-                  }}
-                  className="bg-[#0f2851] hover:bg-[#1a3a6d] text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-[#0f2851]/20 active:scale-95 whitespace-nowrap h-[54px]"
+              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
+                <button
+                  onClick={handleExportAlunos}
+                  disabled={alunosDaEscola.length === 0}
+                  className="flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-5 py-3 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 border border-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed h-[54px] flex-1 sm:flex-none"
+                  title="Exportar alunos desta escola para CSV"
                 >
-                  Novo Aluno
+                  <Download className="w-4 h-4 text-emerald-600" />
+                  Exportar CSV
                 </button>
-              )}
+                <button
+                  onClick={() => setIsImportModalOpen(true)}
+                  className="flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 px-5 py-3 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 border border-blue-200 h-[54px] flex-1 sm:flex-none"
+                  title="Importar alunos para esta escola via CSV ou TXT"
+                >
+                  <Upload className="w-4 h-4 text-blue-600" />
+                  Importar TXT / Planilha
+                </button>
+
+                {(user?.role === 'ADMIN' || user?.role === 'GESTOR' || user?.role === 'SECRETARIO') && (
+                  <button 
+                    onClick={() => {
+                      setAlunoParaEditar(null);
+                      setIsNovoAlunoModalOpen(true);
+                    }}
+                    className="bg-[#0f2851] hover:bg-[#1a3a6d] text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-[#0f2851]/20 active:scale-95 whitespace-nowrap h-[54px] w-full sm:w-auto"
+                  >
+                    Novo Aluno
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -870,7 +1009,9 @@ export default function TabAlunos() {
         fixedEscolaId={selectedEscola?.id}
       />
 
-      <RemanejarAlunoModal aluno={alunoParaRemanejar} onClose={() => setAlunoParaRemanejar(null)} onSuccess={() => { fetchAlunos(); fetchEscolas(); }} />      <ConfirmActionModal
+      <RemanejarAlunoModal aluno={alunoParaRemanejar} onClose={() => setAlunoParaRemanejar(null)} onSuccess={() => { fetchAlunos(); fetchEscolas(); }} />      
+      
+      <ConfirmActionModal
         isOpen={!!alunoParaExcluir}
         onClose={() => setAlunoParaExcluir(null)}
         onConfirm={confirmDeleteAluno}
@@ -880,6 +1021,19 @@ export default function TabAlunos() {
             Tem certeza que deseja excluir o(a) aluno(a) <strong>{alunoParaExcluir?.nome}</strong>? Esta ação não pode ser desfeita.
           </>
         }
+      />
+
+      <ImportCsvModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        title={selectedEscola ? `Importação de Alunos — ${selectedEscola.nome}` : "Importação de Alunos em Lote"}
+        subtitle="Importe estudantes a partir de arquivo Excel (.csv) ou texto tabulado"
+        templateFileName={selectedEscola ? `modelo_importacao_alunos_${selectedEscola.nome.replace(/\s+/g, '_')}.csv` : "modelo_importacao_alunos.csv"}
+        templateCsvContent={getAlunosTemplateCsv()}
+        parseFn={parseAlunos}
+        onSave={handleSaveImportAlunos}
+        previewColumns={alunoPreviewColumns}
+        entityNamePlural="alunos"
       />
     </div>
   );

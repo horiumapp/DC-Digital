@@ -169,18 +169,19 @@ export function exportTurmasToCsv(turmas: Array<{
   turno: string;
   ano_letivo?: string | number;
   ensino?: string;
-  escolas?: { nome?: string };
+  escolas?: { nome?: string } | { nome?: string }[] | null;
 }>): string {
   const header = ['Nome da Turma', 'Turno', 'Ano Letivo', 'Segmento / Ensino', 'Escola'];
   const lines = [header.join(';')];
 
   for (const t of turmas) {
+    const escolaNome = Array.isArray(t.escolas) ? t.escolas[0]?.nome : t.escolas?.nome;
     lines.push([
       escapeCsvField(t.nome),
       escapeCsvField(t.turno || 'Matutino'),
       escapeCsvField(t.ano_letivo || '2026'),
       escapeCsvField(t.ensino || 'Ensino Fundamental'),
-      escapeCsvField(t.escolas?.nome || '')
+      escapeCsvField(escolaNome || '')
     ].join(';'));
   }
 
@@ -391,13 +392,17 @@ export function exportAlunosToCsv(alunos: Array<{
   telefone?: string;
   endereco?: string;
   status?: string;
-  escolas?: { nome?: string };
-  turmas?: { nome?: string; turno?: string };
+  escolas?: { nome?: string } | { nome?: string }[] | null;
+  turmas?: { nome?: string; turno?: string } | { nome?: string; turno?: string }[] | null;
 }>): string {
   const header = ['Nome do Aluno', 'Matrícula', 'CPF', 'Data de Nascimento', 'Sexo', 'Responsável', 'Telefone', 'Endereço', 'Escola', 'Turma', 'Status'];
   const lines = [header.join(';')];
 
   for (const a of alunos) {
+    const escolaObj = Array.isArray(a.escolas) ? a.escolas[0] : a.escolas;
+    const turmaObj = Array.isArray(a.turmas) ? a.turmas[0] : a.turmas;
+    const turmaStr = turmaObj?.nome ? `${turmaObj.nome}${turmaObj.turno ? ` (${turmaObj.turno})` : ''}` : '';
+
     lines.push([
       escapeCsvField(a.nome),
       escapeCsvField(a.matricula || ''),
@@ -407,8 +412,8 @@ export function exportAlunosToCsv(alunos: Array<{
       escapeCsvField(a.nome_responsavel || ''),
       escapeCsvField(a.telefone || ''),
       escapeCsvField(a.endereco || ''),
-      escapeCsvField(a.escolas?.nome || ''),
-      escapeCsvField(a.turmas?.nome ? `${a.turmas.nome} (${a.turmas.turno || ''})` : ''),
+      escapeCsvField(escolaObj?.nome || ''),
+      escapeCsvField(turmaStr),
       escapeCsvField(a.status || 'Ativo')
     ].join(';'));
   }
