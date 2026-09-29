@@ -349,7 +349,7 @@ export const TurmaService = {
     }));
   },
 
-  fetchFechamentos: async (turmaId: string | number, disciplina: string): Promise<Record<string, boolean>> => {
+  fetchFechamentosRaw: async (turmaId: string | number, disciplina: string): Promise<{ bimestre: string; status: string }[]> => {
     const tid = getTid(turmaId);
     const { data, error } = await supabase
       .from('fechamentos_bimestres')
@@ -358,10 +358,21 @@ export const TurmaService = {
       .eq('disciplina', disciplina);
 
     if (error) throw error;
+    return data || [];
+  },
 
+  fetchFechamentos: async (turmaId: string | number, disciplina: string): Promise<Record<string, boolean>> => {
+    const raw = await TurmaService.fetchFechamentosRaw(turmaId, disciplina);
     const map: Record<string, boolean> = {};
-    data?.forEach(f => {
-      map[f.bimestre] = f.status === 'FECHADO';
+    raw.forEach(f => {
+      const isFechado = f.status === 'FECHADO';
+      map[f.bimestre] = isFechado;
+      const match = f.bimestre.match(/^[1-4]/);
+      if (match) {
+        const n = match[0];
+        map[`${n}. BIMESTRE`] = isFechado;
+        map[`${n}º Bimestre`] = isFechado;
+      }
     });
     return map;
   },

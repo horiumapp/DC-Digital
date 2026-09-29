@@ -173,7 +173,7 @@ export default function Frequencia() {
 
             <div className="flex border-b border-slate-200 px-6 bg-white">
               {(['frequencia', 'objeto', 'anotacoes', 'avaliacoes'] as const).map((tab) => {
-                const labels: Record<string, string> = { frequencia: 'Frequência', objeto: 'Objeto de Conhecimento', anotacoes: 'Anotações', avaliacoes: 'Avaliações' };
+                const labels: Record<string, string> = { frequencia: 'Frequência', objeto: 'Conteúdo Ministrado', anotacoes: 'Anotações', avaliacoes: 'Avaliações' };
                 return (
                   <button key={tab} onClick={() => handleTabChange(tab)}
                     className={`px-6 py-4 text-sm font-bold transition-all relative ${activeTab === tab ? 'text-[#0f2851]' : 'text-slate-400 hover:text-[#0f2851]'}`}>

@@ -1,40 +1,48 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 /**
- * Gera um código numérico de 4 dígitos (1000-9999).
+ * Gera um código numérico de 4 dígitos (ex: "4829")
+ * utilizando crypto.getRandomValues().
  */
-function generate4DigitCode(): string {
-  return Math.floor(1000 + Math.random() * 9000).toString();
+function generateCaptchaCode(): string {
+  const arr = new Uint32Array(1);
+  crypto.getRandomValues(arr);
+  const num = 1000 + (arr[0] % 9000);
+  return num.toString();
 }
 
 export function useCaptcha() {
-  const [generatedCaptcha, setGeneratedCaptcha] = useState<string>(generate4DigitCode);
+  const [generatedCaptcha, setGeneratedCaptcha] = useState<string>(generateCaptchaCode);
   const [captchaInput, setCaptchaInput] = useState('');
   const [captchaError, setCaptchaError] = useState(false);
+  const codeRef = useRef<string>('');
 
-  const generateNewCaptcha = () => {
-    setGeneratedCaptcha(generate4DigitCode());
+  useEffect(() => {
+    codeRef.current = generatedCaptcha;
+  }, [generatedCaptcha]);
+
+  const generateNewCaptcha = useCallback(() => {
+    const newCode = generateCaptchaCode();
+    codeRef.current = newCode;
+    setGeneratedCaptcha(newCode);
     setCaptchaInput('');
     setCaptchaError(false);
-  };
+  }, []);
 
-  const validateCaptcha = () => {
-    if (captchaInput.trim() === generatedCaptcha) {
-      setCaptchaError(false);
-      return true;
-    }
-    setCaptchaError(true);
-    return false;
-  };
+  const validateCaptcha = useCallback(() => {
+    const target = codeRef.current || generatedCaptcha;
+    const isValid = captchaInput.trim().toUpperCase() === target.toUpperCase();
+    setCaptchaError(!isValid);
+    return isValid;
+  }, [captchaInput, generatedCaptcha]);
 
-  return { 
-    generatedCaptcha, 
-    captchaInput, 
-    setCaptchaInput, 
-    captchaError, 
-    setCaptchaError, 
-    generateNewCaptcha, 
-    validateCaptcha 
+  return {
+    generatedCaptcha,
+    captchaInput,
+    setCaptchaInput,
+    captchaError,
+    setCaptchaError,
+    generateNewCaptcha,
+    validateCaptcha,
   };
 }
-

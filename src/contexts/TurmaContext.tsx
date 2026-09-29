@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef, useMemo } from 'react';
 
-import { getBimestrePorData, formatarDataParaISO } from '../utils/dateUtils';
+import { getBimestrePorData, getPeriodoInfoPorData, getBimestreNumero, formatarDataParaISO } from '../utils/dateUtils';
 import { getTid } from '../utils/turmaUtils';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
+import { OfflineNoCacheError } from '../services/turmaServiceOffline';
 import { useToast } from '../components/common/Toast';
 import { useAuth } from './AuthContext';
 
@@ -17,7 +18,10 @@ export interface TurmaMetricas {
 }
 
 export interface Turma {
-  id: string | number;
+  // Q1 FIX: `id` é sempre string (UUID) — o tipo `number` era legado de dados
+  // não-normalizados. getTid() é mantido como guard de runtime para compatibilidade
+  // com registros antigos eventualmente presentes no cache local.
+  id: string;
   ensino: string;
   fase: string;
   componente: string;
@@ -31,7 +35,7 @@ export interface Turma {
 }
 
 export interface Lancamento {
-  turmaId: string | number;
+  turmaId: string;
   data: string;
   tipo: 'frequencia' | 'conteudo';
   tempo: string;
@@ -54,19 +58,19 @@ export interface ObjetoAvaliacao {
 
 export interface Avaliacao {
   id: string;
-  turmaId: string | number;
+  turmaId: string;
   tipo: string;
   data: string;
   instrumento: string;
   objetos: ObjetoAvaliacao[];
   bimestre?: string;
   valorMaximo?: number;
-  parent_id?: string | number;
+  parent_id?: string;
 }
 
 export interface Conteudo {
   id?: string;
-  turmaId: string | number;
+  turmaId: string;
   data: string;
   tempo: string;
   objetos: string[];
@@ -92,7 +96,7 @@ interface TurmaContextType {
   loading: boolean;
   salvarAvaliacao: (av: Avaliacao) => Promise<string>;
   removerAvaliacao: (id: string) => Promise<void>;
-  salvarNotas: (avaliacaoId: string, notas: { alunoId: string, valor: string }[]) => Promise<void>;
+  salvarNotas: (avaliacaoId: string, notas: { alunoId: string, valor: string }[], alunoIdsRemovidos?: string[]) => Promise<void>;
   salvarFrequencia: (data: string, tempo: string, alunosFreq: Aluno[]) => Promise<void>;
   salvarConteudo: (cont: Conteudo) => Promise<void>;
   buscarFrequencia: (data: string, tempo: string) => Promise<void>;
@@ -119,6 +123,11 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [faltasPorData, setFaltasPorData] = useState<Record<string, Set<string>>>({});
   const [fechamentos, setFechamentos] = useState<Record<string, boolean>>({});
+
+  // FIX Race Condition: Ref para alunos evita stale closure em callbacks assíncronos
+  // (salvarNotas, salvarAvaliacao) que capturam snapshot antigo via closure.
+  const alunosRef = useRef<Aluno[]>([]);
+  useEffect(() => { alunosRef.current = alunos; }, [alunos]);
   
   const { showError, showSuccess } = useToast();
 
@@ -130,11 +139,33 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
   const verificarPeriodoFechado = useCallback((dateOrBimestreId: string): boolean => {
     if (!dateOrBimestreId) return false;
-    let bimestreId = dateOrBimestreId;
+    
+    // 1. Verificação direta na chave recebida
+    if (fechamentos[dateOrBimestreId]) return true;
+
+    // 2. Se for data, obter informações do período letivo
     if (dateOrBimestreId.includes('-') || dateOrBimestreId.includes('/')) {
-      bimestreId = getBimestrePorData(dateOrBimestreId);
+      const periodo = getPeriodoInfoPorData(dateOrBimestreId);
+      if (periodo) {
+        if (fechamentos[periodo.id] || fechamentos[periodo.nome] || fechamentos[periodo.label]) {
+          return true;
+        }
+      }
     }
-    return !!fechamentos[bimestreId];
+
+    // 3. Normalização pelo número do bimestre (ex: '1. BIMESTRE', '1º Bimestre', 1)
+    const num = getBimestreNumero(dateOrBimestreId);
+    if (num !== null) {
+      if (
+        fechamentos[`${num}. BIMESTRE`] ||
+        fechamentos[`${num}º Bimestre`] ||
+        fechamentos[String(num)]
+      ) {
+        return true;
+      }
+    }
+
+    return false;
   }, [fechamentos]);
 
   const fetchAvaliacoesInterno = useCallback(async (turmaId: string | number, disciplina: string, contextAlunos: Aluno[], signal?: AbortSignal) => {
@@ -147,13 +178,14 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       
       if (notasData.length > 0) {
         setAlunos(prevAlunos => {
-          const baseAlunos = contextAlunos.length > 0 ? contextAlunos : prevAlunos;
+          const baseAlunos = prevAlunos.length > 0 ? prevAlunos : contextAlunos;
           return baseAlunos.map(aluno => {
             const notasAluno: Record<string, string> = {};
-            notasData.filter(n => n.aluno_id.toString() === aluno.id).forEach(n => {
-              notasAluno[n.avaliacao_id.toString()] = n.valor.toFixed(2).replace('.', ',');
+            notasData.filter(n => String(n.aluno_id) === String(aluno.id)).forEach(n => {
+              const valNum = typeof n.valor === 'number' ? n.valor : parseFloat(String(n.valor));
+              notasAluno[String(n.avaliacao_id)] = !isNaN(valNum) ? valNum.toFixed(2).replace('.', ',') : String(n.valor);
             });
-            return { ...aluno, notas: notasAluno };
+            return { ...aluno, notas: { ...(aluno.notas || {}), ...notasAluno } };
           });
         });
       }
@@ -208,8 +240,16 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
           
           await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alumnosData, signal);
         } catch (err) {
-          console.error('Erro ao carregar dados da turma:', err);
-          showErrorRef.current('Não foi possível carregar todos os dados desta turma. Verifique sua conexão.');
+          // U1 FIX: Tratar OfflineNoCacheError com mensagem específica em vez de
+          // mensagem genérica, pois o problema é cachê vazio (primeira visita offline),
+          // não necessariamente um erro de conexão.
+          if (err instanceof OfflineNoCacheError) {
+            console.warn('[TurmaContext] Offline sem cache local:', err.message);
+            showErrorRef.current(err.message);
+          } else {
+            console.error('Erro ao carregar dados da turma:', err);
+            showErrorRef.current('Não foi possível carregar todos os dados desta turma. Verifique sua conexão.');
+          }
         } finally {
           if (!signal.aborted) setLoading(false);
         }
@@ -284,17 +324,15 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
         bimestre: av.bimestre || getBimestrePorData(av.data)
       };
 
+      // FIX R3: Primeiro buscar dados consistentes do servidor/cache (inclui notas),
+      // depois garantir que a avaliação recém-salva esteja no estado — evita o flash
+      // causado pelo padrão anterior de update otimista + re-fetch que sobrescrevia.
+      await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunosRef.current);
       setAvaliacoes(prev => {
-        const index = prev.findIndex(a => a.id === av.id || a.id === createdId);
-        if (index >= 0) {
-          const updated = [...prev];
-          updated[index] = avaliacaoSalva;
-          return updated;
-        }
+        const exists = prev.some(a => a.id === avaliacaoSalva.id);
+        if (exists) return prev;
         return [...prev, avaliacaoSalva];
       });
-
-      await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunos);
       showSuccessRef.current('Avaliação salva com sucesso!');
       return createdId;
     } catch (err) {
@@ -302,7 +340,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       showErrorRef.current('Não foi possível salvar a avaliação. Verifique sua conexão.');
       return '';
     }
-  }, [turmaAtiva, alunos, verificarPeriodoFechado, fetchAvaliacoesInterno]);
+  }, [turmaAtiva, verificarPeriodoFechado, fetchAvaliacoesInterno]);
 
   const removerAvaliacao = useCallback(async (id: string) => {
     const av = avaliacoes.find(a => a.id === id);
@@ -320,23 +358,54 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     }
   }, [avaliacoes, verificarPeriodoFechado]);
 
-  const salvarNotas = useCallback(async (avaliacaoId: string, notas: { alunoId: string, valor: string }[]) => {
+  const salvarNotas = useCallback(async (avaliacaoId: string, notas: { alunoId: string, valor: string }[], alunoIdsRemovidos?: string[]) => {
     if (!turmaAtiva) return;
-    const av = avaliacoes.find(a => a.id === avaliacaoId);
+    const av = avaliacoes.find(a => String(a.id) === String(avaliacaoId));
     if (av && verificarPeriodoFechado(av.bimestre || av.data)) {
       showErrorRef.current('Operação bloqueada: O período correspondente a esta avaliação está fechado.');
       return;
     }
     const rawId = getTid(turmaAtiva.id);
     try {
-      await OfflineTurmaService.salvarNotas(avaliacaoId, notas);
-      await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunos);
+      await OfflineTurmaService.salvarNotas(avaliacaoId, notas, alunoIdsRemovidos);
+
+      // Atualiza o estado local dos alunos imediatamente com as novas notas
+      setAlunos(prevAlunos => {
+        const notasMap = new Map<string, string>();
+        notas.forEach(n => notasMap.set(String(n.alunoId), n.valor));
+        const removidosSet = new Set(alunoIdsRemovidos || []);
+
+        return prevAlunos.map(aluno => {
+          const alunoIdStr = String(aluno.id);
+          if (removidosSet.has(alunoIdStr)) {
+            const novasNotas = { ...(aluno.notas || {}) };
+            delete novasNotas[String(avaliacaoId)];
+            return {
+              ...aluno,
+              notas: novasNotas
+            };
+          }
+          const novaNota = notasMap.get(alunoIdStr);
+          if (novaNota !== undefined && novaNota !== '') {
+            return {
+              ...aluno,
+              notas: {
+                ...(aluno.notas || {}),
+                [String(avaliacaoId)]: novaNota
+              }
+            };
+          }
+          return aluno;
+        });
+      });
+
+      await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunosRef.current);
       showSuccessRef.current('Notas salvas com sucesso!');
     } catch (err) {
       console.error('Erro ao salvar notas:', err);
       showErrorRef.current('Ocorreu um erro ao salvar as notas.');
     }
-  }, [turmaAtiva, avaliacoes, alunos, verificarPeriodoFechado, fetchAvaliacoesInterno]);
+  }, [turmaAtiva, avaliacoes, verificarPeriodoFechado, fetchAvaliacoesInterno]);
 
   const carregarFaltasDaData = useCallback(async (data: string) => {
     if (!turmaAtiva) return;
@@ -402,7 +471,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
     if (freqData.length > 0) {
       setAlunos(prev => prev.map(aluno => {
-        const f = freqData.find(fd => fd.aluno_id === aluno.id);
+        const f = freqData.find(fd => String(fd.aluno_id) === String(aluno.id));
         if (f) return { ...aluno, freq: f.status, part: f.participacao || 'Presencial' };
         return aluno;
       }));

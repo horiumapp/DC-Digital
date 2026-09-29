@@ -2,11 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { X, Building2, MapPin, Hash, User, Activity, Image as ImageIcon } from 'lucide-react';
 import logosLocais from '../config/logos.json';
 
+export interface NovaEscolaData {
+  nome: string;
+  localizacao: string;
+  inep: string;
+  gestor: string;
+  ativo: boolean;
+  logo_url: string;
+}
+
+export interface EscolaEditTarget {
+  id?: string;
+  nome?: string;
+  distrito?: string;
+  inep?: string;
+  diretor?: string;
+  status?: string;
+  logo_url?: string;
+}
+
 interface NovaEscolaModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (escola: any) => void;
-  escolaParaEditar?: any;
+  onSave: (escola: NovaEscolaData) => void;
+  escolaParaEditar?: EscolaEditTarget | null;
 }
 
 export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEditar }: NovaEscolaModalProps) {

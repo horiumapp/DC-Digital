@@ -6,11 +6,13 @@ export default function ConnectionStatus() {
   const {
     connectionState,
     pendingCount,
+    isNearCapacity,
     deadLetterCount,
     deadLetterItems,
     lastError,
     syncNow,
     retryErrors,
+    retryDeadLetters,
     discardDeadLetters,
   } = useOffline();
 
@@ -18,6 +20,7 @@ export default function ConnectionStatus() {
   const [showOnlineBrief, setShowOnlineBrief] = useState(false);
   const [showDeadLetterModal, setShowDeadLetterModal] = useState(false);
   const [isDiscarding, setIsDiscarding] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   useEffect(() => {
     if (connectionState === 'OFFLINE' || connectionState === 'SYNCING' || connectionState === 'ERROR' || deadLetterCount > 0) {
@@ -43,6 +46,17 @@ export default function ConnectionStatus() {
       setShowDeadLetterModal(false);
     } finally {
       setIsDiscarding(false);
+    }
+  };
+
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    try {
+      await retryDeadLetters();
+      setShowDeadLetterModal(false);
+      await syncNow();
+    } finally {
+      setIsRetrying(false);
     }
   };
 
@@ -72,9 +86,11 @@ export default function ConnectionStatus() {
       ) : null,
     },
     OFFLINE: {
-      bg: 'bg-amber-500/95',
-      icon: <WifiOff className="w-4 h-4" />,
-      text: pendingCount > 0
+      bg: isNearCapacity ? 'bg-amber-600/95 font-bold' : 'bg-amber-500/95',
+      icon: isNearCapacity ? <AlertTriangle className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />,
+      text: isNearCapacity
+        ? `Atenção: Fila offline próxima do limite (${pendingCount}/5000) • Conecte-se à internet para sincronizar!`
+        : pendingCount > 0
         ? `Sem conexão • ${pendingCount} alteração(ões) salva(s) localmente`
         : 'Sem conexão — trabalhando offline',
       action: null,
@@ -92,7 +108,12 @@ export default function ConnectionStatus() {
       action: (
         <div className="flex items-center gap-1.5 ml-2">
           <button
-            onClick={retryErrors}
+            onClick={async () => {
+              const retriedCount = await retryErrors();
+              if (retriedCount === 0 && deadLetterCount > 0) {
+                setShowDeadLetterModal(true);
+              }
+            }}
             className="px-2 py-0.5 bg-white/20 rounded-md text-xs font-semibold hover:bg-white/30 transition-colors cursor-pointer"
           >
             Tentar novamente
@@ -196,8 +217,17 @@ export default function ConnectionStatus() {
               </button>
               <button
                 type="button"
+                onClick={handleRetry}
+                disabled={isRetrying || isDiscarding}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-bold rounded-lg text-xs transition-all shadow-sm cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRetrying ? 'animate-spin' : ''}`} />
+                {isRetrying ? 'Reenviando...' : 'Tentar Novamente'}
+              </button>
+              <button
+                type="button"
                 onClick={handleDiscard}
-                disabled={isDiscarding}
+                disabled={isDiscarding || isRetrying}
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-slate-400 text-white font-bold rounded-lg text-xs transition-all shadow-sm cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />

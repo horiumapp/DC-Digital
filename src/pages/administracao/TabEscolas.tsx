@@ -8,16 +8,35 @@ import EscolaDetalhes from './EscolaDetalhes';
 
 import { useToast } from '../../components/common/Toast';
 
+export interface EscolaRow {
+  id: string;
+  nome: string;
+  distrito?: string;
+  inep?: string;
+  diretor?: string;
+  status?: string;
+  logo_url?: string;
+}
+
+export interface EscolaFormData {
+  nome: string;
+  localizacao?: string;
+  inep?: string;
+  gestor?: string;
+  ativo?: boolean;
+  logo_url?: string;
+}
+
 export default function TabEscolas() {
   const { user: _user } = useAuth();
   const { showError } = useToast();
   const [buscaEscola, setBuscaEscola] = useState('');
   const [isNovaEscolaModalOpen, setIsNovaEscolaModalOpen] = useState(false);
-  const [escolaParaEditar, setEscolaParaEditar] = useState<any>(null);
-  const [escolaParaExcluir, setEscolaParaExcluir] = useState<any>(null);
-  const [escolaSelecionada, setEscolaSelecionada] = useState<any>(null);
+  const [escolaParaEditar, setEscolaParaEditar] = useState<EscolaRow & EscolaFormData | null>(null);
+  const [escolaParaExcluir, setEscolaParaExcluir] = useState<EscolaRow | null>(null);
+  const [escolaSelecionada, setEscolaSelecionada] = useState<EscolaRow | null>(null);
 
-  const [escolas, setEscolas] = useState<any[]>([]);
+  const [escolas, setEscolas] = useState<EscolaRow[]>([]);
   const [_loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,7 +55,7 @@ export default function TabEscolas() {
     setLoading(false);
   };
 
-  const handleSaveEscola = async (novaEscola: any) => {
+  const handleSaveEscola = async (novaEscola: EscolaFormData) => {
     if (escolaParaEditar) {
       const { error } = await supabase
         .from('escolas')
@@ -81,7 +100,7 @@ export default function TabEscolas() {
     }
   };
 
-  const handleEditEscola = (escola: any) => {
+  const handleEditEscola = (escola: EscolaRow) => {
     // NovaEscolaModal expects 'localizacao' instead of 'distrito', etc.
     const escolaParaModal = {
       ...escola,

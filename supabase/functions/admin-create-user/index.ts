@@ -4,22 +4,26 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// FIX: Origens permitidas — suporta variável de ambiente ALLOWED_ORIGINS, domínios de desenvolvimento e previews do Vercel.
+// FIX: Origens permitidas — suporta variável de ambiente ALLOWED_ORIGINS, domínios de desenvolvimento e previews oficiais do Vercel.
 const ENV_ALLOWED_ORIGINS = Deno.env.get("ALLOWED_ORIGINS");
 const STATIC_ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:5173",
   "http://127.0.0.1:3000",
   "http://127.0.0.1:5173",
+  "https://ddigital-lbr.vercel.app",
   "https://dc-digital.vercel.app",
 ];
 const ALLOWED_ORIGINS = ENV_ALLOWED_ORIGINS
   ? ENV_ALLOWED_ORIGINS.split(",").map((o) => o.trim())
   : STATIC_ALLOWED_ORIGINS;
 
+// Subdomínios oficiais na Vercel (produção e branch previews legítimos deste projeto)
+const ALLOWED_VERCEL_REGEX = /^https:\/\/(dc-digital|ddigital-lbr)(-[a-z0-9-]+)?\.vercel\.app$/;
+
 function getCorsHeaders(req: Request): Record<string, string> | null {
   const origin = req.headers.get("Origin") || "";
-  const isAllowed = ALLOWED_ORIGINS.includes(origin) || /^https:\/\/.*\.vercel\.app$/.test(origin);
+  const isAllowed = ALLOWED_ORIGINS.includes(origin) || ALLOWED_VERCEL_REGEX.test(origin);
 
   if (!isAllowed && origin) {
     return null; // Origem não permitida — será rejeitada
@@ -151,7 +155,102 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { nome, email, senha, cargo, escola_id } = body as Record<string, unknown>;
+    const bodyRecord = (body && typeof body === "object") ? (body as Record<string, unknown>) : {};
+
+    // 2.1 Ação de exclusão / revogação de usuário
+    if (bodyRecord.action === "delete-user") {
+      // SEC-01 FIX: Apenas papéis administrativos podem excluir usuários.
+      // Antes, qualquer ALUNO/PROFESSOR autenticado da mesma escola podia
+      // invocar este endpoint e deletar contas de colegas permanentemente.
+      if (!["ADMIN", "GESTOR", "SECRETARIO"].includes(effectiveRole as string)) {
+        return new Response(
+          JSON.stringify({ error: "Seu perfil não possui permissão para excluir contas de usuários." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const targetEmail = typeof bodyRecord.email === "string" ? bodyRecord.email.trim().toLowerCase() : "";
+      const targetUserId = typeof bodyRecord.userId === "string" ? bodyRecord.userId.trim() : "";
+
+      if (!targetEmail && !targetUserId) {
+        return new Response(
+          JSON.stringify({ error: "Informe email ou userId para exclusão" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Buscar usuário alvo na tabela usuarios
+      let targetUserQuery = supabaseAdmin.from("usuarios").select("id, email, cargo, escola_id");
+      if (targetUserId) {
+        targetUserQuery = targetUserQuery.eq("id", targetUserId);
+      } else {
+        targetUserQuery = targetUserQuery.eq("email", targetEmail);
+      }
+      const { data: targetUserData } = await targetUserQuery.maybeSingle();
+
+      // Se for não-ADMIN, verificar se tem permissão para deletar este usuário
+      if (effectiveRole !== "ADMIN") {
+        const { data: callerData } = await supabaseAdmin
+          .from("usuarios")
+          .select("escola_id")
+          .eq("id", callerUser.id)
+          .maybeSingle();
+
+        if (!callerData?.escola_id) {
+          return new Response(
+            JSON.stringify({ error: "Seu usuário não possui escola vinculada" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // SEGURANÇA: Não-admin NÃO pode excluir usuário inexistente ou não mapeado na tabela usuarios
+        if (!targetUserData) {
+          return new Response(
+            JSON.stringify({ error: "Usuário não encontrado na base institucional" }),
+            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Não-admin só pode deletar PROFESSOR ou ALUNO da sua própria escola
+        if (
+          targetUserData.escola_id !== callerData.escola_id ||
+          !["PROFESSOR", "ALUNO"].includes(targetUserData.cargo)
+        ) {
+          return new Response(
+            JSON.stringify({ error: "Você não tem permissão para excluir este usuário" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      // Resolver ID do Auth
+      let authUserId = targetUserData?.id || targetUserId;
+      if (!authUserId && targetEmail) {
+        const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
+        const found = listData?.users?.find((u: { email?: string }) => u.email?.toLowerCase() === targetEmail);
+        if (found) authUserId = found.id;
+      }
+
+      if (!authUserId) {
+        return new Response(
+          JSON.stringify({ error: "Usuário não encontrado para exclusão" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { error: delAuthErr } = await supabaseAdmin.auth.admin.deleteUser(authUserId);
+      if (delAuthErr) {
+        console.error("Erro ao deletar de auth.users:", delAuthErr);
+      }
+      await supabaseAdmin.from("usuarios").delete().eq("id", authUserId);
+
+      return new Response(
+        JSON.stringify({ success: true, message: "Conta e credenciais removidas com sucesso" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { nome, email, senha, cargo, escola_id } = bodyRecord;
 
     // FIX: Validação de tipos para evitar injeção de objetos/arrays
     if (
@@ -193,9 +292,14 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (senha.length < 6) {
+    // FIX M1: Exigir senha forte — mínimo 8 caracteres, com letra e número.
+    // Antes aceitava 6 caracteres sem regra de complexidade, permitindo senhas
+    // triviais como "123456". Alinhado com o minLength={8} da tela de login.
+    const hasLetter = /[a-zA-Z]/.test(senha);
+    const hasDigit = /\d/.test(senha);
+    if (senha.length < 8 || !hasLetter || !hasDigit) {
       return new Response(
-        JSON.stringify({ error: "A senha deve ter no mínimo 6 caracteres" }),
+        JSON.stringify({ error: "A senha deve ter no mínimo 8 caracteres, incluindo letras e números" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -238,7 +342,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 6. FIX: Verificar se o chamador (GESTOR/SECRETARIO) tem vínculo com a escola
+    // 6. FIX: Verificar se o chamador (GESTOR/SECRETARIO) tem vínculo com a escola.
+    // FIX C2: Antes, se callerData.escola_id fosse NULL (usuário sem escola
+    // vinculada), o check era pulado e o chamador podia criar contas em QUALQUER
+    // escola. Agora, não-ADMIN só cria usuários da própria escola vinculada.
     if (effectiveRole !== "ADMIN") {
       const { data: callerData } = await supabaseAdmin
         .from("usuarios")
@@ -246,7 +353,14 @@ Deno.serve(async (req: Request) => {
         .eq("id", callerUser.id)
         .maybeSingle();
 
-      if (callerData?.escola_id && callerData.escola_id !== escolaIdTrimmed) {
+      if (!callerData?.escola_id) {
+        return new Response(
+          JSON.stringify({ error: "Seu usuário não possui uma escola vinculada. Contate o administrador." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (callerData.escola_id !== escolaIdTrimmed) {
         return new Response(
           JSON.stringify({ error: "Você só pode criar usuários vinculados à sua própria escola." }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -274,8 +388,10 @@ Deno.serve(async (req: Request) => {
           { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+      console.error("Erro ao criar usuário:", createError);
+      // FIX: Não vazar detalhes internos do servidor/banco para o cliente.
       return new Response(
-        JSON.stringify({ error: "Erro ao criar conta: " + createError.message }),
+        JSON.stringify({ error: "Não foi possível criar a conta. Tente novamente em instantes." }),
         { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -293,6 +409,32 @@ Deno.serve(async (req: Request) => {
 
     if (updateError) {
       console.error("Erro ao fazer upsert em usuarios:", updateError);
+    }
+
+    // 8.1 Se for conta de ALUNO criada com pseudo-e-mail, vincular alunos.usuario_id diretamente
+    if (cargoTrimmed === "ALUNO" && emailTrimmed.endsWith("@aluno.dcdigital.local")) {
+      const cpfDigits = emailTrimmed.split("@")[0];
+      const cpfFormatted = cpfDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+      const { error: linkAlunoError } = await supabaseAdmin
+        .from("alunos")
+        .update({ usuario_id: newUser.user.id })
+        .or(`cpf.eq.${cpfDigits},cpf.eq.${cpfFormatted}`);
+
+      if (linkAlunoError) {
+        console.warn("[admin-create-user] Aviso ao vincular usuario_id em alunos:", linkAlunoError.message);
+      }
+    }
+
+    // 8.2 Se for conta de PROFESSOR, vincular professores.usuario_id diretamente
+    if (cargoTrimmed === "PROFESSOR") {
+      const { error: linkProfError } = await supabaseAdmin
+        .from("professores")
+        .update({ usuario_id: newUser.user.id })
+        .ilike("email", emailTrimmed);
+
+      if (linkProfError) {
+        console.warn("[admin-create-user] Aviso ao vincular usuario_id em professores:", linkProfError.message);
+      }
     }
 
     // 9. Retornar sucesso

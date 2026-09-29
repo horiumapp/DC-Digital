@@ -7,9 +7,10 @@ Object.defineProperty(globalThis, 'navigator', {
   configurable: true,
 });
 
-// ---------- Mock network utility (pingInternet) ----------
+// ---------- Mock network utility (pingInternet & pingSupabase) ----------
 vi.mock('../utils/network', () => ({
   pingInternet: vi.fn(async () => true), // Por padrão, simula online
+  pingSupabase: vi.fn(async () => true),
 }));
 
 
@@ -36,6 +37,7 @@ vi.mock('../services/offlineQueue', () => {
     markDone: _markDone,
     retry: _retry,
     fail: _fail,
+    retryAllErrors: vi.fn(async () => 0),
     getAllPending: _getAllPending,
     getPendingCount: _getPendingCount,
   };
@@ -46,15 +48,15 @@ vi.mock('../lib/supabase', () => {
   const _upsert = vi.fn(async () => ({ data: null, error: null }));
   const _from = vi.fn(() => ({
     upsert: _upsert,
-    delete: vi.fn(() => ({
-      eq: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            eq: vi.fn(async () => ({ error: null })),
-          })),
-        })),
-      })),
-    })),
+    delete: vi.fn(() => {
+      const chain: Record<string, unknown> = {};
+      const deletePromise = Promise.resolve({ error: null });
+      chain.eq = vi.fn(() => chain);
+      chain.in = vi.fn(() => chain);
+      chain.then = deletePromise.then.bind(deletePromise);
+      chain.catch = deletePromise.catch.bind(deletePromise);
+      return chain;
+    }),
     insert: vi.fn(async () => ({ data: [{ id: 'server-uuid' }], error: null })),
     select: vi.fn(() => ({
       eq: vi.fn(() => ({ single: vi.fn(async () => ({ data: null, error: null })) })),
@@ -64,7 +66,14 @@ vi.mock('../lib/supabase', () => {
     })),
   }));
 
-  return { supabase: { from: _from } };
+  return {
+    supabase: {
+      from: _from,
+      auth: {
+        refreshSession: vi.fn(async () => ({ data: { session: null }, error: null })),
+      },
+    },
+  };
 });
 
 // ---------- Mock db (inline para hoisting) ----------
@@ -78,6 +87,7 @@ vi.mock('../lib/db', () => {
   }));
   const _where = vi.fn(() => ({
     equals: _equals,
+    anyOf: vi.fn(() => ({ modify: _modify, toArray: vi.fn(async () => []) })),
     below: vi.fn(() => ({ delete: vi.fn(async () => 0) })),
   }));
 
@@ -89,7 +99,9 @@ vi.mock('../lib/db', () => {
       avaliacoes: { where: _where },
       notas: { where: _where },
       fechamentos: { where: _where },
-      syncQueue: { where: _where },
+      syncQueue: { where: _where, toArray: vi.fn(async () => []) },
+      // FIX H5a: syncFrequencia marca 'synced' por linha dentro de uma transação
+      transaction: vi.fn(async (_mode: string, _tables: unknown, scope: () => Promise<void>) => scope()),
     },
     now: () => new Date().toISOString(),
     hashOperation: vi.fn(async () => 'test-hash'),
@@ -97,30 +109,35 @@ vi.mock('../lib/db', () => {
 });
 
 // ---------- Import sob teste (APÓS mocks) ----------
+import type { SyncQueueItem } from '../lib/db';
 import * as SyncEngine from '../services/syncEngine';
 import * as Queue from '../services/offlineQueue';
 import { supabase } from '../lib/supabase';
 import { pingInternet } from '../utils/network';
 
 // Helper para configurar peek com resultados sequenciais
-function setupPeek(items: any[]) {
+function setupPeek(items: (SyncQueueItem | undefined)[]) {
   let idx = 0;
   vi.mocked(Queue.peek).mockImplementation(async () => items[idx++] || undefined);
 }
 
 // Helper para forçar upsert a falhar
-function forceUpsertError(msg: string) {
+function forceUpsertError(msg: string, code?: string) {
   const fromMock = vi.mocked(supabase.from);
   fromMock.mockReturnValueOnce({
-    upsert: vi.fn(async () => { throw new Error(msg); }),
+    upsert: vi.fn(async () => {
+      const err = new Error(msg);
+      if (code) (err as unknown as { code: string }).code = code;
+      throw err;
+    }),
     delete: vi.fn(() => ({ eq: vi.fn(() => ({ eq: vi.fn(() => ({ eq: vi.fn(() => ({ eq: vi.fn(async () => ({ error: null })) })) })) })) })),
     insert: vi.fn(async () => ({ data: [{ id: 'x' }], error: null })),
     select: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn(async () => ({ data: null, error: null })) })) })),
     update: vi.fn(() => ({ eq: vi.fn(async () => ({ error: null })) })),
-  } as any);
+  } as unknown as ReturnType<typeof supabase.from>);
 }
 
-function makeFreqItem(id: number, payload?: any) {
+function makeFreqItem(id: number, payload?: Record<string, unknown>): SyncQueueItem {
   return {
     id,
     table: 'frequencias',
@@ -143,7 +160,10 @@ function makeFreqItem(id: number, payload?: any) {
 
 describe('syncEngine', () => {
   beforeEach(() => {
-    (globalThis as any).navigator = { onLine: true };
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { onLine: true },
+      configurable: true,
+    });
     vi.clearAllMocks();
     // Reset peek para retornar undefined (fila vazia)
     vi.mocked(Queue.peek).mockResolvedValue(undefined);
@@ -201,6 +221,18 @@ describe('syncEngine', () => {
     expect(Queue.fail).not.toHaveBeenCalled();
   });
 
+  it('deve chamar retry (e não dead letter) para erro de token JWT expirado (PGRST301)', async () => {
+    const item = makeFreqItem(99);
+    setupPeek([item]);
+    forceUpsertError('JWT expired', 'PGRST301');
+
+    const result = await SyncEngine.syncAll();
+    expect(result.failed).toBe(1);
+    expect(Queue.retry).toHaveBeenCalled();
+    expect(Queue.fail).not.toHaveBeenCalled();
+    expect(result.errors[0]).not.toContain('DEAD_LETTER');
+  });
+
   it('deve tratar payload JSON corrompido como dead letter', async () => {
     setupPeek([{
       id: 4, table: 'frequencias', operation: 'UPSERT',
@@ -219,5 +251,109 @@ describe('syncEngine', () => {
   it('deve chamar resetStuckItems no início do sync', async () => {
     await SyncEngine.syncAll();
     expect(Queue.resetStuckItems).toHaveBeenCalled();
+  });
+
+  it('deve processar e sincronizar item da tabela security_logs com sucesso', async () => {
+    const item = {
+      id: 5,
+      table: 'security_logs',
+      operation: 'INSERT' as const,
+      payload: JSON.stringify({
+        user_id: 'user-123',
+        action: 'LOGIN',
+        created_at: new Date().toISOString(),
+      }),
+      status: 'pending' as const,
+      retryCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      hash: 'hash-sec-log',
+    };
+    setupPeek([item]);
+
+    const result = await SyncEngine.syncAll();
+    expect(result.synced).toBe(1);
+    expect(result.failed).toBe(0);
+    expect(Queue.markDone).toHaveBeenCalledWith(5);
+  });
+
+  it('deve sincronizar notas com avaliacao_id numérico (BIGINT) com sucesso', async () => {
+    const item = {
+      id: 6,
+      table: 'notas',
+      operation: 'UPSERT' as const,
+      payload: JSON.stringify({
+        records: [
+          {
+            avaliacao_id: '42', // BIGINT como string
+            aluno_id: 'a1a1a1a1-0000-0000-0000-000000000001',
+            valor: 8.5,
+          },
+        ],
+      }),
+      status: 'pending' as const,
+      retryCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      hash: 'hash-nota-num',
+    };
+    setupPeek([item]);
+
+    const result = await SyncEngine.syncAll();
+    expect(result.synced).toBe(1);
+    expect(result.failed).toBe(0);
+    expect(Queue.markDone).toHaveBeenCalledWith(6);
+  });
+
+  it('deve aguardar avaliação pai quando nota possui avaliacao_id temporário', async () => {
+    const item = {
+      id: 7,
+      table: 'notas',
+      operation: 'UPSERT' as const,
+      payload: JSON.stringify({
+        records: [
+          {
+            avaliacao_id: 'temp_1234567890',
+            aluno_id: 'a1a1a1a1-0000-0000-0000-000000000001',
+            valor: 9.0,
+          },
+        ],
+      }),
+      status: 'pending' as const,
+      retryCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      hash: 'hash-nota-temp',
+    };
+    setupPeek([item]);
+
+    const result = await SyncEngine.syncAll();
+    expect(result.failed).toBe(1);
+    // Erro recuperável de dependência — chama retry e NÃO fail (dead letter)
+    expect(Queue.retry).toHaveBeenCalledWith(7, expect.stringContaining('Aguardando sincronização da avaliação'));
+    expect(Queue.fail).not.toHaveBeenCalled();
+  });
+
+  it('deve processar operação de DELETE de notas com sucesso', async () => {
+    const item = {
+      id: 8,
+      table: 'notas',
+      operation: 'DELETE' as const,
+      payload: JSON.stringify({
+        avaliacao_id: 42,
+        aluno_ids: ['a1a1a1a1-0000-0000-0000-000000000001'],
+      }),
+      status: 'pending' as const,
+      retryCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      hash: 'hash-nota-del',
+    };
+    setupPeek([item]);
+
+    const result = await SyncEngine.syncAll();
+    expect(result.synced).toBe(1);
+    expect(result.failed).toBe(0);
+    expect(Queue.markDone).toHaveBeenCalledWith(8);
   });
 });

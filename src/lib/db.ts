@@ -33,6 +33,8 @@ export interface LocalAluno {
   cpf?: string;
   status?: string;
   turma_id: string;
+  /** Q2 FIX: escola_id adicionado para permitir isolamento por escola no modo offline */
+  escola_id?: string;
   syncStatus: SyncStatus;
   updatedAt: string;
 }
@@ -76,6 +78,10 @@ export interface LocalAvaliacao {
   localId?: number;
   serverId?: string;
   id?: string; // server ID when synced
+  // FIX C4: ID temporário gerado pela UI (ex: temp_<Date.now>) que deve viajar
+  // com o registro local para que notas pendentes referenciando-o sejam
+  // resolvidas após a sincronização da avaliação.
+  clientTempId?: string;
   turma_id: string;
   tipo: string;
   data: string;
@@ -130,6 +136,18 @@ export interface LocalFechamento {
   version: number;
 }
 
+/** Unidade curricular cacheada para consulta BNCC offline (somente leitura). */
+export interface LocalCurriculoUnidade {
+  id: string;
+  modalidade: string;
+  ano: string;
+  bimestre: string;
+  disciplina: string;
+  nome: string;
+  objetos: Array<{ id?: string; unidade_id?: string; descricao: string }>;
+  habilidades: Array<{ id?: string; unidade_id?: string; codigo: string }>;
+  updatedAt: string;
+}
 /** Fila de sincronização */
 export interface SyncQueueItem {
   id?: number;
@@ -204,6 +222,7 @@ export class DCDigitalDB extends Dexie {
   notas!: EntityTable<LocalNota, 'localId'>;
   horarios!: EntityTable<LocalHorario, 'localId'>;
   fechamentos!: EntityTable<LocalFechamento, 'localId'>;
+  curriculos!: EntityTable<LocalCurriculoUnidade, 'id'>;
   syncQueue!: EntityTable<SyncQueueItem, 'id'>;
   syncLogs!: EntityTable<SyncLogEntry, 'id'>;
   cachedUsers!: EntityTable<CachedUser, 'id'>;
@@ -311,6 +330,44 @@ export class DCDigitalDB extends Dexie {
       files:       '++localId, syncStatus, relatedTable, relatedId',
       userSalts:   'userId',
     });
+    // v6: Cache somente leitura do currículo BNCC para consulta offline.
+    this.version(6).stores({
+      turmas:      'id, escola_id',
+      alunos:      'id, turma_id, syncStatus',
+      frequencias: '++localId, [turma_id+aluno_id+data+tempo+disciplina], turma_id, syncStatus, updatedAt, [syncStatus+updatedAt]',
+      conteudos:   '++localId, [turma_id+data+tempo+disciplina], turma_id, syncStatus, updatedAt, [syncStatus+updatedAt]',
+      avaliacoes:  '++localId, turma_id, disciplina, syncStatus, id, updatedAt, [syncStatus+updatedAt]',
+      notas:       '++localId, avaliacao_id, [avaliacao_id+aluno_id], syncStatus, updatedAt, [syncStatus+updatedAt]',
+      horarios:    '++localId, turma_id',
+      fechamentos: '++localId, [turma_id+disciplina+bimestre], syncStatus, [syncStatus+updatedAt]',
+      curriculos:  'id, [modalidade+ano+bimestre+disciplina]',
+
+      syncQueue:   '++id, table, status, createdAt, hash',
+      syncLogs:    '++id, timestamp, table, status',
+      cachedUsers: 'id',
+      files:       '++localId, syncStatus, relatedTable, relatedId',
+      userSalts:   'userId',
+    });
+
+    // v7: Q2 FIX — Adiciona índice escola_id em alunos para permitir filtragem
+    // local por escola no modo offline, consistente com o campo escola_id do servidor.
+    this.version(7).stores({
+      turmas:      'id, escola_id',
+      alunos:      'id, turma_id, syncStatus, escola_id',
+      frequencias: '++localId, [turma_id+aluno_id+data+tempo+disciplina], turma_id, syncStatus, updatedAt, [syncStatus+updatedAt]',
+      conteudos:   '++localId, [turma_id+data+tempo+disciplina], turma_id, syncStatus, updatedAt, [syncStatus+updatedAt]',
+      avaliacoes:  '++localId, turma_id, disciplina, syncStatus, id, updatedAt, [syncStatus+updatedAt]',
+      notas:       '++localId, avaliacao_id, [avaliacao_id+aluno_id], syncStatus, updatedAt, [syncStatus+updatedAt]',
+      horarios:    '++localId, turma_id',
+      fechamentos: '++localId, [turma_id+disciplina+bimestre], syncStatus, [syncStatus+updatedAt]',
+      curriculos:  'id, [modalidade+ano+bimestre+disciplina]',
+
+      syncQueue:   '++id, table, status, createdAt, hash',
+      syncLogs:    '++id, timestamp, table, status',
+      cachedUsers: 'id',
+      files:       '++localId, syncStatus, relatedTable, relatedId',
+      userSalts:   'userId',
+    });
   }
 }
 
@@ -352,26 +409,67 @@ export const OPERATIONAL_TABLE_NAMES: OperationalTableName[] = ['frequencias', '
 export const now = (): string => new Date().toISOString();
 
 /** Gera um hash SHA-256 truncado para deduplicação de operações na fila */
-export async function hashOperation(table: string, operation: QueueOperation, payload: Record<string, unknown>): Promise<string> {
+export async function hashOperation(
+  table: string,
+  operation: QueueOperation,
+  payload: Record<string, unknown>,
+  discriminator?: string | number
+): Promise<string> {
   // Usa as chaves mais relevantes para cada tabela
   const keyFields: Record<string, string[]> = {
     frequencias: ['turma_id', 'aluno_id', 'data', 'tempo', 'disciplina'],
     conteudos: ['turma_id', 'data', 'tempo', 'disciplina'],
-    avaliacoes: ['turma_id', 'disciplina', 'data', 'tipo'],
+    avaliacoes: ['id', 'parent_id', 'turma_id', 'disciplina', 'data', 'tipo'],
     notas: ['avaliacao_id', 'aluno_id'],
     fechamentos: ['turma_id', 'disciplina', 'bimestre'],
+    security_logs: ['user_id', 'action', 'created_at', 'entity_id'],
   };
-  
+
+  // FIX C3: Operações em lote ({ records: [...] }) eram hasheadas pelas chaves
+  // de topo (ausentes no payload), então TODOS os lotes de frequencias e notas
+  // colidiam no mesmo hash e a fila substituía um lote pelo outro — o primeiro
+  // nunca era sincronizado e acabava sendo purgado como "synced".
+  // Agora o hash é calculado sobre os registros normalizados e ordenados.
+  if (Array.isArray(payload.records)) {
+    const fields = keyFields[table] || [];
+    const recordsKey = payload.records
+      .map((r: Record<string, unknown>) => fields.map(f => r?.[f] ?? '').join('|'))
+      .sort()
+      .join(';');
+    return buildHashKey(`${table}:${operation}:batch:${recordsKey}`);
+  }
+
   const fields = keyFields[table] || Object.keys(payload);
-  const key = `${table}:${operation}:${fields.map(f => payload[f] ?? '').join('|')}`;
-  
+  let key = `${table}:${operation}:${fields.map(f => payload[f] ?? '').join('|')}`;
+
+  // Se houver array de aluno_ids (ex: DELETE em lote de notas)
+  if (Array.isArray(payload.aluno_ids)) {
+    const sortedAlunos = payload.aluno_ids.map(String).sort().join(',');
+    key = `${table}:${operation}:avaliacao:${String(payload.avaliacao_id ?? '')}:aluno_ids:${sortedAlunos}`;
+  }
+
+  // FIX C3: DELETEs com id explícito
+  if (operation === 'DELETE' && payload.id !== undefined) {
+    key = `${table}:DELETE:id:${String(payload.id)}`;
+  }
+
+  // FIX C3: INSERTs sem identidade no payload usam o localId como discriminador
+  if (operation === 'INSERT' && discriminator !== undefined) {
+    key = `${key}:local:${String(discriminator)}`;
+  }
+
+  return buildHashKey(key);
+}
+
+function buildHashKey(key: string): Promise<string> {
   try {
     if (typeof crypto !== 'undefined' && crypto.subtle && crypto.subtle.digest) {
       const msgUint8 = new TextEncoder().encode(key);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      return hashHex.slice(0, 32);
+      return crypto.subtle.digest('SHA-256', msgUint8).then(hashBuffer => {
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        return hashHex.slice(0, 32);
+      });
     }
   } catch (err) {
     console.warn('SubtleCrypto error, falling back to DJB2:', err);
@@ -384,6 +482,6 @@ export async function hashOperation(table: string, operation: QueueOperation, pa
     hash = ((hash << 5) - hash) + char;
     hash |= 0; // Convert to 32-bit integer
   }
-  return 'fb_' + Math.abs(hash).toString(36);
+  return Promise.resolve('fb_' + Math.abs(hash).toString(36));
 }
 

@@ -141,15 +141,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // FIX M2: Executar ping e leitura de cache em PARALELO para eliminar o
       // atraso sequencial de até 3s. Antes: ping(3s) → cache → Supabase.
-      // Agora: ping + cache em paralelo → Supabase (apenas se online).
+      // Agora: ping + cache + escola_id em paralelo (P2 FIX).
       // SEGURANÇA: A role NUNCA é sobrescrita pelo servidor — app_metadata (JWT)
       // é a fonte definitiva, pois é assinada pelo backend.
-      const [cacheResult, isReallyOnline] = await Promise.all([
+      // P2 FIX: Iniciar a busca de escola_id em paralelo com ping e cache.
+      // Se estiver offline, o fetch falhará silenciosamente (.catch) e usamos
+      // o valor do cache. Isso elimina a latência sequencial de ~200-500ms.
+      const [cacheResult, isReallyOnline, userDataResult] = await Promise.all([
         getCachedUser(authUser.id).catch((err: unknown) => {
           console.error('[AuthContext] Erro ao carregar usuário cacheado:', err);
           return undefined;
         }),
         pingInternet(3000),
+        // Busca escola_id em paralelo — silencia erros de rede (offline)
+        Promise.resolve(
+          supabase
+            .from('usuarios')
+            .select('escola_id')
+            .eq('id', authUser.id)
+            .maybeSingle()
+        ).catch(() => ({ data: null, error: null })),
       ]);
       if (isCancelled()) return;
 
@@ -161,23 +172,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       const cached = cacheResult;
 
-      if (isReallyOnline) {
-        try {
-          const { data: userData, error } = await supabase
-            .from('usuarios')
-            .select('escola_id')
-            .eq('id', authUser.id)
-            .maybeSingle();
-          
-          if (isCancelled()) return;
-          if (!error && userData) {
-            if (userData.escola_id) {
-              escolaId = userData.escola_id;
-            }
-          }
-        } catch (err: unknown) {
-          console.error('[AuthContext] Falha ao buscar dados complementares do usuário no DB:', err);
-        }
+      // P2 FIX: Usar o resultado da busca paralela apenas se online e sem erro.
+      // Se offline, o resultado é { data: null, error: null } (silenciado pelo .catch).
+      if (isReallyOnline && userDataResult && !userDataResult.error && userDataResult.data?.escola_id) {
+        escolaId = userDataResult.data.escola_id;
       }
 
       // FIX #1: Se não temos role (nem do JWT, nem do servidor), negar acesso
@@ -258,10 +256,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       _isFetchingRef.current = true;
       setLoading(true);
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        await fetchUserData(session);
+        const timeoutPromise = new Promise<{ data: { session: null }; error: Error }>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('SESSION_TIMEOUT')), 5000);
+        });
+        const result = await Promise.race([
+          supabase.auth.getSession(),
+          timeoutPromise,
+        ]);
+        if (timeoutId) clearTimeout(timeoutId);
+        await fetchUserData(result?.data?.session ?? null);
       } catch (err) {
+        if (timeoutId) clearTimeout(timeoutId);
         // Se getSession() falhar, fetchUserData não foi chamado — garantir loading=false
         console.error('[AuthContext] Erro ao obter sessão no refreshUser:', err);
         // FIX M6: setLoading(false) apenas aqui se fetchUserData não foi chamado.
@@ -275,10 +282,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // expor para closure abaixo
     refreshUserRef.current = handleRefreshUser;
 
-    // Busca a sessão assim que inicializa
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      fetchUserData(session);
-    });
+    // Busca a sessão assim que inicializa com proteção contra timeout e erros de rede/502/CORS
+    const initSession = async () => {
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      try {
+        // Timeout de 5s para evitar que a UI fique presa em "Carregando..."
+        // caso o Supabase esteja instável (502, CORS, retry loop de refresh token ou sem internet).
+        const timeoutPromise = new Promise<{ data: { session: null }; error: Error }>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('SESSION_TIMEOUT')), 5000);
+        });
+
+        const result = await Promise.race([
+          supabase.auth.getSession(),
+          timeoutPromise,
+        ]);
+
+        if (timeoutId) clearTimeout(timeoutId);
+
+        if (result?.error) {
+          console.warn('[AuthContext] Erro ao obter sessão inicial:', result.error);
+          // Se o token de atualização falhou por invalidação, limpa localmente para evitar retry loop no próximo reload
+          const errMsg = result.error.message?.toLowerCase() || '';
+          if (errMsg.includes('refresh token') || (result.error as { code?: string }).code === 'validation_failed') {
+            await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+          }
+          await fetchUserData(null);
+          return;
+        }
+
+        await fetchUserData(result?.data?.session ?? null);
+      } catch (err) {
+        if (timeoutId) clearTimeout(timeoutId);
+        console.warn('[AuthContext] Falha ou timeout ao verificar sessão inicial do Supabase:', err);
+        // Em caso de falha de rede/502/timeout, prosseguir para liberar a UI do estado de loading
+        await fetchUserData(null);
+      }
+    };
+
+    initSession();
 
     // Escuta TODOS os eventos de sessão explicitamente para segurança
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -320,7 +361,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // Tentar sincronizar imediatamente pendências de fundo antes de checar/deslogar
       if (navigator.onLine) {
-        await syncAll();
+        const syncResult = await syncAll();
+        // FIX: Se o sync falhou com erros, logar para diagnóstico.
+        // O fluxo de getPendingCount() abaixo já cuidará de alertar o usuário.
+        if (syncResult.failed > 0) {
+          console.warn(`[AuthContext] Sync pré-logout: ${syncResult.failed} item(ns) falharam.`);
+        }
       }
 
       const pending = await getPendingCount();
@@ -344,11 +390,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (signOutSuccess) {
-        // Limpa dados locais e cache de chaves
+        // Limpa dados locais e cache de chaves em memória
         clearKeyCache();
-        // FIX C2: Passar clearCrypto=true para limpar chaves de criptografia
-        // (userSalts) no logout, evitando herança em dispositivos compartilhados.
-        await clearAllLocalData(true, true);
+        // Preserva userSalts (indexado por userId) para permitir acesso a dados offline no re-login
+        await clearAllLocalData(true, false);
         sessionStorage.removeItem('activeEscolaId');
         sessionStorage.removeItem('activeTurno');
       }

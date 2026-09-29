@@ -4,18 +4,55 @@ import { supabase } from '../lib/supabase';
 import { useToast } from './common/Toast';
 import { validarCPF } from '../utils/cpfUtils';
 
+export interface NovoAlunoFormData {
+  escola_id: string;
+  turma_id: string;
+  nome: string;
+  dataNascimento?: string;
+  data_nascimento?: string;
+  cpf: string;
+  sexo: string;
+  nomeResponsavel?: string;
+  nome_responsavel?: string;
+  telefone: string;
+  endereco?: string;
+  status: string;
+}
+
+export interface AlunoEditTarget {
+  id?: string;
+  escola_id?: string;
+  turma_id?: string;
+  nome?: string;
+  dataNascimento?: string;
+  data_nascimento?: string;
+  cpf?: string;
+  sexo?: string;
+  nomeResponsavel?: string;
+  nome_responsavel?: string;
+  telefone?: string;
+  endereco?: string;
+  status?: string;
+}
+
+interface SelectOption {
+  id: string;
+  nome: string;
+  turno?: string;
+}
+
 interface NovoAlunoModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (aluno: any) => void;
-  alunoParaEditar?: any;
+  onSave: (aluno: NovoAlunoFormData) => void;
+  alunoParaEditar?: AlunoEditTarget | null;
   fixedEscolaId?: string;
 }
 
 const NovoAlunoModal = React.memo(function NovoAlunoModal({ isOpen, onClose, onSave, alunoParaEditar, fixedEscolaId }: NovoAlunoModalProps) {
   const { showError } = useToast();
-  const [escolas, setEscolas] = useState<any[]>([]);
-  const [turmas, setTurmas] = useState<any[]>([]);
+  const [escolas, setEscolas] = useState<SelectOption[]>([]);
+  const [turmas, setTurmas] = useState<SelectOption[]>([]);
   const [loadingEscolas, setLoadingEscolas] = useState(false);
   const [loadingTurmas, setLoadingTurmas] = useState(false);
 

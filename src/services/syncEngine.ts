@@ -6,17 +6,25 @@
  * de conflitos via last-write-wins.
  */
 import { supabase } from '../lib/supabase';
-import { db, now, hashOperation, getOperationalTable, type SyncLogEntry, type SyncQueueItem } from '../lib/db';
+import { db, now, hashOperation, getOperationalTable, type SyncLogEntry, type SyncQueueItem, type LocalFrequencia, type LocalNota } from '../lib/db';
 import * as Queue from './offlineQueue';
-import { pingInternet } from '../utils/network';
+import { pingInternet, pingSupabase } from '../utils/network';
+import { getTid } from '../utils/turmaUtils';
+
+import { reportWarning } from '../utils/errorReporting';
 
 // ============================================================
 // M5: Helper de validação de UUID
 // ============================================================
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function assertUUID(val: unknown, field: string): string {
   const s = String(val ?? '').trim();
   if (!s) {
     throw new Error(`[DEAD_LETTER] Campo '${field}' está ausente ou vazio.`);
+  }
+  if (!UUID_REGEX.test(s)) {
+    throw new Error(`[DEAD_LETTER] Campo '${field}' não é um UUID válido: ${s}`);
   }
   return s;
 }
@@ -33,6 +41,8 @@ export type SyncState = 'IDLE' | 'SYNCING' | 'ERROR';
 export interface SyncResult {
   synced: number;
   failed: number;
+  total: number;      // total de itens na fila quando o sync começou
+  remaining: number;  // itens restantes após o ciclo
   errors: string[];
 }
 
@@ -48,7 +58,7 @@ let _isSyncing = false;
 let _debounceTimer: ReturnType<typeof setTimeout> | null = null;
 const _listeners: Set<SyncListener> = new Set();
 
-const DEBOUNCE_MS = 500;
+const DEBOUNCE_MS = 2000;
 
 function setState(newState: SyncState) {
   if (_state !== newState) {
@@ -90,14 +100,34 @@ export function scheduleSync(): void {
 /** Sincroniza toda a fila de operações pendentes */
 export async function syncAll(): Promise<SyncResult> {
   if (_isSyncing) {
-    return { synced: 0, failed: 0, errors: ['Sincronização já em andamento'] };
+    return { synced: 0, failed: 0, total: 0, remaining: 0, errors: ['Sincronização já em andamento'] };
   }
 
   // FIX: Verificar se realmente está online com ping real
   // navigator.onLine pode retornar true em Wi-Fi sem rota ou portal captive
   const isReallyOnline = await pingInternet();
   if (!isReallyOnline) {
-    return { synced: 0, failed: 0, errors: ['Sem conexão com a internet'] };
+    return { synced: 0, failed: 0, total: 0, remaining: 0, errors: ['Sem conexão com a internet'] };
+  }
+
+  // FIX P1-#5: Verificar se o Supabase está acessível antes de sincronizar.
+  // Internet pode estar ok, mas o backend pode estar fora (manutenção, deploy).
+  const isSupabaseUp = await pingSupabase();
+  if (!isSupabaseUp) {
+    return { synced: 0, failed: 0, total: 0, remaining: 0, errors: ['Servidor indisponível. Tentando novamente em breve.'] };
+  }
+
+  // FIX P0-#1: Verificar sessão Supabase antes de sincronizar.
+  // Se o JWT expirou, todos os itens falhariam com 401/403, gastando retries
+  // e potencialmente movendo dados válidos para dead letter.
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return { synced: 0, failed: 0, total: 0, remaining: 0, errors: ['Sessão expirada. Faça login novamente para sincronizar.'] };
+    }
+  } catch {
+    // Se não conseguiu verificar a sessão, prosseguir com cautela
+    console.warn('[SyncEngine] Não foi possível verificar sessão — prosseguindo com sync.');
   }
 
   // FIX M4: Usar Web Locks API para serializar sincronizações entre múltiplas abas.
@@ -105,7 +135,7 @@ export async function syncAll(): Promise<SyncResult> {
   // Sem esse lock, duas abas abertas simultaneamente passariam pelo check acima
   // e sincronizariam em paralelo, causando possíveis duplicatas ou conflitos no Supabase.
   // Fallback: se Web Locks não estiver disponível (ex: browsers antigos, testes), executa sem lock.
-  if (typeof navigator !== 'undefined' && 'locks' in navigator) {
+  if (typeof navigator !== 'undefined' && navigator.locks && typeof navigator.locks.request === 'function') {
     return navigator.locks.request(
       'dc-digital-sync-lock',
       { ifAvailable: true },
@@ -113,7 +143,7 @@ export async function syncAll(): Promise<SyncResult> {
         if (!lock) {
           // Outra aba já está sincronizando — aguardar
           console.info('[SyncEngine] Outra aba está sincronizando. Aguardando próximo ciclo.');
-          return { synced: 0, failed: 0, errors: ['Sincronização em andamento em outra aba'] };
+          return { synced: 0, failed: 0, total: 0, remaining: 0, errors: ['Sincronização em andamento em outra aba'] };
         }
         return _runSyncAll();
       }
@@ -130,7 +160,10 @@ async function _runSyncAll(): Promise<SyncResult> {
   setState('SYNCING');
   emit('start');
 
-  const result: SyncResult = { synced: 0, failed: 0, errors: [] };
+  const result: SyncResult = { synced: 0, failed: 0, total: 0, remaining: 0, errors: [] };
+
+  // FIX P2-#7: Capturar total de itens pendentes no início do ciclo para progresso
+  result.total = await Queue.getPendingCount();
 
   // FIX #15: Limite de itens por ciclo para evitar bloqueio longo em filas grandes.
   // Se a fila tiver mais itens, um próximo ciclo será agendado automaticamente.
@@ -141,6 +174,8 @@ async function _runSyncAll(): Promise<SyncResult> {
     // Resetar itens travados de sessão anterior
     await Queue.resetStuckItems();
     await autoRepairDeadLetters();
+    await Queue.retryAllErrors();
+    // FIX H5b: Reconciliação movida para após o loop de processamento (FIX C1).
 
     // Processar fila em ordem FIFO
     let item = await Queue.peek();
@@ -197,15 +232,45 @@ async function _runSyncAll(): Promise<SyncResult> {
           result.failed++;
           result.errors.push(`${item.table}/${item.operation}: [DEAD_LETTER] ${errorMsg}`);
           emit('itemFailed', { table: item.table, error: errorMsg, deadLetter: true });
+          reportWarning(`[SyncEngine DLQ] Item movido para dead-letter: ${item.table}/${item.operation}`, {
+            table: item.table,
+            operation: item.operation,
+            error: errorMsg,
+            errorCode,
+          });
           // Continua para o próximo item em vez de parar
         } else {
-          // Erro recuperável — retry com backoff e parar o loop
+          // Erro recuperável — retry com backoff
           await Queue.retry(item.id, errorMsg);
           await logSync(item.table, item.operation, 'error', errorMsg);
           result.failed++;
           result.errors.push(`${item.table}/${item.operation}: ${errorMsg}`);
           emit('itemFailed', { table: item.table, error: errorMsg });
-          break; // Parar apenas para erros recuperáveis (rede, timeout)
+
+          // Se for erro de autenticação ou token JWT expirado (PGRST301),
+          // tentar renovar a sessão do usuário e pausar o ciclo corrente
+          // para não queimar tentativas de retry nem descartar dados legítimos.
+          const isAuthError = errorCode === 'PGRST301' || errorMsg.toLowerCase().includes('jwt expired') || errorMsg.toLowerCase().includes('token is expired');
+          if (isAuthError) {
+            try {
+              console.info('[SyncEngine] JWT expirado (PGRST301) detectado durante sync. Tentando renovar sessão...');
+              await supabase.auth?.refreshSession?.();
+            } catch (authErr) {
+              console.warn('[SyncEngine] Não foi possível renovar sessão automaticamente:', authErr);
+            }
+            break; // Parar o ciclo atual até haver autenticação válida
+          }
+
+          // FIX P0-#3: Erros de dependência (avaliação pai pendente) NÃO devem
+          // bloquear a fila inteira. Outros itens independentes podem ser sincronizados
+          // enquanto a dependência é resolvida em ciclos futuros.
+          // Apenas erros de rede/timeout (verdadeiramente recuperáveis por reconexão)
+          // devem parar o loop, pois indicam que o servidor está inacessível.
+          const isDependencyError = errorMsg.includes('Aguardando sincronização');
+          if (!isDependencyError) {
+            break; // Parar para erros de rede/timeout — servidor inacessível
+          }
+          // Para erros de dependência: continuar processando próximos itens
         }
       }
 
@@ -222,18 +287,28 @@ async function _runSyncAll(): Promise<SyncResult> {
       }
     }
 
+    // FIX P2-#7: Calcular itens restantes após o ciclo
+    result.remaining = await Queue.getPendingCount();
+
+    // FIX C1/H5b: Reconciliação de registros locais sem item na fila.
+    // Executada APENAS quando a fila está vazia para evitar timing issue
+    // entre markDone e markLocalRecordSynced que causava reenfileiramento duplicado.
+    if (result.remaining === 0) {
+      await reconcileLocalRecords();
+    }
+
     setState(result.failed > 0 ? 'ERROR' : 'IDLE');
     emit('complete', result);
 
     // FIX M6: Limpeza proativa do IndexedDB após ciclo bem-sucedido.
-    // Registros já sincronizados (syncStatus='synced') com mais de 30 dias são
-    // removidos para evitar crescimento ilimitado ao longo do ano letivo.
-    // FIX M4: Limpeza de syncLogs antigos (> 30 dias) no mesmo ciclo.
+    // D2 FIX: Prazo aumentado de 30 → 60 dias para preservar histórico offline
+    // (professores podem precisar acessar dados de bimestres anteriores offline).
+    // FIX M4: Limpeza de syncLogs antigos (> 60 dias) no mesmo ciclo.
     // Ambas as limpezas são assíncronas e não-bloqueantes. Erros são silenciosos.
     if (result.synced > 0) {
       setTimeout(() => {
         import('../services/offlineStorage').then(({ clearOldSyncedData }) => {
-          clearOldSyncedData(30).then(deleted => {
+          clearOldSyncedData(60).then(deleted => {
             if (deleted > 0) {
               console.info(`[SyncEngine] Limpeza proativa: ${deleted} registros antigos removidos do IndexedDB.`);
             }
@@ -242,15 +317,15 @@ async function _runSyncAll(): Promise<SyncResult> {
           });
         });
 
-        // Limpar syncLogs com mais de 30 dias para evitar crescimento
+        // Limpar syncLogs com mais de 60 dias para evitar crescimento
         // ilimitado ao longo do ano letivo (pode acumular 10k+ entradas).
-        const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const cutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
         db.syncLogs
           .where('timestamp').below(cutoff)
           .delete()
           .then(count => {
             if (count > 0) {
-              console.info(`[SyncEngine] Limpeza de logs: ${count} entradas de syncLog removidas (> 30 dias).`);
+              console.info(`[SyncEngine] Limpeza de logs: ${count} entradas de syncLog removidas (> 60 dias).`);
             }
           })
           .catch(err => {
@@ -288,14 +363,15 @@ function isNonRecoverableError(errorMsg: string, errorCode?: string): boolean {
   const msg = errorMsg.toLowerCase();
 
   // Códigos de erro do PostgREST/Postgres (fonte: https://postgrest.org/en/stable/references/errors.html)
+  // NOTA: 'PGRST301' (JWT expired) NÃO deve entrar em dead-letter permanente, pois é recuperável após refresh de sessão.
   const deadLetterCodes = new Set([
     '23503', // foreign_key_violation
     '23505', // unique_violation
     '23514', // check_violation
     '42501', // insufficient_privilege
     '22P02', // invalid_text_representation
+    'P0001', // raise_exception (ex: trigger de bimestre fechado, validações server-side)
     'PGRST116', // Resource Not Found (RLS bloqueando GET de recurso específico)
-    'PGRST301', // JWT expired (não recuperável sem relogin)
   ]);
 
   if (errorCode && deadLetterCodes.has(errorCode)) return true;
@@ -371,7 +447,7 @@ interface FechamentoPayload {
 function sanitizeFrequencia(payload: FrequenciaPayload): Record<string, unknown> {
   return {
     // FIX M5: assertUUID valida formato antes de enviar ao Supabase
-    turma_id: assertUUID(payload.turma_id, 'turma_id'),
+    turma_id: assertUUID(getTid(String(payload.turma_id)), 'turma_id'),
     aluno_id: assertUUID(payload.aluno_id, 'aluno_id'),
     data: String(payload.data),
     tempo: String(payload.tempo),
@@ -384,7 +460,7 @@ function sanitizeFrequencia(payload: FrequenciaPayload): Record<string, unknown>
 function sanitizeConteudo(payload: ConteudoPayload): Record<string, unknown> {
   return {
     // FIX M5: assertUUID valida formato antes de enviar ao Supabase
-    turma_id: assertUUID(payload.turma_id, 'turma_id'),
+    turma_id: assertUUID(getTid(String(payload.turma_id)), 'turma_id'),
     data: String(payload.data),
     tempo: String(payload.tempo),
     objetos: Array.isArray(payload.objetos) ? payload.objetos.map(String) : [],
@@ -397,7 +473,7 @@ function sanitizeConteudo(payload: ConteudoPayload): Record<string, unknown> {
 function sanitizeAvaliacao(payload: AvaliacaoPayload): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {
     // FIX M5: assertUUID valida formato antes de enviar ao Supabase
-    turma_id: assertUUID(payload.turma_id, 'turma_id'),
+    turma_id: assertUUID(getTid(String(payload.turma_id)), 'turma_id'),
     tipo: String(payload.tipo),
     data: String(payload.data),
     instrumento: String(payload.instrumento || ''),
@@ -408,7 +484,7 @@ function sanitizeAvaliacao(payload: AvaliacaoPayload): Record<string, unknown> {
         }))
       : [],
     bimestre: String(payload.bimestre),
-    valor_maximo: Number(payload.valor_maximo || 10),
+    valor_maximo: (() => { const vm = Number(payload.valor_maximo || 10); return (vm > 0 && vm <= 1000) ? vm : 10; })(),
     disciplina: String(payload.disciplina),
   };
 
@@ -419,9 +495,7 @@ function sanitizeAvaliacao(payload: AvaliacaoPayload): Record<string, unknown> {
     const parentStr = String(payload.parent_id);
     if (!parentStr.startsWith('temp_') && !parentStr.startsWith('local_')) {
       const parentNum = Number(parentStr);
-      if (!isNaN(parentNum)) {
-        sanitized.parent_id = parentNum;
-      }
+      sanitized.parent_id = !isNaN(parentNum) ? parentNum : parentStr;
     }
   }
 
@@ -433,9 +507,24 @@ function sanitizeNota(payload: NotaPayload): Record<string, unknown> {
   if (isNaN(valor) || valor < 0 || valor > 1000) {
     throw new Error(`Valor de nota inválido: ${payload.valor} (deve ser numérico entre 0 e 1000)`);
   }
+  const avIdStr = String(payload.avaliacao_id ?? '').trim();
+  if (!avIdStr) {
+    throw new Error(`[DEAD_LETTER] Campo 'avaliacao_id' está ausente ou vazio.`);
+  }
+
+  // avaliacao_id no Supabase PostgreSQL é BIGINT.
+  // Permite tanto ID numérico inteiro quanto IDs temporários do cliente (temp_* / local_*).
+  let parsedAvId: string | number = avIdStr;
+  if (!avIdStr.startsWith('temp_') && !avIdStr.startsWith('local_')) {
+    const num = Number(avIdStr);
+    if (!Number.isInteger(num) || num <= 0) {
+      throw new Error(`[DEAD_LETTER] Campo 'avaliacao_id' deve ser um número inteiro positivo ou ID temporário: ${avIdStr}`);
+    }
+    parsedAvId = num;
+  }
+
   return {
-    // FIX M5: assertUUID valida formato antes de enviar ao Supabase
-    avaliacao_id: assertUUID(payload.avaliacao_id, 'avaliacao_id'),
+    avaliacao_id: parsedAvId,
     aluno_id: assertUUID(payload.aluno_id, 'aluno_id'),
     valor,
   };
@@ -444,7 +533,7 @@ function sanitizeNota(payload: NotaPayload): Record<string, unknown> {
 function sanitizeFechamento(payload: FechamentoPayload): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {
     // FIX M5: assertUUID valida formato antes de enviar ao Supabase
-    turma_id: assertUUID(payload.turma_id, 'turma_id'),
+    turma_id: assertUUID(getTid(String(payload.turma_id)), 'turma_id'),
     disciplina: String(payload.disciplina),
     bimestre: String(payload.bimestre),
     status: String(payload.status || 'FECHADO'),
@@ -492,6 +581,9 @@ async function processItem(item: SyncQueueItem, signal?: AbortSignal): Promise<s
     case 'fechamentos':
       await syncFechamento(item.operation, payload);
       return null;
+    case 'security_logs':
+      await syncSecurityLog(payload);
+      return null;
     default:
       throw new Error(`[DEAD_LETTER] Tabela desconhecida: ${item.table}`);
   }
@@ -522,6 +614,25 @@ async function syncFrequencia(operation: string, payload: Record<string, unknown
     .from('frequencias')
     .upsert(sanitizedRecords, { onConflict: 'turma_id,aluno_id,data,tempo,disciplina' });
   if (error) throw error;
+
+  // FIX C3/H5a: Marcar como 'synced' APENAS as linhas que realmente foram
+  // enviadas (chave composta), e não a turma inteira. Antes, registros 'pending'
+  // que caíram da fila eram promovidos a 'synced' sem nunca chegar ao servidor
+  // e depois purgados — perda silenciosa de dados.
+  const turmaIds = [...new Set(sanitizedRecords.map(r => String(r.turma_id)))];
+  const syncedKeys = new Set(
+    sanitizedRecords.map(r => `${String(r.turma_id)}|${String(r.aluno_id)}|${String(r.data)}|${String(r.tempo)}|${String(r.disciplina)}`)
+  );
+
+  const localRows = await db.frequencias.where('turma_id').anyOf(turmaIds).toArray();
+  await db.transaction('rw', db.frequencias, async () => {
+    for (const row of localRows) {
+      const rowKey = `${String(row.turma_id)}|${String(row.aluno_id)}|${String(row.data)}|${String(row.tempo)}|${String(row.disciplina)}`;
+      if (syncedKeys.has(rowKey) && row.localId) {
+        await db.frequencias.update(row.localId, { syncStatus: 'synced', updatedAt: now() });
+      }
+    }
+  });
 }
 
 async function syncConteudo(operation: string, payload: Record<string, unknown>): Promise<void> {
@@ -542,6 +653,14 @@ async function syncConteudo(operation: string, payload: Record<string, unknown>)
     .from('conteudos')
     .upsert(sanitized, { onConflict: 'turma_id,data,tempo,disciplina' });
   if (error) throw error;
+
+  // FIX H5a: marcar 'synced' apenas a linha que foi enviada (chave composta),
+  // e não todas as linhas da turma.
+  await db.conteudos
+    .where('turma_id')
+    .equals(String(sanitized.turma_id))
+    .filter(c => c.data === sanitized.data && c.tempo === sanitized.tempo && c.disciplina === sanitized.disciplina)
+    .modify({ syncStatus: 'synced', updatedAt: now() });
 }
 
 async function syncAvaliacao(operation: string, payload: Record<string, unknown>): Promise<string | null> {
@@ -554,17 +673,21 @@ async function syncAvaliacao(operation: string, payload: Record<string, unknown>
   // RESOLVER PARENT_ID SE AINDA FOR TEMPORÁRIO
   if (payload.parent_id !== undefined && payload.parent_id !== null && payload.parent_id !== '') {
     const pStr = String(payload.parent_id);
-    if (pStr.startsWith('temp_') || pStr.startsWith('local_') || isNaN(Number(pStr))) {
+    if (pStr.startsWith('temp_') || pStr.startsWith('local_')) {
       const localIdNum = parseInt(pStr.replace(/\D/g, ''), 10);
-      if (!isNaN(localIdNum)) {
-        const parentLocal = await db.avaliacoes.get(localIdNum);
-        if (parentLocal && parentLocal.serverId) {
-          payload.parent_id = Number(parentLocal.serverId);
-        } else if (parentLocal && parentLocal.id && !String(parentLocal.id).startsWith('temp_') && !String(parentLocal.id).startsWith('local_')) {
-          payload.parent_id = Number(parentLocal.id);
-        } else {
-          throw new Error(`Aguardando sincronização da avaliação pai no servidor (id temporário: ${pStr})`);
+      const parentLocal = await db.avaliacoes
+        .filter(av => String(av.id) === pStr || String(av.localId) === String(localIdNum))
+        .first();
+
+      if (parentLocal && (parentLocal.serverId || (parentLocal.id && !String(parentLocal.id).startsWith('temp_') && !String(parentLocal.id).startsWith('local_')))) {
+        payload.parent_id = parentLocal.serverId || parentLocal.id;
+      } else {
+        // FIX H5c: Se a avaliação pai foi para dead-letter, esta avaliação filha
+        // também é irrecuperável — dead-letter na hora em vez de loop infinito.
+        if (await isAvaliacaoDeadLettered(pStr)) {
+          throw new Error(`[DEAD_LETTER] A avaliação pai (${pStr}) foi rejeitada pelo servidor; esta avaliação filha não pode ser sincronizada.`);
         }
+        throw new Error(`Aguardando sincronização da avaliação pai no servidor (id temporário: ${pStr})`);
       }
     }
   }
@@ -591,7 +714,53 @@ async function syncAvaliacao(operation: string, payload: Record<string, unknown>
   }
 }
 
+/** FIX H5c: verifica se a avaliação (via id temporário) foi movida para
+ *  dead-letter no servidor. Se sim, operações dependentes (notas / avaliações
+ *  filhas) não devem ficar retentando para sempre. */
+async function isAvaliacaoDeadLettered(tempId: string): Promise<boolean> {
+  try {
+    const localParent = await db.avaliacoes
+      .filter(a => String(a.clientTempId) === tempId || String(a.id) === tempId || String(a.serverId) === tempId)
+      .first();
+    if (!localParent?.localId) return false;
+    const deadItem = await db.syncQueue
+      .where('table')
+      .equals('avaliacoes')
+      .filter(i => i.localId === localParent.localId && i.status === 'error' && (i.lastError?.includes('[DEAD_LETTER]') === true))
+      .first();
+    return !!deadItem;
+  } catch {
+    return false;
+  }
+}
+
 async function syncNotas(operation: string, payload: Record<string, unknown>): Promise<void> {
+  if (operation === 'DELETE') {
+    const avId = payload.avaliacao_id;
+    if (!avId || String(avId).startsWith('temp_') || String(avId).startsWith('local_')) {
+      // Se não tem ID no servidor, nada para deletar remotamente
+      return;
+    }
+    if (Array.isArray(payload.aluno_ids) && payload.aluno_ids.length > 0) {
+      const { error } = await supabase
+        .from('notas')
+        .delete()
+        .eq('avaliacao_id', avId)
+        .in('aluno_id', payload.aluno_ids);
+      if (error) throw error;
+      return;
+    } else if (payload.aluno_id) {
+      const { error } = await supabase
+        .from('notas')
+        .delete()
+        .eq('avaliacao_id', avId)
+        .eq('aluno_id', payload.aluno_id);
+      if (error) throw error;
+      return;
+    }
+    return;
+  }
+
   // Notas sempre são upsert em batch ou individual
   const records = Array.isArray(payload.records) ? payload.records : [payload];
   const sanitizedRecords = records.map(r => sanitizeNota(r as unknown as NotaPayload));
@@ -600,6 +769,11 @@ async function syncNotas(operation: string, payload: Record<string, unknown>): P
   for (const rec of sanitizedRecords) {
     const avId = String(rec.avaliacao_id);
     if (avId.startsWith('temp_') || avId.startsWith('local_')) {
+      // FIX H5c: Se a avaliação pai foi para dead-letter, as notas também são
+      // irrecuperáveis — dead-letter na hora em vez de retentar até MAX_RETRIES.
+      if (await isAvaliacaoDeadLettered(avId)) {
+        throw new Error(`[DEAD_LETTER] A avaliação pai (${avId}) foi rejeitada pelo servidor; as notas não podem ser sincronizadas.`);
+      }
       throw new Error(`Aguardando sincronização da avaliação no servidor (id temporário: ${avId})`);
     }
   }
@@ -608,6 +782,24 @@ async function syncNotas(operation: string, payload: Record<string, unknown>): P
     .from('notas')
     .upsert(sanitizedRecords, { onConflict: 'avaliacao_id,aluno_id' });
   if (error) throw error;
+
+  // FIX D3/H5a: Marcar como 'synced' APENAS as notas que foram efetivamente
+  // enviadas (chave composta avaliacao_id+aluno_id), e não todas as notas
+  // da avaliação. Sem isso, uma nota modificada durante o sync seria
+  // promovida a 'synced' sem nunca chegar ao servidor — perda silenciosa.
+  const syncedNoteKeys = new Set(
+    sanitizedRecords.map(r => `${String(r.avaliacao_id)}|${String(r.aluno_id)}`)
+  );
+  const avaliacaoIds = [...new Set(sanitizedRecords.map(r => String(r.avaliacao_id)))];
+  const localNotas = await db.notas.where('avaliacao_id').anyOf(avaliacaoIds).toArray();
+  await db.transaction('rw', db.notas, async () => {
+    for (const nota of localNotas) {
+      const noteKey = `${String(nota.avaliacao_id)}|${String(nota.aluno_id)}`;
+      if (syncedNoteKeys.has(noteKey) && nota.localId) {
+        await db.notas.update(nota.localId, { syncStatus: 'synced', updatedAt: now() });
+      }
+    }
+  });
 }
 
 async function syncFechamento(operation: string, payload: Record<string, unknown>): Promise<void> {
@@ -627,6 +819,19 @@ async function syncFechamento(operation: string, payload: Record<string, unknown
     .from('fechamentos_bimestres')
     .upsert(sanitized, { onConflict: 'turma_id,disciplina,bimestre' });
   if (error) throw error;
+
+  // FIX H5a: marcar 'synced' apenas a linha que foi enviada (chave composta),
+  // e não todos os fechamentos da turma.
+  await db.fechamentos
+    .where('turma_id')
+    .equals(String(sanitized.turma_id))
+    .filter(f => f.disciplina === sanitized.disciplina && f.bimestre === sanitized.bimestre)
+    .modify({ syncStatus: 'synced', updatedAt: now() });
+}
+
+async function syncSecurityLog(payload: Record<string, unknown>): Promise<void> {
+  const { error } = await supabase.from('security_logs').insert([payload]);
+  if (error) throw error;
 }
 
 // ============================================================
@@ -636,7 +841,21 @@ async function syncFechamento(operation: string, payload: Record<string, unknown
 /** Atualiza as referências locais e da fila de um ID temporário de avaliação para o UUID final */
 async function updateTempAvaliacaoId(localId: number, serverId: string): Promise<void> {
   const timestamp = now();
-  const possibleTempIds = new Set([`temp_${localId}`, `local_${localId}`, String(localId)]);
+  const localRecord = await db.avaliacoes.get(localId);
+  const tempIdFromRecord = localRecord?.id ? String(localRecord.id) : null;
+  const serverIdFromRecord = localRecord?.serverId ? String(localRecord.serverId) : null;
+  // FIX C4: O id temporário gerado pela UI (temp_<Date.now>) fica em clientTempId.
+  // Sem ele, notas enfileiradas com esse id nunca eram resolvidas.
+  const clientTempId = localRecord?.clientTempId ? String(localRecord.clientTempId) : null;
+
+  const possibleTempIds = new Set([
+    `temp_${localId}`,
+    `local_${localId}`,
+    String(localId),
+  ]);
+  if (tempIdFromRecord) possibleTempIds.add(tempIdFromRecord);
+  if (serverIdFromRecord) possibleTempIds.add(serverIdFromRecord);
+  if (clientTempId) possibleTempIds.add(clientTempId);
 
   await db.transaction('rw', [db.avaliacoes, db.notas, db.syncQueue], async () => {
     // 1. Atualizar registro local da avaliação
@@ -694,7 +913,7 @@ async function updateTempAvaliacaoId(localId: number, serverId: string): Promise
           payloadChanged = true;
         }
         if (possibleTempIds.has(String(payloadObj.parent_id))) {
-          payloadObj.parent_id = Number(serverId);
+          payloadObj.parent_id = serverId;
           payloadChanged = true;
         }
       }
@@ -705,6 +924,7 @@ async function updateTempAvaliacaoId(localId: number, serverId: string): Promise
           payload: JSON.stringify(payloadObj),
           hash: newHash,
           status: 'pending',
+          retryCount: 0,
           lastError: undefined,
           updatedAt: timestamp,
         });
@@ -713,12 +933,40 @@ async function updateTempAvaliacaoId(localId: number, serverId: string): Promise
   });
 }
 
-/** Repara automaticamente itens na fila marcados com DEAD_LETTER que possuem parent_id temporário já resolvido no IndexedDB */
+/** Repara automaticamente itens na fila marcados com erro que possuem ID temporário ou turma_id composto */
 async function autoRepairDeadLetters(): Promise<void> {
   try {
-    const queueItems = await db.syncQueue.toArray();
+    // FIX P2: Filtrar apenas itens que podem precisar de reparo (error/pending)
+    // em vez de carregar toda a fila (até 5000 itens) na memória.
+    // Itens 'done' já foram deletados e 'processing' não devem ser tocados.
+    const queueItems = await db.syncQueue
+      .where('status').anyOf(['error', 'pending'])
+      .toArray();
+    // FIX P2: Carregar apenas avaliações que já têm serverId ou ID não-temporário,
+    // em vez de toda a tabela. Apenas essas são úteis para o mapeamento de reparo.
+    const allLocalAvaliacoes = typeof db.avaliacoes?.filter === 'function'
+      ? await db.avaliacoes.filter(av =>
+          !!(av.serverId || (av.id && !String(av.id).startsWith('temp_') && !String(av.id).startsWith('local_')))
+        ).toArray()
+      : [];
+
+    // Mapeamento de IDs temporários para o serverId / UUID real da avaliação
+    const tempToRealMap = new Map<string, string>();
+    for (const av of allLocalAvaliacoes) {
+      if (av.serverId || (av.id && !String(av.id).startsWith('temp_') && !String(av.id).startsWith('local_'))) {
+        const realId = String(av.serverId || av.id);
+        if (av.id) tempToRealMap.set(String(av.id), realId);
+        if (av.localId) {
+          tempToRealMap.set(String(av.localId), realId);
+          tempToRealMap.set(`temp_${av.localId}`, realId);
+          tempToRealMap.set(`local_${av.localId}`, realId);
+        }
+        // FIX C4: mapear também o id temporário gerado pela UI (temp_<Date.now>)
+        if (av.clientTempId) tempToRealMap.set(String(av.clientTempId), realId);
+      }
+    }
+
     for (const item of queueItems) {
-      if (item.status !== 'error' && !item.lastError?.includes('invalid input syntax') && !item.lastError?.includes('parent_id')) continue;
       let payloadObj: Record<string, unknown>;
       try {
         payloadObj = JSON.parse(item.payload);
@@ -726,31 +974,246 @@ async function autoRepairDeadLetters(): Promise<void> {
         continue;
       }
 
+      let repaired = false;
+
+      // 1. Auto-reparo de turma_id composto (ex: UUID||Componente)
+      if (payloadObj.turma_id && String(payloadObj.turma_id).includes('||')) {
+        const cleanTurmaId = getTid(String(payloadObj.turma_id));
+        payloadObj.turma_id = cleanTurmaId;
+        repaired = true;
+      }
+
+      // 2. Auto-reparo de notas com avaliacao_id temporário
+      if (item.table === 'notas') {
+        if (payloadObj.avaliacao_id && tempToRealMap.has(String(payloadObj.avaliacao_id))) {
+          payloadObj.avaliacao_id = tempToRealMap.get(String(payloadObj.avaliacao_id));
+          repaired = true;
+        }
+        if (Array.isArray(payloadObj.records)) {
+          payloadObj.records = payloadObj.records.map((r: Record<string, unknown>) => {
+            if (r && r.avaliacao_id && tempToRealMap.has(String(r.avaliacao_id))) {
+              repaired = true;
+              return { ...r, avaliacao_id: tempToRealMap.get(String(r.avaliacao_id)) };
+            }
+            return r;
+          });
+        }
+      }
+
+      // 3. Auto-reparo de avaliações filhas (RP/2CH) com parent_id temporário
       if (item.table === 'avaliacoes' && payloadObj.parent_id) {
         const pStr = String(payloadObj.parent_id);
-        if (pStr.startsWith('temp_') || pStr.startsWith('local_') || isNaN(Number(pStr))) {
-          const localIdNum = parseInt(pStr.replace(/\D/g, ''), 10);
-          if (!isNaN(localIdNum)) {
-            const parentLocal = await db.avaliacoes.get(localIdNum);
-            if (parentLocal && (parentLocal.serverId || (parentLocal.id && !String(parentLocal.id).startsWith('local_') && !String(parentLocal.id).startsWith('temp_')))) {
-              const realId = Number(parentLocal.serverId || parentLocal.id);
-              payloadObj.parent_id = realId;
-              const newHash = await hashOperation(item.table, item.operation, payloadObj);
-              await db.syncQueue.update(item.id!, {
-                payload: JSON.stringify(payloadObj),
-                hash: newHash,
-                status: 'pending',
-                lastError: undefined,
-                updatedAt: now(),
-              });
-              console.info(`[SyncEngine] Dead letter id=${item.id} auto-reparado com parent_id=${realId}`);
-            }
-          }
+        if (tempToRealMap.has(pStr)) {
+          payloadObj.parent_id = tempToRealMap.get(pStr);
+          repaired = true;
         }
+      }
+
+      if (repaired && item.id) {
+        const newHash = await hashOperation(item.table, item.operation, payloadObj);
+        await db.syncQueue.update(item.id, {
+          payload: JSON.stringify(payloadObj),
+          hash: newHash,
+          status: 'pending',
+          retryCount: 0,
+          lastError: undefined,
+          updatedAt: now(),
+        });
+        console.info(`[SyncEngine] Item em fila id=${item.id} (${item.table}) auto-reparado com sucesso.`);
       }
     }
   } catch (err) {
     console.warn('[SyncEngine] Falha ao tentar auto-reparar dead letters:', err);
+  }
+}
+
+/** FIX H5b: Reconciliação — reenfileira registros locais 'pending'/'error' que
+ *  ficaram sem item correspondente na fila (ex: falha entre a escrita local e o
+ *  enqueue, ou item purgado por engano). Cura a perda silenciosa de dados onde
+ *  o registro nunca chegaria ao servidor. */
+async function reconcileLocalRecords(): Promise<void> {
+  try {
+    // Guarda defensiva: em ambientes de teste ou schemas antigos a tabela pode
+    // não expor .filter() — a reconciliação é otimização, não pode quebrar o sync.
+    if (typeof (db as { frequencias?: { filter?: unknown } }).frequencias?.filter !== 'function') {
+      return;
+    }
+
+    // P1 FIX: Usar queries por tabela via índice em vez de db.syncQueue.toArray()
+    // (full scan). Com MAX_QUEUE_SIZE=5000, o toArray() poderia carregar até 5000
+    // objetos JSON em memória a cada ciclo. As queries por tabela carregam apenas
+    // os itens relevantes para cada entidade.
+
+    // --- Conteudos (chave composta) ---
+    const conteudoQueueItems = await db.syncQueue.where('table').equals('conteudos').toArray();
+    const conteudoKeys = new Set<string>();
+    for (const i of conteudoQueueItems) {
+      try {
+        const p = JSON.parse(i.payload) as Record<string, unknown>;
+        conteudoKeys.add(`${p.turma_id}|${p.data}|${p.tempo}|${p.disciplina}`);
+      } catch { continue; }
+    }
+    // FIX P1: Usar índice syncStatus em vez de filter() JavaScript (full scan)
+    const unsyncedConteudos = await db.conteudos.where('syncStatus').anyOf(['pending', 'error']).toArray();
+    for (const c of unsyncedConteudos) {
+      const key = `${c.turma_id}|${c.data}|${c.tempo}|${c.disciplina}`;
+      if (conteudoKeys.has(key)) continue;
+      await Queue.enqueue('conteudos', 'UPSERT', {
+        turma_id: c.turma_id,
+        data: c.data,
+        tempo: c.tempo,
+        objetos: c.objetos,
+        habilidades: c.habilidades,
+        descricao: c.descricao,
+        disciplina: c.disciplina,
+      });
+      console.info(`[SyncEngine] Reconciliação: reenfileirado conteudo ${key}`);
+    }
+
+    // --- Frequencias (chave composta por registro, batches agrupados por dia) ---
+    const freqQueueItems = await db.syncQueue.where('table').equals('frequencias').toArray();
+    const freqKeys = new Set<string>();
+    for (const i of freqQueueItems) {
+      try {
+        const p = JSON.parse(i.payload) as Record<string, unknown>;
+        const recs = Array.isArray(p.records) ? p.records : [p];
+        for (const r of recs) {
+          const rr = r as Record<string, unknown>;
+          freqKeys.add(`${rr.turma_id}|${rr.aluno_id}|${rr.data}|${rr.tempo}|${rr.disciplina}`);
+        }
+      } catch { continue; }
+    }
+    // FIX P1: Usar índice syncStatus em vez de filter() JavaScript (full scan)
+    const unsyncedFreqs = await db.frequencias.where('syncStatus').anyOf(['pending', 'error']).toArray();
+    const missingFreqs = unsyncedFreqs.filter(
+      f => !freqKeys.has(`${f.turma_id}|${f.aluno_id}|${f.data}|${f.tempo}|${f.disciplina}`)
+    );
+    if (missingFreqs.length > 0) {
+      const byDay = new Map<string, LocalFrequencia[]>();
+      for (const f of missingFreqs) {
+        const k = `${f.turma_id}|${f.data}|${f.tempo}|${f.disciplina}`;
+        const arr = byDay.get(k) ?? [];
+        arr.push(f);
+        byDay.set(k, arr);
+      }
+      for (const batch of byDay.values()) {
+        await Queue.enqueue('frequencias', 'UPSERT', {
+          records: batch.map(f => ({
+            turma_id: f.turma_id,
+            aluno_id: f.aluno_id,
+            data: f.data,
+            tempo: f.tempo,
+            status: f.status,
+            participacao: f.participacao,
+            disciplina: f.disciplina,
+          })),
+        });
+        console.info(`[SyncEngine] Reconciliação: reenfileirado batch de ${batch.length} frequencias`);
+      }
+    }
+
+    // --- Avaliacoes (via localId) ---
+    const avaliacaoQueueItems = await db.syncQueue.where('table').equals('avaliacoes').toArray();
+    const avaliacaoQueueIds = new Set(
+      avaliacaoQueueItems.map(i => i.localId).filter(Boolean)
+    );
+    // FIX P1: Usar índice syncStatus em vez de filter() JavaScript (full scan)
+    const unsyncedAvs = await db.avaliacoes.where('syncStatus').anyOf(['pending', 'error']).toArray();
+    for (const a of unsyncedAvs) {
+      if (a.localId && avaliacaoQueueIds.has(a.localId)) continue;
+      await Queue.enqueue('avaliacoes', a.id && !String(a.id).startsWith('temp_') ? 'UPDATE' : 'INSERT', {
+        ...(a.id && !String(a.id).startsWith('temp_') ? { id: a.id } : {}),
+        turma_id: a.turma_id,
+        tipo: a.tipo,
+        data: a.data,
+        instrumento: a.instrumento,
+        objetos: a.objetos,
+        bimestre: a.bimestre,
+        valor_maximo: a.valor_maximo,
+        disciplina: a.disciplina,
+        parent_id: a.parent_id,
+      }, a.localId);
+      console.info(`[SyncEngine] Reconciliação: reenfileirada avaliacao localId=${a.localId}`);
+    }
+
+    // --- Notas ---
+    // D1 FIX: Carrega itens de notas via índice (P1) e inclui items com status
+    // 'error' não-dead-letter no set de chaves (D1). Sem isso, uma nota com item
+    // de erro na fila seria reenfileirada desnecessariamente na reconciliação,
+    // podendo criar operações duplicadas no servidor.
+    const notaQueueItems = await db.syncQueue.where('table').equals('notas').toArray();
+    const notaKeys = new Set<string>();
+    for (const i of notaQueueItems) {
+      // Incluir todos os status (pending, processing, error) — inclusive error
+      // não-dead-letter — para evitar reenfileirar notas que já têm item na fila.
+      try {
+        const p = JSON.parse(i.payload) as Record<string, unknown>;
+        const recs = Array.isArray(p.records) ? p.records : [p];
+        for (const r of recs) {
+          const rr = r as Record<string, unknown>;
+          notaKeys.add(`${rr.avaliacao_id}|${rr.aluno_id}`);
+        }
+      } catch { continue; }
+    }
+    // FIX P1: Usar índice syncStatus em vez de filter() JavaScript (full scan)
+    const unsyncedNotas = await db.notas.where('syncStatus').anyOf(['pending', 'error']).toArray();
+    const missingNotas = unsyncedNotas.filter(n => !notaKeys.has(`${n.avaliacao_id}|${n.aluno_id}`));
+    // Evitar reenfileirar notas cuja avaliação ainda não sincronizou (ids temporários).
+    // FIX SYNC-02/P-04: Buscar apenas as avaliações referenciadas pelas notas pendentes,
+    // em vez de carregar toda a tabela avaliacoes (toArray) na memória.
+    const resolvableAvIds = new Set<string>();
+    if (missingNotas.length > 0) {
+      const neededAvIds = [...new Set(missingNotas.map(n => n.avaliacao_id))];
+      const referencedAvs = await db.avaliacoes.where('id').anyOf(neededAvIds).toArray();
+      for (const av of referencedAvs) {
+        if (av.serverId) resolvableAvIds.add(String(av.serverId));
+        if (av.id && !String(av.id).startsWith('temp_') && !String(av.id).startsWith('local_')) resolvableAvIds.add(String(av.id));
+      }
+    }
+    const byAvaliacao = new Map<string, LocalNota[]>();
+    for (const n of missingNotas) {
+      const avKey = resolvableAvIds.has(n.avaliacao_id) ? n.avaliacao_id : null;
+      if (!avKey) continue;
+      const arr = byAvaliacao.get(avKey) ?? [];
+      arr.push(n);
+      byAvaliacao.set(avKey, arr);
+    }
+    for (const batch of byAvaliacao.values()) {
+      await Queue.enqueue('notas', 'UPSERT', {
+        records: batch.map(n => ({
+          avaliacao_id: n.avaliacao_id,
+          aluno_id: n.aluno_id,
+          valor: n.valor,
+        })),
+      });
+      console.info(`[SyncEngine] Reconciliação: reenfileirado batch de ${batch.length} notas`);
+    }
+
+    // --- Fechamentos (chave composta) ---
+    const fechamentoQueueItems = await db.syncQueue.where('table').equals('fechamentos').toArray();
+    const fechamentoKeys = new Set<string>();
+    for (const i of fechamentoQueueItems) {
+      try {
+        const p = JSON.parse(i.payload) as Record<string, unknown>;
+        fechamentoKeys.add(`${p.turma_id}|${p.disciplina}|${p.bimestre}`);
+      } catch { continue; }
+    }
+    // FIX P1: Usar índice syncStatus em vez de filter() JavaScript (full scan)
+    const unsyncedFechamentos = await db.fechamentos.where('syncStatus').anyOf(['pending', 'error']).toArray();
+    for (const f of unsyncedFechamentos) {
+      const key = `${f.turma_id}|${f.disciplina}|${f.bimestre}`;
+      if (fechamentoKeys.has(key)) continue;
+      await Queue.enqueue('fechamentos', 'UPSERT', {
+        turma_id: f.turma_id,
+        disciplina: f.disciplina,
+        bimestre: f.bimestre,
+        status: f.status,
+        usuario_fechamento_id: f.usuario_fechamento_id,
+      });
+      console.info(`[SyncEngine] Reconciliação: reenfileirado fechamento ${key}`);
+    }
+  } catch (err) {
+    console.warn('[SyncEngine] Falha na reconciliação de registros locais:', err);
   }
 }
 
@@ -811,7 +1274,23 @@ export async function getQueueStats() {
 
 /** Tenta reprocessar itens com erro */
 export async function retryErrors(): Promise<number> {
-  const count = await Queue.retryAllErrors();
+  await autoRepairDeadLetters();
+  // FIX H5c: ação explícita do usuário — zera o backoff e tenta novamente todos
+  // os itens não-dead-letter.
+  const count = await Queue.retryAllErrors(true);
+  // FIX R1: Apenas agendar sync quando há itens recuperados. Antes, syncAll()
+  // era chamado quando count === 0, causando execução redundante de
+  // autoRepairDeadLetters() e retryAllErrors() dentro de _runSyncAll().
+  if (count > 0) {
+    scheduleSync();
+  }
+  return count;
+}
+
+/** Tenta reprocessar itens marcados como dead letter após intervenção ou correção */
+export async function retryDeadLetters(): Promise<number> {
+  await autoRepairDeadLetters();
+  const count = await Queue.retryDeadLetterItems();
   if (count > 0) {
     scheduleSync();
   }

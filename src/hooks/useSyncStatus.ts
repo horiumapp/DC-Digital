@@ -23,10 +23,14 @@ interface SyncStatusResult {
   lastSyncAt: Date | null;
   /** Mensagem do último erro */
   lastError: string | null;
+  /** Indica se a fila pendente está próxima da capacidade máxima (>= 80% do limite de 5000) */
+  isNearCapacity: boolean;
   /** Força sincronização agora */
   syncNow: () => Promise<void>;
   /** Tenta reprocessar itens com erro */
-  retryErrors: () => Promise<void>;
+  retryErrors: () => Promise<number>;
+  /** Tenta reprocessar itens da dead letter queue após correção */
+  retryDeadLetters: () => Promise<number>;
   /** Descarta itens irrecuperáveis da dead letter queue */
   discardDeadLetters: () => Promise<void>;
 }
@@ -113,7 +117,7 @@ export function useSyncStatus(isOnline: boolean): SyncStatusResult {
     await SyncEngine.syncAll();
   }, [isOnline]);
 
-  const retryErrors = useCallback(async () => {
+  const retryErrors = useCallback(async (): Promise<number> => {
     const retriedCount = await SyncEngine.retryErrors();
     // Se itens foram recolocados na fila, limpar o erro enquanto o sync roda
     if (retriedCount > 0) {
@@ -123,6 +127,17 @@ export function useSyncStatus(isOnline: boolean): SyncStatusResult {
       // Nenhum item recuperável — verificar se ainda há erros
       await updateCounts();
     }
+    return retriedCount;
+  }, [isOnline, updateCounts]);
+
+  const retryDeadLetters = useCallback(async (): Promise<number> => {
+    const retriedCount = await SyncEngine.retryDeadLetters();
+    if (retriedCount > 0) {
+      setLastError(null);
+      setConnectionState(isOnline ? 'ONLINE' : 'OFFLINE');
+    }
+    await updateCounts();
+    return retriedCount;
   }, [isOnline, updateCounts]);
 
   const discardDeadLetters = useCallback(async () => {
@@ -133,12 +148,14 @@ export function useSyncStatus(isOnline: boolean): SyncStatusResult {
   return {
     connectionState,
     pendingCount,
+    isNearCapacity: pendingCount >= 4000,
     deadLetterCount: deadLetterItems.length,
     deadLetterItems,
     lastSyncAt,
     lastError,
     syncNow,
     retryErrors,
+    retryDeadLetters,
     discardDeadLetters,
   };
 }

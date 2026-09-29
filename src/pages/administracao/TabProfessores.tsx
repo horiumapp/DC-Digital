@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Search, Plus, Edit2, Trash2, Building2, User, ArrowLeft, Users, ChevronRight, Calendar, Clock, X } from 'lucide-react';
-import NovoProfessorModal from '../../components/NovoProfessorModal';
+import NovoProfessorModal, { type NovoProfessorFormData } from '../../components/NovoProfessorModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import GerenciarAlocacoesModal from '../../components/GerenciarAlocacoesModal';
 import ScheduleModal from '../../components/ScheduleModal';
+import { gerarSenhaTemporaria } from '../../utils/formatters';
 
 
 const DEPARTAMENTOS = ['Geral', 'BIOLÓGICAS', 'HUMANAS', 'EXATAS', 'LINGUAGENS'];
@@ -17,21 +18,44 @@ const DISCIPLINAS = [
 import { useToast } from '../../components/common/Toast';
 
 
+export interface ProfessorRow {
+  id: string;
+  nome: string;
+  email: string;
+  cpf?: string;
+  telefone?: string;
+  vinculo?: string;
+  status?: string;
+  senha?: string;
+  departamento?: string;
+  disciplinas?: string[];
+  usuario_id?: string;
+  alocacoes_count?: number;
+  professor_alocacoes?: { id?: string; escola_id: string; turno?: string; escolas?: { nome?: string } | { nome?: string }[] }[];
+  professor_horarios?: { id?: string; escola_id?: string; dia_semana?: number }[];
+}
+
+export interface EscolaOption {
+  id: string;
+  nome: string;
+  logo_url?: string;
+}
+
 export default function TabProfessores() {
   const { user } = useAuth();
   const { showError, showWarning, showSuccess } = useToast();
   const [buscaProfessor, setBuscaProfessor] = useState('');
   const [isNovoProfessorModalOpen, setIsNovoProfessorModalOpen] = useState(false);
-  const [professorParaEditar, setProfessorParaEditar] = useState<any>(null);
-  const [professorParaExcluir, setProfessorParaExcluir] = useState<any>(null);
+  const [professorParaEditar, setProfessorParaEditar] = useState<ProfessorRow | null>(null);
+  const [professorParaExcluir, setProfessorParaExcluir] = useState<ProfessorRow | null>(null);
   const [isAlocacoesModalOpen, setIsAlocacoesModalOpen] = useState(false);
-  const [professorParaAlocar, setProfessorParaAlocar] = useState<any>(null);
+  const [professorParaAlocar, setProfessorParaAlocar] = useState<ProfessorRow | null>(null);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
-  const [professorParaHorario, setProfessorParaHorario] = useState<any>(null);
+  const [professorParaHorario, setProfessorParaHorario] = useState<ProfessorRow | null>(null);
 
-  const [professores, setProfessores] = useState<any[]>([]);
-  const [escolas, setEscolas] = useState<any[]>([]);
-  const [selectedEscola, setSelectedEscola] = useState<any>(null);
+  const [professores, setProfessores] = useState<ProfessorRow[]>([]);
+  const [escolas, setEscolas] = useState<EscolaOption[]>([]);
+  const [selectedEscola, setSelectedEscola] = useState<EscolaOption | null>(null);
   const [_loading, setLoading] = useState(true);
 
   // Estado para o formulário inline
@@ -110,7 +134,7 @@ export default function TabProfessores() {
     setLoading(false);
   };
 
-  const handleSaveProfessor = async (novoProfessor: any) => {
+  const handleSaveProfessor = async (novoProfessor: NovoProfessorFormData | ProfessorRow) => {
     const professorData = {
       nome: novoProfessor.nome,
       email: novoProfessor.email,
@@ -138,7 +162,7 @@ export default function TabProfessores() {
       }
     } else {
       // Limpa chaves vazias para não conflitar com constraints UNIQUE (tipo cpf vazio)
-      const dataToInsert = { ...professorData };
+      const dataToInsert: Record<string, string | null | string[] | undefined> = { ...professorData };
       if (!dataToInsert.cpf) dataToInsert.cpf = null;
       if (!dataToInsert.email) dataToInsert.email = null;
 
@@ -166,9 +190,10 @@ export default function TabProfessores() {
 
         // Fase 2: Se forneceu e-mail, criar conta de acesso via Edge Function
         if (novoProfessor.email && selectedEscola) {
-          const senhaDeAcesso = novoProfessor.senha || '@prof123';
-          
-          if (senhaDeAcesso.length >= 6) {
+          // FIX C2: senha temporária aleatória forte — nunca mais "@prof123"
+          const senhaDeAcesso = novoProfessor.senha || gerarSenhaTemporaria();
+
+          if (senhaDeAcesso.length >= 8) {
             try {
               const { data: authData, error: authError } = await supabase.functions.invoke('admin-create-user', {
                 body: {
@@ -185,14 +210,14 @@ export default function TabProfessores() {
                 if (authData?.details) msg += ` - Detalhes: ${JSON.stringify(authData.details)}`;
                 showWarning(`Professor cadastrado, mas não foi possível criar a conta de acesso: ${msg}`);
               } else {
-                showSuccess(`Professor ${novoProfessor.nome} cadastrado com acesso! (Senha padrão: ${senhaDeAcesso})`);
+                showSuccess(`Professor ${novoProfessor.nome} cadastrado com acesso! (Senha: ${senhaDeAcesso})`);
               }
             } catch (err: unknown) {
-              const msg = err instanceof Error ? err.message : String(err);
-              showWarning(`Professor cadastrado, mas erro ao criar conta: ${msg}`);
+              console.error("Erro ao criar conta de acesso do professor:", err);
+              showWarning('Professor cadastrado, mas houve um erro ao criar a conta de acesso.');
             }
           } else {
-            showWarning('Professor cadastrado, mas a senha deve ter no mínimo 6 caracteres para criar conta de acesso.');
+            showWarning('Professor cadastrado, mas a senha deve ter no mínimo 8 caracteres, incluindo letras e números, para criar conta de acesso.');
           }
         }
 
@@ -213,7 +238,7 @@ export default function TabProfessores() {
     
     handleSaveProfessor({
       ...inlineFormData,
-      email: inlineFormData.email || null,
+      email: inlineFormData.email || '',
       cpf: '',
       telefone: '',
       status: 'Ativo',
@@ -221,13 +246,16 @@ export default function TabProfessores() {
     });
   };
 
-  const handleEditProfessor = (professor: any) => {
+  const handleEditProfessor = (professor: ProfessorRow) => {
     setProfessorParaEditar(professor);
     setIsNovoProfessorModalOpen(true);
   };
 
   const confirmDeleteProfessor = async () => {
-    if (professorParaExcluir) {
+    if (!professorParaExcluir) return;
+
+    if (user?.role === 'ADMIN') {
+      // ADMIN: Exclusão mestre do professor em todo o sistema
       const { error } = await supabase
         .from('professores')
         .delete()
@@ -237,15 +265,54 @@ export default function TabProfessores() {
         console.error("Erro ao deletar:", error);
         showError("Erro ao deletar professor: " + error.message);
       } else {
+        // Revogar conta Auth correspondente se o professor tiver email cadastrado
+        if (professorParaExcluir.email) {
+          try {
+            await supabase.functions.invoke('admin-create-user', {
+              body: { action: 'delete-user', email: professorParaExcluir.email.trim().toLowerCase() },
+            });
+          } catch (e) {
+            console.warn('Erro ao remover conta Auth do professor excluído:', e);
+          }
+        }
+
         fetchProfessores();
         setProfessorParaExcluir(null);
+        showSuccess("Professor excluído com sucesso do sistema!");
       }
+    } else if (selectedEscola?.id) {
+      // NÃO-ADMIN (GESTOR / SECRETARIO): Remove a alocação e horários do professor apenas nesta escola
+      // Preserva o cadastro global e os vínculos com outras escolas da rede municipal
+      const { error: alocError } = await supabase
+        .from('professor_alocacoes')
+        .delete()
+        .eq('professor_id', professorParaExcluir.id)
+        .eq('escola_id', selectedEscola.id);
+
+      if (alocError) {
+        console.error("Erro ao desvincular professor da escola:", alocError);
+        showError("Erro ao desvincular professor: " + alocError.message);
+        return;
+      }
+
+      // Remover também horários do professor vinculados a esta escola
+      await supabase
+        .from('professor_horarios')
+        .delete()
+        .eq('professor_id', professorParaExcluir.id)
+        .eq('escola_id', selectedEscola.id);
+
+      fetchProfessores();
+      setProfessorParaExcluir(null);
+      showSuccess(`Professor(a) desvinculado(a) da unidade ${selectedEscola.nome} com sucesso!`);
+    } else {
+      showWarning("Selecione uma escola para desvincular o professor.");
     }
   };
 
   const getProfessorCount = (escolaId: string) => {
     return professores.filter(p => 
-      p.professor_alocacoes?.some((aloc: any) => aloc.escola_id === escolaId)
+      p.professor_alocacoes?.some((aloc: { escola_id: string }) => aloc.escola_id === escolaId)
     ).length;
   };
 
@@ -264,7 +331,7 @@ export default function TabProfessores() {
 
   const professoresDaEscola = selectedEscola 
     ? professores.filter(p => 
-        p.professor_alocacoes?.some((aloc: any) => aloc.escola_id === selectedEscola.id) &&
+        p.professor_alocacoes?.some((aloc: { escola_id: string }) => aloc.escola_id === selectedEscola.id) &&
         (p.nome.toLowerCase().includes(buscaProfessor.toLowerCase()) ||
          (p.cpf && p.cpf.includes(buscaProfessor)) ||
          (p.email && p.email.toLowerCase().includes(buscaProfessor.toLowerCase())))
@@ -571,14 +638,14 @@ export default function TabProfessores() {
                           {d.slice(0, 4)}
                         </span>
                       ))}
-                      {(professor.disciplinas?.length > 2) && (
+                      {(professor.disciplinas && professor.disciplinas.length > 2) && (
                         <span className="text-[8px] font-bold text-slate-400">+{professor.disciplinas.length - 2}</span>
                       )}
                     </div>
                     <div className="flex items-center gap-1 text-slate-400 shrink-0">
                       <Clock className="w-3 h-3" />
                       <span className="text-[10px] font-black uppercase tracking-widest tabular-nums">
-                        {professor.professor_horarios?.filter((h: any) => h.escola_id === selectedEscola.id).length || 0} AULAS
+                        {professor.professor_horarios?.filter((h: { escola_id?: string }) => h.escola_id === selectedEscola.id).length || 0} AULAS
                       </span>
                     </div>
                   </div>
@@ -625,8 +692,14 @@ export default function TabProfessores() {
         isOpen={!!professorParaExcluir}
         onClose={() => setProfessorParaExcluir(null)}
         onConfirm={confirmDeleteProfessor}
-        title="Excluir Professor"
-        message={<>Tem certeza que deseja excluir o(a) professor(a) <strong>{professorParaExcluir?.nome}</strong>? Esta ação não pode ser desfeita.</>}
+        title={user?.role === 'ADMIN' ? "Excluir Professor do Sistema" : "Desvincular Professor da Escola"}
+        message={
+          user?.role === 'ADMIN' ? (
+            <>Tem certeza que deseja excluir permanentemente o(a) professor(a) <strong>{professorParaExcluir?.nome}</strong> do sistema? Todas as alocações e horários em todas as escolas serão removidos.</>
+          ) : (
+            <>Tem certeza que deseja desvincular o(a) professor(a) <strong>{professorParaExcluir?.nome}</strong> da escola <strong>{selectedEscola?.nome}</strong>? As aulas e alocações nesta unidade serão removidas, preservando o cadastro nas demais escolas.</>
+          )
+        }
       />
     </div>
   );

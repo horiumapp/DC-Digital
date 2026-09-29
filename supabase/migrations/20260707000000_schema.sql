@@ -1,301 +1,6 @@
 -- DC Digital — Banco de Dados Schema Inicial
 
 -- ==========================================
--- 0. EXTENSÕES E SEQUÊNCIAS
--- ==========================================
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-
-CREATE SEQUENCE IF NOT EXISTS public.audit_log_id_seq;
-CREATE SEQUENCE IF NOT EXISTS public.avaliacoes_id_seq;
-CREATE SEQUENCE IF NOT EXISTS public.conteudos_id_seq;
-CREATE SEQUENCE IF NOT EXISTS public.frequencias_id_seq;
-CREATE SEQUENCE IF NOT EXISTS public.notas_id_seq;
-
--- ==========================================
--- 2. TABELAS E ESTRUTURA
--- ==========================================
-
-CREATE TABLE IF NOT EXISTS public.admin_whitelist (
-  email text NOT NULL,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT admin_whitelist_pkey PRIMARY KEY (email)
-);
-
-CREATE TABLE IF NOT EXISTS public.alunos (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  escola_id uuid NOT NULL,
-  turma_id uuid,
-  nome text NOT NULL,
-  data_nascimento date NOT NULL,
-  cpf text,
-  sexo text,
-  nome_responsavel text NOT NULL,
-  telefone text NOT NULL,
-  endereco text NOT NULL,
-  status text NOT NULL DEFAULT 'Ativo'::text,
-  criado_em timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
-  matricula text,
-  CONSTRAINT alunos_pkey PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS public.audit_log (
-  id bigint NOT NULL DEFAULT nextval('audit_log_id_seq'::regclass),
-  user_id uuid,
-  user_email text,
-  action text NOT NULL,
-  table_name text,
-  record_id text,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT audit_log_pkey PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS public.avaliacoes (
-  id bigint NOT NULL DEFAULT nextval('avaliacoes_id_seq'::regclass),
-  created_at timestamp with time zone DEFAULT now(),
-  turma_id uuid NOT NULL,
-  tipo text NOT NULL,
-  data text NOT NULL,
-  instrumento text,
-  objetos jsonb DEFAULT '[]'::jsonb,
-  bimestre text,
-  valor_maximo numeric DEFAULT 10,
-  disciplina text DEFAULT 'GERAL'::text,
-  parent_id bigint,
-  CONSTRAINT avaliacoes_pkey PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS public.conteudos (
-  id bigint NOT NULL DEFAULT nextval('conteudos_id_seq'::regclass),
-  created_at timestamp with time zone DEFAULT now(),
-  turma_id uuid NOT NULL,
-  data text NOT NULL,
-  tempo text NOT NULL,
-  objetos jsonb DEFAULT '[]'::jsonb,
-  habilidades jsonb DEFAULT '[]'::jsonb,
-  descricao text,
-  disciplina text DEFAULT 'GERAL'::text,
-  CONSTRAINT conteudos_pkey PRIMARY KEY (id),
-  CONSTRAINT conteudos_uniqueness UNIQUE (turma_id, data, tempo, disciplina)
-);
-
-CREATE TABLE IF NOT EXISTS public.curriculo_habilidades (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  unidade_id uuid,
-  codigo text NOT NULL,
-  criado_em timestamp with time zone DEFAULT now(),
-  CONSTRAINT curriculo_habilidades_pkey PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS public.curriculo_objetos (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  unidade_id uuid,
-  descricao text NOT NULL,
-  criado_em timestamp with time zone DEFAULT now(),
-  CONSTRAINT curriculo_objetos_pkey PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS public.curriculo_unidades (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  modalidade text NOT NULL,
-  ano text NOT NULL,
-  disciplina text NOT NULL,
-  bimestre text NOT NULL,
-  nome text NOT NULL,
-  criado_em timestamp with time zone DEFAULT now(),
-  CONSTRAINT curriculo_unidades_pkey PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS public.escolas (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  nome text NOT NULL,
-  distrito text,
-  inep text,
-  diretor text,
-  status text DEFAULT 'Ativa'::text,
-  criado_em timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
-  logo_url text,
-  CONSTRAINT escolas_pkey PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS public.fechamentos_bimestres (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  turma_id uuid NOT NULL,
-  disciplina text NOT NULL,
-  bimestre text NOT NULL,
-  status text NOT NULL,
-  data_fechamento timestamp with time zone DEFAULT timezone('utc'::text, now()),
-  usuario_fechamento_id uuid,
-  CONSTRAINT fechamentos_bimestres_pkey PRIMARY KEY (id),
-  CONSTRAINT unique_fechamento_turma_disciplina_bimestre UNIQUE (turma_id, disciplina, bimestre)
-);
-
-CREATE TABLE IF NOT EXISTS public.frequencias (
-  id bigint NOT NULL DEFAULT nextval('frequencias_id_seq'::regclass),
-  created_at timestamp with time zone DEFAULT now(),
-  turma_id uuid NOT NULL,
-  aluno_id uuid NOT NULL,
-  data text NOT NULL,
-  tempo text NOT NULL,
-  status text NOT NULL,
-  participacao text NOT NULL,
-  disciplina text DEFAULT 'GERAL'::text,
-  CONSTRAINT frequencias_pkey PRIMARY KEY (id),
-  CONSTRAINT frequencias_uniqueness UNIQUE (turma_id, aluno_id, data, tempo, disciplina)
-);
-
-CREATE TABLE IF NOT EXISTS public.lgpd_requests (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  nome text NOT NULL,
-  email text NOT NULL,
-  tipo text NOT NULL,
-  mensagem text NOT NULL,
-  status text NOT NULL DEFAULT 'recebida'::text,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  resposta_admin text,
-  CONSTRAINT lgpd_requests_pkey PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS public.notas (
-  id bigint NOT NULL DEFAULT nextval('notas_id_seq'::regclass),
-  created_at timestamp with time zone DEFAULT now(),
-  avaliacao_id bigint,
-  aluno_id uuid NOT NULL,
-  valor numeric NOT NULL,
-  CONSTRAINT notas_pkey PRIMARY KEY (id),
-  CONSTRAINT notas_avaliacao_id_aluno_id_key UNIQUE (avaliacao_id, aluno_id)
-);
-
-CREATE TABLE IF NOT EXISTS public.professor_alocacoes (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  professor_id uuid NOT NULL,
-  escola_id uuid NOT NULL,
-  turno text NOT NULL,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT professor_alocacoes_pkey PRIMARY KEY (id),
-  CONSTRAINT professor_alocacoes_professor_id_escola_id_turno_key UNIQUE (professor_id, escola_id, turno)
-);
-
-CREATE TABLE IF NOT EXISTS public.professor_horarios (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  professor_id uuid NOT NULL,
-  turma_id uuid NOT NULL,
-  escola_id uuid NOT NULL,
-  dia_semana integer NOT NULL,
-  tempo_ordem integer NOT NULL,
-  created_at timestamp with time zone DEFAULT now(),
-  componente text NOT NULL,
-  CONSTRAINT professor_horarios_pkey PRIMARY KEY (id),
-  CONSTRAINT professor_horarios_professor_id_dia_semana_tempo_ordem_key UNIQUE (professor_id, dia_semana, tempo_ordem)
-);
-
-CREATE TABLE IF NOT EXISTS public.professores (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  nome text NOT NULL,
-  email text,
-  cpf text,
-  telefone text,
-  vinculo text,
-  status text DEFAULT 'Ativo'::text,
-  criado_em timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
-  departamento text DEFAULT 'Geral'::text,
-  disciplinas text[] DEFAULT '{}'::text[],
-  CONSTRAINT professores_pkey PRIMARY KEY (id),
-  CONSTRAINT professores_email_key UNIQUE (email)
-);
-
-CREATE TABLE IF NOT EXISTS public.security_logs (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid,
-  user_email text,
-  action text NOT NULL,
-  entity text,
-  entity_id text,
-  ip text,
-  user_agent text,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  metadata jsonb,
-  CONSTRAINT security_logs_pkey PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS public.turmas (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  escola_id uuid NOT NULL,
-  nome text NOT NULL,
-  turno text NOT NULL,
-  ano_letivo text NOT NULL,
-  criado_em timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
-  CONSTRAINT turmas_pkey PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS public.user_consents (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid,
-  finalidade text NOT NULL,
-  status text NOT NULL,
-  versao_politica text NOT NULL,
-  data_hora_aceite timestamp with time zone NOT NULL DEFAULT now(),
-  data_hora_revogacao timestamp with time zone,
-  ip text,
-  user_agent text,
-  CONSTRAINT user_consents_pkey PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS public.usuarios (
-  id uuid NOT NULL,
-  email text,
-  nome_completo text,
-  cargo text,
-  criado_em timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
-  escola_id uuid,
-  CONSTRAINT usuarios_pkey PRIMARY KEY (id)
-);
-
--- ==========================================
--- 3. CHAVES ESTRANGEIRAS
--- ==========================================
-
-ALTER TABLE public.alunos DROP CONSTRAINT IF EXISTS alunos_turma_id_fkey;
-ALTER TABLE public.alunos ADD CONSTRAINT alunos_turma_id_fkey FOREIGN KEY (turma_id) REFERENCES public.turmas(id);
-ALTER TABLE public.alunos DROP CONSTRAINT IF EXISTS alunos_escola_id_fkey;
-ALTER TABLE public.alunos ADD CONSTRAINT alunos_escola_id_fkey FOREIGN KEY (escola_id) REFERENCES public.escolas(id);
-ALTER TABLE public.avaliacoes DROP CONSTRAINT IF EXISTS avaliacoes_turma_id_fkey;
-ALTER TABLE public.avaliacoes ADD CONSTRAINT avaliacoes_turma_id_fkey FOREIGN KEY (turma_id) REFERENCES public.turmas(id);
-ALTER TABLE public.avaliacoes DROP CONSTRAINT IF EXISTS avaliacoes_parent_id_fkey;
-ALTER TABLE public.avaliacoes ADD CONSTRAINT avaliacoes_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.avaliacoes(id);
-ALTER TABLE public.conteudos DROP CONSTRAINT IF EXISTS conteudos_turma_id_fkey;
-ALTER TABLE public.conteudos ADD CONSTRAINT conteudos_turma_id_fkey FOREIGN KEY (turma_id) REFERENCES public.turmas(id);
-ALTER TABLE public.curriculo_habilidades DROP CONSTRAINT IF EXISTS curriculo_habilidades_unidade_id_fkey;
-ALTER TABLE public.curriculo_habilidades ADD CONSTRAINT curriculo_habilidades_unidade_id_fkey FOREIGN KEY (unidade_id) REFERENCES public.curriculo_unidades(id);
-ALTER TABLE public.curriculo_objetos DROP CONSTRAINT IF EXISTS curriculo_objetos_unidade_id_fkey;
-ALTER TABLE public.curriculo_objetos ADD CONSTRAINT curriculo_objetos_unidade_id_fkey FOREIGN KEY (unidade_id) REFERENCES public.curriculo_unidades(id);
-ALTER TABLE public.fechamentos_bimestres DROP CONSTRAINT IF EXISTS fechamentos_bimestres_turma_id_fkey;
-ALTER TABLE public.fechamentos_bimestres ADD CONSTRAINT fechamentos_bimestres_turma_id_fkey FOREIGN KEY (turma_id) REFERENCES public.turmas(id);
-ALTER TABLE public.frequencias DROP CONSTRAINT IF EXISTS frequencias_turma_id_fkey;
-ALTER TABLE public.frequencias ADD CONSTRAINT frequencias_turma_id_fkey FOREIGN KEY (turma_id) REFERENCES public.turmas(id);
-ALTER TABLE public.frequencias DROP CONSTRAINT IF EXISTS frequencias_aluno_id_fkey;
-ALTER TABLE public.frequencias ADD CONSTRAINT frequencias_aluno_id_fkey FOREIGN KEY (aluno_id) REFERENCES public.alunos(id);
-ALTER TABLE public.notas DROP CONSTRAINT IF EXISTS notas_avaliacao_id_fkey;
-ALTER TABLE public.notas ADD CONSTRAINT notas_avaliacao_id_fkey FOREIGN KEY (avaliacao_id) REFERENCES public.avaliacoes(id);
-ALTER TABLE public.notas DROP CONSTRAINT IF EXISTS notas_aluno_id_fkey;
-ALTER TABLE public.notas ADD CONSTRAINT notas_aluno_id_fkey FOREIGN KEY (aluno_id) REFERENCES public.alunos(id);
-ALTER TABLE public.professor_alocacoes DROP CONSTRAINT IF EXISTS professor_alocacoes_escola_id_fkey;
-ALTER TABLE public.professor_alocacoes ADD CONSTRAINT professor_alocacoes_escola_id_fkey FOREIGN KEY (escola_id) REFERENCES public.escolas(id);
-ALTER TABLE public.professor_alocacoes DROP CONSTRAINT IF EXISTS professor_alocacoes_professor_id_fkey;
-ALTER TABLE public.professor_alocacoes ADD CONSTRAINT professor_alocacoes_professor_id_fkey FOREIGN KEY (professor_id) REFERENCES public.professores(id);
-ALTER TABLE public.professor_horarios DROP CONSTRAINT IF EXISTS professor_horarios_escola_id_fkey;
-ALTER TABLE public.professor_horarios ADD CONSTRAINT professor_horarios_escola_id_fkey FOREIGN KEY (escola_id) REFERENCES public.escolas(id);
-ALTER TABLE public.professor_horarios DROP CONSTRAINT IF EXISTS professor_horarios_turma_id_fkey;
-ALTER TABLE public.professor_horarios ADD CONSTRAINT professor_horarios_turma_id_fkey FOREIGN KEY (turma_id) REFERENCES public.turmas(id);
-ALTER TABLE public.professor_horarios DROP CONSTRAINT IF EXISTS professor_horarios_professor_id_fkey;
-ALTER TABLE public.professor_horarios ADD CONSTRAINT professor_horarios_professor_id_fkey FOREIGN KEY (professor_id) REFERENCES public.professores(id);
-ALTER TABLE public.turmas DROP CONSTRAINT IF EXISTS turmas_escola_id_fkey;
-ALTER TABLE public.turmas ADD CONSTRAINT turmas_escola_id_fkey FOREIGN KEY (escola_id) REFERENCES public.escolas(id);
-ALTER TABLE public.usuarios DROP CONSTRAINT IF EXISTS usuarios_escola_id_fkey;
-ALTER TABLE public.usuarios ADD CONSTRAINT usuarios_escola_id_fkey FOREIGN KEY (escola_id) REFERENCES public.escolas(id);
-
--- ==========================================
 -- 1. FUNÇÕES AUXILIARES
 -- ==========================================
 
@@ -496,6 +201,289 @@ BEGIN
   RETURN NEW;
 END;
 $function$;
+
+-- ==========================================
+-- 2. TABELAS E ESTRUTURA
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS public.admin_whitelist (
+  email text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT admin_whitelist_pkey PRIMARY KEY (email)
+);
+
+CREATE TABLE IF NOT EXISTS public.alunos (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  escola_id uuid NOT NULL,
+  turma_id uuid,
+  nome text NOT NULL,
+  data_nascimento date NOT NULL,
+  cpf text,
+  sexo text,
+  nome_responsavel text NOT NULL,
+  telefone text NOT NULL,
+  endereco text NOT NULL,
+  status text NOT NULL DEFAULT 'Ativo'::text,
+  criado_em timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  matricula text,
+  CONSTRAINT alunos_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.audit_log (
+  id bigint NOT NULL DEFAULT nextval('audit_log_id_seq'::regclass),
+  user_id uuid,
+  user_email text,
+  action text NOT NULL,
+  table_name text,
+  record_id text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT audit_log_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.avaliacoes (
+  id bigint NOT NULL DEFAULT nextval('avaliacoes_id_seq'::regclass),
+  created_at timestamp with time zone DEFAULT now(),
+  turma_id uuid NOT NULL,
+  tipo text NOT NULL,
+  data text NOT NULL,
+  instrumento text,
+  objetos jsonb DEFAULT '[]'::jsonb,
+  bimestre text,
+  valor_maximo numeric DEFAULT 10,
+  disciplina text DEFAULT 'GERAL'::text,
+  parent_id bigint,
+  CONSTRAINT avaliacoes_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.conteudos (
+  id bigint NOT NULL DEFAULT nextval('conteudos_id_seq'::regclass),
+  created_at timestamp with time zone DEFAULT now(),
+  turma_id uuid NOT NULL,
+  data text NOT NULL,
+  tempo text NOT NULL,
+  objetos jsonb DEFAULT '[]'::jsonb,
+  habilidades jsonb DEFAULT '[]'::jsonb,
+  descricao text,
+  disciplina text DEFAULT 'GERAL'::text,
+  CONSTRAINT conteudos_pkey PRIMARY KEY (id),
+  CONSTRAINT conteudos_uniqueness UNIQUE (turma_id, data, tempo, disciplina)
+);
+
+CREATE TABLE IF NOT EXISTS public.curriculo_habilidades (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  unidade_id uuid,
+  codigo text NOT NULL,
+  criado_em timestamp with time zone DEFAULT now(),
+  CONSTRAINT curriculo_habilidades_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.curriculo_objetos (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  unidade_id uuid,
+  descricao text NOT NULL,
+  criado_em timestamp with time zone DEFAULT now(),
+  CONSTRAINT curriculo_objetos_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.curriculo_unidades (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  modalidade text NOT NULL,
+  ano text NOT NULL,
+  disciplina text NOT NULL,
+  bimestre text NOT NULL,
+  nome text NOT NULL,
+  criado_em timestamp with time zone DEFAULT now(),
+  CONSTRAINT curriculo_unidades_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.escolas (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  nome text NOT NULL,
+  distrito text,
+  inep text,
+  diretor text,
+  status text DEFAULT 'Ativa'::text,
+  criado_em timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  logo_url text,
+  CONSTRAINT escolas_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.fechamentos_bimestres (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  turma_id uuid NOT NULL,
+  disciplina text NOT NULL,
+  bimestre text NOT NULL,
+  status text NOT NULL,
+  data_fechamento timestamp with time zone DEFAULT timezone('utc'::text, now()),
+  usuario_fechamento_id uuid,
+  CONSTRAINT fechamentos_bimestres_pkey PRIMARY KEY (id),
+  CONSTRAINT unique_fechamento_turma_disciplina_bimestre UNIQUE (turma_id, disciplina, bimestre)
+);
+
+CREATE TABLE IF NOT EXISTS public.frequencias (
+  id bigint NOT NULL DEFAULT nextval('frequencias_id_seq'::regclass),
+  created_at timestamp with time zone DEFAULT now(),
+  turma_id uuid NOT NULL,
+  aluno_id uuid NOT NULL,
+  data text NOT NULL,
+  tempo text NOT NULL,
+  status text NOT NULL,
+  participacao text NOT NULL,
+  disciplina text DEFAULT 'GERAL'::text,
+  CONSTRAINT frequencias_pkey PRIMARY KEY (id),
+  CONSTRAINT frequencias_uniqueness UNIQUE (turma_id, aluno_id, data, tempo, disciplina)
+);
+
+CREATE TABLE IF NOT EXISTS public.lgpd_requests (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  nome text NOT NULL,
+  email text NOT NULL,
+  tipo text NOT NULL,
+  mensagem text NOT NULL,
+  status text NOT NULL DEFAULT 'recebida'::text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  resposta_admin text,
+  CONSTRAINT lgpd_requests_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.notas (
+  id bigint NOT NULL DEFAULT nextval('notas_id_seq'::regclass),
+  created_at timestamp with time zone DEFAULT now(),
+  avaliacao_id bigint,
+  aluno_id uuid NOT NULL,
+  valor numeric NOT NULL,
+  CONSTRAINT notas_pkey PRIMARY KEY (id),
+  CONSTRAINT notas_avaliacao_id_aluno_id_key UNIQUE (avaliacao_id, aluno_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.professor_alocacoes (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  professor_id uuid NOT NULL,
+  escola_id uuid NOT NULL,
+  turno text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT professor_alocacoes_pkey PRIMARY KEY (id),
+  CONSTRAINT professor_alocacoes_professor_id_escola_id_turno_key UNIQUE (professor_id, escola_id, turno)
+);
+
+CREATE TABLE IF NOT EXISTS public.professor_horarios (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  professor_id uuid NOT NULL,
+  turma_id uuid NOT NULL,
+  escola_id uuid NOT NULL,
+  dia_semana integer NOT NULL,
+  tempo_ordem integer NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  componente text NOT NULL,
+  CONSTRAINT professor_horarios_pkey PRIMARY KEY (id),
+  CONSTRAINT professor_horarios_professor_id_dia_semana_tempo_ordem_key UNIQUE (professor_id, dia_semana, tempo_ordem)
+);
+
+CREATE TABLE IF NOT EXISTS public.professores (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  nome text NOT NULL,
+  email text,
+  cpf text,
+  telefone text,
+  vinculo text,
+  status text DEFAULT 'Ativo'::text,
+  criado_em timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  departamento text DEFAULT 'Geral'::text,
+  disciplinas ARRAY DEFAULT '{}'::text[],
+  CONSTRAINT professores_pkey PRIMARY KEY (id),
+  CONSTRAINT professores_email_key UNIQUE (email)
+);
+
+CREATE TABLE IF NOT EXISTS public.security_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  user_email text,
+  action text NOT NULL,
+  entity text,
+  entity_id text,
+  ip text,
+  user_agent text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  metadata jsonb,
+  CONSTRAINT security_logs_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.turmas (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  escola_id uuid NOT NULL,
+  nome text NOT NULL,
+  turno text NOT NULL,
+  ano_letivo text NOT NULL,
+  criado_em timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT turmas_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.user_consents (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  finalidade text NOT NULL,
+  status text NOT NULL,
+  versao_politica text NOT NULL,
+  data_hora_aceite timestamp with time zone NOT NULL DEFAULT now(),
+  data_hora_revogacao timestamp with time zone,
+  ip text,
+  user_agent text,
+  CONSTRAINT user_consents_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.usuarios (
+  id uuid NOT NULL,
+  email text,
+  nome_completo text,
+  cargo text,
+  criado_em timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  escola_id uuid,
+  CONSTRAINT usuarios_pkey PRIMARY KEY (id)
+);
+
+-- ==========================================
+-- 3. CHAVES ESTRANGEIRAS
+-- ==========================================
+
+ALTER TABLE public.alunos DROP CONSTRAINT IF EXISTS alunos_turma_id_fkey;
+ALTER TABLE public.alunos ADD CONSTRAINT alunos_turma_id_fkey FOREIGN KEY (turma_id) REFERENCES public.turmas(id);
+ALTER TABLE public.alunos DROP CONSTRAINT IF EXISTS alunos_escola_id_fkey;
+ALTER TABLE public.alunos ADD CONSTRAINT alunos_escola_id_fkey FOREIGN KEY (escola_id) REFERENCES public.escolas(id);
+ALTER TABLE public.avaliacoes DROP CONSTRAINT IF EXISTS avaliacoes_turma_id_fkey;
+ALTER TABLE public.avaliacoes ADD CONSTRAINT avaliacoes_turma_id_fkey FOREIGN KEY (turma_id) REFERENCES public.turmas(id);
+ALTER TABLE public.avaliacoes DROP CONSTRAINT IF EXISTS avaliacoes_parent_id_fkey;
+ALTER TABLE public.avaliacoes ADD CONSTRAINT avaliacoes_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.avaliacoes(id);
+ALTER TABLE public.conteudos DROP CONSTRAINT IF EXISTS conteudos_turma_id_fkey;
+ALTER TABLE public.conteudos ADD CONSTRAINT conteudos_turma_id_fkey FOREIGN KEY (turma_id) REFERENCES public.turmas(id);
+ALTER TABLE public.curriculo_habilidades DROP CONSTRAINT IF EXISTS curriculo_habilidades_unidade_id_fkey;
+ALTER TABLE public.curriculo_habilidades ADD CONSTRAINT curriculo_habilidades_unidade_id_fkey FOREIGN KEY (unidade_id) REFERENCES public.curriculo_unidades(id);
+ALTER TABLE public.curriculo_objetos DROP CONSTRAINT IF EXISTS curriculo_objetos_unidade_id_fkey;
+ALTER TABLE public.curriculo_objetos ADD CONSTRAINT curriculo_objetos_unidade_id_fkey FOREIGN KEY (unidade_id) REFERENCES public.curriculo_unidades(id);
+ALTER TABLE public.fechamentos_bimestres DROP CONSTRAINT IF EXISTS fechamentos_bimestres_turma_id_fkey;
+ALTER TABLE public.fechamentos_bimestres ADD CONSTRAINT fechamentos_bimestres_turma_id_fkey FOREIGN KEY (turma_id) REFERENCES public.turmas(id);
+ALTER TABLE public.frequencias DROP CONSTRAINT IF EXISTS frequencias_turma_id_fkey;
+ALTER TABLE public.frequencias ADD CONSTRAINT frequencias_turma_id_fkey FOREIGN KEY (turma_id) REFERENCES public.turmas(id);
+ALTER TABLE public.frequencias DROP CONSTRAINT IF EXISTS frequencias_aluno_id_fkey;
+ALTER TABLE public.frequencias ADD CONSTRAINT frequencias_aluno_id_fkey FOREIGN KEY (aluno_id) REFERENCES public.alunos(id);
+ALTER TABLE public.notas DROP CONSTRAINT IF EXISTS notas_avaliacao_id_fkey;
+ALTER TABLE public.notas ADD CONSTRAINT notas_avaliacao_id_fkey FOREIGN KEY (avaliacao_id) REFERENCES public.avaliacoes(id);
+ALTER TABLE public.notas DROP CONSTRAINT IF EXISTS notas_aluno_id_fkey;
+ALTER TABLE public.notas ADD CONSTRAINT notas_aluno_id_fkey FOREIGN KEY (aluno_id) REFERENCES public.alunos(id);
+ALTER TABLE public.professor_alocacoes DROP CONSTRAINT IF EXISTS professor_alocacoes_escola_id_fkey;
+ALTER TABLE public.professor_alocacoes ADD CONSTRAINT professor_alocacoes_escola_id_fkey FOREIGN KEY (escola_id) REFERENCES public.escolas(id);
+ALTER TABLE public.professor_alocacoes DROP CONSTRAINT IF EXISTS professor_alocacoes_professor_id_fkey;
+ALTER TABLE public.professor_alocacoes ADD CONSTRAINT professor_alocacoes_professor_id_fkey FOREIGN KEY (professor_id) REFERENCES public.professores(id);
+ALTER TABLE public.professor_horarios DROP CONSTRAINT IF EXISTS professor_horarios_escola_id_fkey;
+ALTER TABLE public.professor_horarios ADD CONSTRAINT professor_horarios_escola_id_fkey FOREIGN KEY (escola_id) REFERENCES public.escolas(id);
+ALTER TABLE public.professor_horarios DROP CONSTRAINT IF EXISTS professor_horarios_turma_id_fkey;
+ALTER TABLE public.professor_horarios ADD CONSTRAINT professor_horarios_turma_id_fkey FOREIGN KEY (turma_id) REFERENCES public.turmas(id);
+ALTER TABLE public.professor_horarios DROP CONSTRAINT IF EXISTS professor_horarios_professor_id_fkey;
+ALTER TABLE public.professor_horarios ADD CONSTRAINT professor_horarios_professor_id_fkey FOREIGN KEY (professor_id) REFERENCES public.professores(id);
+ALTER TABLE public.turmas DROP CONSTRAINT IF EXISTS turmas_escola_id_fkey;
+ALTER TABLE public.turmas ADD CONSTRAINT turmas_escola_id_fkey FOREIGN KEY (escola_id) REFERENCES public.escolas(id);
+ALTER TABLE public.usuarios DROP CONSTRAINT IF EXISTS usuarios_escola_id_fkey;
+ALTER TABLE public.usuarios ADD CONSTRAINT usuarios_escola_id_fkey FOREIGN KEY (escola_id) REFERENCES public.escolas(id);
 
 -- ==========================================
 -- 4. HABILITAÇÃO RLS
@@ -1175,3 +1163,4 @@ CREATE TRIGGER on_usuario_cargo_changed
   ON public.usuarios
   FOR EACH ROW
   EXECUTE FUNCTION sync_user_cargo_to_auth();
+

@@ -77,7 +77,22 @@ export default function FrequenciaTab({
       if (turmaAtiva) {
         await salvarFrequencia(selectedDate, tempoAula, studentData);
         setIsLaunching(false);
+        setCaptchaInput('');
+        generateNewCaptcha();
         window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // Auto-advance para o próximo tempo pendente (ou próximo tempo sequencial)
+        const nextPendingTempo = disponiveisTempos.find(t => 
+          t !== tempoAula && !lancamentos.some(l => l.data === selectedDate && l.tempo === t && l.tipo === 'frequencia')
+        );
+        if (nextPendingTempo) {
+          setTempoAula(nextPendingTempo);
+        } else {
+          const currentIndex = disponiveisTempos.indexOf(tempoAula);
+          if (currentIndex >= 0 && currentIndex < disponiveisTempos.length - 1) {
+            setTempoAula(disponiveisTempos[currentIndex + 1]);
+          }
+        }
       }
     } else {
       showToastError('Código incorreto. Tente novamente.');

@@ -76,7 +76,8 @@ export default function NovoUsuarioEscolarModal({
       });
 
       if (error) {
-        showError(error.message || 'Erro ao criar conta.');
+        console.error("Erro ao chamar admin-create-user:", error);
+        showError('Não foi possível criar a conta. Verifique sua conexão e tente novamente.');
         setLoading(false);
         return;
       }
@@ -93,8 +94,9 @@ export default function NovoUsuarioEscolarModal({
       // Limpar formulário
       setFormData({ nome: '', email: '', senha: '' });
       onSuccess();
-    } catch (err: any) {
-      showError('Erro inesperado: ' + (err.message || 'Tente novamente.'));
+    } catch (err: unknown) {
+      console.error("Erro inesperado ao criar usuário:", err);
+      showError('Erro inesperado ao criar a conta. Tente novamente.');
     } finally {
       setLoading(false);
     }

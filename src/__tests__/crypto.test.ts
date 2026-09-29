@@ -3,18 +3,18 @@ import { webcrypto } from 'crypto';
 
 // Garantir que a API Web Crypto global está disponível no Node.js
 if (!globalThis.crypto) {
-  (globalThis as any).crypto = webcrypto;
+  Object.defineProperty(globalThis, 'crypto', { value: webcrypto });
 }
 
 // Mock do banco de dados Dexie para evitar chamadas de E/S reais e dependência do navegador
-const mockUserSalts: Record<string, any> = {};
+const mockUserSalts: Record<string, { userId: string; salt: string; cryptoKey?: CryptoKey }> = {};
 
 vi.mock('../lib/db', () => {
   return {
     db: {
       userSalts: {
         get: async (userId: string) => mockUserSalts[userId] || null,
-        put: async (record: { userId: string; salt: string; cryptoKey?: any }) => {
+        put: async (record: { userId: string; salt: string; cryptoKey?: CryptoKey }) => {
           mockUserSalts[record.userId] = record;
           return record.userId;
         }

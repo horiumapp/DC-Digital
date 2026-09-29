@@ -4,7 +4,7 @@ import Captcha from '../common/Captcha';
 import { useCaptcha } from '../../hooks/useCaptcha';
 
 interface AnotacoesTabProps {
-  turmaAtiva: any;
+  turmaAtiva: { id: string | number; nome?: string } | null;
   tempoAula: string;
   setTempoAula: (v: string) => void;
   disponiveisTempos: string[];
@@ -39,9 +39,14 @@ export default function AnotacoesTab({
         return;
       }
       
+      const sanitizedText = textoAnotacao
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/<[^>]+>/g, '')
+        .trim();
+
       const novaAnotacao = {
         id: Math.random().toString(36).substr(2, 9),
-        texto: textoAnotacao,
+        texto: sanitizedText,
         tempo: tempoAula,
         data: new Date().toLocaleDateString('pt-BR')
       };

@@ -4,26 +4,55 @@ import { supabase } from '../../lib/supabase';
 import { Search, Edit2, Trash2, Building2, Users, GraduationCap, ChevronRight, ArrowLeft } from 'lucide-react';
 import NovoAlunoModal from '../../components/NovoAlunoModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
-import { formatMatricula, getMatriculaLogin } from '../../utils/formatters';
+import { formatMatricula, getMatriculaLogin, formatCpfObscured, gerarSenhaTemporaria } from '../../utils/formatters';
 
 import { useToast } from '../../components/common/Toast';
 
 const ALUNO_EMAIL_DOMAIN = 'aluno.dcdigital.local';
-const ALUNO_SENHA_PADRAO = 'Aluno2026';
+
+export interface AlunoRow {
+  id: string;
+  nome: string;
+  cpf?: string;
+  turma_id: string;
+  escola_id?: string;
+  data_nascimento?: string;
+  sexo?: string;
+  nome_responsavel?: string;
+  telefone?: string;
+  endereco?: string;
+  status?: string;
+  turmas?: { nome: string; turno?: string };
+  escolas?: { nome: string };
+}
+
+export interface EscolaItem {
+  id: string;
+  nome: string;
+  logo_url?: string;
+  alunosCount?: number;
+}
+
+export interface TurmaItem {
+  id: string;
+  nome: string;
+  escola_id: string;
+  turno?: string;
+}
 
 export default function TabAlunos() {
   const { user } = useAuth();
   const { showError, showSuccess, showWarning } = useToast();
   const [busca, setBusca] = useState('');
   const [isNovoAlunoModalOpen, setIsNovoAlunoModalOpen] = useState(false);
-  const [alunoParaEditar, setAlunoParaEditar] = useState<any>(null);
-  const [alunoParaExcluir, setAlunoParaExcluir] = useState<any>(null);
-  const [alunos, setAlunos] = useState<any[]>([]);
-  const [escolas, setEscolas] = useState<any[]>([]);
-  const [selectedEscola, setSelectedEscola] = useState<any>(null);
+  const [alunoParaEditar, setAlunoParaEditar] = useState<AlunoRow | null>(null);
+  const [alunoParaExcluir, setAlunoParaExcluir] = useState<AlunoRow | null>(null);
+  const [alunos, setAlunos] = useState<AlunoRow[]>([]);
+  const [escolas, setEscolas] = useState<EscolaItem[]>([]);
+  const [selectedEscola, setSelectedEscola] = useState<EscolaItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedTurmas, setExpandedTurmas] = useState<Set<string>>(new Set());
-  const [todasTurmas, setTodasTurmas] = useState<any[]>([]);
+  const [todasTurmas, setTodasTurmas] = useState<TurmaItem[]>([]);
 
   useEffect(() => {
     fetchInitialData();
@@ -114,18 +143,18 @@ export default function TabAlunos() {
     }
   }
 
-  const handleSaveAluno = async (novoAluno: any) => {
+  const handleSaveAluno = async (novoAluno: { escola_id: string; turma_id: string; nome: string; dataNascimento?: string; data_nascimento?: string; cpf?: string; sexo?: string; nomeResponsavel?: string; nome_responsavel?: string; telefone?: string; status?: string; endereco?: string }) => {
     const alunoData = {
       escola_id: novoAluno.escola_id,
       turma_id: novoAluno.turma_id,
       nome: novoAluno.nome,
-      data_nascimento: novoAluno.data_nascimento,
+      data_nascimento: novoAluno.dataNascimento || novoAluno.data_nascimento,
       cpf: novoAluno.cpf,
       sexo: novoAluno.sexo,
-      nome_responsavel: novoAluno.nome_responsavel,
+      nome_responsavel: novoAluno.nomeResponsavel || novoAluno.nome_responsavel,
       telefone: novoAluno.telefone,
       endereco: novoAluno.endereco,
-      status: novoAluno.status
+      status: novoAluno.status || 'Ativo'
     };
 
     if (alunoParaEditar) {
@@ -160,7 +189,8 @@ export default function TabAlunos() {
         .select();
 
       if (error) {
-        showError("Erro ao criar aluno: " + error.message);
+        console.error("Erro ao criar aluno:", error);
+        showError("Erro ao criar aluno. Verifique se os dados são válidos e tente novamente.");
       } else {
         const newAluno = newAlunoList?.[0];
         
@@ -170,11 +200,13 @@ export default function TabAlunos() {
           const pseudoEmail = `${cpfDigits}@${ALUNO_EMAIL_DOMAIN}`;
           
           try {
+            // FIX C2: senha temporária aleatória forte — nunca mais "Aluno2026"
+            const senhaTemporaria = gerarSenhaTemporaria();
             const { data: authData, error: authError } = await supabase.functions.invoke('admin-create-user', {
               body: {
                 nome: novoAluno.nome,
                 email: pseudoEmail,
-                senha: ALUNO_SENHA_PADRAO,
+                senha: senhaTemporaria,
                 cargo: 'ALUNO',
                 escola_id: novoAluno.escola_id,
               },
@@ -184,11 +216,11 @@ export default function TabAlunos() {
               const msg = authData?.error || authError?.message || 'Erro desconhecido';
               showWarning(`Aluno cadastrado, mas não foi possível criar a conta de acesso: ${msg}`);
             } else {
-              showSuccess(`Aluno ${novoAluno.nome} cadastrado! Matrícula (CPF): ${formatMatricula(newAluno.id, novoAluno.cpf)} | Senha: ${ALUNO_SENHA_PADRAO}`);
+              showSuccess(`Aluno ${novoAluno.nome} cadastrado! Matrícula (CPF): ${formatMatricula(newAluno.id, novoAluno.cpf)} | Senha: ${senhaTemporaria}`);
             }
           } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : String(err);
-            showWarning(`Aluno cadastrado, mas erro ao criar conta: ${msg}`);
+            console.error("Erro ao criar conta de acesso do aluno:", err);
+            showWarning('Aluno cadastrado, mas houve um erro ao criar a conta de acesso.');
           }
         } else if (newAluno) {
           showSuccess(`Aluno ${novoAluno.nome} cadastrado! CPF não informado — a conta de acesso será criada quando o CPF for adicionado.`);
@@ -202,7 +234,7 @@ export default function TabAlunos() {
     }
   };
 
-  const handleEditAluno = (aluno: any) => {
+  const handleEditAluno = (aluno: AlunoRow) => {
     setAlunoParaEditar(aluno);
     setIsNovoAlunoModalOpen(true);
   };
@@ -217,6 +249,19 @@ export default function TabAlunos() {
       if (error) {
         showError("Erro ao excluir aluno: " + error.message);
       } else {
+        // Revogar conta Auth correspondente se o aluno tiver CPF
+        if (alunoParaExcluir.cpf) {
+          const cpfDigits = getMatriculaLogin(alunoParaExcluir.cpf);
+          const pseudoEmail = `${cpfDigits}@${ALUNO_EMAIL_DOMAIN}`;
+          try {
+            await supabase.functions.invoke('admin-create-user', {
+              body: { action: 'delete-user', email: pseudoEmail },
+            });
+          } catch (e) {
+            console.warn('Erro ao remover conta Auth do aluno excluído:', e);
+          }
+        }
+
         fetchAlunos();
         fetchEscolas();
         setAlunoParaExcluir(null);
@@ -240,7 +285,7 @@ export default function TabAlunos() {
     : [];
 
   // Agrupar alunos por turma e turno
-  const alunosAgrupados = alunosDaEscola.reduce((acc: Record<string, any>, a) => {
+  const alunosAgrupados = alunosDaEscola.reduce((acc: Record<string, { id: string; nome: string; turno: string; alunos: AlunoRow[] }>, a) => {
     const turmaKey = a.turma_id || 'sem-turma';
     if (!acc[turmaKey]) {
       acc[turmaKey] = {
@@ -254,7 +299,7 @@ export default function TabAlunos() {
     return acc;
   }, {});
 
-  const _turmasComAlunos = Object.values(alunosAgrupados).sort((a: any, b: any) => {
+  const _turmasComAlunos = Object.values(alunosAgrupados).sort((a, b) => {
     if (a.id === 'sem-turma') return 1;
     if (b.id === 'sem-turma') return -1;
     return a.nome.localeCompare(b.nome);
@@ -262,7 +307,7 @@ export default function TabAlunos() {
 
   // Agrupar turmas por turno para o acordeão
   const turnosOrdenados = ['MANHÃ', 'TARDE', 'NOITE', 'INTEGRAL'];
-  const turmasPorTurno = todasTurmas.reduce((acc: Record<string, any[]>, t) => {
+  const turmasPorTurno = todasTurmas.reduce((acc: Record<string, TurmaItem[]>, t) => {
     const turno = t.turno?.toUpperCase() || 'N/A';
     if (!acc[turno]) acc[turno] = [];
     acc[turno].push(t);
@@ -444,7 +489,7 @@ export default function TabAlunos() {
                   <div className="flex flex-col">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total de Alunos</span>
                     <span className="text-2xl font-black text-slate-700 tabular-nums">
-                      {escola.alunosCount.toString().padStart(2, '0')}
+                      {(escola.alunosCount || 0).toString().padStart(2, '0')}
                     </span>
                   </div>
                   <div className="p-2 bg-slate-50 text-slate-400 rounded-lg group-hover:bg-[#eef2ff] group-hover:text-[#0f2851] transition-colors">
@@ -519,7 +564,7 @@ export default function TabAlunos() {
                                   </thead>
                                   <tbody className="divide-y divide-slate-50">
                                     {alunosDaTurma.length > 0 ? (
-                                      alunosDaTurma.map((aluno: any, index: number) => (
+                                      alunosDaTurma.map((aluno: AlunoRow, index: number) => (
                                         <tr key={aluno.id} className="hover:bg-slate-50/50 transition-colors group">
                                           <td className="px-6 py-4 text-xs font-black text-slate-300 tabular-nums">
                                             {(index + 1).toString().padStart(2, '0')}
@@ -534,7 +579,8 @@ export default function TabAlunos() {
                                                   {aluno.nome}
                                                 </span>
                                                 <span className="text-[10px] font-bold text-slate-400 tabular-nums uppercase tracking-tight">
-                                                  MATRÍCULA: {formatMatricula(aluno.id, aluno.cpf)}
+                                                  {/* FIX H4: mascarar CPF na listagem (LGPD) */}
+                                                  MATRÍCULA: {aluno.cpf ? formatCpfObscured(aluno.cpf) : 'CPF Pendente'}
                                                 </span>
                                               </div>
                                             </div>
@@ -621,7 +667,7 @@ export default function TabAlunos() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {alunosAgrupados['sem-turma'].alunos.map((aluno: any, index: number) => (
+                        {alunosAgrupados['sem-turma'].alunos.map((aluno: AlunoRow, index: number) => (
                           <tr key={aluno.id} className="hover:bg-red-50/30 transition-colors group">
                             <td className="px-6 py-4 text-xs font-black text-slate-300 tabular-nums">
                               {(index + 1).toString().padStart(2, '0')}

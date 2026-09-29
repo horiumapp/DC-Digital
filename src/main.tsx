@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import {StrictMode, useState, useCallback, useEffect, useRef} from 'react';
 import {createRoot} from 'react-dom/client';
 import {useRegisterSW} from 'virtual:pwa-register/react';
@@ -17,7 +18,8 @@ function Root() {
       console.log('[SW] Registrado:', swUrl);
       // Verificar atualizações a cada 60 minutos
       if (registration) {
-        // FIX: Armazenar ref do interval para cleanup
+        // FIX: Limpar interval anterior antes de criar novo (evita acúmulo se chamado múltiplas vezes)
+        if (swIntervalRef.current) clearInterval(swIntervalRef.current);
         swIntervalRef.current = setInterval(() => {
           registration.update();
         }, 60 * 60 * 1000);
@@ -67,4 +69,7 @@ function Root() {
   );
 }
 
+export default Root;
+
 createRoot(document.getElementById('root')!).render(<Root />);
+

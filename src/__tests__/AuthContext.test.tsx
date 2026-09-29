@@ -15,13 +15,12 @@ const {
   mockSignOut,
   mockMaybeSingle,
   mockFrom,
-  setSessionVal,
-  getAuthStateCallback
+  setSessionVal
 } = vi.hoisted(() => {
-  let sessionVal: any = null;
-  let authStateCallback: any = null;
+  let sessionVal: unknown = null;
+  let authStateCallback: ((event: string, session: unknown) => void) | null = null;
 
-  const getSession = vi.fn(async () => ({ data: { session: sessionVal } }));
+  const getSession = vi.fn(async (): Promise<{ data: { session: unknown }; error?: { message?: string; code?: string } | null }> => ({ data: { session: sessionVal }, error: null }));
   const onAuthStateChange = vi.fn((callback) => {
     authStateCallback = callback;
     return {
@@ -46,7 +45,7 @@ const {
 
   return {
     mockCacheUser: vi.fn(async () => { }),
-    mockGetCachedUser: vi.fn(async (): Promise<Record<string, any> | null | undefined> => null),
+    mockGetCachedUser: vi.fn(async (): Promise<Record<string, unknown> | null | undefined> => null),
     mockClearAllLocalData: vi.fn(async () => { }),
     mockClearSalts: vi.fn(async () => { }),
     mockGetSession: getSession,
@@ -54,8 +53,7 @@ const {
     mockSignOut: signOut,
     mockMaybeSingle: maybeSingle,
     mockFrom: from,
-    setSessionVal: (val: any) => { sessionVal = val; },
-    getAuthStateCallback: () => authStateCallback
+    setSessionVal: (val: unknown) => { sessionVal = val; }
   };
 });
 
@@ -70,6 +68,16 @@ vi.mock('../components/common/Toast', () => ({
 // ---------- Mock LoadingFallback ----------
 vi.mock('../components/common/LoadingFallback', () => ({
   default: () => <div data-testid="loading-fallback">Carregando...</div>,
+}));
+
+// ---------- Mock network & syncEngine ----------
+vi.mock('../utils/network', () => ({
+  pingInternet: vi.fn(async () => true),
+  pingSupabase: vi.fn(async () => true),
+}));
+
+vi.mock('../services/syncEngine', () => ({
+  syncAll: vi.fn(async () => ({ synced: 0, failed: 0, total: 0, remaining: 0, errors: [] })),
 }));
 
 // ---------- Mock offlineStorage ----------
@@ -269,10 +277,48 @@ describe('AuthContext', () => {
     });
 
     expect(mockSignOut).toHaveBeenCalled();
-    // FIX C2: clearAllLocalData agora recebe clearCrypto=true para limpar chaves cripto
-    expect(mockClearAllLocalData).toHaveBeenCalledWith(true, true);
+    // Preserva userSalts (indexado por userId) para re-login offline seguro
+    expect(mockClearAllLocalData).toHaveBeenCalledWith(true, false);
     expect(screen.getByText('Não autenticado')).toBeDefined();
 
     window.confirm = originalConfirm;
   });
+
+  it('deve se recuperar graciosamente e finalizar loading se getSession falhar com erro de rede ou 502', async () => {
+    mockGetSession.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    );
+
+    // Deve sair do estado de loading e mostrar Não autenticado
+    await waitFor(() => {
+      expect(screen.queryByTestId('loading-fallback')).toBeNull();
+    });
+
+    expect(screen.getByText('Não autenticado')).toBeDefined();
+  });
+
+  it('deve limpar token corrompido e finalizar loading se getSession retornar erro de refresh token', async () => {
+    mockGetSession.mockResolvedValueOnce({
+      data: { session: null },
+      error: { message: 'Refresh token is not valid', code: 'validation_failed' },
+    });
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('loading-fallback')).toBeNull();
+    });
+
+    expect(mockSignOut).toHaveBeenCalledWith({ scope: 'local' });
+    expect(screen.getByText('Não autenticado')).toBeDefined();
+  });
 });
+

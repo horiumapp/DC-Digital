@@ -3,38 +3,42 @@ import { webcrypto } from 'crypto';
 
 // Garantir que a API Web Crypto global está disponível no Node.js
 if (!globalThis.crypto) {
-  (globalThis as any).crypto = webcrypto;
+  Object.defineProperty(globalThis, 'crypto', { value: webcrypto });
 }
+
+type MockRecord = Record<string, unknown>;
 
 // ---------- Hoisted Memory Database Mock ----------
 const {
   mockDb,
   getMockStore,
-  setMockStore,
-  resetMockStore,
-  setAutoId
+  resetMockStore
 } = vi.hoisted(() => {
-  let mockStore: Record<string, any[]> = {
+  let mockStore: Record<string, MockRecord[]> = {
     turmas: [],
     alunos: [],
     frequencias: [],
     conteudos: [],
     avaliacoes: [],
     notas: [],
+    horarios: [],
     fechamentos: [],
+    curriculos: [],
     userSalts: [],
     syncLogs: [],
     syncQueue: [],
+    cachedUsers: [],
+    files: [],
   };
   let autoId = 1;
 
   const createTableMock = (tableName: string) => {
     return {
-      bulkPut: async (records: any[]) => {
+      bulkPut: async (records: MockRecord[]) => {
         records.forEach(r => {
           const idField = r.localId !== undefined ? 'localId' : (r.id !== undefined ? 'id' : (r.userId !== undefined ? 'userId' : 'localId'));
           const searchVal = r[idField];
-          const idx = mockStore[tableName].findIndex((x: any) => x[idField] === searchVal);
+          const idx = mockStore[tableName].findIndex((x: MockRecord) => x[idField] === searchVal);
           if (idx >= 0) {
             mockStore[tableName][idx] = { ...mockStore[tableName][idx], ...r };
           } else {
@@ -42,16 +46,21 @@ const {
           }
         });
       },
-      bulkDelete: async (ids: any[]) => {
+      bulkDelete: async (ids: unknown[]) => {
         mockStore[tableName] = mockStore[tableName].filter(
-          (x: any) => !ids.includes(x.localId) && !ids.includes(x.id)
+          (x: MockRecord) => !ids.includes(x.localId) && !ids.includes(x.id)
+        );
+      },
+      delete: async (id: unknown) => {
+        mockStore[tableName] = mockStore[tableName].filter(
+          (x: MockRecord) => x.localId !== id && x.id !== id
         );
       },
       clear: async () => {
         mockStore[tableName] = [];
       },
       toArray: async () => mockStore[tableName],
-      add: async (item: any) => {
+      add: async (item: MockRecord) => {
         const idField = item.localId !== undefined ? 'localId' : (item.id !== undefined ? 'id' : (item.userId !== undefined ? 'userId' : 'localId'));
         const newItem = { ...item };
         if (newItem[idField] === undefined) {
@@ -60,16 +69,16 @@ const {
         mockStore[tableName].push(newItem);
         return newItem[idField];
       },
-      get: async (id: any) => {
-        return mockStore[tableName].find((x: any) => x.id === id || x.userId === id || x.localId === id) || null;
+      get: async (id: unknown) => {
+        return mockStore[tableName].find((x: MockRecord) => x.id === id || x.userId === id || x.localId === id) || null;
       },
-      put: async (record: any) => {
+      put: async (record: MockRecord) => {
         const idField = record.userId !== undefined ? 'userId' : (record.localId !== undefined ? 'localId' : (record.id !== undefined ? 'id' : 'localId'));
         const searchVal = record[idField] !== undefined ? record[idField] : autoId++;
         const recordToSave = { ...record };
         recordToSave[idField] = searchVal;
         
-        const idx = mockStore[tableName].findIndex((x: any) => x[idField] === searchVal);
+        const idx = mockStore[tableName].findIndex((x: MockRecord) => x[idField] === searchVal);
         if (idx >= 0) {
           mockStore[tableName][idx] = recordToSave;
         } else {
@@ -77,8 +86,8 @@ const {
         }
         return searchVal;
       },
-      update: async (localId: any, changes: any) => {
-        const idx = mockStore[tableName].findIndex((x: any) => x.localId === localId || x.id === localId || x.userId === localId);
+      update: async (localId: unknown, changes: MockRecord) => {
+        const idx = mockStore[tableName].findIndex((x: MockRecord) => x.localId === localId || x.id === localId || x.userId === localId);
         if (idx >= 0) {
           mockStore[tableName][idx] = { ...mockStore[tableName][idx], ...changes };
           return 1;
@@ -86,8 +95,8 @@ const {
         return 0;
       },
       where: (field: string) => {
-        const queryEquals = (val: any) => {
-          const matching = mockStore[tableName].filter((x: any) => {
+        const queryEquals = (val: unknown) => {
+          const matching = mockStore[tableName].filter((x: MockRecord) => {
             if (Array.isArray(val) && field === '[turma_id+aluno_id+data+tempo+disciplina]') {
               return (
                 x.turma_id === val[0] &&
@@ -95,6 +104,21 @@ const {
                 x.data === val[2] &&
                 x.tempo === val[3] &&
                 x.disciplina === val[4]
+              );
+            }
+            if (Array.isArray(val) && field === '[turma_id+data+tempo+disciplina]') {
+              return (
+                x.turma_id === val[0] &&
+                x.data === val[1] &&
+                x.tempo === val[2] &&
+                x.disciplina === val[3]
+              );
+            }
+            if (Array.isArray(val) && field === '[turma_id+disciplina+bimestre]') {
+              return (
+                x.turma_id === val[0] &&
+                x.disciplina === val[1] &&
+                x.bimestre === val[2]
               );
             }
             if (Array.isArray(val) && field === '[avaliacao_id+aluno_id]') {
@@ -105,34 +129,48 @@ const {
 
           return {
             toArray: async () => matching,
-            first: async () => matching[0],
-            filter: (fn: any) => ({
+            first: async () => matching[0] || null,
+            count: async () => matching.length,
+            filter: (fn: (item: MockRecord) => boolean) => ({
               toArray: async () => matching.filter(fn),
+              first: async () => matching.filter(fn)[0] || null,
             }),
           };
         };
 
-        const queryAnyOf = (vals: any[]) => {
-          const matching = mockStore[tableName].filter((x: any) => vals.includes(x[field]));
+        const queryAnyOf = (vals: unknown[]) => {
+          const matching = mockStore[tableName].filter((x: MockRecord) => vals.includes(x[field]));
+          return {
+            toArray: async () => matching,
+            count: async () => matching.length,
+          };
+        };
+
+        const queryBetween = (lower: unknown[], upper: unknown[]) => {
+          const matching = mockStore[tableName].filter((x: MockRecord) => {
+            if (field === '[syncStatus+updatedAt]') {
+              return x.syncStatus === lower[0] && String(x.updatedAt) < String(upper[1]);
+            }
+            if (field === '[turma_id+aluno_id+data+tempo+disciplina]') {
+              return (
+                x.turma_id === lower[0] &&
+                x.data === lower[2] &&
+                x.tempo === lower[3] &&
+                x.disciplina === lower[4]
+              );
+            }
+            if (field === '[turma_id+disciplina+bimestre]') {
+              return x.turma_id === lower[0] && x.disciplina === lower[1];
+            }
+            return true;
+          });
           return {
             toArray: async () => matching,
           };
         };
 
-        const queryBetween = (start: any[], end: any[]) => {
-          return {
-            toArray: async () => {
-              return mockStore[tableName].filter((x: any) => {
-                const statusMatch = x.syncStatus === start[0];
-                const dateMatch = x.updatedAt < end[1];
-                return statusMatch && dateMatch;
-              });
-            },
-          };
-        };
-
-        const queryBelow = (val: any) => {
-          const matching = mockStore[tableName].filter((x: any) => x[field] < val);
+        const queryBelow = (val: string) => {
+          const matching = mockStore[tableName].filter((x: MockRecord) => String(x[field]) < val);
           return {
             toArray: async () => matching,
           };
@@ -145,21 +183,29 @@ const {
           below: queryBelow,
         };
       },
+      filter: (fn: (item: MockRecord) => boolean) => ({
+        first: async () => mockStore[tableName].filter(fn)[0],
+        toArray: async () => mockStore[tableName].filter(fn),
+      }),
     };
   };
 
-  const dbInstance: any = {
+  const dbInstance = {
     turmas: createTableMock('turmas'),
     alunos: createTableMock('alunos'),
     frequencias: createTableMock('frequencias'),
     conteudos: createTableMock('conteudos'),
     avaliacoes: createTableMock('avaliacoes'),
     notas: createTableMock('notas'),
+    horarios: createTableMock('horarios'),
     fechamentos: createTableMock('fechamentos'),
+    curriculos: createTableMock('curriculos'),
     userSalts: createTableMock('userSalts'),
     syncLogs: createTableMock('syncLogs'),
     syncQueue: createTableMock('syncQueue'),
-    transaction: async (mode: string, tables: any, callback: any) => {
+    cachedUsers: createTableMock('cachedUsers'),
+    files: createTableMock('files'),
+    transaction: async (_mode: string, _tables: unknown, callback: () => Promise<unknown>) => {
       return await callback();
     },
   };
@@ -167,7 +213,6 @@ const {
   return {
     mockDb: dbInstance,
     getMockStore: () => mockStore,
-    setMockStore: (val: any) => { mockStore = val; },
     resetMockStore: () => {
       mockStore = {
         turmas: [],
@@ -176,14 +221,17 @@ const {
         conteudos: [],
         avaliacoes: [],
         notas: [],
+        horarios: [],
         fechamentos: [],
+        curriculos: [],
         userSalts: [],
         syncLogs: [],
         syncQueue: [],
+        cachedUsers: [],
+        files: [],
       };
       autoId = 1;
     },
-    setAutoId: (val: number) => { autoId = val; }
   };
 });
 
@@ -192,8 +240,10 @@ vi.mock('../lib/db', () => {
   return {
     db: mockDb,
     now: () => new Date().toISOString(),
+    hashOperation: async (table: string, operation: string, payload: Record<string, unknown>) =>
+      `hash_${table}_${operation}_${JSON.stringify(payload)}`,
     OPERATIONAL_TABLE_NAMES: ['frequencias', 'conteudos', 'avaliacoes', 'notas', 'fechamentos'],
-    getOperationalTable: (name: string) => mockDb[name],
+    getOperationalTable: (name: string) => (mockDb as Record<string, unknown>)[name],
   };
 });
 
@@ -220,7 +270,13 @@ import {
   cacheAlunos,
   getCachedAlunos,
   saveFrequenciaLocal,
+  deleteFrequenciasLocal,
+  saveConteudoLocal,
+  deleteConteudoLocal,
+  saveAvaliacaoLocal,
+  deleteAvaliacaoLocal,
   clearOldSyncedData,
+  clearAllLocalData,
 } from '../services/offlineStorage';
 import { db } from '../lib/db';
 
@@ -290,13 +346,13 @@ describe('offlineStorage Service', () => {
     const originalAdd = db.frequencias.add;
 
     // Fazer a primeira chamada lançar erro de cota
-    (db.frequencias.add as any) = async (item: any) => {
+    db.frequencias.add = (async (item: Parameters<typeof originalAdd>[0]) => {
       if (!hasThrown) {
         hasThrown = true;
         throw new DOMException('QuotaExceededError', 'QuotaExceededError');
       }
       return await originalAdd.call(db.frequencias, item);
-    };
+    }) as typeof originalAdd;
 
     const freq = {
       turma_id: 't-1',
@@ -352,5 +408,159 @@ describe('offlineStorage Service', () => {
     expect(updatedStore.frequencias.find(f => f.localId === 1)).toBeUndefined();
     expect(updatedStore.frequencias.find(f => f.localId === 2)).toBeDefined();
     expect(updatedStore.frequencias.find(f => f.localId === 3)).toBeDefined();
+  });
+
+  it('removes an offline evaluation, its notes, and only related queue entries', async () => {
+    const store = getMockStore();
+    store.avaliacoes.push({ localId: 42, clientTempId: 'temp_1720000000000' });
+    store.notas.push(
+      { localId: 1, avaliacao_id: 'temp_1720000000000' },
+      { localId: 2, avaliacao_id: 'temp_42' },
+      { localId: 3, avaliacao_id: 'avaliacao-preservada' },
+    );
+    store.syncQueue.push(
+      { id: 10, table: 'avaliacoes', operation: 'INSERT', localId: 42, payload: '{}', status: 'pending', hash: 'av', createdAt: '2026-01-01', updatedAt: '2026-01-01', retryCount: 0 },
+      { id: 11, table: 'notas', operation: 'UPSERT', payload: JSON.stringify({ records: [{ avaliacao_id: 'temp_1720000000000', aluno_id: 'a1' }] }), status: 'pending', hash: 'notas-1', createdAt: '2026-01-01', updatedAt: '2026-01-01', retryCount: 0 },
+      { id: 12, table: 'notas', operation: 'UPSERT', payload: JSON.stringify({ records: [{ avaliacao_id: 'temp_42', aluno_id: 'a2' }, { avaliacao_id: 'avaliacao-preservada', aluno_id: 'a3' }] }), status: 'pending', hash: 'notas-2', createdAt: '2026-01-01', updatedAt: '2026-01-01', retryCount: 0 },
+    );
+
+    await deleteAvaliacaoLocal('temp_1720000000000');
+
+    expect(store.avaliacoes).toHaveLength(0);
+    expect(store.notas.map(n => n.localId)).toEqual([3]);
+    expect(store.syncQueue.map(item => item.id)).toEqual([12]);
+    expect(JSON.parse(String(store.syncQueue[0].payload)).records).toEqual([
+      { avaliacao_id: 'avaliacao-preservada', aluno_id: 'a3' },
+    ]);
+  });
+
+  it('normaliza turma_id composto (UUID||Componente) para UUID puro em operações locais', async () => {
+    const rawTurmaId = '12345678-1234-1234-1234-1234567890ab||Matemática';
+    const expectedTid = '12345678-1234-1234-1234-1234567890ab';
+
+    await saveFrequenciaLocal({
+      turma_id: rawTurmaId,
+      aluno_id: 'aluno-1',
+      data: '2026-03-01',
+      tempo: '1',
+      status: 'P',
+      participacao: 'Presencial',
+      disciplina: 'Matemática',
+    });
+
+    await saveConteudoLocal({
+      turma_id: rawTurmaId,
+      data: '2026-03-01',
+      tempo: '1',
+      objetos: ['Geometria'],
+      habilidades: ['EF01MA01'],
+      descricao: 'Aula inaugural',
+      disciplina: 'Matemática',
+    });
+
+    await saveAvaliacaoLocal({
+      turma_id: rawTurmaId,
+      tipo: 'PROVA',
+      data: '2026-03-10',
+      instrumento: 'Escrita',
+      objetos: [{ objeto: 'Geometria', unidade: 'Unidade 1' }],
+      bimestre: '1º',
+      valor_maximo: 10,
+      disciplina: 'Matemática',
+    });
+
+    const store = getMockStore();
+    expect(store.frequencias[0].turma_id).toBe(expectedTid);
+    expect(store.conteudos[0].turma_id).toBe(expectedTid);
+    expect(store.avaliacoes[0].turma_id).toBe(expectedTid);
+  });
+
+  it('limpa todas as tabelas incluindo curriculos ao chamar clearAllLocalData', async () => {
+    const store = getMockStore();
+    store.turmas.push({ id: 't1' });
+    store.curriculos.push({ id: 'c1', modalidade: 'EF1' });
+    store.alunos.push({ id: 'a1' });
+
+    await clearAllLocalData();
+
+    expect(store.turmas).toHaveLength(0);
+    expect(store.curriculos).toHaveLength(0);
+    expect(store.alunos).toHaveLength(0);
+  });
+
+  it('purga operações pendentes de UPSERT na fila ao deletar frequência local', async () => {
+    const store = getMockStore();
+    store.frequencias.push({
+      localId: 1,
+      turma_id: 't-123',
+      aluno_id: 'a-1',
+      data: '2026-04-15',
+      tempo: '1',
+      disciplina: 'História',
+      status: 'P',
+      syncStatus: 'pending',
+    });
+
+    store.syncQueue.push({
+      id: 99,
+      table: 'frequencias',
+      operation: 'UPSERT',
+      payload: JSON.stringify({
+        records: [{
+          turma_id: 't-123',
+          aluno_id: 'a-1',
+          data: '2026-04-15',
+          tempo: '1',
+          disciplina: 'História',
+          status: 'P',
+        }],
+      }),
+      status: 'pending',
+      hash: 'h-freq-1',
+      createdAt: '2026-04-15',
+      updatedAt: '2026-04-15',
+      retryCount: 0,
+    });
+
+    await deleteFrequenciasLocal('t-123', 'História', '2026-04-15', '1');
+
+    expect(store.frequencias).toHaveLength(0);
+    expect(store.syncQueue).toHaveLength(0);
+  });
+
+  it('purga operações pendentes de UPSERT na fila ao deletar conteúdo local', async () => {
+    const store = getMockStore();
+    store.conteudos.push({
+      localId: 2,
+      turma_id: 't-123',
+      data: '2026-04-15',
+      tempo: '1',
+      disciplina: 'História',
+      descricao: 'Aula offline',
+      syncStatus: 'pending',
+    });
+
+    store.syncQueue.push({
+      id: 100,
+      table: 'conteudos',
+      operation: 'UPSERT',
+      payload: JSON.stringify({
+        turma_id: 't-123',
+        data: '2026-04-15',
+        tempo: '1',
+        disciplina: 'História',
+        descricao: 'Aula offline',
+      }),
+      status: 'pending',
+      hash: 'h-cont-1',
+      createdAt: '2026-04-15',
+      updatedAt: '2026-04-15',
+      retryCount: 0,
+    });
+
+    await deleteConteudoLocal('t-123', 'História', '2026-04-15', '1');
+
+    expect(store.conteudos).toHaveLength(0);
+    expect(store.syncQueue).toHaveLength(0);
   });
 });

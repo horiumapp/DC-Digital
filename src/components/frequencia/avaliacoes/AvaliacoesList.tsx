@@ -1,11 +1,12 @@
 import React from 'react';
-import { Eye, Pencil, Trash2, List, Check, Calendar as CalendarIcon, Plus } from 'lucide-react';
-import { Avaliacao } from '../../../contexts/TurmaContext';
+import { Eye, Pencil, Trash2, List, Check, Calendar as CalendarIcon, Plus, Clock } from 'lucide-react';
+import { Avaliacao, Aluno } from '../../../contexts/TurmaContext';
 import { formatarDataParaISO, formatarDataParaExibicao } from '../../../utils/dateUtils';
+import { isAvaliacaoPendente } from '../../../utils/avaliacaoUtils';
 
 interface AvaliacoesListProps {
   avaliacoes: Avaliacao[];
-  alunos: any[];
+  alunos: Aluno[];
   faltasPorData: Record<string, Set<string>>;
   onViewDetails: (av: Avaliacao) => void;
   onEdit: (av: Avaliacao) => void;
@@ -65,14 +66,22 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                     <tr className="bg-[#eef2ff]/30">
                       <td colSpan={4} className="px-6 py-2 font-bold text-[#0f2851] text-[11px] uppercase tracking-wider">{bim}</td>
                     </tr>
-                    {avsBim.map((av) => (
+                    {avsBim.map((av) => {
+                      const temPendencia = isAvaliacaoPendente(av, avaliacoes, alunos, faltasPorData);
+                      return (
                       <React.Fragment key={av.id}>
                         <tr className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 flex items-center gap-2">
-                            <div className="flex gap-1">
-                              <div className="w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center shadow-sm">
-                                <Check className="w-3 h-3" />
-                              </div>
+                          <td className="px-6 py-4 flex items-center gap-2 flex-wrap">
+                            <div className="flex gap-1 items-center">
+                              {temPendencia ? (
+                                <div className="w-5 h-5 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-sm" title="Notas pendentes">
+                                  <Clock className="w-3 h-3" />
+                                </div>
+                              ) : (
+                                <div className="w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-sm" title="Notas lançadas">
+                                  <Check className="w-3 h-3" />
+                                </div>
+                              )}
                             </div>
                             <span className="text-slate-900 font-bold text-base">{av.tipo}</span>
                           </td>
@@ -105,8 +114,11 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                                   </button>
 
                                   {alunos.some(aluno => {
-                                    const nota = parseFloat((aluno.notas?.[av.id] || '').replace(',', '.'));
-                                    return !isNaN(nota) && nota < 6.0;
+                                    const notaStr = aluno.notas?.[av.id] || aluno.notas?.[String(av.id)];
+                                    const nota = parseFloat((notaStr || '').replace(',', '.'));
+                                    const maxVal = av.valorMaximo ? Number(av.valorMaximo) : 10;
+                                    const mediaCorte = maxVal / 2;
+                                    return !isNaN(nota) && nota < mediaCorte;
                                   }) && !avaliacoes.some(rp => String(rp.parent_id) === String(av.id)) && (
                                     <button 
                                       onClick={() => onAddRP(av)}
@@ -195,7 +207,8 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                           </>
                         )}
                       </React.Fragment>
-                    ))}
+                      );
+                    })}
                   </React.Fragment>
                 );
               })}

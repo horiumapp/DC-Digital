@@ -118,8 +118,8 @@ export default function PortalAluno() {
       return;
     }
 
-    const escolaData = alunoEncontrado.escolas as any;
-    const turmaData = alunoEncontrado.turmas as any;
+    const escolaData = (Array.isArray(alunoEncontrado.escolas) ? alunoEncontrado.escolas[0] : alunoEncontrado.escolas) as { nome?: string; logo_url?: string; inep?: string; diretor?: string; distrito?: string } | null;
+    const turmaData = (Array.isArray(alunoEncontrado.turmas) ? alunoEncontrado.turmas[0] : alunoEncontrado.turmas) as { nome?: string; turno?: string; escola_id?: string; ensino?: string; ano_letivo?: string | number } | null;
 
     // Buscar colegas para calcular o número de chamada (por ordem alfabética)
     const { data: colegas } = await supabase
@@ -142,7 +142,7 @@ export default function PortalAluno() {
       escola_endereco: escolaData?.distrito || '---',
       turma_nome: turmaData?.nome || 'Sem turma',
       turma_turno: turmaData?.turno || '',
-      turma_ano: turmaData?.ano_letivo || APP_CONFIG.YEAR,
+      turma_ano: String(turmaData?.ano_letivo || APP_CONFIG.YEAR),
       matricula: formatMatriculaCpf(alunoEncontrado.cpf),
       data_nascimento: alunoEncontrado.data_nascimento || '---',
       nome_responsavel: alunoEncontrado.nome_responsavel || '---',
@@ -160,13 +160,20 @@ export default function PortalAluno() {
       .eq('aluno_id', alunoEncontrado.id);
 
     if (notasData) {
-      setNotas(notasData.map((n: any) => ({
-        disciplina: n.avaliacoes?.disciplina || 'N/D',
-        tipo: n.avaliacoes?.tipo || 'N/D',
-        valor: n.valor,
-        valor_maximo: n.avaliacoes?.valor_maximo || 10,
-        bimestre: n.avaliacoes?.bimestre || '1º',
-      })));
+      interface NotaRowSelect {
+        valor: number;
+        avaliacoes?: { tipo?: string; disciplina?: string; bimestre?: string; valor_maximo?: number };
+      }
+      setNotas(notasData.map((n: unknown) => {
+        const item = n as NotaRowSelect;
+        return {
+          disciplina: item.avaliacoes?.disciplina || 'N/D',
+          tipo: item.avaliacoes?.tipo || 'N/D',
+          valor: item.valor,
+          valor_maximo: item.avaliacoes?.valor_maximo || 10,
+          bimestre: item.avaliacoes?.bimestre || '1º',
+        };
+      }));
     }
 
     // Buscar frequências do aluno

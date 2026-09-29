@@ -25,28 +25,28 @@ export async function enqueue(
   payload: Record<string, unknown>,
   localId?: number
 ): Promise<number> {
-  const hash = await hashOperation(table, operation, payload);
+  // FIX C3: Passar localId como discriminador em INSERTs sem identidade no payload
+  // (ex: avaliação criada offline) para evitar colisão de hash na fila.
+  const hash = await hashOperation(table, operation, payload, operation === 'INSERT' ? localId : undefined);
   const timestamp = now();
 
-  // Deduplicação: substituir se já existe com mesmo hash e status pending (evita mexer em itens 'processing')
-  const existing = await db.syncQueue
-    .where('hash').equals(hash)
-    .filter(item => item.status === 'pending')
-    .first();
-
-  if (existing?.id) {
-    await db.syncQueue.update(existing.id, {
-      payload: JSON.stringify(payload),
-      updatedAt: timestamp,
-      localId,
-    });
-    return existing.id;
-  }
-
-  // FIX M2: Encapsular check de limite + insert em uma transação Dexie atômica.
-  // Sem a transação, dois enqueues simultâneos poderiam ambos passar pelo check
-  // de currentCount antes de qualquer um inserir (race condition).
+  // Deduplicação, check de limite e inserção em uma única transação Dexie atômica
+  // evitando race condition entre chamadas concorrentes.
   return await db.transaction('rw', db.syncQueue, async () => {
+    const existing = await db.syncQueue
+      .where('hash').equals(hash)
+      .filter(item => item.status === 'pending')
+      .first();
+
+    if (existing?.id) {
+      await db.syncQueue.update(existing.id, {
+        payload: JSON.stringify(payload),
+        updatedAt: timestamp,
+        localId,
+      });
+      return existing.id;
+    }
+
     const currentCount = await db.syncQueue.where('status').anyOf(['pending', 'processing']).count();
     if (currentCount >= MAX_QUEUE_SIZE) {
       throw new Error(
@@ -175,8 +175,16 @@ export async function fail(id: number, error: string): Promise<void> {
  * Reseta itens com erro RECUPERÁVEL para reprocessamento.
  * Itens marcados [DEAD_LETTER] (RLS, FK, duplicate key) são permanentemente
  * irrecuperáveis e NÃO são incluídos — evita loop infinito de falhas.
+ *
+ * FIX H5c: `resetBackoff` controla o comportamento de retryCount:
+ *  - false (ciclo automático): preserva retryCount e o backoff exponencial,
+ *    e NÃO revive itens que já esgotaram MAX_RETRIES (aguardam ação manual).
+ *    Antes, zerar retryCount a cada ciclo anulava o backoff e fazia itens
+ *    permanentemente falhos rodarem em loop infinito.
+ *  - true (ação explícita do usuário "reprocessar"): zera o backoff e tenta
+ *    todos os itens não-dead-letter novamente.
  */
-export async function retryAllErrors(): Promise<number> {
+export async function retryAllErrors(resetBackoff: boolean = false): Promise<number> {
   const errors = await db.syncQueue.where('status').equals('error').toArray();
   const timestamp = now();
   let count = 0;
@@ -185,10 +193,13 @@ export async function retryAllErrors(): Promise<number> {
     // Não reprocessar itens de dead letter — nunca vão sincronizar
     if (item.lastError?.includes('[DEAD_LETTER]')) continue;
 
+    // Não reviver itens que já esgotaram o limite de retries em ciclo automático
+    if (!resetBackoff && (item.retryCount || 0) >= MAX_RETRIES) continue;
+
     if (item.id) {
       await db.syncQueue.update(item.id, {
         status: 'pending' as QueueStatus,
-        retryCount: 0,
+        retryCount: resetBackoff ? 0 : (item.retryCount || 0),
         lastError: undefined,
         updatedAt: timestamp,
         retryAfter: undefined,
@@ -220,6 +231,32 @@ export async function discardDeadLetterItems(): Promise<number> {
     await db.syncQueue.bulkDelete(ids);
   }
   return ids.length;
+}
+
+/**
+ * Força a re-tentativa de itens marcados como dead letter (ação explícita do usuário).
+ * Reseta o status para 'pending', zerando o retryCount e o erro.
+ * Retorna a quantidade de itens re-enfileirados.
+ */
+export async function retryDeadLetterItems(): Promise<number> {
+  const deadItems = await getDeadLetterItems();
+  const timestamp = now();
+  let count = 0;
+
+  for (const item of deadItems) {
+    if (item.id) {
+      await db.syncQueue.update(item.id, {
+        status: 'pending' as QueueStatus,
+        retryCount: 0,
+        lastError: undefined,
+        updatedAt: timestamp,
+        retryAfter: undefined,
+      });
+      count++;
+    }
+  }
+
+  return count;
 }
 
 /**

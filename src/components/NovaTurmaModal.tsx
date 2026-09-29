@@ -3,16 +3,36 @@ import { X, Building2, Users, Clock, Calendar } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { APP_CONFIG } from '../config/appConfig';
 
+export interface NovaTurmaFormData {
+  escola_id: string;
+  nome: string;
+  turno: string;
+  ano_letivo: string | number;
+}
+
+export interface TurmaEditTarget {
+  id?: string;
+  escola_id?: string;
+  nome?: string;
+  turno?: string;
+  ano_letivo?: string | number;
+}
+
+interface EscolaSelectOption {
+  id: string;
+  nome: string;
+}
+
 interface NovaTurmaModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (turma: any) => void;
-  turmaParaEditar?: any;
+  onSave: (turma: NovaTurmaFormData) => void;
+  turmaParaEditar?: TurmaEditTarget | null;
   fixedEscolaId?: string;
 }
 
 export default function NovaTurmaModal({ isOpen, onClose, onSave, turmaParaEditar, fixedEscolaId }: NovaTurmaModalProps) {
-  const [escolas, setEscolas] = useState<any[]>([]);
+  const [escolas, setEscolas] = useState<EscolaSelectOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     escola_id: '',
@@ -51,7 +71,7 @@ export default function NovaTurmaModal({ isOpen, onClose, onSave, turmaParaEdita
         escola_id: turmaParaEditar.escola_id || fixedEscolaId || (escolas.length > 0 ? escolas[0].id : ''),
         nome: turmaParaEditar.nome || '',
         turno: turmaParaEditar.turno || 'Manhã',
-        ano_letivo: turmaParaEditar.ano_letivo || new Date().getFullYear().toString(),
+        ano_letivo: String(turmaParaEditar.ano_letivo || new Date().getFullYear()),
       });
     } else {
       setFormData({

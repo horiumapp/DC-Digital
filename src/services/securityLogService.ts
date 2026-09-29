@@ -1,4 +1,7 @@
 import { supabase } from '../lib/supabase';
+import { now } from '../lib/db';
+
+import * as Queue from './offlineQueue';
 
 export interface SecurityLogInput {
   userId?: string;
@@ -14,16 +17,49 @@ export interface SecurityLogInput {
  * Em vez de guardar o email em texto plano no audit log, guardamos apenas o hash,
  * que ainda permite correlacionar eventos do mesmo usuário sem expor PII.
  * Retorna null se a API de criptografia não estiver disponível.
+ *
+ * FIX S4: Salt fixo de aplicação para resistência a rainbow table/pré-computação.
+ * Não é HMAC verdadeiro (requer chave secreta no servidor), mas aumenta
+ * significativamente o custo de ataque para domínios de email previsíveis.
+ * Prefixo 's1:' permite distinguir hashes salted de hashes legados no banco.
  */
+const EMAIL_HASH_SALT = 'dc-digital-audit-v1';
+
 async function hashEmail(email: string): Promise<string | null> {
   try {
     const encoder = new TextEncoder();
-    const data = encoder.encode(email.toLowerCase().trim());
+    const data = encoder.encode(EMAIL_HASH_SALT + email.toLowerCase().trim());
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return 's1:' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   } catch {
     return null;
+  }
+}
+
+/**
+ * FIX P2-#9: Salva o evento de segurança localmente no IndexedDB como fallback.
+ * Usado quando o Supabase está inacessível (offline, timeout, erro RLS).
+ * Os logs pendentes são sincronizados na próxima vez que o syncEngine rodar.
+ */
+async function saveSecurityLogLocally(input: SecurityLogInput, cleanMetadata: Record<string, unknown>): Promise<void> {
+  try {
+    const emailHash = input.userEmail ? await hashEmail(input.userEmail) : null;
+    const logPayload = {
+      user_id: input.userId || null,
+      user_email: emailHash,
+      action: input.action,
+      entity: input.entity || null,
+      entity_id: input.entityId || null,
+      ip: null,
+      user_agent: (navigator.userAgent || '').replace(/<[^>]*>/g, '').substring(0, 512),
+      metadata: cleanMetadata,
+      created_at: now(),
+    };
+    await Queue.enqueue('security_logs', 'INSERT', logPayload);
+    console.info('[Security Log] Evento enfileirado para sync posterior.');
+  } catch (localErr) {
+    console.error('[Security Log] Falha ao enfileirar log localmente:', localErr);
   }
 }
 
@@ -31,19 +67,22 @@ async function hashEmail(email: string): Promise<string | null> {
  * Registra uma ação de segurança ou privacidade no banco de dados.
  * Esta função falha silenciosamente no console para garantir que o fluxo principal
  * do usuário (ex: login) continue funcionando em caso de falha de conexão.
+ *
+ * FIX P2-#9: Se o Supabase estiver inacessível, salva o evento localmente
+ * no IndexedDB para ser sincronizado posteriormente.
  */
 export async function logSecurityEvent(input: SecurityLogInput): Promise<boolean> {
-  try {
-    // Sanitização de metadados: Garantir que senhas, tokens ou dados pessoais excessivos não sejam salvos no log.
-    const cleanMetadata = input.metadata ? { ...input.metadata } : {};
-    const sensitiveKeys = ['password', 'senha', 'token', 'access_token', 'jwt', 'secret'];
-    
-    for (const key of Object.keys(cleanMetadata)) {
-      if (sensitiveKeys.some(sk => key.toLowerCase().includes(sk))) {
-        cleanMetadata[key] = '[REDUZIDO_POR_SEGURANCA]';
-      }
+  // Sanitização de metadados: Garantir que senhas, tokens ou dados pessoais excessivos não sejam salvos no log.
+  const cleanMetadata = input.metadata ? { ...input.metadata } : {};
+  const sensitiveKeys = ['password', 'senha', 'token', 'access_token', 'jwt', 'secret'];
+  
+  for (const key of Object.keys(cleanMetadata)) {
+    if (sensitiveKeys.some(sk => key.toLowerCase().includes(sk))) {
+      cleanMetadata[key] = '[REDUZIDO_POR_SEGURANCA]';
     }
+  }
 
+  try {
     // FIX M4 (LGPD): Usar hash do email em vez de texto plano no log de auditoria.
     // O hash SHA-256 permite correlacionar eventos do mesmo usuário sem expor PII.
     const emailHash = input.userEmail ? await hashEmail(input.userEmail) : null;
@@ -65,11 +104,15 @@ export async function logSecurityEvent(input: SecurityLogInput): Promise<boolean
 
     if (error) {
       console.warn('[Security Log] Falha ao gravar log no banco (RLS ou conexão):', error.message);
+      // FIX P2-#9: Fallback — salvar localmente para sync posterior
+      await saveSecurityLogLocally(input, cleanMetadata);
       return false;
     }
     return true;
   } catch (err) {
     console.error('[Security Log] Erro ao registrar evento de auditoria:', err);
+    // FIX P2-#9: Fallback — salvar localmente para sync posterior
+    await saveSecurityLogLocally(input, cleanMetadata);
     return false;
   }
 }

@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { APP_CONFIG } from '../config/appConfig';
-import { TurmaService } from '../services/turmaService';
+import { TurmaService, NotaRecord } from '../services/turmaService';
 import { Aluno, Avaliacao } from '../contexts/TurmaContext';
 
 import { useToast } from '../components/common/Toast';
@@ -59,7 +59,7 @@ export default function RelatorioNotas() {
   const [hasSearched, setHasSearched] = useState(false);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
-  const [notas, setNotas] = useState<any[]>([]);
+  const [notas, setNotas] = useState<NotaRecord[]>([]);
 
   const fetchTurmasProfessor = React.useCallback(async () => {
     setLoading(true);
@@ -112,7 +112,7 @@ export default function RelatorioNotas() {
         const { data: profs, error: profError } = await supabase
           .from('professores')
           .select('id, disciplinas')
-          .ilike('email', `%${emailLimpo}%`);
+          .or(`usuario_id.eq.${user.id},email.ilike.${emailLimpo}`);
 
         if (profError) throw profError;
 

@@ -3,7 +3,7 @@ import { ArrowLeft, Printer, Search, BookOpen } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import * as OfflineTurmaService from '../services/turmaServiceOffline';
 import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
 import { APP_CONFIG, getBimestreAtual } from '../config/appConfig';
 
@@ -20,27 +20,27 @@ export default function AparataDetalhes() {
   const [search, setSearch] = useState('');
   const [faltasMap, setFaltasMap] = useState<Record<string, number>>({});
 
-  // Buscar histórico de faltas para todos os alunos da turma filtrados pelo período da aparata
+  // Buscar histórico de faltas para todos os alunos da turma filtrados pelo período da aparata.
+  // O serviço offline-first devolve o cache local quando não há conexão, incluindo registros pending.
   useEffect(() => {
     async function fetchFaltas() {
       if (!turmaAtiva) return;
       try {
         const rawId = turmaAtiva.id.toString().split('||')[0];
-        const { data, error } = await supabase
-          .from('frequencias')
-          .select('aluno_id, status, data')
-          .eq('turma_id', rawId)
-          .eq('disciplina', turmaAtiva.componente)
-          .in('status', ['F', 'FJ']);
-
-        if (error) throw error;
-        
+        const frequencias = await OfflineTurmaService.fetchAllFrequencias(rawId, turmaAtiva.componente);
+        const alunosDaTurma = new Set(alunos.map(aluno => String(aluno.id)));
         const map: Record<string, number> = {};
-        
         const pStart = new Date(bimestreInfo.dataInicio + 'T00:00:00');
         const pEnd = new Date(bimestreInfo.dataFim + 'T23:59:59');
 
-        data?.forEach(f => {
+        frequencias.forEach(f => {
+          // turma e disciplina são filtradas pelo serviço; os demais filtros são
+          // aplicados aqui para manter o escopo da Aparata.
+          if (!alunosDaTurma.has(String(f.aluno_id))) return;
+          if (f.disciplina !== turmaAtiva.componente) return;
+          if (f.status !== 'F' && f.status !== 'FJ') return;
+          if (!f.data) return;
+
           const dataFreq = new Date(f.data + 'T12:00:00'); // Evitar fuso horário
           if (dataFreq >= pStart && dataFreq <= pEnd) {
             map[f.aluno_id] = (map[f.aluno_id] || 0) + 1;
@@ -52,7 +52,7 @@ export default function AparataDetalhes() {
       }
     }
     fetchFaltas();
-  }, [turmaAtiva, bimestreInfo]);
+  }, [turmaAtiva, alunos, bimestreInfo]);
 
   // Cálculo de Aulas Dadas (Lançamentos únicos de frequência)
   const aulasDadas = useMemo(() => {
@@ -72,11 +72,10 @@ export default function AparataDetalhes() {
     const principalAvs = avaliacoes.filter(a => a.tipo.startsWith('AV') && !a.tipo.startsWith('RP'));
 
     return (alunos || []).map((aluno, index) => {
-      // Cálculo Correto da Média (considerando as notas e eventuais recuperações)
-      let media = '0,00';
+      // Cálculo da Soma Parcial (considerando as notas e eventuais recuperações)
+      let somaParcial = '0,00';
       if (principalAvs.length > 0) {
         let soma = 0;
-        let counted = 0;
         principalAvs.forEach(av => {
           const rp = avaliacoes.find(a => a.parent_id?.toString() === av.id?.toString());
           const valAvStr = aluno.notas?.[av.id];
@@ -86,9 +85,8 @@ export default function AparataDetalhes() {
           const valRp = valRpStr ? parseFloat(valRpStr.replace(',', '.')) : 0;
           
           soma += Math.max(isNaN(valAv) ? 0 : valAv, isNaN(valRp) ? 0 : valRp);
-          counted++;
         });
-        media = counted > 0 ? (soma / counted).toFixed(2).replace('.', ',') : '0,00';
+        somaParcial = soma.toFixed(2).replace('.', ',');
       }
       
       const faltas = faltasMap[aluno.id] || 0;
@@ -97,7 +95,7 @@ export default function AparataDetalhes() {
         ...aluno,
         n: index + 1,
         matricula: aluno.matricula, 
-        media,
+        somaParcial,
         faltas
       };
     });
@@ -273,7 +271,7 @@ export default function AparataDetalhes() {
                       <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase w-12">Nº</th>
                       <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Nome</th>
                       <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Matrícula</th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Média</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Soma Parcial</th>
                       <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Faltas</th>
                     </tr>
                   </thead>
@@ -284,8 +282,8 @@ export default function AparataDetalhes() {
                         <td className="px-4 py-2.5 text-[#0f2851] font-bold text-sm hover:underline cursor-pointer">{aluno.nome}</td>
                         <td className="px-4 py-2.5 text-slate-700 text-sm font-mono uppercase">{aluno.matricula}</td>
                         <td className="px-4 py-2.5">
-                          <span className={`inline-block text-white text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[42px] text-center ${parseFloat(aluno.media.replace(',', '.')) >= 6 ? 'bg-emerald-500' : 'bg-red-500'}`}>
-                            {aluno.media}
+                          <span className={`inline-block text-white text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[42px] text-center ${parseFloat(aluno.somaParcial.replace(',', '.')) >= 6 ? 'bg-emerald-500' : 'bg-red-500'}`}>
+                            {aluno.somaParcial}
                           </span>
                         </td>
                         <td className="px-4 py-2.5">

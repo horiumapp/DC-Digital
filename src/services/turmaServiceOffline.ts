@@ -8,7 +8,6 @@
  * Este módulo substitui as chamadas diretas ao turmaService original
  * na camada de contexto (TurmaContext).
  */
-import { supabase } from '../lib/supabase';
 import { getBimestrePorData } from '../utils/dateUtils';
 import type { Aluno, Avaliacao, Conteudo, Horario, Lancamento } from '../contexts/TurmaContext';
 import type { FrequenciaRecord, NotaRecord } from './turmaService';
@@ -18,6 +17,32 @@ import * as Queue from './offlineQueue';
 import * as SyncEngine from './syncEngine';
 
 import { getTid, normalizarDataISO } from '../utils/turmaUtils';
+
+// ============================================================
+// Erro tipado: offline sem cache local
+// ============================================================
+
+/**
+ * U1 FIX: Lançado quando o dispositivo está offline e não há dados locais
+ * em cache para a entidade solicitada. Permite que o componente exiba uma
+ * mensagem contextualizada em vez de apenas um estado vazio sem explicacao.
+ *
+ * Exemplo de tratamento no componente:
+ *   } catch (err) {
+ *     if (err instanceof OfflineNoCacheError) {
+ *       showToast({ type: 'warning', message: err.message });
+ *     }
+ *   }
+ */
+export class OfflineNoCacheError extends Error {
+  constructor(entity: string) {
+    super(
+      `Você está offline e não há dados de ${entity} no dispositivo. ` +
+      'Conecte-se à internet para carregar os dados.'
+    );
+    this.name = 'OfflineNoCacheError';
+  }
+}
 
 // ============================================================
 // Flag de conectividade (atualizada externamente pelo OfflineContext)
@@ -68,16 +93,44 @@ export async function fetchAlunos(turmaId: string | number): Promise<Aluno[]> {
       nome: a.nome,
       cpf: a.cpf,
       turma_id: tid,
+      // Q2 FIX: incluir escola_id no cache para isolamento offline por escola
+      escola_id: (a as unknown as Record<string, unknown>).escola_id as string | undefined,
     })));
     return result;
   } catch {
-    // Fallback local
+    // Fallback local (stale data)
     const { alunos: local, decryptionFailed } = await OfflineStorage.getCachedAlunos(tid);
 
     // FIX: Se a chave de criptografia foi perdida (troca de dispositivo, limpeza de browser),
     // avisar o usuário claramente em vez de exibir '[DADOS PROTEGIDOS - RECONECTE PARA ATUALIZAR]'.
     if (decryptionFailed) {
       console.error('[turmaServiceOffline] Chave de criptografia perdida — dados de alunos offline inacessíveis. Reconecte à internet para re-sincronizar.');
+    }
+
+    // U1 FIX: Quando offline e sem cache local (primeira visita à turma),
+    // lançar erro tipado para que o componente possa exibir mensagem
+    // contextualizada em vez de uma lista vazia sem explicação.
+    if (!_isOnline && local.length === 0 && !decryptionFailed) {
+      throw new OfflineNoCacheError('alunos desta turma');
+    }
+
+    // FIX P1-#6: Stale-while-revalidate — retorna dados locais imediatamente
+    // e tenta revalidar em background se online (erro pode ser intermitente)
+    if (_isOnline && !decryptionFailed) {
+      TurmaService.fetchAlunos(turmaId).then(async (fresh) => {
+        try {
+          await OfflineStorage.cacheAlunos(fresh.map(a => ({
+            id: a.id,
+            nome: a.nome,
+            cpf: a.cpf,
+            turma_id: tid,
+            escola_id: (a as unknown as Record<string, unknown>).escola_id as string | undefined,
+          })));
+          console.info('[turmaServiceOffline] Cache de alunos revalidado em background.');
+        } catch (cacheErr) {
+          console.warn('[turmaServiceOffline] Falha ao re-cachear alunos em background:', cacheErr);
+        }
+      }).catch(() => { /* silencioso — já retornamos stale data */ });
     }
 
     return local.map(a => {
@@ -154,35 +207,105 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
       })));
     }
     
-    // Mesclar com avaliações locais pendentes (que ainda não foram sincronizadas com o servidor)
+    // Mesclar com avaliações locais salvas no IndexedDB (inclusive criadas recentemente)
     const localAvs = await OfflineStorage.getAvaliacoesLocal(tid, disciplina);
-    const localPending = localAvs.filter(a => a.syncStatus === 'pending');
+    const mergedAvaliacoes = [...result.avaliacoes];
+    const remoteIds = new Set(result.avaliacoes.map(a => String(a.id)));
 
-    let mergedAvaliacoes = [...result.avaliacoes];
-    for (const pending of localPending) {
+    for (const local of localAvs) {
       const formatted: Avaliacao = {
-        id: pending.id || pending.serverId || `local_${pending.localId}`,
-        turmaId: pending.turma_id,
-        tipo: pending.tipo,
-        data: pending.data,
-        instrumento: pending.instrumento,
-        objetos: pending.objetos,
-        bimestre: pending.bimestre,
-        valorMaximo: pending.valor_maximo,
-        parent_id: pending.parent_id,
+        id: local.id || local.serverId || `local_${local.localId}`,
+        turmaId: local.turma_id,
+        tipo: local.tipo,
+        data: local.data,
+        instrumento: local.instrumento,
+        objetos: local.objetos,
+        bimestre: local.bimestre,
+        valorMaximo: local.valor_maximo,
+        parent_id: local.parent_id !== undefined ? String(local.parent_id) : undefined,
       };
 
-      const existingIdx = mergedAvaliacoes.findIndex(a => a.id === formatted.id);
-      if (existingIdx >= 0) {
-        mergedAvaliacoes[existingIdx] = formatted;
-      } else {
-        mergedAvaliacoes.push(formatted);
+      const idToCheck = String(formatted.id);
+      const isRemote = remoteIds.has(idToCheck) || (local.id && remoteIds.has(String(local.id))) || (local.serverId && remoteIds.has(String(local.serverId)));
+
+      if (!isRemote) {
+        const existingIdx = mergedAvaliacoes.findIndex(a => 
+          String(a.id) === idToCheck || 
+          (local.id && String(a.id) === String(local.id)) ||
+          (local.serverId && String(a.id) === String(local.serverId))
+        );
+
+        if (existingIdx >= 0) {
+          mergedAvaliacoes[existingIdx] = formatted;
+        } else {
+          mergedAvaliacoes.push(formatted);
+        }
       }
     }
 
+    // Mesclar notas do servidor com notas salvas localmente no IndexedDB (suportando IDs temporários e aliases)
+    const possibleAvIds = new Set<string>();
+    mergedAvaliacoes.forEach(a => {
+      if (a.id) possibleAvIds.add(String(a.id));
+    });
+    localAvs.forEach(a => {
+      if (a.id) possibleAvIds.add(String(a.id));
+      if (a.serverId) possibleAvIds.add(String(a.serverId));
+      if (a.clientTempId) possibleAvIds.add(String(a.clientTempId));
+      if (a.localId) {
+        possibleAvIds.add(String(a.localId));
+        possibleAvIds.add(`temp_${a.localId}`);
+        possibleAvIds.add(`local_${a.localId}`);
+      }
+    });
+
+    const localNotas = await OfflineStorage.getNotasLocal(Array.from(possibleAvIds));
+
+    const aliasToCanonicalMap = new Map<string, string[]>();
+    localAvs.forEach(av => {
+      const canonical = mergedAvaliacoes.find(m => 
+        m.id === av.id || m.id === av.serverId || m.id === av.clientTempId || (av.localId && (m.id === `temp_${av.localId}` || m.id === `local_${av.localId}` || m.id === String(av.localId)))
+      )?.id || av.id || av.serverId || (av.localId ? `temp_${av.localId}` : '');
+
+      if (canonical) {
+        const aliases = new Set<string>([canonical]);
+        if (av.id) aliases.add(String(av.id));
+        if (av.serverId) aliases.add(String(av.serverId));
+        if (av.clientTempId) aliases.add(String(av.clientTempId));
+        if (av.localId) {
+          aliases.add(String(av.localId));
+          aliases.add(`temp_${av.localId}`);
+          aliases.add(`local_${av.localId}`);
+        }
+        const aliasArr = Array.from(aliases);
+        aliasArr.forEach(alias => {
+          aliasToCanonicalMap.set(alias, aliasArr);
+        });
+      }
+    });
+
+    const mergedNotasMap = new Map<string, NotaRecord>();
+    const addNotaToMap = (avaliacaoId: string, alunoId: string, valor: number) => {
+      const aliases = aliasToCanonicalMap.get(avaliacaoId) || [avaliacaoId];
+      aliases.forEach(avId => {
+        mergedNotasMap.set(`${avId}_${alunoId}`, {
+          avaliacao_id: avId,
+          aluno_id: alunoId,
+          valor: valor,
+        });
+      });
+    };
+
+    result.notasData.forEach(n => {
+      addNotaToMap(n.avaliacao_id.toString(), n.aluno_id.toString(), n.valor);
+    });
+    localNotas.forEach(n => {
+      addNotaToMap(n.avaliacao_id.toString(), n.aluno_id.toString(), n.valor);
+    });
+
     return {
       avaliacoes: mergedAvaliacoes,
-      notasData: result.notasData,
+      notasData: Array.from(mergedNotasMap.values()),
     };
   } catch {
     // Fallback local
@@ -196,7 +319,7 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
       objetos: av.objetos,
       bimestre: av.bimestre,
       valorMaximo: av.valor_maximo,
-      parent_id: av.parent_id,
+      parent_id: av.parent_id !== undefined ? String(av.parent_id) : undefined,
     }));
 
     const avIds = avaliacoes.map(a => a.id);
@@ -274,20 +397,41 @@ export async function fetchFechamentos(turmaId: string | number, disciplina: str
   const tid = getTid(turmaId);
   try {
     if (!_isOnline) throw new Error('Offline');
-    const result = await TurmaService.fetchFechamentos(turmaId, disciplina);
-    // Cache
-    const records = Object.entries(result).map(([bimestre, isFechado]) => ({
+    const rawRecords = await TurmaService.fetchFechamentosRaw(turmaId, disciplina);
+    // Cache: salvar registros reais sem duplicar aliases no IndexedDB
+    const records = rawRecords.map(f => ({
       turma_id: tid,
       disciplina,
-      bimestre,
-      status: isFechado ? 'FECHADO' : 'ABERTO',
+      bimestre: f.bimestre,
+      status: (f.status === 'FECHADO' ? 'FECHADO' : 'ABERTO') as 'FECHADO' | 'ABERTO',
     }));
     await OfflineStorage.cacheFechamentos(tid, disciplina, records);
-    return result;
+    
+    const map: Record<string, boolean> = {};
+    rawRecords.forEach(f => {
+      const isFechado = f.status === 'FECHADO';
+      map[f.bimestre] = isFechado;
+      const match = f.bimestre.match(/^[1-4]/);
+      if (match) {
+        const n = match[0];
+        map[`${n}. BIMESTRE`] = isFechado;
+        map[`${n}º Bimestre`] = isFechado;
+      }
+    });
+    return map;
   } catch {
     const local = await OfflineStorage.getFechamentosLocal(tid, disciplina);
     const map: Record<string, boolean> = {};
-    local.forEach(f => { map[f.bimestre] = f.status === 'FECHADO'; });
+    local.forEach(f => {
+      const isFechado = f.status === 'FECHADO';
+      map[f.bimestre] = isFechado;
+      const match = f.bimestre.match(/^[1-4]/);
+      if (match) {
+        const n = match[0];
+        map[`${n}. BIMESTRE`] = isFechado;
+        map[`${n}º Bimestre`] = isFechado;
+      }
+    });
     return map;
   }
 }
@@ -443,8 +587,17 @@ export async function salvarAvaliacao(
     parent_id: av.parent_id,
   };
 
+  // FIX C4: Propagar o id temporário da UI (temp_<Date.now>) para o registro
+  // local. Sem isso, notas enfileiradas com avaliacao_id = temp_... nunca eram
+  // resolvidas após a avaliação sincronizar (updateTempAvaliacaoId não conhecia
+  // esse id) e as notas ficavam em loop infinito até serem purgadas.
+  const localPayload = {
+    ...payload,
+    ...(av.id && av.id.startsWith('temp_') ? { clientTempId: av.id } : {}),
+  };
+
   // 1. Salvar localmente
-  const localId = await OfflineStorage.saveAvaliacaoLocal(payload);
+  const localId = await OfflineStorage.saveAvaliacaoLocal(localPayload);
 
   // 2. Enfileirar
   await Queue.enqueue('avaliacoes', av.id && !av.id.startsWith('temp_') ? 'UPDATE' : 'INSERT', payload, localId);
@@ -472,19 +625,38 @@ export async function removerAvaliacao(id: string): Promise<void> {
 
 export async function salvarNotas(
   avaliacaoId: string,
-  notas: { alunoId: string; valor: string }[]
+  notas: { alunoId: string; valor: string }[],
+  alunoIdsRemovidos?: string[]
 ): Promise<void> {
-  // 1. Salvar localmente
-  const records = notas.map(n => ({
-    avaliacao_id: avaliacaoId,
-    aluno_id: n.alunoId,
-    valor: parseFloat(n.valor.replace(',', '.')),
-  }));
+  const avIdStr = String(avaliacaoId);
 
-  await OfflineStorage.saveNotasLocal(records);
+  // 1. Processar notas preenchidas
+  const preenchidas = notas.filter(n => n.valor !== undefined && n.valor !== null && n.valor.trim() !== '');
+  if (preenchidas.length > 0) {
+    const records = preenchidas.map(n => ({
+      avaliacao_id: avIdStr,
+      aluno_id: String(n.alunoId),
+      valor: parseFloat(n.valor.replace(',', '.')),
+    }));
 
-  // 2. Enfileirar (batch como um item)
-  await Queue.enqueue('notas', 'UPSERT', { records });
+    await OfflineStorage.saveNotasLocal(records);
+    await Queue.enqueue('notas', 'UPSERT', { records });
+  }
+
+  // 2. Processar notas removidas (em branco)
+  const removidos = alunoIdsRemovidos && alunoIdsRemovidos.length > 0
+    ? alunoIdsRemovidos
+    : notas.filter(n => !n.valor || n.valor.trim() === '').map(n => String(n.alunoId));
+
+  if (removidos.length > 0) {
+    await OfflineStorage.deleteNotasLocal(avIdStr, removidos);
+    if (!avIdStr.startsWith('temp_') && !avIdStr.startsWith('local_')) {
+      await Queue.enqueue('notas', 'DELETE', {
+        avaliacao_id: avIdStr,
+        aluno_ids: removidos,
+      });
+    }
+  }
 
   // 3. Sync
   if (_isOnline) {
@@ -501,16 +673,27 @@ export async function removerFrequencia(
   const tid = getTid(turmaId);
   const dataISO = normalizarDataISO(data);
 
+  // FIX P0-#2: Verificar se há registros sincronizados ANTES de deletar.
+  // Se todos eram 'pending' (nunca enviados ao servidor), não enfileirar DELETE
+  // remoto — evita dead letters para dados inexistentes no Supabase.
+  // Padrão já usado em deleteConteudoLocal (FIX C3).
+  const existing = await OfflineStorage.getAllFrequenciasLocal(tid, disciplina);
+  const hasSyncedRecords = existing.some(
+    r => r.data === dataISO && r.tempo === tempo && r.syncStatus !== 'pending'
+  );
+
   // 1. Remover localmente
   await OfflineStorage.deleteFrequenciasLocal(tid, disciplina, dataISO, tempo);
 
-  // 2. Enfileirar
-  await Queue.enqueue('frequencias', 'DELETE', {
-    turma_id: tid,
-    data: dataISO,
-    tempo,
-    disciplina,
-  });
+  // 2. Só enfileirar DELETE se havia registros já sincronizados com o servidor
+  if (hasSyncedRecords) {
+    await Queue.enqueue('frequencias', 'DELETE', {
+      turma_id: tid,
+      data: dataISO,
+      tempo,
+      disciplina,
+    });
+  }
 
   if (_isOnline) {
     SyncEngine.scheduleSync();

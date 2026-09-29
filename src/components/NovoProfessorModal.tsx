@@ -1,11 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, Mail, CreditCard, Phone, Activity, Briefcase, GraduationCap, LayoutGrid, KeyRound, Plus } from 'lucide-react';
 
+export interface NovoProfessorFormData {
+  nome: string;
+  email: string;
+  cpf: string;
+  telefone: string;
+  senha?: string;
+  status: string;
+  vinculo: string;
+  departamento: string;
+  disciplinas: string[];
+}
+
+export interface ProfessorEditTarget {
+  id?: string;
+  nome?: string;
+  email?: string;
+  cpf?: string;
+  telefone?: string;
+  status?: string;
+  vinculo?: string;
+  departamento?: string;
+  disciplinas?: string[];
+}
+
 interface NovoProfessorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (professor: any) => void;
-  professorParaEditar?: any;
+  onSave: (professor: NovoProfessorFormData) => void;
+  professorParaEditar?: ProfessorEditTarget | null;
 }
 
 const DEPARTAMENTOS = ['Geral', 'BIOLÓGICAS', 'HUMANAS', 'EXATAS', 'LINGUAGENS'];
@@ -205,10 +229,10 @@ const NovoProfessorModal = React.memo(function NovoProfessorModal({ isOpen, onCl
                     onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
                     autoComplete="new-password"
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all placeholder-slate-400 font-medium"
-                    placeholder="Padrão: @prof123 (Mín. 6 caracteres)"
+                    placeholder="Mín. 8 caracteres (letras e números)"
                   />
                   <p className="text-[10px] text-slate-400 font-medium ml-1">
-                    Defina uma senha para que o professor possa acessar o sistema. Se deixar vazio, usará a senha padrão @prof123.
+                    Defina uma senha para que o professor possa acessar o sistema. Se deixar vazio, será gerada uma senha temporária segura exibida após o cadastro.
                   </p>
                 </div>
               )}
