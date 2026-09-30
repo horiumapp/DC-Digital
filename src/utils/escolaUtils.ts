@@ -4,6 +4,9 @@
 
 // Mapeamento de termos no nome da escola para logos locais na pasta public
 const MAPA_LOGOS_NOMES: Array<{ pattern: RegExp; file: string }> = [
+  { pattern: /DANILO/i, file: '/Danilo.png' },
+  { pattern: /PENHA\s+SAID/i, file: '/Penha Said.png' },
+  { pattern: /MARIA\s+MADALENA/i, file: '/Maria Madalena.png' },
   { pattern: /FRANCISCA\s+MENDES/i, file: '/Francisca Mendes.png' },
   { pattern: /JOS[EÉ]\s+MAIA/i, file: '/José Maia.png' },
   { pattern: /PASTOR\s+JOS[EÉ]\s+REIS|PASTOR\s+REIS/i, file: '/Pastor José Reis.png' },
@@ -19,6 +22,20 @@ export const LOGO_PADRAO_SEMED = '/semed.png';
 export interface EscolaVisualInfo {
   logo_url?: string | null;
   nome?: string | null;
+}
+
+/**
+ * Tenta encontrar um logo correspondente pelo nome da escola.
+ * Retorna o caminho do logo (ex: '/Danilo.png') ou null se não encontrar.
+ */
+export function findSuggestedLogo(nome?: string | null): string | null {
+  if (!nome) return null;
+  for (const item of MAPA_LOGOS_NOMES) {
+    if (item.pattern.test(nome)) {
+      return item.file;
+    }
+  }
+  return null;
 }
 
 /**
@@ -42,13 +59,9 @@ export function getEscolaLogo(escola?: EscolaVisualInfo | null): string {
     return `/${trimmed}`;
   }
 
-  const nome = escola?.nome || '';
-  if (nome) {
-    for (const item of MAPA_LOGOS_NOMES) {
-      if (item.pattern.test(nome)) {
-        return item.file;
-      }
-    }
+  const suggested = findSuggestedLogo(escola?.nome);
+  if (suggested) {
+    return suggested;
   }
 
   return LOGO_PADRAO_SEMED;

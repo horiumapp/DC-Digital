@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Building2, MapPin, Hash, User, UserCheck, Activity, Image as ImageIcon } from 'lucide-react';
 import logosLocais from '../config/logos.json';
-import { getEscolaLogo } from '../utils/escolaUtils';
+import { getEscolaLogo, findSuggestedLogo } from '../utils/escolaUtils';
 
 export interface NovaEscolaData {
   nome: string;
@@ -44,6 +44,7 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
 
   useEffect(() => {
     if (escolaParaEditar) {
+      const suggested = findSuggestedLogo(escolaParaEditar.nome) || '';
       setFormData({
         nome: escolaParaEditar.nome || '',
         localizacao: escolaParaEditar.distrito || '', // assuming the table uses 'distrito'
@@ -51,7 +52,7 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
         gestor: escolaParaEditar.diretor || '',
         secretario: escolaParaEditar.secretario || '',
         ativo: escolaParaEditar.status === 'Ativa',
-        logo_url: escolaParaEditar.logo_url || '',
+        logo_url: escolaParaEditar.logo_url || suggested,
       });
     } else {
       setFormData({
@@ -111,7 +112,15 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
               type="text"
               required
               value={formData.nome}
-              onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+              onChange={(e) => {
+                const novoNome = e.target.value;
+                const suggested = findSuggestedLogo(novoNome);
+                setFormData(prev => ({
+                  ...prev,
+                  nome: novoNome,
+                  logo_url: (!prev.logo_url && suggested) ? suggested : prev.logo_url
+                }));
+              }}
               className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
               placeholder="Ex: E.M.E.F. Machado de Assis"
             />
