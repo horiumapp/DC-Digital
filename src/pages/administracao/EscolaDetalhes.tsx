@@ -179,15 +179,18 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
 
           <div className="flex items-center">
             {/* Logo da Escola */}
-            {escola.logo_url && (
-              <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-2xl p-2 border border-white/20 flex items-center justify-center overflow-hidden group hover:bg-white transition-all duration-300 shadow-2xl">
-                <img 
-                  src={escola.logo_url} 
-                  alt="Logo Escola" 
-                  className="max-w-full max-h-full object-contain filter drop-shadow-md" 
-                />
-              </div>
-            )}
+            <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-2xl p-2 border border-white/20 flex items-center justify-center overflow-hidden group hover:bg-white transition-all duration-300 shadow-2xl">
+              <img 
+                src={getEscolaLogo(escola)} 
+                alt="Logo Escola" 
+                className="max-w-full max-h-full object-contain filter drop-shadow-md" 
+                onError={(e) => {
+                  if (!e.currentTarget.src.endsWith('/semed.png')) {
+                    e.currentTarget.src = '/semed.png';
+                  }
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>
