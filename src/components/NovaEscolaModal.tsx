@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Building2, MapPin, Hash, User, UserCheck, Activity, Image as ImageIcon } from 'lucide-react';
 import logosLocais from '../config/logos.json';
+import { getEscolaLogo } from '../utils/escolaUtils';
 
 export interface NovaEscolaData {
   nome: string;
@@ -189,7 +190,7 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
                 onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
                 className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all bg-white text-sm"
               >
-                <option value="">Sem Logo</option>
+                <option value="">Sem Logo (Padrão: semed.png)</option>
                 <optgroup label="Logos Locais (Pasta Public)">
                   {logosLocais.map((logo) => (
                     <option key={logo} value={logo}>
@@ -198,11 +199,18 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
                   ))}
                 </optgroup>
               </select>
-              {formData.logo_url && (
-                <div className="w-11 h-11 border border-slate-200 rounded-lg p-1 flex items-center justify-center bg-slate-50">
-                  <img src={formData.logo_url} alt="Preview" className="max-w-full max-h-full object-contain" />
-                </div>
-              )}
+              <div className="w-11 h-11 border border-slate-200 rounded-lg p-1 flex items-center justify-center bg-slate-50" title="Pré-visualização do logo">
+                <img 
+                  src={getEscolaLogo({ logo_url: formData.logo_url, nome: formData.nome })} 
+                  alt="Preview" 
+                  className="max-w-full max-h-full object-contain"
+                  onError={(e) => {
+                    if (!e.currentTarget.src.endsWith('/semed.png')) {
+                      e.currentTarget.src = '/semed.png';
+                    }
+                  }} 
+                />
+              </div>
             </div>
             <p className="text-[10px] text-slate-400 mt-1">
               Selecione uma logo da lista ou cole uma URL externa abaixo.

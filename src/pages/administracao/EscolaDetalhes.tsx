@@ -9,6 +9,7 @@ import NovoUsuarioEscolarModal from '../../components/NovoUsuarioEscolarModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import NovaEscolaModal from '../../components/NovaEscolaModal';
 import { useToast } from '../../components/common/Toast';
+import { getEscolaLogo } from '../../utils/escolaUtils';
 
 import { type EscolaRow, type EscolaFormData } from './TabEscolas';
 

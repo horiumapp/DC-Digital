@@ -14,6 +14,7 @@ import {
 } from '../../utils/csvImportExport';
 
 import { useToast } from '../../components/common/Toast';
+import { getEscolaLogo } from '../../utils/escolaUtils';
 
 export interface EscolaRow {
   id: string;
@@ -307,19 +308,18 @@ export default function TabEscolas() {
 
                 {/* Logo and Status (Top Right) */}
                 <div className="absolute top-4 right-4 flex flex-col items-end gap-2">
-                  {escola.logo_url ? (
-                    <div className="w-14 h-14 bg-white rounded-xl p-1 shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden">
-                      <img 
-                        src={(/^https?:\/\//.test(escola.logo_url) || escola.logo_url.startsWith('data:image/') || escola.logo_url.startsWith('/')) ? escola.logo_url : undefined} 
-                        alt="Logo" 
-                        className="max-w-full max-h-full object-contain" 
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-14 h-14 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 opacity-20">
-                      <Building2 className="w-8 h-8 text-[#0f2851]" />
-                    </div>
-                  )}
+                  <div className="w-14 h-14 bg-white rounded-xl p-1 shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden">
+                    <img 
+                      src={getEscolaLogo(escola)} 
+                      alt={escola.nome || "Logo"} 
+                      className="max-w-full max-h-full object-contain"
+                      onError={(e) => {
+                        if (!e.currentTarget.src.endsWith('/semed.png')) {
+                          e.currentTarget.src = '/semed.png';
+                        }
+                      }} 
+                    />
+                  </div>
 
                   {/* Status Badge */}
                   <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest ${
