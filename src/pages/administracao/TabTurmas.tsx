@@ -16,6 +16,7 @@ import {
 
 import { useToast } from '../../components/common/Toast';
 import { readAllRows } from '../../services/pagination';
+import { getEscolaLogo } from '../../utils/escolaUtils';
 
 export interface TurmaRow {
   id: string;
@@ -385,15 +386,18 @@ export default function TabTurmas() {
                 </div>
 
                 {/* Logo da Escola */}
-                {selectedEscola.logo_url && (
-                  <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-2xl p-2 border border-white/20 flex items-center justify-center overflow-hidden group hover:bg-white transition-all duration-300 shadow-2xl">
-                    <img 
-                      src={(/^https?:\/\//.test(selectedEscola.logo_url) || selectedEscola.logo_url.startsWith('data:image/') || selectedEscola.logo_url.startsWith('/')) ? selectedEscola.logo_url : undefined} 
-                      alt="Logo Escola" 
-                      className="max-w-full max-h-full object-contain filter drop-shadow-md" 
-                    />
-                  </div>
-                )}
+                <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-2xl p-2 border border-white/20 flex items-center justify-center overflow-hidden group hover:bg-white transition-all duration-300 shadow-2xl">
+                  <img 
+                    src={getEscolaLogo(selectedEscola)} 
+                    alt="Logo Escola" 
+                    className="max-w-full max-h-full object-contain filter drop-shadow-md" 
+                    onError={(e) => {
+                      if (!e.currentTarget.src.endsWith('/semed.png')) {
+                        e.currentTarget.src = '/semed.png';
+                      }
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -467,19 +471,18 @@ export default function TabTurmas() {
                 >
                   {/* Logo (Top Right) */}
                   <div className="absolute top-4 right-4 flex flex-col items-end gap-2">
-                    {escola.logo_url ? (
-                      <div className="w-12 h-12 bg-white rounded-xl p-1 shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden">
-                        <img 
-                          src={(/^https?:\/\//.test(escola.logo_url) || escola.logo_url.startsWith('data:image/') || escola.logo_url.startsWith('/')) ? escola.logo_url : undefined} 
-                          alt="Logo" 
-                          className="max-w-full max-h-full object-contain" 
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 opacity-20">
-                        <Building2 className="w-8 h-8 text-[#0f2851]" />
-                      </div>
-                    )}
+                    <div className="w-12 h-12 bg-white rounded-xl p-1 shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden">
+                      <img 
+                        src={getEscolaLogo(escola)} 
+                        alt="Logo" 
+                        className="max-w-full max-h-full object-contain" 
+                        onError={(e) => {
+                          if (!e.currentTarget.src.endsWith('/semed.png')) {
+                            e.currentTarget.src = '/semed.png';
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
                   
                   <div className="w-12 h-12 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center mb-4 group-hover:bg-[#0f2851] group-hover:text-white transition-colors duration-300">
