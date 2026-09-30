@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Loader2, GraduationCap, Briefcase, Sparkles, ShieldCheck, WifiOff, CheckCircle2 } from 'lucide-react';
+import { Loader2, GraduationCap, Briefcase, Sparkles, ShieldCheck, WifiOff, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { useCaptcha } from '../hooks/useCaptcha';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Background from '../components/Background';
@@ -28,6 +28,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loginMode, setLoginMode] = useState<'servidor' | 'aluno'>('servidor');
+  const [showPassword, setShowPassword] = useState(false);
 
   // UX LOCAL de tentativas e lockout timer
   const [failedAttempts, setFailedAttempts] = useState(() => {
@@ -342,16 +343,27 @@ export default function Login() {
                       </Link>
                     )}
                   </div>
-                  <input 
-                    type="password" 
-                    id="password" 
-                    name="password" 
-                    placeholder="••••••••" 
-                    required 
-                    minLength={8}
-                    autoComplete="current-password"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#0b1f3f]/15 focus:border-[#0b1f3f] transition-all shadow-sm"
-                  />
+                  <div className="relative">
+                    <input 
+                      type={showPassword ? 'text' : 'password'} 
+                      id="password" 
+                      name="password" 
+                      placeholder="••••••••" 
+                      required 
+                      minLength={8}
+                      autoComplete="current-password"
+                      className="w-full px-4 py-3 pr-12 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#0b1f3f]/15 focus:border-[#0b1f3f] transition-all shadow-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((visible) => !visible)}
+                      className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#0b1f3f] dark:hover:text-blue-300 transition-colors"
+                      aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                      title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Captcha se tentativas falhas >= 3 */}
