@@ -13,10 +13,11 @@ export async function loadAcademicCalendar(escolaId?: string): Promise<void> {
   } catch { /* A corrupt cache does not replace the bundled calendar. */ }
   try {
     let query = supabase.from('periodos_letivos').select('escola_id, periodo, data_inicio, data_fim').eq('ano', APP_CONFIG.YEAR);
-    query = (escolaId && typeof (query as any)?.or === 'function')
-      ? query.or(`escola_id.is.null,escola_id.eq.${escolaId}`)
-      : (typeof (query as any)?.is === 'function' ? query.is('escola_id', null) : query);
-    const orderedQuery = typeof (query as any)?.order === 'function'
+    const q = query as unknown as Record<string, unknown>;
+    query = (escolaId && typeof q.or === 'function')
+      ? (q.or as (arg: string) => typeof query)(`escola_id.is.null,escola_id.eq.${escolaId}`)
+      : (typeof q.is === 'function' ? (q.is as (col: string, val: unknown) => typeof query)('escola_id', null) : query);
+    const orderedQuery = typeof (query as unknown as Record<string, unknown>).order === 'function'
       ? query.order('periodo').order('id')
       : query;
     const {data} = await readAllRows<CalendarRow>(orderedQuery);
