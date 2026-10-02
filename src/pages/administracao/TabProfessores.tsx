@@ -130,7 +130,7 @@ export default function TabProfessores() {
     try {
       const query = supabase
         .from('professores')
-        .select('id, nome, email, status, departamento, disciplinas, vinculo, telefone, professor_alocacoes(id, escola_id, turno, escolas(nome)), professor_horarios(id, escola_id)')
+        .select('id, nome, email, cpf, status, departamento, disciplinas, vinculo, telefone, professor_alocacoes(id, escola_id, turno, escolas(nome)), professor_horarios(id, escola_id)')
         .order('nome');
         
       const { data } = await readAllRows<ProfessorRow>(query.order('id'));
