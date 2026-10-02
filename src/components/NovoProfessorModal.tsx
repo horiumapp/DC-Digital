@@ -229,10 +229,10 @@ const NovoProfessorModal = React.memo(function NovoProfessorModal({ isOpen, onCl
                     onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
                     autoComplete="new-password"
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all placeholder-slate-400 font-medium"
-                    placeholder="Mín. 8 caracteres (letras e números)"
+                    placeholder="Padrão: @prof123"
                   />
                   <p className="text-[10px] text-slate-400 font-medium ml-1">
-                    Defina uma senha para que o professor possa acessar o sistema. Se deixar vazio, será gerada uma senha temporária segura exibida após o cadastro.
+                    Defina uma senha ou deixe em branco para usar a senha padrão <strong className="text-slate-600 font-bold">@prof123</strong>.
                   </p>
                 </div>
               )}
