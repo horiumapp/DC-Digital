@@ -265,6 +265,7 @@ ALTER TABLE public.curriculo_habilidades
 -- -------------------------------------------------------------
 
 -- Edição atômica de currículo (unidade + objetos)
+DROP FUNCTION IF EXISTS public.update_curriculo_unidade_com_objetos(uuid, text, text, text, text, text, text[]);
 CREATE OR REPLACE FUNCTION public.update_curriculo_unidade_com_objetos(
   p_id uuid,
   p_modalidade text,
@@ -320,6 +321,7 @@ REVOKE ALL ON FUNCTION public.update_curriculo_unidade_com_objetos(uuid, text, t
 GRANT EXECUTE ON FUNCTION public.update_curriculo_unidade_com_objetos(uuid, text, text, text, text, text, text[]) TO authenticated;
 
 -- Exclusão atômica de unidade de currículo
+DROP FUNCTION IF EXISTS public.delete_curriculo_unidade(uuid);
 CREATE OR REPLACE FUNCTION public.delete_curriculo_unidade(p_id uuid)
 RETURNS void
 LANGUAGE plpgsql
