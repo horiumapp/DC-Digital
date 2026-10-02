@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Check, Pencil, Trash2, X } from 'lucide-react';
+import { Check, Pencil, Trash2, X, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useToast } from '../common/Toast';
 import { useTurma } from '../../contexts/TurmaContext';
 import { supabase } from '../../lib/supabase';
 import * as OfflineStorage from '../../services/offlineStorage';
 import { getBimestrePorData } from '../../utils/dateUtils';
+import Captcha from '../common/Captcha';
+import { useCaptcha } from '../../hooks/useCaptcha';
 
 interface CurriculoObjeto {
   id?: string;
@@ -55,6 +57,16 @@ export default function ObjetoConhecimentoTab({
   const [isAddingObjeto, setIsAddingObjeto] = useState(false);
   const [objetoSalvo, setObjetoSalvo] = useState(false);
   const [objetoData, setObjetoData] = useState<{ descricao: string; observacao: string; status: string } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const {
+    generatedCaptcha,
+    captchaInput,
+    setCaptchaInput,
+    captchaError,
+    generateNewCaptcha,
+    validateCaptcha
+  } = useCaptcha();
   
   // Lógica de Currículo Dinâmico (Busca no Banco)
   const [unidadesBD, setUnidadesBD] = useState<CurriculoUnidade[]>([]);
@@ -179,7 +191,7 @@ export default function ObjetoConhecimentoTab({
     carregar();
   }, [selectedDate, tempoAula, turmaAtiva, buscarConteudo, unidadesDisponiveis, curriculoIndisponivel]);
 
-  const { showWarning } = useToast();
+  const { showWarning, showError, showSuccess } = useToast();
 
   const handleExcluirObjeto = async () => {
     await removerConteudo(selectedDate, tempoAula);
@@ -188,6 +200,13 @@ export default function ObjetoConhecimentoTab({
     setShowObjetoTable(false);
     setObjetoObservacao('');
     setShowDeleteObjetoModal(false);
+    showSuccess('Conteúdo ministrado excluído com sucesso.');
+  };
+
+  const handleVoltar = () => {
+    setIsAddingObjeto(false);
+    setCaptchaInput('');
+    generateNewCaptcha();
   };
 
   const handleSave = async () => {
@@ -197,32 +216,48 @@ export default function ObjetoConhecimentoTab({
       return;
     }
 
+    if (!validateCaptcha()) {
+      showError('Código de confirmação incorreto. Tente novamente.');
+      return;
+    }
+
     // Garantir que objetoConhecimento seja string ao salvar
     const objParaSalvar = typeof objetoConhecimento === 'object' && objetoConhecimento !== null
       ? ((objetoConhecimento as Record<string, unknown>).descricao as string || (objetoConhecimento as Record<string, unknown>).titulo_oc as string || JSON.stringify(objetoConhecimento))
       : objetoConhecimento;
 
-    await salvarConteudo({
-      turmaId: String(turmaAtiva?.id || ''),
-      data: selectedDate,
-      tempo: tempoAula,
-      objetos: [objParaSalvar],
-      habilidades: [],
-      descricao: objetoObservacao
-    });
+    setIsSaving(true);
+    try {
+      await salvarConteudo({
+        turmaId: String(turmaAtiva?.id || ''),
+        data: selectedDate,
+        tempo: tempoAula,
+        objetos: [objParaSalvar],
+        habilidades: [],
+        descricao: objetoObservacao
+      });
 
-    setObjetoData({ descricao: objParaSalvar, observacao: objetoObservacao, status: objetoStatus });
-    setObjetoSalvo(true);
-    setShowObjetoTable(false);
-    setIsAddingObjeto(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+      setObjetoData({ descricao: objParaSalvar, observacao: objetoObservacao, status: objetoStatus });
+      setObjetoSalvo(true);
+      setShowObjetoTable(false);
+      setIsAddingObjeto(false);
+      setCaptchaInput('');
+      generateNewCaptcha();
+      showSuccess('Conteúdo ministrado gravado com sucesso!');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Auto-advance to the next tempo that doesn't have content yet
-    const nextPendingTempo = disponiveisTempos.find(t => 
-      t !== tempoAula && !lancamentos.some(l => l.data === selectedDate && l.tempo === t && l.tipo === 'conteudo')
-    );
-    if (nextPendingTempo) {
-      setTempoAula(nextPendingTempo);
+      // Auto-advance to the next tempo that doesn't have content yet
+      const nextPendingTempo = disponiveisTempos.find(t => 
+        t !== tempoAula && !lancamentos.some(l => l.data === selectedDate && l.tempo === t && l.tipo === 'conteudo')
+      );
+      if (nextPendingTempo) {
+        setTempoAula(nextPendingTempo);
+      }
+    } catch (err) {
+      console.error('Erro ao salvar conteúdo ministrado:', err);
+      showError('Erro ao salvar conteúdo ministrado. Tente novamente.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -263,6 +298,7 @@ export default function ObjetoConhecimentoTab({
                     onClick={() => {
                       setShowObjetoTable(false);
                       setShowNoRecordsObjeto(false);
+                      generateNewCaptcha();
                       setIsAddingObjeto(true);
                     }}
                     className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-4 sm:px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] flex items-center gap-2 shadow-sm active:scale-95 whitespace-nowrap"
@@ -305,7 +341,11 @@ export default function ObjetoConhecimentoTab({
                           {!disabled ? (
                             <>
                               <button
-                                onClick={() => { setShowObjetoTable(false); setIsAddingObjeto(true); }}
+                                onClick={() => { 
+                                  setShowObjetoTable(false); 
+                                  generateNewCaptcha();
+                                  setIsAddingObjeto(true); 
+                                }}
                                 className="flex items-center gap-1 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-3 py-1.5 rounded text-xs font-bold hover:bg-[#e0e7ff] transition"
                               >
                                 <Pencil className="w-3 h-3" /> Alterar
@@ -424,18 +464,56 @@ export default function ObjetoConhecimentoTab({
             />
           </div>
 
-          <div className="pt-2">
-             <div className="flex items-center gap-3">
-               <button
-                 onClick={handleSave}
-                 className="flex items-center gap-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-8 py-2 rounded text-sm font-bold hover:bg-[#e0e7ff] transition shadow-sm active:scale-95"
-               >
-                 <Check className="w-4 h-4" /> Confirmar lançamento
-               </button>
-               <button onClick={() => setIsAddingObjeto(false)} className="bg-white text-slate-600 border border-slate-200 px-6 py-2 rounded text-sm font-medium hover:bg-slate-50 transition">
-                 Cancelar
-               </button>
-             </div>
+          {/* Captcha & Save Action Bar */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+            {!disabled && (
+              <div className="max-w-md">
+                <Captcha
+                  generatedCaptcha={generatedCaptcha}
+                  captchaInput={captchaInput}
+                  setCaptchaInput={setCaptchaInput}
+                  captchaError={captchaError}
+                  generateNewCaptcha={generateNewCaptcha}
+                  className="mb-2"
+                />
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              {!disabled ? (
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="inline-flex items-center gap-2 bg-[#0b1f3f] hover:bg-[#133060] text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-[#0b1f3f]/15 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {isSaving ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Gravando...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Confirmar e Gravar Conteúdo Ministrado
+                    </>
+                  )}
+                </button>
+              ) : (
+                <div className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-4 py-2.5 rounded-xl border border-amber-200 dark:border-amber-800 font-semibold flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  Período letivo fechado — edições não são permitidas.
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handleVoltar}
+                className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-750 transition cursor-pointer"
+              >
+                Voltar
+              </button>
+            </div>
           </div>
         </div>
       )}
