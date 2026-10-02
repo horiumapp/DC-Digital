@@ -231,6 +231,8 @@ export default function TabProfessores() {
           } else {
             showWarning('Professor cadastrado, mas a senha deve ter no mínimo 8 caracteres, incluindo letras e números, para criar conta de acesso.');
           }
+        } else {
+          showSuccess(`Professor(a) ${novoProfessor.nome} cadastrado(a) com sucesso!`);
         }
 
         fetchProfessores();

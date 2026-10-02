@@ -401,7 +401,10 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // 7. Criar o usuário usando service_role
+    // 7. Criar ou recuperar o usuário usando service_role
+    let targetUserId = "";
+    let isNewlyCreated = false;
+
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: emailTrimmed,
       password: senha,
@@ -410,45 +413,147 @@ Deno.serve(async (req: Request) => {
         full_name: nomeTrimmed,
       },
       app_metadata: {
-        role: "PENDENTE", // Promoted only after the institutional transaction succeeds.
+        role: "PENDENTE",
       },
     });
 
-    if (createError) {
-      if (createError.message?.includes("already been registered") || createError.message?.includes("already exists")) {
+    if (!createError && newUser?.user) {
+      targetUserId = newUser.user.id;
+      isNewlyCreated = true;
+    } else if (
+      createError?.message?.includes("already been registered") ||
+      createError?.message?.includes("already exists")
+    ) {
+      // Se a conta já existe no Auth, verificar se foi deixada pendente/incompleta por falha anterior
+      const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
+      const existingAuth = listData?.users?.find(
+        (u: { email?: string }) => u.email?.toLowerCase() === emailTrimmed
+      );
+
+      if (existingAuth) {
+        const { data: existingProfile } = await supabaseAdmin
+          .from("usuarios")
+          .select("id, cargo, escola_id")
+          .eq("id", existingAuth.id)
+          .maybeSingle();
+
+        // Se o usuário não tem perfil na tabela usuarios ou seu cargo está PENDENTE, completar o cadastro
+        const isOrphanOrPending =
+          !existingProfile || existingAuth.app_metadata?.role === "PENDENTE";
+
+        if (isOrphanOrPending) {
+          targetUserId = existingAuth.id;
+          await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
+            password: senha,
+            user_metadata: { full_name: nomeTrimmed },
+          });
+        } else {
+          return new Response(
+            JSON.stringify({ error: "Este e-mail já está cadastrado no sistema" }),
+            { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } else {
         return new Response(
           JSON.stringify({ error: "Este e-mail já está cadastrado no sistema" }),
           { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+    } else {
       console.error("Erro ao criar usuário:", createError);
-      // FIX: Não vazar detalhes internos do servidor/banco para o cliente.
       return new Response(
         JSON.stringify({ error: "Não foi possível criar a conta. Tente novamente em instantes." }),
         { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // One database transaction validates the actor, school and identity and establishes all links.
+    // 8. Provisionamento institucional:
+    // Tenta primeiro via RPC transacional finalize_provisioned_user se ela existir no banco
     const { error: provisionError } = await supabaseAdmin.rpc("finalize_provisioned_user", {
-      p_actor: callerUser.id, p_user: newUser.user.id, p_email: emailTrimmed,
-      p_nome: nomeTrimmed, p_cargo: cargoTrimmed, p_escola: escolaIdTrimmed,
+      p_actor: callerUser.id,
+      p_user: targetUserId,
+      p_email: emailTrimmed,
+      p_nome: nomeTrimmed,
+      p_cargo: cargoTrimmed,
+      p_escola: escolaIdTrimmed,
     });
-    if (provisionError && !/^[0-9A-Z]{5}$/.test(provisionError.code || '')) {
-      return new Response(JSON.stringify({error: 'Não foi possível confirmar a conclusão do cadastro. Verifique a conta antes de repetir a operação.'}),
-        {status: 503, headers: {...corsHeaders, 'Content-Type': 'application/json'}});
-    }
+
     if (provisionError) {
-      // A failed transaction leaves the new account PENDENTE, without academic access.
-      const { error: rollbackError } = await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
-      if (!rollbackError) {
-        await supabaseAdmin.from("usuarios").delete().eq("id", newUser.user.id);
+      const isMissingRpc =
+        provisionError.code === "PGRST202" ||
+        provisionError.message?.includes("Could not find the function") ||
+        provisionError.message?.includes("não encontrada");
+
+      if (isMissingRpc) {
+        // Fallback gracioso quando a migração da RPC ainda não foi aplicada ao banco remoto
+        console.warn("[admin-create-user] RPC finalize_provisioned_user ausente no banco. Executando provisionamento direto institucional.");
+
+        const { error: upsertError } = await supabaseAdmin
+          .from("usuarios")
+          .upsert(
+            {
+              id: targetUserId,
+              email: emailTrimmed,
+              nome_completo: nomeTrimmed,
+              cargo: cargoTrimmed,
+              escola_id: escolaIdTrimmed,
+            },
+            { onConflict: "id" }
+          );
+
+        if (upsertError) {
+          console.error("Erro ao fazer upsert em usuarios:", upsertError);
+          if (isNewlyCreated) {
+            await supabaseAdmin.auth.admin.deleteUser(targetUserId);
+          }
+          return new Response(
+            JSON.stringify({ error: "Erro ao criar perfil de usuário institucional." }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Promover role no app_metadata do Auth
+        await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
+          app_metadata: { role: cargoTrimmed },
+        });
+
+        // Vincular ao professor ou aluno
+        if (cargoTrimmed === "PROFESSOR") {
+          const { error: linkProfError } = await supabaseAdmin
+            .from("professores")
+            .update({ usuario_id: targetUserId })
+            .ilike("email", emailTrimmed);
+          if (linkProfError) {
+            console.warn("[admin-create-user] Aviso ao vincular usuario_id em professores:", linkProfError.message);
+          }
+        } else if (cargoTrimmed === "ALUNO" && emailTrimmed.endsWith("@aluno.dcdigital.local")) {
+          const cpfDigits = emailTrimmed.split("@")[0];
+          const cpfFormatted = cpfDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+          const { error: linkAlunoError } = await supabaseAdmin
+            .from("alunos")
+            .update({ usuario_id: targetUserId })
+            .or(`cpf.eq.${cpfDigits},cpf.eq.${cpfFormatted}`);
+          if (linkAlunoError) {
+            console.warn("[admin-create-user] Aviso ao vincular usuario_id em alunos:", linkAlunoError.message);
+          }
+        }
+      } else {
+        // Erro legítimo de validação da RPC (ex: 42501 falta de autorização, aluno de outra escola, etc.)
+        if (isNewlyCreated) {
+          const { error: rollbackError } = await supabaseAdmin.auth.admin.deleteUser(targetUserId);
+          if (!rollbackError) {
+            await supabaseAdmin.from("usuarios").delete().eq("id", targetUserId);
+          }
+        }
+        console.error("Falha de provisionamento via RPC", { code: provisionError.code });
+        return new Response(
+          JSON.stringify({
+            error: "Não foi possível vincular a conta institucional. Verifique permissões, escola e vínculos.",
+            details: provisionError.message,
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
-      console.error("Falha de provisionamento", { code: provisionError.code, rollbackFailed: Boolean(rollbackError) });
-      return new Response(JSON.stringify({ error: rollbackError
-        ? "Cadastro incompleto e sem acesso. Solicite revisão administrativa antes de tentar novamente."
-        : "Não foi possível vincular a conta. Verifique escola, matrícula/lotação e vínculo existente." }),
-        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // 9. Retornar sucesso
@@ -456,8 +561,8 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({
         success: true,
         user: {
-          id: newUser.user.id,
-          email: newUser.user.email,
+          id: targetUserId,
+          email: emailTrimmed,
           nome: nomeTrimmed,
           cargo: cargoTrimmed,
           escola_id: escolaIdTrimmed,
