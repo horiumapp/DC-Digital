@@ -227,8 +227,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setOfflineOwner(authUser.id);
       };
       cancelSync();
-      if (navigator.locks) await navigator.locks.request('dc-digital-sync-lock',isolate);
-      else await isolate();
+      if (typeof navigator !== 'undefined' && navigator.locks && typeof navigator.locks.request === 'function') {
+        const lockController = new AbortController();
+        const lockTimeout = setTimeout(() => lockController.abort(), 2000);
+        try {
+          await navigator.locks.request('dc-digital-sync-lock', { signal: lockController.signal }, isolate);
+        } catch {
+          await isolate();
+        } finally {
+          clearTimeout(lockTimeout);
+        }
+      } else {
+        await isolate();
+      }
       if (isCancelled()) return;
       setUser(userObj);
 

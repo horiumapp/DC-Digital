@@ -673,8 +673,13 @@ async function processItem(item: SyncQueueItem, signal: AbortSignal): Promise<Mu
     // Persist exact wire request before sending; retries after lost responses reuse it.
     await db.syncQueue.update(item.id!, {requestPayload:JSON.stringify(wire), attempted:true});
   }
+  const operationId = item.operationId || crypto.randomUUID();
+  if (!item.operationId && item.id) {
+    await db.syncQueue.update(item.id, { operationId });
+    item.operationId = operationId;
+  }
   const {data,error} = await supabase.rpc('apply_academic_mutation', {
-    p_table:item.table,p_operation:item.operation,p_payload:wire,p_operation_id:item.operationId,
+    p_table:item.table,p_operation:item.operation,p_payload:wire,p_operation_id:operationId,
   }).abortSignal(signal);
   if (error) throw error;
   return (data || []) as MutationRecord[];
