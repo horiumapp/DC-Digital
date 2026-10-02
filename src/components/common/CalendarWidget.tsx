@@ -513,8 +513,8 @@ export default function CalendarWidget({
                     <div className="flex items-start justify-between w-full h-full">
                       {/* Left: Day number and tempo */}
                       <div className="flex flex-col items-start">
-                        <span className={`text-base sm:text-lg font-black leading-none ${
-                          isSelected ? 'text-[var(--dd-cal-selected-border)]' : 'text-slate-800 dark:text-slate-100'
+                        <span className={`text-base sm:text-lg font-bold leading-none ${
+                          isSelected ? 'text-[var(--dd-cal-selected-border)]' : 'text-slate-700 dark:text-slate-200'
                         } group-hover:text-[var(--dd-cal-selected-border)] transition-colors`}>
                           {day}
                         </span>
@@ -674,16 +674,16 @@ export default function CalendarWidget({
         <div className="flex flex-wrap items-center gap-3 sm:gap-4">
           <span className="font-bold text-slate-600 dark:text-slate-300">Quadrinhos:</span>
           <span className="flex items-center gap-1.5">
-            <span className="w-3.5 h-3.5 rounded border border-emerald-400 bg-[#dcfce7] dark:bg-emerald-950/60 shadow-2xs" />
-            <span className="font-medium">Concluído</span>
+            <span className="w-3.5 h-3.5 rounded border border-emerald-200 bg-[#f0fdf4] dark:bg-emerald-950/40 shadow-2xs" />
+            <span className="font-medium text-slate-600 dark:text-slate-300">Concluído</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-3.5 h-3.5 rounded border border-amber-400 bg-[#fef9c3] dark:bg-amber-950/60 shadow-2xs" />
-            <span className="font-medium">Parcial</span>
+            <span className="w-3.5 h-3.5 rounded border border-yellow-200 bg-[#fefce8] dark:bg-amber-950/40 shadow-2xs" />
+            <span className="font-medium text-slate-600 dark:text-slate-300">Parcial</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-3.5 h-3.5 rounded border border-red-400 bg-[#fee2e2] dark:bg-red-950/60 shadow-2xs" />
-            <span className="font-medium">Pendente</span>
+            <span className="w-3.5 h-3.5 rounded border border-rose-200 bg-[#fff1f2] dark:bg-rose-950/40 shadow-2xs" />
+            <span className="font-medium text-slate-600 dark:text-slate-300">Pendente</span>
           </span>
         </div>
 
