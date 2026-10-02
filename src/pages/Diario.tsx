@@ -401,17 +401,20 @@ export default function Diario() {
                           <div className="space-y-2 py-2">
                             <StatusRow 
                               label="Frequência" 
+                              letter="F"
                               done={selectedDayDetails.isFrequenciaFull} 
                               partial={selectedDayDetails.isFrequenciaPartial}
                             />
                             <StatusRow 
                               label="Conteúdo ministrado" 
+                              letter="C"
                               done={selectedDayDetails.isConteudoFull} 
                               partial={selectedDayDetails.isConteudoPartial}
                             />
                             {selectedDayDetails.temAvaliacao && (
                               <StatusRow 
                                 label={selectedDayDetails.avaliacoesDoDia.some(av => av.tipo?.startsWith('RP')) ? 'Recuperação Paralela' : 'Avaliação'} 
+                                letter="A"
                                 done={selectedDayDetails.avaliacoesLancadas} 
                                 partial={false}
                               />
@@ -424,7 +427,7 @@ export default function Diario() {
                               to={`/frequencia?date=${selectedDayDetails.dayStr}&turmaId=${turmaAtiva.id}`}
                               className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-[var(--dd-primary)] text-white font-bold rounded-xl hover:opacity-90 transition-all shadow-xs text-sm"
                             >
-                              {selectedDayDetails.status === 'full' ? 'Revisar registro' : selectedDayDetails.status === 'pending' ? 'Continuar registro' : 'Abrir registro'}
+                              {selectedDayDetails.status === 'full' ? 'Revisar registro' : (selectedDayDetails.status === 'pending' || selectedDayDetails.status === 'partial') ? 'Continuar registro' : 'Abrir registro'}
                               <ArrowRight className="w-4 h-4" />
                             </Link>
                           )}
@@ -538,7 +541,7 @@ export default function Diario() {
 
 // ── Helper Components ──
 
-function StatusRow({ label, done, partial }: { label: string; done: boolean; partial: boolean }) {
+function StatusRow({ label, letter, done, partial }: { label: string; letter?: 'F' | 'C' | 'A'; done: boolean; partial: boolean }) {
   const icon = done 
     ? <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> 
     : partial 
@@ -552,9 +555,14 @@ function StatusRow({ label, done, partial }: { label: string; done: boolean; par
     ? 'text-amber-700 dark:text-amber-400' 
     : 'text-[var(--dd-ink-muted)]';
 
+  const badgeCls = `dd-circle-badge ${done ? 'dd-circle-done' : partial ? 'dd-circle-partial' : 'dd-circle-pending'}`;
+
   return (
     <div className="flex items-center justify-between py-1.5 border-b border-dashed border-[var(--dd-border)] last:border-0">
-      <span className="text-sm font-medium text-[var(--dd-ink)]">{label}</span>
+      <div className="flex items-center gap-2">
+        {letter && <span className={badgeCls}>{letter}</span>}
+        <span className="text-sm font-medium text-[var(--dd-ink)]">{label}</span>
+      </div>
       <span className={`inline-flex items-center gap-1.5 text-xs font-bold ${statusColor}`}>
         {icon}
         {statusText}
