@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, List, Clock, ArrowRight, Check, AlertTriangle, Circle, CalendarSearch } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, List, Clock, ArrowRight, CalendarSearch } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { APP_CONFIG } from '../../config/appConfig';
