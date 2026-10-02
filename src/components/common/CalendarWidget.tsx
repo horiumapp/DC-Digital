@@ -354,18 +354,6 @@ export default function CalendarWidget({
     );
   };
 
-  // Badge renderer
-  const StatusBadge = ({ done, partial, label, shortLabel }: { done: boolean; partial: boolean; label: string; shortLabel: string }) => {
-    const cls = done ? 'dd-badge dd-badge-done' : partial ? 'dd-badge dd-badge-partial' : 'dd-badge dd-badge-pending';
-    const icon = done ? <Check className="w-3 h-3" /> : partial ? <AlertTriangle className="w-3 h-3" /> : <Circle className="w-2.5 h-2.5" />;
-    return (
-      <span className={cls} aria-label={`${label}: ${done ? 'concluído' : partial ? 'parcial' : 'pendente'}`}>
-        {icon}
-        <span className="hidden sm:inline">{shortLabel}</span>
-      </span>
-    );
-  };
-
   // Sync selected day when month changes
   useEffect(() => {
     if (selectedDay !== null) {
