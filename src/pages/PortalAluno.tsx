@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { GraduationCap, BookOpen, CalendarCheck, BarChart3, Loader2, LogOut, User, ChevronRight, Calendar, Shield, Key, Lock, X } from 'lucide-react';
+import { GraduationCap, BookOpen, CalendarCheck, BarChart3, Loader2, LogOut, User, ChevronRight, Calendar, Shield, Key, Lock, X, Eye, EyeOff } from 'lucide-react';
 import PrivacyLinksFooter from '../components/PrivacyLinksFooter';
 import { APP_CONFIG } from '../config/appConfig';
 import { formatMatriculaCpf } from '../utils/formatters';
@@ -61,7 +61,17 @@ export default function PortalAluno() {
   const [isSenhaModalOpen, setIsSenhaModalOpen] = useState(false);
   const [novaSenha, setNovaSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [showNovaSenha, setShowNovaSenha] = useState(false);
+  const [showConfirmarSenha, setShowConfirmarSenha] = useState(false);
   const [isSavingSenha, setIsSavingSenha] = useState(false);
+
+  const closeSenhaModal = () => {
+    setIsSenhaModalOpen(false);
+    setNovaSenha('');
+    setConfirmarSenha('');
+    setShowNovaSenha(false);
+    setShowConfirmarSenha(false);
+  };
 
   const toggleMonth = (monthKey: string) => {
     const newExpanded = new Set(expandedMonths);
@@ -732,8 +742,9 @@ export default function PortalAluno() {
                 </div>
               </div>
               <button
-                onClick={() => setIsSenhaModalOpen(false)}
+                onClick={closeSenhaModal}
                 className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                aria-label="Fechar"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -760,9 +771,7 @@ export default function PortalAluno() {
                   const { error: pwdErr } = await supabase.auth.updateUser({ password: novaSenha });
                   if (pwdErr) throw pwdErr;
                   showSuccess('Sua senha foi alterada com sucesso!');
-                  setIsSenhaModalOpen(false);
-                  setNovaSenha('');
-                  setConfirmarSenha('');
+                  closeSenhaModal();
                 } catch (err: unknown) {
                   const msg = err instanceof Error ? err.message : 'Não foi possível alterar a senha.';
                   showError(msg);
@@ -776,38 +785,60 @@ export default function PortalAluno() {
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Nova Senha (mínimo 8 caracteres)
                 </label>
-                <input
-                  type="password"
-                  value={novaSenha}
-                  onChange={(e) => setNovaSenha(e.target.value)}
-                  placeholder="Nova senha secreta"
-                  required
-                  minLength={8}
-                  disabled={isSavingSenha}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition"
-                />
+                <div className="relative">
+                  <input
+                    type={showNovaSenha ? 'text' : 'password'}
+                    value={novaSenha}
+                    onChange={(e) => setNovaSenha(e.target.value)}
+                    placeholder="Nova senha secreta"
+                    required
+                    minLength={8}
+                    disabled={isSavingSenha}
+                    className="w-full px-3.5 py-2.5 pr-11 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNovaSenha((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#0f2851] transition-colors cursor-pointer"
+                    aria-label={showNovaSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                    title={showNovaSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {showNovaSenha ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Confirmar Nova Senha
                 </label>
-                <input
-                  type="password"
-                  value={confirmarSenha}
-                  onChange={(e) => setConfirmarSenha(e.target.value)}
-                  placeholder="Repita a nova senha"
-                  required
-                  minLength={8}
-                  disabled={isSavingSenha}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition"
-                />
+                <div className="relative">
+                  <input
+                    type={showConfirmarSenha ? 'text' : 'password'}
+                    value={confirmarSenha}
+                    onChange={(e) => setConfirmarSenha(e.target.value)}
+                    placeholder="Repita a nova senha"
+                    required
+                    minLength={8}
+                    disabled={isSavingSenha}
+                    className="w-full px-3.5 py-2.5 pr-11 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmarSenha((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#0f2851] transition-colors cursor-pointer"
+                    aria-label={showConfirmarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                    title={showConfirmarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {showConfirmarSenha ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsSenhaModalOpen(false)}
+                  onClick={closeSenhaModal}
                   disabled={isSavingSenha}
                   className="flex-1 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition cursor-pointer"
                 >
