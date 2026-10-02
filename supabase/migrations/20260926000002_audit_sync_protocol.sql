@@ -1,5 +1,5 @@
 BEGIN;
-CREATE SEQUENCE public.academic_revision_seq START WITH 2;
+CREATE SEQUENCE IF NOT EXISTS public.academic_revision_seq START WITH 2;
 GRANT USAGE ON SEQUENCE public.academic_revision_seq TO authenticated,service_role;
 -- Monotonic revisions are assigned by the database, including writes outside the sync RPC.
 CREATE OR REPLACE FUNCTION public.bump_academic_revision() RETURNS trigger LANGUAGE plpgsql AS $$
@@ -9,18 +9,21 @@ BEGIN
 END $$;
 DO $$ DECLARE t text; BEGIN
  FOREACH t IN ARRAY ARRAY['frequencias','conteudos','avaliacoes','notas','fechamentos_bimestres'] LOOP
-  EXECUTE format('ALTER TABLE public.%I ADD COLUMN sync_revision bigint NOT NULL DEFAULT 1',t);
+  EXECUTE format('ALTER TABLE public.%I ADD COLUMN IF NOT EXISTS sync_revision bigint NOT NULL DEFAULT 1',t);
+  EXECUTE format('DROP TRIGGER IF EXISTS audit_revision ON public.%I', t);
   EXECUTE format('CREATE TRIGGER audit_revision BEFORE INSERT OR UPDATE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.bump_academic_revision()',t);
  END LOOP;
 END $$;
 
-CREATE TABLE public.sync_receipts (
+CREATE TABLE IF NOT EXISTS public.sync_receipts (
  user_id uuid NOT NULL DEFAULT auth.uid(), operation_id uuid NOT NULL,
  request jsonb NOT NULL, response jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now(),
  PRIMARY KEY(user_id,operation_id)
 );
 ALTER TABLE public.sync_receipts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS own_receipt_read ON public.sync_receipts;
 CREATE POLICY own_receipt_read ON public.sync_receipts FOR SELECT TO authenticated USING(user_id=auth.uid());
+DROP POLICY IF EXISTS own_receipt_insert ON public.sync_receipts;
 CREATE POLICY own_receipt_insert ON public.sync_receipts FOR INSERT TO authenticated WITH CHECK(user_id=auth.uid());
 GRANT SELECT,INSERT ON public.sync_receipts TO authenticated;
 

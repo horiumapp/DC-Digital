@@ -73,13 +73,15 @@ LANGUAGE sql IMMUTABLE AS $$
 $$;
 
 -- Canonical calendar, with optional school overrides. Updates restricted to ADMIN.
-CREATE TABLE public.periodos_letivos (
+CREATE TABLE IF NOT EXISTS public.periodos_letivos (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), escola_id uuid REFERENCES public.escolas(id),
  ano integer NOT NULL, periodo text NOT NULL, data_inicio date NOT NULL, data_fim date NOT NULL,
  CHECK (data_inicio<=data_fim), UNIQUE NULLS NOT DISTINCT (escola_id,ano,periodo)
 );
 ALTER TABLE public.periodos_letivos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS calendario_read ON public.periodos_letivos;
 CREATE POLICY calendario_read ON public.periodos_letivos FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS calendario_admin ON public.periodos_letivos;
 CREATE POLICY calendario_admin ON public.periodos_letivos FOR ALL TO authenticated
 USING (public.get_user_role()='ADMIN') WITH CHECK (public.get_user_role()='ADMIN');
 GRANT SELECT,INSERT,UPDATE,DELETE ON public.periodos_letivos TO authenticated;
@@ -87,7 +89,8 @@ INSERT INTO public.periodos_letivos(ano,periodo,data_inicio,data_fim) VALUES
 (2026,'1. BIMESTRE','2026-02-05','2026-04-23'),(2026,'2. BIMESTRE','2026-04-24','2026-07-07'),
 (2026,'3. BIMESTRE','2026-07-16','2026-09-24'),(2026,'4. BIMESTRE','2026-09-25','2026-12-14'),
 (2026,'1. SEMESTRE','2026-02-05','2026-07-07'),(2026,'2. SEMESTRE','2026-07-16','2026-12-14'),
-(2026,'ÚNICO','2026-02-05','2026-12-14'),(2026,'RECUPERAÇÃO','2026-12-15','2026-12-23');
+(2026,'ÚNICO','2026-02-05','2026-12-14'),(2026,'RECUPERAÇÃO','2026-12-15','2026-12-23')
+ON CONFLICT DO NOTHING;
 
 CREATE OR REPLACE FUNCTION public.assert_periodo_aberto(p_turma uuid,p_disciplina text,p_data text,p_periodo text DEFAULT NULL)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$

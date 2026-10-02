@@ -81,6 +81,8 @@ $function$;
 --    Substituimos por politicas granulares.
 -- ---------------------------------------------------------------
 DROP POLICY IF EXISTS "block_all_access" ON public.admin_whitelist;
+DROP POLICY IF EXISTS "admin_select_whitelist" ON public.admin_whitelist;
+DROP POLICY IF EXISTS "admin_manage_whitelist" ON public.admin_whitelist;
 
 CREATE POLICY "admin_select_whitelist" ON public.admin_whitelist
   FOR SELECT
@@ -118,6 +120,7 @@ CREATE POLICY "deny_update_security_logs" ON public.security_logs
 --    pre-login (cookie consent), mas nao podem impersonar outros.
 -- ---------------------------------------------------------------
 DROP POLICY IF EXISTS "Allow public insert for user_consents" ON public.user_consents;
+DROP POLICY IF EXISTS "Allow insert for user_consents" ON public.user_consents;
 CREATE POLICY "Allow insert for user_consents" ON public.user_consents
   FOR INSERT
   WITH CHECK (
