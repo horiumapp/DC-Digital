@@ -350,6 +350,7 @@ REVOKE ALL ON FUNCTION public.delete_curriculo_unidade(uuid) FROM anon;
 GRANT EXECUTE ON FUNCTION public.delete_curriculo_unidade(uuid) TO authenticated;
 
 -- Importação em lote completo de currículo em transação única
+DROP FUNCTION IF EXISTS public.import_curriculo_batch(jsonb, boolean);
 CREATE OR REPLACE FUNCTION public.import_curriculo_batch(
   p_unidades jsonb,
   p_substituir boolean DEFAULT false
@@ -427,6 +428,7 @@ REVOKE ALL ON FUNCTION public.import_curriculo_batch(jsonb, boolean) FROM anon;
 GRANT EXECUTE ON FUNCTION public.import_curriculo_batch(jsonb, boolean) TO authenticated;
 
 -- Atualizar upsert_curriculo_unidade_com_objetos com fail-closed e remoção de habilidades
+DROP FUNCTION IF EXISTS public.upsert_curriculo_unidade_com_objetos(text, text, text, text, text, text[], boolean);
 CREATE OR REPLACE FUNCTION public.upsert_curriculo_unidade_com_objetos(
   p_modalidade text,
   p_ano text,
