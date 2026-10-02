@@ -33,7 +33,7 @@ export interface DayDetails {
   dayOfWeek: number;
   isDiaDeAula: boolean;
   temposValidos: string[];
-  status: 'none' | 'pending' | 'full';
+  status: 'none' | 'pending' | 'partial' | 'full';
   isFrequenciaFull: boolean;
   isFrequenciaPartial: boolean;
   isConteudoFull: boolean;
@@ -238,9 +238,17 @@ export default function CalendarWidget({
     const isConteudoFull = totalTempos > 0 && uniqueTemposCont === totalTempos;
     const isConteudoPartial = uniqueTemposCont > 0 && uniqueTemposCont < totalTempos;
 
-    let status: 'none' | 'pending' | 'full' = 'none';
-    if (isFrequenciaFull && isConteudoFull && (!temAvaliacao || avaliacoesLancadas)) status = 'full';
-    else if (uniqueTemposFreq > 0 || uniqueTemposCont > 0 || temAvaliacao) status = 'pending';
+    let status: 'none' | 'pending' | 'partial' | 'full' = 'none';
+    const hasAnyLancamento = uniqueTemposFreq > 0 || uniqueTemposCont > 0 || (temAvaliacao && avaliacoesLancadas);
+    const isAllDone = isFrequenciaFull && isConteudoFull && (!temAvaliacao || avaliacoesLancadas);
+
+    if (isAllDone) {
+      status = 'full';
+    } else if (hasAnyLancamento) {
+      status = 'partial';
+    } else if (isDiaDeAula) {
+      status = 'pending';
+    }
 
     const isToday = currentDate.getTime() === todayDate.getTime();
 
@@ -324,6 +332,26 @@ export default function CalendarWidget({
       e.preventDefault();
       onDaySelect(day, details);
     }
+  };
+
+  // Circular Status Indicator (F, C, A)
+  const StatusCircle = ({ 
+    letter, 
+    done, 
+    partial, 
+    title 
+  }: { 
+    letter: 'F' | 'C' | 'A'; 
+    done: boolean; 
+    partial?: boolean; 
+    title: string; 
+  }) => {
+    const cls = `dd-circle-badge ${done ? 'dd-circle-done' : partial ? 'dd-circle-partial' : 'dd-circle-pending'}`;
+    return (
+      <span className={cls} title={title} aria-label={title}>
+        {letter}
+      </span>
+    );
   };
 
   // Badge renderer
@@ -465,8 +493,15 @@ export default function CalendarWidget({
               const isSelected = selectedDay === day;
 
               if (details.isDiaDeAula) {
+                const cellStatusClass = details.status === 'full' 
+                  ? 'dd-cal-cell-full' 
+                  : details.status === 'partial' 
+                  ? 'dd-cal-cell-partial' 
+                  : 'dd-cal-cell-pending';
+
                 const cellClasses = [
                   'dd-cal-cell dd-cal-lesson',
+                  cellStatusClass,
                   details.isToday ? 'dd-cal-today' : '',
                   isSelected ? 'dd-cal-selected' : '',
                 ].filter(Boolean).join(' ');
@@ -486,43 +521,47 @@ export default function CalendarWidget({
                     aria-label={`${day} de ${MONTH_NAMES[currentMonth]}, ${WEEK_DAYS_FULL[details.dayOfWeek]}${details.temposValidos.length > 0 ? `, ${details.temposValidos.join(', ')}` : ''}`}
                     title="Clique para selecionar ou clique duas vezes para abrir Frequência e notas"
                   >
-                    {/* Day number + times */}
-                    <div className="flex items-start justify-between">
-                      <span className={`text-lg font-bold leading-none ${isSelected ? 'text-[var(--dd-cal-selected-border)]' : 'text-[var(--dd-ink)]'} group-hover:text-[var(--dd-cal-selected-border)] transition-colors`}>
-                        {day}
-                      </span>
-                      {details.temposValidos.length > 0 && (
-                        <span className="text-[10px] text-[var(--dd-ink-muted)] font-medium hidden lg:block">
-                          {details.temposValidos.length === 1 
-                            ? details.temposValidos[0].replace('º TEMPO', 'º') 
-                            : `${details.temposValidos[0].replace('º TEMPO', 'º')}–${details.temposValidos[details.temposValidos.length - 1].replace('º TEMPO', 'º')}`
-                          }
+                    {/* Content inside cell */}
+                    <div className="flex items-start justify-between w-full h-full">
+                      {/* Left: Day number and tempo */}
+                      <div className="flex flex-col items-start">
+                        <span className={`text-base sm:text-lg font-black leading-none ${
+                          isSelected ? 'text-[var(--dd-cal-selected-border)]' : 'text-slate-800 dark:text-slate-100'
+                        } group-hover:text-[var(--dd-cal-selected-border)] transition-colors`}>
+                          {day}
                         </span>
-                      )}
-                    </div>
+                        {details.temposValidos.length > 0 && (
+                          <span className="text-[10px] text-slate-600 dark:text-slate-300 font-semibold mt-1">
+                            {details.temposValidos.length === 1 
+                              ? details.temposValidos[0].replace('º TEMPO', 'º') 
+                              : `${details.temposValidos[0].replace('º TEMPO', 'º')}–${details.temposValidos[details.temposValidos.length - 1].replace('º TEMPO', 'º')}`
+                            }
+                          </span>
+                        )}
+                      </div>
 
-                    {/* Status badges */}
-                    <div className="flex flex-wrap items-center gap-0.5 mt-auto pt-1">
-                      <StatusBadge 
-                        done={details.isFrequenciaFull} 
-                        partial={details.isFrequenciaPartial} 
-                        label="Frequência" 
-                        shortLabel="Freq" 
-                      />
-                      <StatusBadge 
-                        done={details.isConteudoFull} 
-                        partial={details.isConteudoPartial} 
-                        label="Conteúdo" 
-                        shortLabel="Cont" 
-                      />
-                      {details.temAvaliacao && (
-                        <StatusBadge 
-                          done={details.avaliacoesLancadas} 
-                          partial={false} 
-                          label={details.avaliacoesDoDia.some(av => av.tipo?.startsWith('RP')) ? 'Recuperação' : 'Avaliação'} 
-                          shortLabel={details.avaliacoesDoDia.some(av => av.tipo?.startsWith('RP')) ? 'RP' : 'Aval'} 
+                      {/* Right: Circular Badges F, C, A stacked vertically */}
+                      <div className="flex flex-col items-center gap-1 shrink-0 ml-1">
+                        <StatusCircle 
+                          letter="F" 
+                          done={details.isFrequenciaFull} 
+                          partial={details.isFrequenciaPartial} 
+                          title={`Frequência: ${details.isFrequenciaFull ? 'Concluída' : details.isFrequenciaPartial ? 'Parcial' : 'Pendente'}`} 
                         />
-                      )}
+                        <StatusCircle 
+                          letter="C" 
+                          done={details.isConteudoFull} 
+                          partial={details.isConteudoPartial} 
+                          title={`Conteúdo: ${details.isConteudoFull ? 'Concluído' : details.isConteudoPartial ? 'Parcial' : 'Pendente'}`} 
+                        />
+                        {details.temAvaliacao && (
+                          <StatusCircle 
+                            letter="A" 
+                            done={details.avaliacoesLancadas} 
+                            title={`Avaliação: ${details.avaliacoesLancadas ? 'Notas lançadas' : 'Pendente de notas'}`} 
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
