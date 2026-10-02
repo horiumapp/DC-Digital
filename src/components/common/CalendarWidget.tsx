@@ -641,11 +641,20 @@ export default function CalendarWidget({
 
                       {/* Status + Action */}
                       <div className="flex items-center justify-between sm:justify-end gap-3">
-                        <div className="flex items-center gap-1.5">
-                          <StatusBadge done={item.isFrequenciaFull} partial={item.isFrequenciaPartial} label="Frequência" shortLabel="Freq" />
-                          <StatusBadge done={item.isConteudoFull} partial={item.isConteudoPartial} label="Conteúdo" shortLabel="Cont" />
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                            <StatusCircle letter="F" done={item.isFrequenciaFull} partial={item.isFrequenciaPartial} title="Frequência" />
+                            <span className="hidden sm:inline">Freq</span>
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                            <StatusCircle letter="C" done={item.isConteudoFull} partial={item.isConteudoPartial} title="Conteúdo" />
+                            <span className="hidden sm:inline">Cont</span>
+                          </span>
                           {item.temAvaliacao && (
-                            <StatusBadge done={item.avaliacoesLancadas} partial={false} label={temRP ? 'Recuperação' : 'Avaliação'} shortLabel={temRP ? 'RP' : 'Aval'} />
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                              <StatusCircle letter="A" done={item.avaliacoesLancadas} title={temRP ? 'Recuperação Paralela' : 'Avaliação'} />
+                              <span className="hidden sm:inline">{temRP ? 'RP' : 'Aval'}</span>
+                            </span>
                           )}
                         </div>
 
@@ -672,19 +681,40 @@ export default function CalendarWidget({
       )}
 
       {/* Compact Legend Footer */}
-      <div className="px-4 py-2.5 bg-[var(--dd-surface-subtle)] border-t border-[var(--dd-border)] flex flex-wrap items-center gap-4 text-xs text-[var(--dd-ink-muted)]">
-        <span className="flex items-center gap-1.5">
-          <span className="dd-badge dd-badge-done"><Check className="w-3 h-3" /></span>
-          Concluído
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="dd-badge dd-badge-partial"><AlertTriangle className="w-3 h-3" /></span>
-          Parcial
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="dd-badge dd-badge-pending"><Circle className="w-2.5 h-2.5" /></span>
-          Pendente
-        </span>
+      <div className="px-4 py-3 bg-[var(--dd-surface-subtle)] border-t border-[var(--dd-border)] flex flex-wrap items-center justify-between gap-y-2.5 text-xs text-[var(--dd-ink-muted)]">
+        {/* Quadrinhos colors */}
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+          <span className="font-bold text-slate-600 dark:text-slate-300">Quadrinhos:</span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-3.5 h-3.5 rounded border border-emerald-400 bg-[#dcfce7] dark:bg-emerald-950/60 shadow-2xs" />
+            <span className="font-medium">Concluído</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-3.5 h-3.5 rounded border border-amber-400 bg-[#fef9c3] dark:bg-amber-950/60 shadow-2xs" />
+            <span className="font-medium">Parcial</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-3.5 h-3.5 rounded border border-red-400 bg-[#fee2e2] dark:bg-red-950/60 shadow-2xs" />
+            <span className="font-medium">Pendente</span>
+          </span>
+        </div>
+
+        {/* Badges F, C, A */}
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+          <span className="font-bold text-slate-600 dark:text-slate-300">Indicadores:</span>
+          <span className="flex items-center gap-1.5" title="Frequência">
+            <span className="dd-circle-badge dd-circle-done">F</span>
+            <span className="font-medium">Frequência</span>
+          </span>
+          <span className="flex items-center gap-1.5" title="Conteúdo Ministrado">
+            <span className="dd-circle-badge dd-circle-done">C</span>
+            <span className="font-medium">Conteúdo</span>
+          </span>
+          <span className="flex items-center gap-1.5" title="Avaliação (quando agendada)">
+            <span className="dd-circle-badge dd-circle-done">A</span>
+            <span className="font-medium">Avaliação</span>
+          </span>
+        </div>
       </div>
     </div>
   );
