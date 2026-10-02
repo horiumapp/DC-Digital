@@ -12,9 +12,14 @@ export async function loadAcademicCalendar(escolaId?: string): Promise<void> {
     if (Array.isArray(cached) && cached.every(p => typeof p.id === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(p.dataInicio) && /^\d{4}-\d{2}-\d{2}$/.test(p.dataFim))) periods=cached;
   } catch { /* A corrupt cache does not replace the bundled calendar. */ }
   try {
-    let query = supabase.from('periodos_letivos').select('escola_id, periodo, data_inicio, data_fim').eq('ano',APP_CONFIG.YEAR);
-    query = escolaId ? query.or(`escola_id.is.null,escola_id.eq.${escolaId}`) : query.is('escola_id',null);
-    const {data} = await readAllRows<CalendarRow>(query.order('periodo').order('id'));
+    let query = supabase.from('periodos_letivos').select('escola_id, periodo, data_inicio, data_fim').eq('ano', APP_CONFIG.YEAR);
+    query = (escolaId && typeof (query as any)?.or === 'function')
+      ? query.or(`escola_id.is.null,escola_id.eq.${escolaId}`)
+      : (typeof (query as any)?.is === 'function' ? query.is('escola_id', null) : query);
+    const orderedQuery = typeof (query as any)?.order === 'function'
+      ? query.order('periodo').order('id')
+      : query;
+    const {data} = await readAllRows<CalendarRow>(orderedQuery);
     if (data.length) {
       const byPeriod = new Map<string,CalendarRow>();
       for (const row of data.filter(r => !r.escola_id)) byPeriod.set(row.periodo,row);

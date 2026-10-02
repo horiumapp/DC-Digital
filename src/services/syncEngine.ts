@@ -929,8 +929,8 @@ async function reconcileLocalRecords(): Promise<void> {
         conteudoKeys.add(`${p.turma_id}|${p.data}|${p.tempo}|${p.disciplina}`);
       } catch { continue; }
     }
-    // FIX P1: Usar índice syncStatus em vez de filter() JavaScript (full scan)
-    const unsyncedConteudos = await db.conteudos.where('syncStatus').anyOf(['pending', 'error']).toArray();
+    // Reconciliar apenas registros com pendência legítima (ignora 'error' para não ressuscitar dead letters)
+    const unsyncedConteudos = await db.conteudos.where('syncStatus').equals('pending').toArray();
     for (const c of unsyncedConteudos) {
       const key = `${c.turma_id}|${c.data}|${c.tempo}|${c.disciplina}`;
       if (conteudoKeys.has(key)) continue;
@@ -959,8 +959,7 @@ async function reconcileLocalRecords(): Promise<void> {
         }
       } catch { continue; }
     }
-    // FIX P1: Usar índice syncStatus em vez de filter() JavaScript (full scan)
-    const unsyncedFreqs = await db.frequencias.where('syncStatus').anyOf(['pending', 'error']).toArray();
+    const unsyncedFreqs = await db.frequencias.where('syncStatus').equals('pending').toArray();
     const missingFreqs = unsyncedFreqs.filter(
       f => !freqKeys.has(`${f.turma_id}|${f.aluno_id}|${f.data}|${f.tempo}|${f.disciplina}`)
     );

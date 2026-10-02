@@ -16,9 +16,12 @@ export function downloadCsvFile(content: string, fileName: string): void {
   URL.revokeObjectURL(url);
 }
 
+import { sanitizeFormulaValue } from './sanitizeUtils';
+
 function escapeCsvField(val: unknown): string {
   if (val === null || val === undefined) return '';
-  const str = String(val).trim();
+  let str = String(val).trim();
+  str = sanitizeFormulaValue(str);
   if (str.includes(';') || str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
     return `"${str.replace(/"/g, '""')}"`;
   }

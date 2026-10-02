@@ -5,6 +5,7 @@ import { getPeriodoPorData } from '../config/appConfig';
 describe('Utilitários de Data (dateUtils.ts)', () => {
   it('deve formatar data para formato ISO YYYY-MM-DD', () => {
     expect(formatarDataParaISO('30/05/2026')).toBe('2026-05-30');
+    expect(formatarDataParaISO('30-05-2026')).toBe('2026-05-30');
     expect(formatarDataParaISO('2026-05-30')).toBe('2026-05-30');
     expect(formatarDataParaISO('')).toBe('');
   });

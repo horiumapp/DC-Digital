@@ -1,4 +1,4 @@
-﻿// @vitest-environment node
+// @vitest-environment node
 import 'fake-indexeddb/auto';
 import { beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
 import { db, now } from '../lib/db';
@@ -84,4 +84,15 @@ describe('offlineQueue com IndexedDB real',()=>{
   await db.syncQueue.bulkAdd(Array.from({length:5000},(_,i)=>({ownerUserId:owner,table:'notas',operation:'UPSERT' as const,payload:'{}',status:'pending' as const,createdAt:now(),updatedAt:now(),retryCount:0,hash:String(i)})));
   await expect(Queue.enqueue('frequencias','UPSERT',{records:[freq]})).rejects.toThrow('Limite');
  }, 30000);
+ it('item com erro anterior na mesma tabela não bloqueia reivindicação de novos itens pendentes (anti-starvation)', async () => {
+  const deadId = await Queue.enqueue('frequencias', 'UPSERT', { records: [freq] });
+  await db.syncQueue.update(deadId, { status: 'error', lastError: '[DEAD_LETTER] Payload rejeitado' });
+  const newFreq = { ...freq, data: '2026-03-02' };
+  const newId = await Queue.enqueue('frequencias', 'UPSERT', { records: [newFreq] });
+
+  const claimed = await Queue.claimNext(owner);
+  expect(claimed).toBeDefined();
+  expect(claimed?.id).toBe(newId);
+  expect(claimed?.status).toBe('processing');
+ });
 });

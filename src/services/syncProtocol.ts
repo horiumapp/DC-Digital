@@ -21,6 +21,28 @@ export function matchesMutation(table: string, row: MutationRecord, payload: Mut
 export async function snapshotMutation(table: string, operation: string, payload: MutationRecord, localId?: number): Promise<MutationRecord> {
   const localTable = getOperationalTable(table);
   if (!localTable) return payload;
+
+  // Otimização: busca direta por chave primária se localId estiver disponível e não for lote
+  if (localId !== undefined && !Array.isArray(payload.records)) {
+    const local = await localTable.get(localId) as unknown as MutationRecord | undefined;
+    if (local) {
+      if (operation === 'DELETE') {
+        return {
+          ...payload,
+          _expected: {
+            [recordKey(table, table === 'avaliacoes' ? { ...local, id: payload.id } : local)]: Number(local.serverRevision || 0)
+          }
+        };
+      }
+      return {
+        ...payload,
+        _expected_revision: Number(local.serverRevision || 0),
+        _local_version: local.version,
+        _local_id: local.localId
+      };
+    }
+  }
+
   const all = await localTable.toArray() as unknown as MutationRecord[];
   if (operation === 'DELETE') {
     const matching = all.filter(r => (localId !== undefined && r.localId === localId) || matchesMutation(table,r,payload));

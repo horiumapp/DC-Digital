@@ -87,4 +87,20 @@ describe('sanitizeFormulaValue — Prevenção de CSV / Formula Injection (SEC-0
     expect(sanitized.titular.detalhes.endereco).toBe('Rua Principal, 100');
     expect(sanitized.titular.detalhes.disciplinas).toEqual(['\'-Matemática', 'Português']);
   });
+
+  it('deve neutralizar fórmulas maliciosas nas exportações de CSV via exportEscolasToCsv', async () => {
+    const { exportEscolasToCsv } = await import('../utils/csvImportExport');
+    const csv = exportEscolasToCsv([{
+      nome: '=cmd|\' /C calc\'!A0',
+      distrito: '+Distrito Norte',
+      inep: '@12345678',
+      diretor: '-Diretor',
+      status: 'Ativa'
+    }]);
+
+    expect(csv).toContain('\'=cmd');
+    expect(csv).toContain('\'+Distrito Norte');
+    expect(csv).toContain('\'@12345678');
+    expect(csv).toContain('\'-Diretor');
+  });
 });

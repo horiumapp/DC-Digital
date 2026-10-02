@@ -348,12 +348,29 @@ export async function claimNext(ownerUserId: string): Promise<SyncQueueItem | un
   return db.transaction('rw', db.syncQueue, async () => {
     const timestamp = now();
     const queued = await db.syncQueue.orderBy('id').filter(i => i.ownerUserId === ownerUserId).toArray();
-    const seen = new Set<string>();
+    
+    // Tabelas que já possuem item sendo ativamente processado não devem ter outro item concorrente
+    const activeProcessingTables = new Set(
+      queued.filter(i => i.status === 'processing').map(i => i.table)
+    );
+
+    const seenPendingTables = new Set<string>();
+
     const item = queued.find(i => {
-      if (seen.has(i.table)) return false;
-      seen.add(i.table);
-      return i.status === 'pending' && (!i.retryAfter || i.retryAfter <= timestamp);
+      // Se a tabela já está sendo processada, aguardar para manter serialização
+      if (activeProcessingTables.has(i.table)) return false;
+
+      // Não reivindicar itens que já falharam definitivamente ou não estão pendentes
+      if (i.status !== 'pending') return false;
+
+      // Apenas um item pendente por tabela por rodada de claim
+      if (seenPendingTables.has(i.table)) return false;
+      seenPendingTables.add(i.table);
+
+      // Respeitar backoff de retry
+      return !i.retryAfter || i.retryAfter <= timestamp;
     });
+
     if (!item?.id) return undefined;
     await db.syncQueue.update(item.id, {status:'processing', updatedAt:timestamp});
     return {...item,status:'processing'};

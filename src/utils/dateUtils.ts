@@ -70,18 +70,26 @@ export const getDayOfWeek = (dataStr: string): number => {
 
 export const formatarDataParaISO = (dataStr: string): string => {
   if (!dataStr) return '';
-  if (dataStr.includes('-')) return dataStr; // Já está no formato ISO
-  const [dia, mes, ano] = dataStr.split('/');
-  if (!dia || !mes || !ano) return dataStr;
+  const trimmed = dataStr.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed; // Já está no formato ISO
+  if (/^\d{2}-\d{2}-\d{4}$/.test(trimmed)) {
+    const [dia, mes, ano] = trimmed.split('-');
+    return `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+  }
+  const [dia, mes, ano] = trimmed.split('/');
+  if (!dia || !mes || !ano) return trimmed;
   return `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
 };
 
 export const formatarDataParaExibicao = (dataStr: string): string => {
   if (!dataStr) return '';
-  if (dataStr.includes('/')) return dataStr; // Já está no formato brasileiro
-  const [ano, mes, dia] = dataStr.split('-');
-  if (!dia || !mes || !ano) return dataStr;
-  return `${dia.padStart(2, '0')}/${mes.padStart(2, '0')}/${ano}`;
+  const trimmed = dataStr.trim();
+  if (trimmed.includes('/')) return trimmed; // Já está no formato brasileiro
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const [ano, mes, dia] = trimmed.split('-');
+    return `${dia.padStart(2, '0')}/${mes.padStart(2, '0')}/${ano}`;
+  }
+  return trimmed;
 };
 
 export const formatarDiaMes = (dataStr: string): string => {
