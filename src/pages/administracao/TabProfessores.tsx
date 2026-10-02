@@ -158,15 +158,19 @@ export default function TabProfessores() {
     };
 
     if (professorParaEditar) {
-      const { error } = await supabase
+      const { data: updatedData, error } = await supabase
         .from('professores')
         .update(professorData)
-        .eq('id', professorParaEditar.id);
+        .eq('id', professorParaEditar.id)
+        .select();
 
       if (error) {
         console.error("Erro ao atualizar:", error);
         showError("Erro ao atualizar professor: " + error.message);
+      } else if (!updatedData || updatedData.length === 0) {
+        showWarning("Nenhum registro foi atualizado. Verifique suas permissões.");
       } else {
+        showSuccess(`Dados do(a) professor(a) ${novoProfessor.nome} atualizados com sucesso!`);
         fetchProfessores();
         setProfessorParaEditar(null);
         setIsNovoProfessorModalOpen(false);
