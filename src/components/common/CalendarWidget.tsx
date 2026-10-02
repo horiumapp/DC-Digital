@@ -365,9 +365,9 @@ export default function CalendarWidget({
   }, [currentMonth, year, selectedDay, onDaySelect]);
 
   return (
-    <div className="bg-[var(--dd-surface)] border border-[var(--dd-border)] rounded-2xl overflow-hidden shadow-xs">
+    <div className="bg-[var(--dd-cal-bg)] border border-[var(--dd-cal-border)] rounded-2xl overflow-hidden shadow-xs">
       {/* Calendar Header */}
-      <div className="p-3 sm:px-5 sm:py-3.5 border-b border-[var(--dd-border)] bg-[var(--dd-surface-subtle)]">
+      <div className="p-3 sm:px-5 sm:py-3.5 border-b border-[var(--dd-cal-border)] bg-[var(--dd-cal-header)]">
         <div className="flex flex-col sm:grid sm:grid-cols-3 items-center gap-3">
           {/* Left (Desktop): Quick Action Hoje */}
           <div className="hidden sm:flex items-center justify-start">
@@ -375,10 +375,10 @@ export default function CalendarWidget({
               type="button"
               onClick={handleGoToday}
               disabled={!isTodayInPeriod}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[var(--dd-border)] rounded-xl text-xs font-bold text-[var(--dd-ink-muted)] hover:bg-[var(--dd-surface)] transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[var(--dd-cal-border)] rounded-xl text-xs font-semibold text-[var(--dd-cal-text-primary)] hover:bg-[var(--dd-cal-bg)] transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
               title={!isTodayInPeriod ? 'A data de hoje está fora do período selecionado' : 'Ir para hoje'}
             >
-              <CalendarSearch className="w-3.5 h-3.5" />
+              <CalendarSearch className="w-3.5 h-3.5 text-[var(--dd-cal-selected)]" />
               <span>Hoje</span>
             </button>
           </div>
@@ -388,18 +388,18 @@ export default function CalendarWidget({
             <button 
               onClick={handlePrevMonth}
               disabled={currentMonth <= minMonth}
-              className="p-2 border border-[var(--dd-border)] rounded-xl text-[var(--dd-ink-muted)] hover:bg-[var(--dd-surface)] transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+              className="p-2 border border-[var(--dd-cal-border)] rounded-xl text-[var(--dd-cal-text-secondary)] hover:text-[var(--dd-cal-text-primary)] hover:bg-[var(--dd-cal-bg)] transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
               aria-label="Mês anterior"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <h3 className="text-lg sm:text-xl font-bold text-[var(--dd-ink)] tracking-tight min-w-[160px] sm:min-w-[180px] text-center select-none">
-              {MONTH_NAMES[currentMonth]} <span className="text-[var(--dd-ink-muted)] font-semibold">{year}</span>
+            <h3 className="text-lg sm:text-xl font-bold text-[var(--dd-cal-text-primary)] tracking-tight min-w-[160px] sm:min-w-[180px] text-center select-none">
+              {MONTH_NAMES[currentMonth]} <span className="text-[var(--dd-cal-text-secondary)] font-normal">{year}</span>
             </h3>
             <button 
               onClick={handleNextMonth}
               disabled={currentMonth >= maxMonth}
-              className="p-2 border border-[var(--dd-border)] rounded-xl text-[var(--dd-ink-muted)] hover:bg-[var(--dd-surface)] transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+              className="p-2 border border-[var(--dd-cal-border)] rounded-xl text-[var(--dd-cal-text-secondary)] hover:text-[var(--dd-cal-text-primary)] hover:bg-[var(--dd-cal-bg)] transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
               aria-label="Próximo mês"
             >
               <ChevronRight className="w-4 h-4" />
@@ -414,23 +414,23 @@ export default function CalendarWidget({
                 type="button"
                 onClick={handleGoToday}
                 disabled={!isTodayInPeriod}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[var(--dd-border)] rounded-xl text-xs font-bold text-[var(--dd-ink-muted)] hover:bg-[var(--dd-surface)] transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[var(--dd-cal-border)] rounded-xl text-xs font-semibold text-[var(--dd-cal-text-primary)] hover:bg-[var(--dd-cal-bg)] transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
                 title={!isTodayInPeriod ? 'A data de hoje está fora do período selecionado' : 'Ir para hoje'}
               >
-                <CalendarSearch className="w-3.5 h-3.5" />
+                <CalendarSearch className="w-3.5 h-3.5 text-[var(--dd-cal-selected)]" />
                 <span>Hoje</span>
               </button>
             </div>
 
             {/* View Switcher: Mês / Agenda */}
-            <div className="flex items-center bg-[var(--dd-surface)] p-1 rounded-xl border border-[var(--dd-border)] shadow-xs">
+            <div className="flex items-center bg-[var(--dd-cal-bg)] p-1 rounded-xl border border-[var(--dd-cal-border)] shadow-xs">
               <button
                 type="button"
                 onClick={() => handleViewChange('grid')}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   viewMode === 'grid'
-                    ? 'bg-[var(--dd-primary)] text-white shadow-xs'
-                    : 'text-[var(--dd-ink-muted)] hover:text-[var(--dd-ink)]'
+                    ? 'bg-[var(--dd-cal-primary)] text-white shadow-xs'
+                    : 'text-[var(--dd-cal-text-secondary)] hover:text-[var(--dd-cal-text-primary)]'
                 }`}
               >
                 <CalendarIcon className="w-3.5 h-3.5" />
@@ -441,8 +441,8 @@ export default function CalendarWidget({
                 onClick={() => handleViewChange('agenda')}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   viewMode === 'agenda'
-                    ? 'bg-[var(--dd-primary)] text-white shadow-xs'
-                    : 'text-[var(--dd-ink-muted)] hover:text-[var(--dd-ink)]'
+                    ? 'bg-[var(--dd-cal-primary)] text-white shadow-xs'
+                    : 'text-[var(--dd-cal-text-secondary)] hover:text-[var(--dd-cal-text-primary)]'
                 }`}
               >
                 <List className="w-3.5 h-3.5" />
@@ -457,16 +457,16 @@ export default function CalendarWidget({
       {viewMode === 'grid' && (
         <div>
           {/* Weekday headers */}
-          <div className="grid grid-cols-7 border-b border-[var(--dd-border)] bg-[var(--dd-surface-subtle)]">
+          <div className="grid grid-cols-7 border-b border-[var(--dd-cal-border)] bg-[var(--dd-cal-header)]">
             {WEEK_DAYS.map((day) => (
-              <div key={day} className="text-center py-2.5 text-xs font-bold text-[var(--dd-ink-muted)] uppercase tracking-wider">
+              <div key={day} className="text-center py-2.5 text-xs font-bold text-[var(--dd-cal-text-secondary)] uppercase tracking-wider">
                 {day}
               </div>
             ))}
           </div>
 
           {/* Day cells */}
-          <div className="grid grid-cols-7 border-l border-t border-[var(--dd-border)]">
+          <div className="grid grid-cols-7 border-l border-t border-[var(--dd-cal-border)] bg-[var(--dd-cal-bg)]">
             {calendarDays.map((day, index) => {
               if (day === null) {
                 return (
@@ -512,14 +512,16 @@ export default function CalendarWidget({
                     {/* Content inside cell */}
                     <div className="flex items-start justify-between w-full h-full">
                       {/* Left: Day number and tempo */}
-                      <div className="flex flex-col items-start">
+                      <div className="flex flex-col items-start gap-1">
                         <span className={`text-base sm:text-lg font-bold leading-none ${
-                          isSelected ? 'text-[var(--dd-cal-selected-border)]' : 'text-slate-700 dark:text-slate-200'
-                        } group-hover:text-[var(--dd-cal-selected-border)] transition-colors`}>
+                          isSelected ? 'text-[var(--dd-cal-selected)]' : 'text-[var(--dd-cal-text-primary)]'
+                        } transition-colors`}>
                           {day}
                         </span>
                         {details.temposValidos.length > 0 && (
-                          <span className="text-[10px] text-slate-600 dark:text-slate-300 font-semibold mt-1">
+                          <span className={`text-[11px] font-medium leading-none ${
+                            isSelected ? 'text-[var(--dd-cal-selected)]' : 'text-[var(--dd-cal-text-secondary)]'
+                          }`}>
                             {details.temposValidos.length === 1 
                               ? details.temposValidos[0].replace('º TEMPO', 'º') 
                               : `${details.temposValidos[0].replace('º TEMPO', 'º')}–${details.temposValidos[details.temposValidos.length - 1].replace('º TEMPO', 'º')}`
@@ -528,7 +530,7 @@ export default function CalendarWidget({
                         )}
                       </div>
 
-                      {/* Right: Circular Badges F, C, A stacked vertically */}
+                      {/* Right: Badges F, C, A stacked vertically */}
                       <div className="flex flex-col items-center gap-1 shrink-0 ml-1">
                         <StatusCircle 
                           letter="F" 
@@ -560,9 +562,9 @@ export default function CalendarWidget({
               return (
                 <div
                   key={`day-${day}`}
-                  className={`dd-cal-cell ${isOutsidePeriod ? 'dd-cal-disabled' : 'dd-cal-empty'} ${details.isToday ? 'dd-cal-today' : ''}`}
+                  className={`dd-cal-cell ${isOutsidePeriod ? 'dd-cal-disabled' : 'dd-cal-empty'} ${details.isToday ? 'dd-cal-today' : ''} ${isSelected ? 'dd-cal-selected' : ''}`}
                 >
-                  <span className="text-sm font-semibold text-[var(--dd-ink-muted)]">{day}</span>
+                  <span className="text-sm sm:text-base font-semibold text-[var(--dd-cal-text-muted)]">{day}</span>
                 </div>
               );
             })}
@@ -608,19 +610,19 @@ export default function CalendarWidget({
                       <div className="flex items-center gap-3">
                         <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 ${
                           item.isToday 
-                            ? 'bg-[var(--dd-primary)] text-white' 
-                            : 'bg-[var(--dd-surface-subtle)] border border-[var(--dd-border)] text-[var(--dd-ink)]'
+                            ? 'bg-[var(--dd-cal-primary)] text-white' 
+                            : 'bg-[var(--dd-cal-header)] border border-[var(--dd-cal-border)] text-[var(--dd-cal-text-primary)]'
                         }`}>
                           <span className="text-base font-black leading-none">{item.day}</span>
-                          <span className={`text-[10px] font-bold uppercase mt-0.5 ${item.isToday ? 'text-white/70' : 'text-[var(--dd-ink-muted)]'}`}>
+                          <span className={`text-[10px] font-bold uppercase mt-0.5 ${item.isToday ? 'text-white/70' : 'text-[var(--dd-cal-text-secondary)]'}`}>
                             {MONTH_NAMES[currentMonth].slice(0, 3)}
                           </span>
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-[var(--dd-ink)]">
+                          <p className="text-sm font-bold text-[var(--dd-cal-text-primary)]">
                             {WEEK_DAYS_FULL[item.dayOfWeek]}
                           </p>
-                          <p className="text-xs text-[var(--dd-ink-muted)] flex items-center gap-1 mt-0.5">
+                          <p className="text-xs text-[var(--dd-cal-text-secondary)] flex items-center gap-1 mt-0.5">
                             <Clock className="w-3 h-3" />
                             {item.temposValidos.join(', ')}
                           </p>
@@ -630,16 +632,16 @@ export default function CalendarWidget({
                       {/* Status + Action */}
                       <div className="flex items-center justify-between sm:justify-end gap-3">
                         <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--dd-cal-text-primary)]">
                             <StatusCircle letter="F" done={item.isFrequenciaFull} partial={item.isFrequenciaPartial} title="Frequência" />
                             <span className="hidden sm:inline">Freq</span>
                           </span>
-                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--dd-cal-text-primary)]">
                             <StatusCircle letter="C" done={item.isConteudoFull} partial={item.isConteudoPartial} title="Conteúdo" />
                             <span className="hidden sm:inline">Cont</span>
                           </span>
                           {item.temAvaliacao && (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--dd-cal-text-primary)]">
                               <StatusCircle letter="A" done={item.avaliacoesLancadas} title={temRP ? 'Recuperação Paralela' : 'Avaliação'} />
                               <span className="hidden sm:inline">{temRP ? 'RP' : 'Aval'}</span>
                             </span>
@@ -648,7 +650,7 @@ export default function CalendarWidget({
 
                         <Link
                           to={`/frequencia?date=${item.dayStr}&turmaId=${turmaAtiva?.id}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--dd-primary)] hover:opacity-90 text-white rounded-lg text-xs font-bold transition-all shadow-xs shrink-0"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--dd-cal-primary)] hover:opacity-90 text-white rounded-lg text-xs font-bold transition-all shadow-xs shrink-0"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <span>Abrir registro</span>
@@ -661,7 +663,7 @@ export default function CalendarWidget({
               </div>
             ))
           ) : (
-            <div className="py-12 text-center text-[var(--dd-ink-muted)] text-sm">
+            <div className="py-12 text-center text-[var(--dd-cal-text-muted)] text-sm">
               Não há dias de aula cadastrados neste mês para esta turma.
             </div>
           )}
@@ -669,38 +671,38 @@ export default function CalendarWidget({
       )}
 
       {/* Compact Legend Footer */}
-      <div className="px-4 py-3 bg-[var(--dd-surface-subtle)] border-t border-[var(--dd-border)] flex flex-wrap items-center justify-between gap-y-2.5 text-xs text-[var(--dd-ink-muted)]">
+      <div className="px-4 py-3 bg-[var(--dd-cal-header)] border-t border-[var(--dd-cal-border)] flex flex-wrap items-center justify-between gap-y-2.5 text-xs text-[var(--dd-cal-text-secondary)]">
         {/* Quadrinhos colors */}
         <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-          <span className="font-bold text-slate-600 dark:text-slate-300">Quadrinhos:</span>
+          <span className="font-bold text-[var(--dd-cal-text-primary)]">Quadrinhos:</span>
           <span className="flex items-center gap-1.5">
-            <span className="w-3.5 h-3.5 rounded border border-emerald-200 bg-[#f0fdf4] dark:bg-emerald-950/40 shadow-2xs" />
-            <span className="font-medium text-slate-600 dark:text-slate-300">Concluído</span>
+            <span className="w-3.5 h-3.5 rounded border border-[#D3F0DA] bg-[#EFFBF2] dark:border-emerald-700/40 dark:bg-emerald-950/40 shadow-2xs" />
+            <span className="font-medium text-[var(--dd-cal-text-secondary)]">Concluído</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-3.5 h-3.5 rounded border border-yellow-200 bg-[#fefce8] dark:bg-amber-950/40 shadow-2xs" />
-            <span className="font-medium text-slate-600 dark:text-slate-300">Parcial</span>
+            <span className="w-3.5 h-3.5 rounded border border-[#F8DEA0] bg-[#FFF9E8] dark:border-amber-700/40 dark:bg-amber-950/40 shadow-2xs" />
+            <span className="font-medium text-[var(--dd-cal-text-secondary)]">Parcial</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-3.5 h-3.5 rounded border border-rose-200 bg-[#fff1f2] dark:bg-rose-950/40 shadow-2xs" />
-            <span className="font-medium text-slate-600 dark:text-slate-300">Pendente</span>
+            <span className="w-3.5 h-3.5 rounded border border-[#F8D1D1] bg-[#FFF1F1] dark:border-rose-700/40 dark:bg-rose-950/40 shadow-2xs" />
+            <span className="font-medium text-[var(--dd-cal-text-secondary)]">Pendente</span>
           </span>
         </div>
 
         {/* Badges F, C, A */}
         <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-          <span className="font-bold text-slate-600 dark:text-slate-300">Indicadores:</span>
+          <span className="font-bold text-[var(--dd-cal-text-primary)]">Indicadores:</span>
           <span className="flex items-center gap-1.5" title="Frequência">
             <span className="dd-circle-badge dd-circle-done">F</span>
-            <span className="font-medium">Frequência</span>
+            <span className="font-medium text-[var(--dd-cal-text-secondary)]">Frequência</span>
           </span>
           <span className="flex items-center gap-1.5" title="Conteúdo Ministrado">
             <span className="dd-circle-badge dd-circle-done">C</span>
-            <span className="font-medium">Conteúdo</span>
+            <span className="font-medium text-[var(--dd-cal-text-secondary)]">Conteúdo</span>
           </span>
           <span className="flex items-center gap-1.5" title="Avaliação (quando agendada)">
             <span className="dd-circle-badge dd-circle-done">A</span>
-            <span className="font-medium">Avaliação</span>
+            <span className="font-medium text-[var(--dd-cal-text-secondary)]">Avaliação</span>
           </span>
         </div>
       </div>

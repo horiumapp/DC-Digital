@@ -293,61 +293,88 @@
   background: radial-gradient(circle at 10% 20%, #0a1120 0%, #0f172a 50%, #080d18 100%);
 }
 
-/* ── Diário em Foco: Calendar Redesign ── */
+/* ── Diário em Foco: Calendar Redesign Modern SaaS ── */
 :root {
-  --dd-cal-cell-min: 6.5rem;
-  --dd-cal-today-ring: #2563eb;
-  --dd-cal-selected-bg: #eff6ff;
-  --dd-cal-selected-border: #3b82f6;
-  --dd-cal-lesson-bg: #ffffff;
-  --dd-cal-empty-bg: #f8fafc;
-  --dd-cal-disabled-bg: #f1f5f9;
-  --dd-status-done: #059669;
-  --dd-status-partial: #d97706;
-  --dd-status-pending: #94a3b8;
+  --dd-cal-primary: #102B6A;
+  --dd-cal-selected: #1677FF;
+  --dd-cal-selected-bg: #EFF6FF;
+  --dd-cal-selected-border: #1677FF;
+  --dd-cal-success: #3B9345;
+  --dd-cal-success-bg: #EFFBF2;
+  --dd-cal-success-border: #D3F0DA;
+  --dd-cal-warning: #F0A21A;
+  --dd-cal-warning-bg: #FFF9E8;
+  --dd-cal-warning-border: #F8DEA0;
+  --dd-cal-danger: #F04444;
+  --dd-cal-danger-bg: #FFF1F1;
+  --dd-cal-danger-border: #F8D1D1;
+  --dd-cal-bg: #FFFFFF;
+  --dd-cal-header: #F8FAFC;
+  --dd-cal-border: #E2E8F0;
+  --dd-cal-text-primary: #10204F;
+  --dd-cal-text-secondary: #64748B;
+  --dd-cal-text-muted: #94A3B8;
+  --dd-cal-cell-min: 6.25rem;
 }
 
 .dark {
-  --dd-cal-today-ring: #38bdf8;
+  --dd-cal-primary: #38bdf8;
+  --dd-cal-selected: #38bdf8;
   --dd-cal-selected-bg: #172554;
-  --dd-cal-selected-border: #3b82f6;
-  --dd-cal-lesson-bg: #0f172a;
-  --dd-cal-empty-bg: #0c1322;
-  --dd-cal-disabled-bg: #0b1120;
-  --dd-status-done: #34d399;
-  --dd-status-partial: #fbbf24;
-  --dd-status-pending: #475569;
+  --dd-cal-selected-border: #38bdf8;
+  --dd-cal-success: #34d399;
+  --dd-cal-success-bg: rgba(59, 147, 69, 0.14);
+  --dd-cal-success-border: rgba(59, 147, 69, 0.32);
+  --dd-cal-warning: #fbbf24;
+  --dd-cal-warning-bg: rgba(240, 162, 26, 0.14);
+  --dd-cal-warning-border: rgba(240, 162, 26, 0.32);
+  --dd-cal-danger: #f87171;
+  --dd-cal-danger-bg: rgba(240, 68, 68, 0.14);
+  --dd-cal-danger-border: rgba(240, 68, 68, 0.32);
+  --dd-cal-bg: #0f172a;
+  --dd-cal-header: #1e293b;
+  --dd-cal-border: #334155;
+  --dd-cal-text-primary: #f8fafc;
+  --dd-cal-text-secondary: #cbd5e1;
+  --dd-cal-text-muted: #94A3B8;
 }
 
 /* Calendar cell base */
 .dd-cal-cell {
   position: relative;
   min-height: var(--dd-cal-cell-min);
-  padding: 0.5rem;
-  border-right: 1px solid var(--dd-border);
-  border-bottom: 1px solid var(--dd-border);
-  transition: background 0.15s ease, box-shadow 0.15s ease;
+  padding: 0.625rem 0.625rem 0.5rem;
+  border-right: 1px solid var(--dd-cal-border);
+  border-bottom: 1px solid var(--dd-cal-border);
+  background-color: var(--dd-cal-bg);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
 
 /* Today ring */
 .dd-cal-today {
-  box-shadow: inset 0 0 0 2px var(--dd-cal-today-ring);
-  z-index: 1;
+  position: relative;
+}
+
+.dd-cal-today::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: var(--dd-cal-selected);
+  pointer-events: none;
 }
 
 /* Selected day */
 .dd-cal-selected {
-  box-shadow: inset 0 0 0 2.5px var(--dd-cal-selected-border) !important;
+  box-shadow: inset 0 0 0 2px var(--dd-cal-selected) !important;
   z-index: 2;
 }
 
 .dd-cal-empty.dd-cal-selected {
-  background: var(--dd-cal-selected-bg) !important;
-}
-
-/* Combined today + selected */
-.dd-cal-today.dd-cal-selected {
-  box-shadow: inset 0 0 0 2.5px var(--dd-cal-selected-border), inset 0 0 0 4.5px var(--dd-cal-today-ring) !important;
+  background-color: var(--dd-cal-selected-bg) !important;
 }
 
 /* Lesson day base */
@@ -357,91 +384,80 @@
 
 /* Calendar cell status backgrounds - Cores suaves, claras e modernas */
 .dd-cal-cell-full {
-  background-color: #f0fdf4 !important;
-  border-color: #d1fae5;
+  background-color: var(--dd-cal-success-bg) !important;
+  border-color: var(--dd-cal-success-border);
 }
 
 .dd-cal-cell-partial {
-  background-color: #fefce8 !important;
-  border-color: #fef08a;
+  background-color: var(--dd-cal-warning-bg) !important;
+  border-color: var(--dd-cal-warning-border);
 }
 
 .dd-cal-cell-pending {
-  background-color: #fff1f2 !important;
-  border-color: #fecdd3;
-}
-
-.dark .dd-cal-cell-full {
-  background-color: rgba(16, 185, 129, 0.12) !important;
-  border-color: rgba(16, 185, 129, 0.25);
-}
-
-.dark .dd-cal-cell-partial {
-  background-color: rgba(245, 158, 11, 0.12) !important;
-  border-color: rgba(245, 158, 11, 0.25);
-}
-
-.dark .dd-cal-cell-pending {
-  background-color: rgba(244, 63, 94, 0.12) !important;
-  border-color: rgba(244, 63, 94, 0.25);
+  background-color: var(--dd-cal-danger-bg) !important;
+  border-color: var(--dd-cal-danger-border);
 }
 
 .dd-cal-cell-full:hover,
 .dd-cal-cell-partial:hover,
 .dd-cal-cell-pending:hover {
-  filter: brightness(0.97);
+  filter: brightness(0.985);
 }
 
 .dark .dd-cal-cell-full:hover,
 .dark .dd-cal-cell-partial:hover,
 .dark .dd-cal-cell-pending:hover {
-  filter: brightness(1.15);
+  filter: brightness(1.12);
 }
 
 .dd-cal-lesson:focus-visible {
-  outline: 2px solid var(--dd-focus);
+  outline: 2px solid var(--dd-cal-selected);
   outline-offset: -2px;
 }
 
-/* Circle badges F, C, A - Cores modernas suaves e elegantes */
+/* Badges F, C, A - Modern SaaS squircle (22-24px, cantos arredondados) */
 .dd-circle-badge {
-  width: 1.25rem;
-  height: 1.25rem;
-  border-radius: 9999px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.625rem;
-  font-weight: 800;
+  font-size: 0.6875rem;
+  font-weight: 700;
   line-height: 1;
   color: #ffffff;
   user-select: none;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
   flex-shrink: 0;
-  transition: transform 0.1s ease;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.dd-circle-badge:hover {
+  transform: scale(1.06);
 }
 
 .dd-circle-done {
-  background-color: #2e7d32; /* Verde folha suave e natural */
+  background-color: var(--dd-cal-success);
 }
 
 .dd-circle-partial {
-  background-color: #d97706; /* Âmbar suave sofisticado */
+  background-color: var(--dd-cal-warning);
 }
 
 .dd-circle-pending {
-  background-color: #c0392b; /* Terracota elegante e suave */
+  background-color: var(--dd-cal-danger);
 }
 
 /* Empty/disabled day */
 .dd-cal-empty {
-  background: var(--dd-cal-empty-bg);
-  color: var(--dd-ink-muted);
+  background-color: var(--dd-cal-bg);
+  color: var(--dd-cal-text-muted);
 }
 
 .dd-cal-disabled {
-  background: var(--dd-cal-disabled-bg);
-  opacity: 0.5;
+  background-color: var(--dd-cal-header);
+  opacity: 0.6;
 }
 
 /* Status indicator badges */
