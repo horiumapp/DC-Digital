@@ -114,6 +114,7 @@ export function useSyncStatus(isOnline: boolean): SyncStatusResult {
 
   const syncNow = useCallback(async () => {
     if (!isOnline) return;
+    await SyncEngine.retryErrors();
     await SyncEngine.syncAll();
   }, [isOnline]);
 

@@ -275,7 +275,7 @@ export default function Layout() {
                 !isOnline 
                   ? `Offline: ${pendingCount} alteração(ões) salva(s) localmente` 
                   : pendingCount > 0 
-                  ? `${pendingCount} item(ns) aguardando sincronização. Clique para sincronizar agora.` 
+                  ? `${pendingCount} alteração(ões) salva(s) localmente aguardando sincronização com a nuvem. Clique para enviar agora.` 
                   : 'Conectado e sincronizado'
               }
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer select-none ${
@@ -310,7 +310,7 @@ export default function Layout() {
               ) : pendingCount > 0 ? (
                 <>
                   <RefreshCw className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                  <span className="hidden md:inline">Pendente</span>
+                  <span className="hidden md:inline">Sinc. pendente</span>
                   <span className="font-bold">({pendingCount})</span>
                 </>
               ) : (
