@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Plus, Edit2, Trash2, Building2, User, ArrowLeft, Users, ChevronRight, Calendar, Clock, X, Download, Upload } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Building2, User, ArrowLeft, Users, ChevronRight, Calendar, Clock, X, Download, Upload, KeyRound, Copy, Check } from 'lucide-react';
 import NovoProfessorModal, { type NovoProfessorFormData } from '../../components/NovoProfessorModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 import GerenciarAlocacoesModal from '../../components/GerenciarAlocacoesModal';
@@ -13,8 +13,8 @@ import {
   parseProfessoresCsv,
   downloadCsvFile
 } from '../../utils/csvImportExport';
-import { gerarSenhaTemporaria } from '../../utils/formatters';
 
+const SENHA_PADRAO_PROFESSOR = '@prof123';
 const DEPARTAMENTOS = ['Geral', 'BIOLÓGICAS', 'HUMANAS', 'EXATAS', 'LINGUAGENS'];
 const DISCIPLINAS = [
   'Português', 'Matemática', 'Ciências', 'História', 'Geografia',
@@ -60,6 +60,8 @@ export default function TabProfessores() {
   const [professorParaAlocar, setProfessorParaAlocar] = useState<ProfessorRow | null>(null);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [professorParaHorario, setProfessorParaHorario] = useState<ProfessorRow | null>(null);
+  const [credenciaisCriadas, setCredenciaisCriadas] = useState<{ nome: string; email: string; senha: string } | null>(null);
+  const [copiado, setCopiado] = useState(false);
 
   const [professores, setProfessores] = useState<ProfessorRow[]>([]);
   const [escolas, setEscolas] = useState<EscolaOption[]>([]);
@@ -202,8 +204,8 @@ export default function TabProfessores() {
 
         // Fase 2: Se forneceu e-mail, criar conta de acesso via Edge Function
         if (novoProfessor.email && selectedEscola) {
-          // FIX C2: senha temporária aleatória forte — nunca mais "@prof123"
-          const senhaDeAcesso = novoProfessor.senha || gerarSenhaTemporaria();
+          // Senha padrão @prof123 solicitada para acesso inicial
+          const senhaDeAcesso = novoProfessor.senha?.trim() || SENHA_PADRAO_PROFESSOR;
 
           if (senhaDeAcesso.length >= 8) {
             try {
@@ -222,7 +224,12 @@ export default function TabProfessores() {
                 if (authData?.details) msg += ` - Detalhes: ${JSON.stringify(authData.details)}`;
                 showWarning(`Professor cadastrado, mas não foi possível criar a conta de acesso: ${msg}`);
               } else {
-                showSuccess(`Professor ${novoProfessor.nome} cadastrado com acesso! (Senha: ${senhaDeAcesso})`);
+                setCredenciaisCriadas({
+                  nome: novoProfessor.nome,
+                  email: novoProfessor.email.trim().toLowerCase(),
+                  senha: senhaDeAcesso,
+                });
+                showSuccess(`Professor(a) ${novoProfessor.nome} cadastrado(a) com acesso! Senha padrão: ${senhaDeAcesso}`);
               }
             } catch (err: unknown) {
               console.error("Erro ao criar conta de acesso do professor:", err);
@@ -585,6 +592,9 @@ export default function TabProfessores() {
                     placeholder="E-mail de acesso"
                     className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851]"
                   />
+                  <p className="text-[10px] text-slate-400 font-medium ml-1">
+                    Ao preencher, a conta é criada com senha padrão: <span className="font-bold text-[#0f2851] bg-slate-100 px-1.5 py-0.5 rounded">@prof123</span>
+                  </p>
                 </div>
                 {/* Departamento */}
                 <div className="space-y-2 lg:col-span-1">
@@ -875,6 +885,79 @@ export default function TabProfessores() {
         previewColumns={professorPreviewColumns}
         entityNamePlural="professores"
       />
+
+      {/* Modal de confirmação de credenciais criadas */}
+      {credenciaisCriadas && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full p-6 space-y-6">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">
+                  Conta de Acesso Criada
+                </h3>
+                <p className="text-xs text-slate-400 font-medium">
+                  Credenciais de acesso do professor
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Professor</span>
+                <span className="text-sm font-black text-slate-800">{credenciaisCriadas.nome}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">E-mail de Login</span>
+                <span className="text-sm font-bold text-[#0f2851] font-mono">{credenciaisCriadas.email}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Senha Padrão</span>
+                <span className="text-sm font-black text-emerald-700 font-mono bg-emerald-50 px-2.5 py-1 rounded-lg inline-block border border-emerald-200">
+                  {credenciaisCriadas.senha}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  const texto = `Acesso DC Digital - Professor\nNome: ${credenciaisCriadas.nome}\nE-mail: ${credenciaisCriadas.email}\nSenha: ${credenciaisCriadas.senha}\nLink de Acesso: ${window.location.origin}`;
+                  navigator.clipboard.writeText(texto);
+                  setCopiado(true);
+                  setTimeout(() => setCopiado(false), 2000);
+                }}
+                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors"
+              >
+                {copiado ? (
+                  <>
+                    <Check className="w-4 h-4 text-emerald-600" />
+                    <span>Copiado!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    <span>Copiar Dados de Acesso</span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCredenciaisCriadas(null);
+                  setCopiado(false);
+                }}
+                className="py-3 px-6 bg-[#0f2851] hover:bg-blue-900 text-white font-bold rounded-xl text-xs transition-colors shadow-md"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
