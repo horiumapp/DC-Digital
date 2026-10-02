@@ -191,7 +191,7 @@ export default function ObjetoConhecimentoTab({
     carregar();
   }, [selectedDate, tempoAula, turmaAtiva, buscarConteudo, unidadesDisponiveis, curriculoIndisponivel]);
 
-  const { showWarning, showError, showSuccess } = useToast();
+  const { showWarning, showError } = useToast();
 
   const handleExcluirObjeto = async () => {
     await removerConteudo(selectedDate, tempoAula);
@@ -200,7 +200,6 @@ export default function ObjetoConhecimentoTab({
     setShowObjetoTable(false);
     setObjetoObservacao('');
     setShowDeleteObjetoModal(false);
-    showSuccess('Conteúdo ministrado excluído com sucesso.');
   };
 
   const handleVoltar = () => {
@@ -243,7 +242,6 @@ export default function ObjetoConhecimentoTab({
       setIsAddingObjeto(false);
       setCaptchaInput('');
       generateNewCaptcha();
-      showSuccess('Conteúdo ministrado gravado com sucesso!');
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
       // Auto-advance to the next tempo that doesn't have content yet
