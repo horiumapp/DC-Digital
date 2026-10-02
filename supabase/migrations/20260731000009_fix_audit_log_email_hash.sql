@@ -25,7 +25,7 @@ BEGIN
   v_email_hash := NULL;
   IF auth.email() IS NOT NULL THEN
     BEGIN
-      v_email_hash := encode(digest(lower(trim(auth.email())), 'sha256'::text), 'hex');
+      v_email_hash := encode(extensions.digest(lower(trim(auth.email())), 'sha256'::text), 'hex');
     EXCEPTION WHEN OTHERS THEN
       v_email_hash := NULL;
     END;
@@ -47,7 +47,7 @@ $function$;
 -- 2. Atualizar registros existentes que contêm emails em texto plano
 -- (emails reais contêm '@', hashes SHA-256 não contêm)
 UPDATE audit_log
-SET user_email = encode(digest(lower(trim(user_email)), 'sha256'), 'hex')
+SET user_email = encode(extensions.digest(lower(trim(user_email)), 'sha256'), 'hex')
 WHERE user_email IS NOT NULL
   AND user_email LIKE '%@%';
 

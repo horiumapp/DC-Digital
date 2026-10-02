@@ -34,7 +34,7 @@ BEGIN
 
     -- Preencher retroativamente (somente se user_email não for nulo)
     UPDATE public.audit_log
-      SET user_email_hash = encode(digest(lower(trim(user_email)), 'sha256'), 'hex')
+      SET user_email_hash = encode(extensions.digest(lower(trim(user_email)), 'sha256'), 'hex')
       WHERE user_email IS NOT NULL
         AND user_email_hash IS NULL;
 
@@ -55,7 +55,7 @@ CREATE OR REPLACE FUNCTION public.fn_audit_log_changes()
   RETURNS trigger
   LANGUAGE plpgsql
   SECURITY DEFINER
-  SET search_path TO 'public'
+  SET search_path TO 'public', 'extensions'
 AS $function$
 DECLARE
   v_record_id TEXT;
@@ -73,7 +73,7 @@ BEGIN
   -- Permite correlacionar eventos do mesmo usuário sem armazenar PII.
   v_email_raw := auth.email();
   IF v_email_raw IS NOT NULL THEN
-    v_email_hash := encode(digest(lower(trim(v_email_raw)), 'sha256'), 'hex');
+    v_email_hash := encode(extensions.digest(lower(trim(v_email_raw)), 'sha256'), 'hex');
   END IF;
 
   INSERT INTO public.audit_log (
