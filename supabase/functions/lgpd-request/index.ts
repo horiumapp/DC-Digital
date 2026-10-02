@@ -87,22 +87,6 @@ function checkRateLimit(ip: string): {
   };
 }
 
-// Limpeza periódica de entradas expiradas (a cada 5 minutos)
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitMap.entries()) {
-    // Remover se todas as timestamps já expiraram
-    const recent = entry.timestamps.filter(
-      (ts) => now - ts < RATE_LIMIT_WINDOW_MS
-    );
-    if (recent.length === 0) {
-      rateLimitMap.delete(key);
-    } else {
-      entry.timestamps = recent;
-    }
-  }
-}, 5 * 60_000);
-
 // ============================================================
 // Validação de input
 // ============================================================
