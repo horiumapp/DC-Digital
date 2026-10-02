@@ -471,7 +471,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       registrarLancamento({ turmaId: rawId, data: cont.data, tipo: 'conteudo', tempo: cont.tempo });
       const conts = await OfflineTurmaService.fetchConteudosPeriodo(rawId, turmaAtiva.componente);
       setConteudos(conts);
-      showSuccessRef.current('Conteúdo salvo!');
+      showSuccessRef.current('Conteúdo ministrado gravado com sucesso!');
     } catch (err) {
       console.error('Erro ao salvar conteúdo:', err);
       showErrorRef.current('Erro ao salvar o conteúdo ministrado.');
@@ -537,7 +537,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       removerLancamento({ turmaId: rawId, data, tipo: 'conteudo', tempo });
       const conts = await OfflineTurmaService.fetchConteudosPeriodo(rawId, turmaAtiva.componente);
       setConteudos(conts);
-      showSuccessRef.current('Conteúdo removido.');
+      showSuccessRef.current('Conteúdo ministrado excluído com sucesso.');
     } catch {
       showErrorRef.current('Não foi possível remover o conteúdo.');
     }
