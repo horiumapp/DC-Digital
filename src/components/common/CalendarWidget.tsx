@@ -457,28 +457,34 @@ export default function CalendarWidget({
       {viewMode === 'grid' && (
         <div>
           {/* Weekday headers */}
-          <div className="grid grid-cols-7 border-b border-[var(--dd-cal-border)] bg-[var(--dd-cal-header)]">
-            {WEEK_DAYS.map((day) => (
-              <div key={day} className="text-center py-2.5 text-xs font-bold text-[var(--dd-cal-text-secondary)] uppercase tracking-wider">
+          <div className="grid grid-cols-6 sm:grid-cols-7 border-b border-[var(--dd-cal-border)] bg-[var(--dd-cal-header)]">
+            {WEEK_DAYS.map((day, dIdx) => (
+              <div 
+                key={day} 
+                className={`text-center py-2 sm:py-2.5 text-xs font-bold text-[var(--dd-cal-text-secondary)] uppercase tracking-wider ${
+                  dIdx === 0 ? 'hidden sm:block' : ''
+                }`}
+              >
                 {day}
               </div>
             ))}
           </div>
 
           {/* Day cells */}
-          <div className="grid grid-cols-7 border-l border-t border-[var(--dd-cal-border)] bg-[var(--dd-cal-bg)]">
+          <div className="grid grid-cols-6 sm:grid-cols-7 border-l border-t border-[var(--dd-cal-border)] bg-[var(--dd-cal-bg)]">
             {calendarDays.map((day, index) => {
               if (day === null) {
                 return (
                   <div 
                     key={`empty-${index}`} 
-                    className="dd-cal-cell dd-cal-empty"
+                    className={`dd-cal-cell dd-cal-empty ${index === 0 ? 'hidden sm:block' : ''}`}
                   />
                 );
               }
 
               const details = getDayDetails(day);
               const isSelected = selectedDay === day;
+              const isSunday = details.dayOfWeek === 0;
 
               if (details.isDiaDeAula) {
                 const cellStatusClass = details.status === 'full' 
@@ -492,6 +498,7 @@ export default function CalendarWidget({
                   cellStatusClass,
                   details.isToday ? 'dd-cal-today' : '',
                   isSelected ? 'dd-cal-selected' : '',
+                  isSunday ? 'hidden sm:flex' : 'flex',
                 ].filter(Boolean).join(' ');
 
                 return (
@@ -499,7 +506,7 @@ export default function CalendarWidget({
                     key={`day-${day}`}
                     role="button"
                     tabIndex={0}
-                    className={`${cellClasses} flex flex-col justify-between group cursor-pointer select-none`}
+                    className={`${cellClasses} flex-col justify-between group cursor-pointer select-none`}
                     onClick={(e) => handleDayClick(e, day, details)}
                     onDoubleClick={(e) => {
                       e.preventDefault();
@@ -512,14 +519,14 @@ export default function CalendarWidget({
                     {/* Content inside cell */}
                     <div className="flex items-start justify-between w-full h-full">
                       {/* Left: Day number and tempo */}
-                      <div className="flex flex-col items-start gap-1">
-                        <span className={`text-base sm:text-lg font-bold leading-none ${
+                      <div className="flex flex-col items-start gap-0.5 sm:gap-1">
+                        <span className={`text-sm sm:text-lg font-bold leading-none ${
                           isSelected ? 'text-[var(--dd-cal-selected)]' : 'text-[var(--dd-cal-text-primary)]'
                         } transition-colors`}>
                           {day}
                         </span>
                         {details.temposValidos.length > 0 && (
-                          <span className={`text-[11px] font-medium leading-none ${
+                          <span className={`text-[10px] sm:text-[11px] font-medium leading-none ${
                             isSelected ? 'text-[var(--dd-cal-selected)]' : 'text-[var(--dd-cal-text-secondary)]'
                           }`}>
                             {details.temposValidos.length === 1 
@@ -531,7 +538,7 @@ export default function CalendarWidget({
                       </div>
 
                       {/* Right: Badges F, C, A stacked vertically */}
-                      <div className="flex flex-col items-center gap-1 shrink-0 ml-1">
+                      <div className="flex flex-col items-center gap-1 shrink-0 ml-0.5 sm:ml-1">
                         <StatusCircle 
                           letter="F" 
                           done={details.isFrequenciaFull} 
@@ -562,7 +569,7 @@ export default function CalendarWidget({
               return (
                 <div
                   key={`day-${day}`}
-                  className={`dd-cal-cell ${isOutsidePeriod ? 'dd-cal-disabled' : 'dd-cal-empty'} ${details.isToday ? 'dd-cal-today' : ''} ${isSelected ? 'dd-cal-selected' : ''}`}
+                  className={`dd-cal-cell ${isOutsidePeriod ? 'dd-cal-disabled' : 'dd-cal-empty'} ${details.isToday ? 'dd-cal-today' : ''} ${isSelected ? 'dd-cal-selected' : ''} ${isSunday ? 'hidden sm:block' : ''}`}
                 >
                   <span className="text-sm sm:text-base font-semibold text-[var(--dd-cal-text-muted)]">{day}</span>
                 </div>
@@ -671,9 +678,9 @@ export default function CalendarWidget({
       )}
 
       {/* Compact Legend Footer */}
-      <div className="px-4 py-3 bg-[var(--dd-cal-header)] border-t border-[var(--dd-cal-border)] flex flex-wrap items-center justify-between gap-y-2.5 text-xs text-[var(--dd-cal-text-secondary)]">
+      <div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-[var(--dd-cal-header)] border-t border-[var(--dd-cal-border)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 text-xs text-[var(--dd-cal-text-secondary)]">
         {/* Quadrinhos colors */}
-        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           <span className="font-bold text-[var(--dd-cal-text-primary)]">Quadrinhos:</span>
           <span className="flex items-center gap-1.5">
             <span className="w-3.5 h-3.5 rounded border border-[#D3F0DA] bg-[#EFFBF2] dark:border-emerald-700/40 dark:bg-emerald-950/40 shadow-2xs" />
@@ -690,7 +697,7 @@ export default function CalendarWidget({
         </div>
 
         {/* Badges F, C, A */}
-        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           <span className="font-bold text-[var(--dd-cal-text-primary)]">Indicadores:</span>
           <span className="flex items-center gap-1.5" title="Frequência">
             <span className="dd-circle-badge dd-circle-done">F</span>

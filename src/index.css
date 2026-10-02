@@ -533,6 +533,15 @@
   .dd-frequency-summary .flex.items-center { flex-wrap: wrap; }
 
   /* Calendar mobile adjustments */
-  :root { --dd-cal-cell-min: 5rem; }
+  :root { --dd-cal-cell-min: 5.15rem; }
+  .dd-cal-cell {
+    padding: 0.45rem 0.35rem 0.35rem;
+  }
+  .dd-circle-badge {
+    width: 20px;
+    height: 20px;
+    font-size: 0.625rem;
+    border-radius: 5px;
+  }
   .dd-badge { font-size: 0.625rem; padding: 0.1rem 0.3rem; }
 }
