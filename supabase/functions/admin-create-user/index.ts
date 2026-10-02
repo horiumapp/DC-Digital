@@ -53,6 +53,16 @@ const rateLimitMap = new Map<string, RateLimitEntry>();
 
 function checkRateLimit(userId: string): boolean {
   const now = Date.now();
+
+  // Limpar entradas expiradas sob demanda (evita timers de fundo que causam 503 no runtime serverless)
+  if (rateLimitMap.size > 50) {
+    for (const [key, entry] of rateLimitMap.entries()) {
+      if ((now - entry.windowStart) > RATE_LIMIT_WINDOW_MS * 2) {
+        rateLimitMap.delete(key);
+      }
+    }
+  }
+
   const entry = rateLimitMap.get(userId);
 
   if (!entry || (now - entry.windowStart) > RATE_LIMIT_WINDOW_MS) {
@@ -68,16 +78,6 @@ function checkRateLimit(userId: string): boolean {
   entry.count++;
   return true;
 }
-
-// Limpar entradas expiradas periodicamente (a cada 5 minutos) para evitar leak de memória
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitMap.entries()) {
-    if ((now - entry.windowStart) > RATE_LIMIT_WINDOW_MS * 2) {
-      rateLimitMap.delete(key);
-    }
-  }
-}, 5 * 60_000);
 
 Deno.serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req);
@@ -126,11 +126,16 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Verificar role do chamador — SOMENTE via app_metadata (JWT assinado pelo backend)
-    // FIX #4: Removido fallback para tabela `usuarios` que poderia ser manipulada via RLS.
-    const { data: actorProfile, error: actorError } = await supabaseAdmin.from("usuarios").select("cargo").eq("id", callerUser.id).single();
-    if (actorError) throw actorError;
-    const effectiveRole = actorProfile?.cargo;
+    // Verificar role do chamador — primeiro via app_metadata (JWT seguro do backend), com fallback seguro
+    let effectiveRole = (callerUser.app_metadata?.role as string | undefined)?.toUpperCase();
+    if (!effectiveRole) {
+      const { data: actorProfile } = await supabaseAdmin
+        .from("usuarios")
+        .select("cargo")
+        .eq("id", callerUser.id)
+        .maybeSingle();
+      effectiveRole = actorProfile?.cargo?.toUpperCase();
+    }
     if (!effectiveRole) {
       return new Response(
         JSON.stringify({ error: "Seu perfil não possui permissão configurada (role ausente no JWT). Contate o administrador." }),
