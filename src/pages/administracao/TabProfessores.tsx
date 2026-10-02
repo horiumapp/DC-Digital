@@ -264,14 +264,26 @@ export default function TabProfessores() {
 
     if (user?.role === 'ADMIN') {
       // ADMIN: Exclusão mestre do professor em todo o sistema
-      const { error } = await supabase
-        .from('professores')
-        .delete()
-        .eq('id', professorParaExcluir.id);
+      // 1. Tenta RPC transacional no banco
+      let deleteError: { message: string } | null = null;
+      const { error: rpcErr } = await supabase.rpc('admin_excluir_professor', {
+        p_professor_id: professorParaExcluir.id
+      });
 
-      if (error) {
-        console.error("Erro ao deletar:", error);
-        showError("Erro ao deletar professor: " + error.message);
+      if (rpcErr) {
+        // Fallback resiliente: limpa explicitamente dependências de chave estrangeira
+        await supabase.from('professor_horarios').delete().eq('professor_id', professorParaExcluir.id);
+        await supabase.from('professor_alocacoes').delete().eq('professor_id', professorParaExcluir.id);
+        const { error: fallbackErr } = await supabase
+          .from('professores')
+          .delete()
+          .eq('id', professorParaExcluir.id);
+        deleteError = fallbackErr;
+      }
+
+      if (deleteError) {
+        console.error("Erro ao deletar:", deleteError);
+        showError("Erro ao deletar professor: " + deleteError.message);
       } else {
         let authRemoved = true;
         // Revogar conta Auth correspondente se o professor tiver email cadastrado
