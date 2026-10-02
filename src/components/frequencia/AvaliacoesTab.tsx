@@ -51,7 +51,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
     salvarAvaliacao, removerAvaliacao, salvarNotas, 
     carregarFaltasDaData, faltasPorData 
   } = useTurma();
-  const { showWarning, showError, showSuccess } = useToast();
+  const { showWarning, showError } = useToast();
 
   const currentBimestre = React.useMemo(() => {
     return (dataContexto ? getBimestrePorData(dataContexto) : '') || '1º Bimestre';
@@ -410,7 +410,6 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
     try {
       setIsSaving(true);
       await salvarAvaliacao(payload);
-      showSuccess('Avaliação salva com sucesso!');
       setAvaliacaoViewMode('list');
       resetForm();
     } catch (err) {
@@ -449,7 +448,6 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
 
     try {
       await salvarNotas(selectedAvaliacao.id, notasToSave, removidos);
-      showSuccess('Notas gravadas com sucesso!');
       setAvaliacaoViewMode('list');
       resetForm();
     } catch (err) {
