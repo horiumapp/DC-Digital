@@ -46,6 +46,7 @@ vi.mock('../hooks/useTurmaProgress', () => ({
 vi.mock('react-router-dom', () => ({
   Link: ({ children, to }: { children: React.ReactNode; to: string }) => <a href={to}>{children}</a>,
   useNavigate: () => vi.fn(),
+  useSearchParams: () => [new URLSearchParams(), vi.fn()],
 }));
 
 vi.mock('motion/react', () => ({

@@ -114,6 +114,7 @@ export default function CalendarWidget({
 }: CalendarWidgetProps) {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'grid' | 'agenda'>(getStoredViewMode);
+  const lastEmittedRef = useRef<string | null>(null);
 
   const handleOpenFrequencia = useCallback((dayStr: string) => {
     const turmaParam = turmaAtiva?.id ? `&turmaId=${turmaAtiva.id}` : '';
@@ -132,8 +133,10 @@ export default function CalendarWidget({
     }
 
     lastCalendarClick = { day, time: now };
+    const signature = `${year}-${currentMonth}-${day}-${details.status}-${details.isFrequenciaFull}-${details.isConteudoFull}-${details.avaliacoesLancadas}`;
+    lastEmittedRef.current = signature;
     onDaySelect(day, details);
-  }, [onDaySelect, handleOpenFrequencia]);
+  }, [onDaySelect, handleOpenFrequencia, year, currentMonth]);
 
   const handleViewChange = (mode: 'grid' | 'agenda') => {
     setViewMode(mode);
@@ -354,15 +357,25 @@ export default function CalendarWidget({
     );
   };
 
-  // Sync selected day when month changes
+  // Sync selected day when month or lancamentos/details change
   useEffect(() => {
     if (selectedDay !== null) {
       const daysInMonth = new Date(year, currentMonth + 1, 0).getDate();
       if (selectedDay > daysInMonth) {
+        lastEmittedRef.current = null;
         onDaySelect(null, null);
+      } else {
+        const details = getDayDetails(selectedDay, currentMonth);
+        const signature = `${year}-${currentMonth}-${selectedDay}-${details.status}-${details.isFrequenciaFull}-${details.isConteudoFull}-${details.avaliacoesLancadas}`;
+        if (lastEmittedRef.current !== signature) {
+          lastEmittedRef.current = signature;
+          onDaySelect(selectedDay, details);
+        }
       }
+    } else {
+      lastEmittedRef.current = null;
     }
-  }, [currentMonth, year, selectedDay, onDaySelect]);
+  }, [selectedDay, currentMonth, year, getDayDetails, onDaySelect]);
 
   return (
     <div className="bg-[var(--dd-cal-bg)] border border-[var(--dd-cal-border)] rounded-2xl overflow-hidden shadow-xs">
