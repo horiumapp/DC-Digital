@@ -18,9 +18,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, publicOnl
     );
   }
 
+  const defaultRedirect = user?.role === 'ALUNO'
+    ? '/portal-aluno'
+    : user?.role === 'ADMIN'
+    ? '/administracao'
+    : '/turmas';
+
   if (publicOnly) {
     if (user) {
-      return <Navigate to={user.role === 'ALUNO' ? '/portal-aluno' : '/turmas'} replace />;
+      return <Navigate to={defaultRedirect} replace />;
     }
     return <Outlet />;
   }
@@ -30,7 +36,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, publicOnl
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to={user.role === 'ALUNO' ? '/portal-aluno' : '/turmas'} replace />;
+    return <Navigate to={defaultRedirect} replace />;
   }
 
   return <Outlet />;

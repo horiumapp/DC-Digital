@@ -129,17 +129,22 @@ export default function Layout() {
     { label: 'Pendências', to: '/estatisticas', icon: BarChart3 },
   ] : [];
 
+  const isDocente = user?.role !== 'ADMIN';
+  const homePath = user?.role === 'ADMIN' ? '/administracao' : '/turmas';
+
   const renderNav = () => (
     <nav className="space-y-6 py-2" aria-label="Navegação principal">
-      <section>
-        <p className="dd-nav-label">Rotina Docente</p>
-        {work.map(({ label, to, icon: Icon, end }) => (
-          <NavLink key={label} to={to} end={end} onClick={close} className={navClass}>
-            <Icon aria-hidden="true" />
-            <span>{label}</span>
-          </NavLink>
-        ))}
-      </section>
+      {isDocente && (
+        <section>
+          <p className="dd-nav-label">Rotina Docente</p>
+          {work.map(({ label, to, icon: Icon, end }) => (
+            <NavLink key={label} to={to} end={end} onClick={close} className={navClass}>
+              <Icon aria-hidden="true" />
+              <span>{label}</span>
+            </NavLink>
+          ))}
+        </section>
+      )}
 
       {management.length > 0 && (
         <section>
@@ -193,7 +198,7 @@ export default function Layout() {
     <div className="min-h-screen bg-slate-50 text-slate-800 dark:bg-[#090e17] dark:text-slate-100">
       {/* Desktop Persistent Sidebar */}
       <aside className="dd-sidebar hidden lg:flex">
-        <Link to="/turmas" className="dd-brand" aria-label="DC Digital, ir para visão geral">
+        <Link to={homePath} className="dd-brand" aria-label="DC Digital, ir para visão geral">
           <img src="/logo.png" alt="" className="h-9 w-9 object-contain" />
           <span>
             <strong className="text-[#0b1f3f] dark:text-sky-400 text-base tracking-tight font-extrabold">DC Digital</strong>
@@ -239,7 +244,7 @@ export default function Layout() {
               <Menu aria-hidden="true" />
             </button>
             
-            <Link to="/turmas" className="flex items-center gap-2 lg:hidden">
+            <Link to={homePath} className="flex items-center gap-2 lg:hidden">
               <img src="/logo.png" alt="" className="h-7 w-7 object-contain" />
               <b className="text-[#0b1f3f] dark:text-sky-400 font-bold text-sm">DC Digital</b>
             </Link>
@@ -420,29 +425,52 @@ export default function Layout() {
       )}
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="dd-mobile-nav lg:hidden" aria-label="Ações principais do professor">
-        <NavLink to="/turmas" end>
-          <Home aria-hidden="true" />
-          <span>Início</span>
-        </NavLink>
-        <NavLink to="/diario">
-          <BookOpenCheck aria-hidden="true" />
-          <span>Diário</span>
-        </NavLink>
-        <button onClick={openQuickAttendance} aria-label="Abrir chamada rápida">
-          <ClipboardCheck aria-hidden="true" />
-          <span>Chamada</span>
-        </button>
-        {canManage ? (
-          <NavLink to="/administracao">
-            <GraduationCap aria-hidden="true" />
-            <span>Gestão</span>
-          </NavLink>
+      <nav className="dd-mobile-nav lg:hidden" aria-label={user?.role === 'ADMIN' ? 'Ações principais do administrador' : 'Ações principais do professor'}>
+        {user?.role === 'ADMIN' ? (
+          <>
+            <NavLink to="/administracao" end>
+              <GraduationCap aria-hidden="true" />
+              <span>Gestão</span>
+            </NavLink>
+            <NavLink to="/curriculo">
+              <BookOpenCheck aria-hidden="true" />
+              <span>BNCC</span>
+            </NavLink>
+            <NavLink to="/estatisticas">
+              <BarChart3 aria-hidden="true" />
+              <span>Pendências</span>
+            </NavLink>
+            <NavLink to="/minha-privacidade">
+              <Shield aria-hidden="true" />
+              <span>Privacidade</span>
+            </NavLink>
+          </>
         ) : (
-          <button onClick={() => setScheduleOpen(true)}>
-            <CalendarDays aria-hidden="true" />
-            <span>Horários</span>
-          </button>
+          <>
+            <NavLink to="/turmas" end>
+              <Home aria-hidden="true" />
+              <span>Início</span>
+            </NavLink>
+            <NavLink to="/diario">
+              <BookOpenCheck aria-hidden="true" />
+              <span>Diário</span>
+            </NavLink>
+            <button onClick={openQuickAttendance} aria-label="Abrir chamada rápida">
+              <ClipboardCheck aria-hidden="true" />
+              <span>Chamada</span>
+            </button>
+            {canManage ? (
+              <NavLink to="/administracao">
+                <GraduationCap aria-hidden="true" />
+                <span>Gestão</span>
+              </NavLink>
+            ) : (
+              <button onClick={() => setScheduleOpen(true)}>
+                <CalendarDays aria-hidden="true" />
+                <span>Horários</span>
+              </button>
+            )}
+          </>
         )}
       </nav>
 

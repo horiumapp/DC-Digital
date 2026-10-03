@@ -72,6 +72,20 @@ describe('ProtectedRoute', () => {
     expect(nav.getAttribute('data-to')).toBe('/turmas');
   });
 
+  it('para publicOnly: deve redirecionar administrador logado para administracao', () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'admin-1', role: 'ADMIN' },
+      loading: false,
+    });
+
+    render(<ProtectedRoute publicOnly />);
+
+    expect(screen.queryByTestId('outlet')).toBeNull();
+    const nav = screen.getByTestId('navigate');
+    expect(nav).toBeDefined();
+    expect(nav.getAttribute('data-to')).toBe('/administracao');
+  });
+
   it('para rotas protegidas normais: deve redirecionar para a home "/" se não estiver logado', () => {
     mockUseAuth.mockReturnValue({ user: null, loading: false });
 

@@ -21,7 +21,7 @@ export default function Login() {
   // Redireciona automaticamente se o usuário já estiver logado
   useEffect(() => {
     if (user) {
-      navigate(user.role === 'ALUNO' ? '/portal-aluno' : '/turmas', { replace: true });
+      navigate(user.role === 'ALUNO' ? '/portal-aluno' : user.role === 'ADMIN' ? '/administracao' : '/turmas', { replace: true });
     }
   }, [user, navigate]);
   
@@ -137,6 +137,8 @@ export default function Login() {
       const role = signInData?.user?.app_metadata?.role;
       if (role === 'ALUNO') {
         navigate('/portal-aluno');
+      } else if (role === 'ADMIN') {
+        navigate('/administracao');
       } else if (role) {
         navigate('/turmas');
       } else {

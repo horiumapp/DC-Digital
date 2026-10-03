@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Building2, Clock, Calendar, AlertCircle, Pencil, BookOpen } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { APP_CONFIG } from '../config/appConfig';
 import { useTurma, Turma } from '../contexts/TurmaContext';
 import { useAuth, type Alocacao } from '../contexts/AuthContext';
@@ -26,10 +26,16 @@ interface TurmaBD {
 }
 
 export default function Turmas() {
+  const { user } = useAuth();
+
+  // Administrador não tem rotina docente; seu destino padrão é Gestão Escolar
+  if (user?.role === 'ADMIN') {
+    return <Navigate to="/administracao" replace />;
+  }
+
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const { selecionarTurma } = useTurma();
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const handleSelectTurma = (turma: Turma) => {
