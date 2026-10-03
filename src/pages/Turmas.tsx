@@ -10,6 +10,7 @@ import { getCachedUser, cacheUser, cacheTurmas, getCachedTurmas } from '../servi
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
 import type { TurmaRelatorioInfo } from '../services/turmaService';
 import SelecionarLotacaoModal from '../components/SelecionarLotacaoModal';
+import { ADMIN_ROLES } from '../constants/authConstants';
 
 // FIX #10: Reutilizar Alocacao do AuthContext em vez de definição local duplicada
 type EscolaAlocacao = Alocacao;
@@ -28,8 +29,8 @@ interface TurmaBD {
 export default function Turmas() {
   const { user } = useAuth();
 
-  // Administrador não tem rotina docente; seu destino padrão é Gestão Escolar
-  if (user?.role === 'ADMIN') {
+  // Perfis administrativos (ADMIN, GESTOR, SECRETARIO) não têm rotina docente; seu destino padrão é Gestão Escolar
+  if (user?.role && ADMIN_ROLES.includes(user.role)) {
     return <Navigate to="/administracao" replace />;
   }
 

@@ -129,8 +129,8 @@ export default function Layout() {
     { label: 'Pendências', to: '/estatisticas', icon: BarChart3 },
   ] : [];
 
-  const isDocente = user?.role !== 'ADMIN';
-  const homePath = user?.role === 'ADMIN' ? '/administracao' : '/turmas';
+  const isDocente = user?.role === 'PROFESSOR';
+  const homePath = canManage ? '/administracao' : '/turmas';
 
   const renderNav = () => (
     <nav className="space-y-6 py-2" aria-label="Navegação principal">
@@ -326,7 +326,7 @@ export default function Layout() {
               )}
             </div>
 
-            {user?.role !== 'ADMIN' && (
+            {!canManage && (
               <button 
                 onClick={() => setScheduleOpen(true)} 
                 className="dd-icon-button" 
@@ -425,8 +425,8 @@ export default function Layout() {
       )}
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="dd-mobile-nav lg:hidden" aria-label={user?.role === 'ADMIN' ? 'Ações principais do administrador' : 'Ações principais do professor'}>
-        {user?.role === 'ADMIN' ? (
+      <nav className="dd-mobile-nav lg:hidden" aria-label={canManage ? 'Ações principais de gestão' : 'Ações principais do professor'}>
+        {canManage ? (
           <>
             <NavLink to="/administracao" end>
               <GraduationCap aria-hidden="true" />

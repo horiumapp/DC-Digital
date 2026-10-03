@@ -86,6 +86,34 @@ describe('ProtectedRoute', () => {
     expect(nav.getAttribute('data-to')).toBe('/administracao');
   });
 
+  it('para publicOnly: deve redirecionar secretário logado para administracao', () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'sec-1', role: 'SECRETARIO' },
+      loading: false,
+    });
+
+    render(<ProtectedRoute publicOnly />);
+
+    expect(screen.queryByTestId('outlet')).toBeNull();
+    const nav = screen.getByTestId('navigate');
+    expect(nav).toBeDefined();
+    expect(nav.getAttribute('data-to')).toBe('/administracao');
+  });
+
+  it('para publicOnly: deve redirecionar gestor logado para administracao', () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'gestor-1', role: 'GESTOR' },
+      loading: false,
+    });
+
+    render(<ProtectedRoute publicOnly />);
+
+    expect(screen.queryByTestId('outlet')).toBeNull();
+    const nav = screen.getByTestId('navigate');
+    expect(nav).toBeDefined();
+    expect(nav.getAttribute('data-to')).toBe('/administracao');
+  });
+
   it('para rotas protegidas normais: deve redirecionar para a home "/" se não estiver logado', () => {
     mockUseAuth.mockReturnValue({ user: null, loading: false });
 

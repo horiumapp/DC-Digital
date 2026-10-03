@@ -9,6 +9,7 @@ import { translateSupabaseError } from '../utils/supabaseErrors';
 import PrivacyLinksFooter from '../components/PrivacyLinksFooter';
 import { logSecurityEvent } from '../services/securityLogService';
 import { validarCPF } from '../utils/cpfUtils';
+import { ADMIN_ROLES } from '../constants/authConstants';
 
 const ALUNO_EMAIL_DOMAIN = 'aluno.dcdigital.local';
 
@@ -21,7 +22,14 @@ export default function Login() {
   // Redireciona automaticamente se o usuário já estiver logado
   useEffect(() => {
     if (user) {
-      navigate(user.role === 'ALUNO' ? '/portal-aluno' : user.role === 'ADMIN' ? '/administracao' : '/turmas', { replace: true });
+      navigate(
+        user.role === 'ALUNO'
+          ? '/portal-aluno'
+          : ADMIN_ROLES.includes(user.role)
+          ? '/administracao'
+          : '/turmas',
+        { replace: true }
+      );
     }
   }, [user, navigate]);
   
@@ -137,7 +145,7 @@ export default function Login() {
       const role = signInData?.user?.app_metadata?.role;
       if (role === 'ALUNO') {
         navigate('/portal-aluno');
-      } else if (role === 'ADMIN') {
+      } else if (role && (ADMIN_ROLES as readonly string[]).includes(role)) {
         navigate('/administracao');
       } else if (role) {
         navigate('/turmas');

@@ -116,9 +116,53 @@ describe('Layout - Visibilidade por Perfil (Role)', () => {
     expect(brandLink.getAttribute('href')).toBe('/turmas');
   });
 
-  it('para perfil ADMIN: ao acessar a tela de Turmas, deve ser redirecionado para /administracao', () => {
+  it('para perfil SECRETARIO: NÃO deve renderizar "Rotina Docente" e deve apontar o logo para /administracao', () => {
     mockUseAuth.mockReturnValue({
-      user: { id: 'admin-1', name: 'Administrador Geral', role: 'ADMIN', title: 'ADMIN' },
+      user: { id: 'sec-1', name: 'Secretário Vinicius', role: 'SECRETARIO', title: 'SECRETARIO' },
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter>
+        <Layout />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText('Rotina Docente')).toBeNull();
+    expect(screen.queryByText('Minhas turmas')).toBeNull();
+    expect(screen.queryByText('Diário de classe')).toBeNull();
+    expect(screen.queryByText('Frequência e notas')).toBeNull();
+
+    expect(screen.getAllByText('Gestão escolar').length).toBeGreaterThan(0);
+    const brandLink = screen.getByLabelText('DC Digital, ir para visão geral');
+    expect(brandLink.getAttribute('href')).toBe('/administracao');
+  });
+
+  it('para perfil GESTOR: NÃO deve renderizar "Rotina Docente" e deve apontar o logo para /administracao', () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'gestor-1', name: 'Gestor Escolar', role: 'GESTOR', title: 'GESTOR' },
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter>
+        <Layout />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText('Rotina Docente')).toBeNull();
+    expect(screen.queryByText('Minhas turmas')).toBeNull();
+    expect(screen.queryByText('Diário de classe')).toBeNull();
+    expect(screen.queryByText('Frequência e notas')).toBeNull();
+
+    expect(screen.getAllByText('Gestão escolar').length).toBeGreaterThan(0);
+    const brandLink = screen.getByLabelText('DC Digital, ir para visão geral');
+    expect(brandLink.getAttribute('href')).toBe('/administracao');
+  });
+
+  it('para perfil SECRETARIO: ao acessar a tela de Turmas, deve ser redirecionado para /administracao', () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'sec-1', name: 'Secretário Vinicius', role: 'SECRETARIO', title: 'SECRETARIO' },
     });
 
     render(
