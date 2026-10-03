@@ -182,4 +182,75 @@ describe('Regras de Isolamento de Professores Multi-Escola (SEC-02)', () => {
     expect(state.alocacoes.length).toBe(0);
     expect(state.horarios.length).toBe(0);
   });
+
+  describe('Criação e Importação com Alocação Escolar (criar_professor_com_alocacao)', () => {
+    function rpcCriarProfessorComAlocacao(
+      user: UserContext,
+      params: { nome: string; email?: string; escola_id?: string | null },
+      state: { professores: Professor[]; alocacoes: ProfessorAllocation[] }
+    ): { success: boolean; error?: string; professorId?: string } {
+      if (user.role === 'ADMIN') {
+        // ADMIN pode alocar em qualquer escola
+      } else if (user.role === 'GESTOR' || user.role === 'SECRETARIO') {
+        if (!params.escola_id || params.escola_id !== user.escola_id) {
+          return { success: false, error: 'Permissão negada: você só pode alocar professores na sua própria escola' };
+        }
+      } else {
+        return { success: false, error: 'Permissão negada para cadastrar professor' };
+      }
+
+      const id = `prof-${state.professores.length + 1}`;
+      state.professores.push({ id, nome: params.nome, email: params.email });
+      if (params.escola_id) {
+        state.alocacoes.push({ id: `aloc-${state.alocacoes.length + 1}`, professor_id: id, escola_id: params.escola_id, turno: 'Manhã' });
+      }
+      return { success: true, professorId: id };
+    }
+
+    it('deve permitir que Secretário importe/crie professor para sua própria escola', () => {
+      const state = { professores: [], alocacoes: [] };
+      const secretario: UserContext = { role: 'SECRETARIO', escola_id: escolaA };
+
+      const res = rpcCriarProfessorComAlocacao(
+        secretario,
+        { nome: 'Carla Mendes Teste', email: 'carla@teste.com', escola_id: escolaA },
+        state
+      );
+
+      expect(res.success).toBe(true);
+      expect(state.professores.length).toBe(1);
+      expect(state.alocacoes.length).toBe(1);
+      expect(state.alocacoes[0].escola_id).toBe(escolaA);
+    });
+
+    it('deve bloquear Secretário se tentar importar professor para escola diferente da sua', () => {
+      const state = { professores: [], alocacoes: [] };
+      const secretario: UserContext = { role: 'SECRETARIO', escola_id: escolaA };
+
+      const res = rpcCriarProfessorComAlocacao(
+        secretario,
+        { nome: 'Carla Mendes Teste', email: 'carla@teste.com', escola_id: escolaB },
+        state
+      );
+
+      expect(res.success).toBe(false);
+      expect(res.error).toContain('você só pode alocar professores na sua própria escola');
+      expect(state.professores.length).toBe(0);
+    });
+
+    it('deve permitir que ADMIN importe professor para qualquer escola ou sem escola vinculada', () => {
+      const state = { professores: [], alocacoes: [] };
+      const admin: UserContext = { role: 'ADMIN' };
+
+      const res = rpcCriarProfessorComAlocacao(
+        admin,
+        { nome: 'Professor Global', email: 'global@teste.com', escola_id: null },
+        state
+      );
+
+      expect(res.success).toBe(true);
+      expect(state.professores.length).toBe(1);
+      expect(state.alocacoes.length).toBe(0);
+    });
+  });
 });
