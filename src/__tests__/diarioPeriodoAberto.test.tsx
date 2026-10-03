@@ -22,10 +22,16 @@ vi.mock('../components/common/TurmaHeaderInfo', () => ({
   default: () => <div data-testid="turma-header" />,
 }));
 
+let mockSearchParams = new URLSearchParams();
+
 vi.mock('../components/common/CalendarWidget', () => ({
-  default: (props: { currentMonth?: number }) => (
-    <div data-testid="calendar-widget" data-current-month={props.currentMonth}>
-      Calendar Month: {props.currentMonth}
+  default: (props: { currentMonth?: number; selectedDay?: number | null }) => (
+    <div 
+      data-testid="calendar-widget" 
+      data-current-month={props.currentMonth}
+      data-selected-day={props.selectedDay ?? ''}
+    >
+      Calendar Month: {props.currentMonth}, Day: {props.selectedDay}
     </div>
   ),
 }));
@@ -46,7 +52,7 @@ vi.mock('../hooks/useTurmaProgress', () => ({
 vi.mock('react-router-dom', () => ({
   Link: ({ children, to }: { children: React.ReactNode; to: string }) => <a href={to}>{children}</a>,
   useNavigate: () => vi.fn(),
-  useSearchParams: () => [new URLSearchParams(), vi.fn()],
+  useSearchParams: () => [mockSearchParams, vi.fn()],
 }));
 
 vi.mock('motion/react', () => ({
@@ -206,5 +212,54 @@ describe('Diario - Seleção Automática do Período Letivo Aberto', () => {
 
     // Na nova turma, a escolha manual anterior deve ser redefinida e posicionar no período aberto da Turma 2 (2º Bimestre)
     expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('2. BIMESTRE');
+  });
+
+  it('posiciona automaticamente no mês e dia especificados em ?date=YYYY-MM-DD da URL', () => {
+    mockSearchParams = new URLSearchParams('date=2026-03-18');
+
+    mockUseTurma.mockReturnValue({
+      turmaAtiva: turmaMock,
+      lancamentos: [],
+      avaliacoes: [],
+      alunos: [],
+      horarioTurma: [],
+      fechamentos: {},
+      verificarPeriodoFechado: () => false,
+    });
+
+    render(<Diario />);
+
+    const widget = screen.getByTestId('calendar-widget');
+    // Março é o índice 2 (0-indexed)
+    expect(widget.getAttribute('data-current-month')).toBe('2');
+    expect(widget.getAttribute('data-selected-day')).toBe('18');
+
+    mockSearchParams = new URLSearchParams();
+  });
+
+  it('posiciona automaticamente no mês e dia do último preenchimento da turma quando não há date na URL', () => {
+    mockSearchParams = new URLSearchParams();
+
+    const lancamentosMock = [
+      { turmaId: 'turma-1', data: '2026-02-10', tipo: 'frequencia', tempo: '1º TEMPO' },
+      { turmaId: 'turma-1', data: '2026-03-18', tipo: 'conteudo', tempo: '3º TEMPO' },
+    ];
+
+    mockUseTurma.mockReturnValue({
+      turmaAtiva: turmaMock,
+      lancamentos: lancamentosMock,
+      avaliacoes: [],
+      alunos: [],
+      horarioTurma: [],
+      fechamentos: {},
+      verificarPeriodoFechado: () => false,
+    });
+
+    render(<Diario />);
+
+    const widget = screen.getByTestId('calendar-widget');
+    // Último preenchimento é 2026-03-18 -> mês índice 2 (Março), dia 18
+    expect(widget.getAttribute('data-current-month')).toBe('2');
+    expect(widget.getAttribute('data-selected-day')).toBe('18');
   });
 });
