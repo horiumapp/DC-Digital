@@ -125,7 +125,7 @@ export default function Layout() {
   
   const management: Item[] = canManage ? [
     { label: 'Gestão escolar', to: '/administracao', icon: GraduationCap },
-    { label: 'Currículo BNCC', to: '/curriculo', icon: BookOpenCheck },
+    ...(user?.role === 'ADMIN' ? [{ label: 'Currículo BNCC', to: '/curriculo', icon: BookOpenCheck }] : []),
     { label: 'Pendências', to: '/estatisticas', icon: BarChart3 },
   ] : [];
 
@@ -432,10 +432,12 @@ export default function Layout() {
               <GraduationCap aria-hidden="true" />
               <span>Gestão</span>
             </NavLink>
-            <NavLink to="/curriculo">
-              <BookOpenCheck aria-hidden="true" />
-              <span>BNCC</span>
-            </NavLink>
+            {user?.role === 'ADMIN' && (
+              <NavLink to="/curriculo">
+                <BookOpenCheck aria-hidden="true" />
+                <span>BNCC</span>
+              </NavLink>
+            )}
             <NavLink to="/estatisticas">
               <BarChart3 aria-hidden="true" />
               <span>Pendências</span>

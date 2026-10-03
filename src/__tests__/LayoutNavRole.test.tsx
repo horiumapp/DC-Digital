@@ -134,6 +134,7 @@ describe('Layout - Visibilidade por Perfil (Role)', () => {
     expect(screen.queryByText('Frequência e notas')).toBeNull();
 
     expect(screen.getAllByText('Gestão escolar').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Currículo BNCC')).toBeNull();
     const brandLink = screen.getByLabelText('DC Digital, ir para visão geral');
     expect(brandLink.getAttribute('href')).toBe('/administracao');
   });
@@ -156,6 +157,7 @@ describe('Layout - Visibilidade por Perfil (Role)', () => {
     expect(screen.queryByText('Frequência e notas')).toBeNull();
 
     expect(screen.getAllByText('Gestão escolar').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Currículo BNCC')).toBeNull();
     const brandLink = screen.getByLabelText('DC Digital, ir para visão geral');
     expect(brandLink.getAttribute('href')).toBe('/administracao');
   });
