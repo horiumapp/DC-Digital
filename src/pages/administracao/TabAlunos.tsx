@@ -477,23 +477,89 @@ export default function TabAlunos() {
     escola_id: string;
     status: string;
   }>) => {
-    const payload = items.map(a => ({
-      nome: a.nome,
-      cpf: a.cpf || null,
-      data_nascimento: a.data_nascimento || null,
-      sexo: a.sexo || null,
-      nome_responsavel: a.nome_responsavel || null,
-      telefone: a.telefone || null,
-      endereco: a.endereco || null,
-      turma_id: a.turma_id || null,
-      escola_id: a.escola_id,
-      status: a.status || 'Ativo'
-    }));
+    // 1. Extrair CPFs numéricos limpos presentes no arquivo para verificar duplicatas
+    const cpfsLimpos = items
+      .map(a => a.cpf ? a.cpf.replace(/\D/g, '') : null)
+      .filter((c): c is string => Boolean(c) && c.length === 11);
 
-    const { error } = await supabase.from('alunos').insert(payload);
-    if (error) {
-      console.error('Erro ao importar alunos:', error);
-      throw new Error(error.message || 'Erro ao importar alunos.');
+    // 2. Consultar se algum desses CPFs já existe no banco de dados para evitar erro 409 (uq_alunos_cpf_limpo)
+    const existingAlunosByCpf = new Map<string, string>(); // cpfLimpo -> alunoId
+    if (cpfsLimpos.length > 0) {
+      const { data: existingData, error: searchError } = await supabase
+        .from('alunos')
+        .select('id, cpf')
+        .not('cpf', 'is', null);
+
+      if (!searchError && existingData) {
+        existingData.forEach(al => {
+          if (al.cpf) {
+            const limpo = al.cpf.replace(/\D/g, '');
+            if (limpo && cpfsLimpos.includes(limpo)) {
+              existingAlunosByCpf.set(limpo, al.id);
+            }
+          }
+        });
+      }
+    }
+
+    // 3. Separar entre registros a atualizar e novos a inserir
+    const toUpdate: Array<{ id: string; payload: Record<string, unknown> }> = [];
+    const toInsert: Array<Record<string, unknown>> = [];
+    const seenInsertCpfs = new Set<string>();
+
+    for (const a of items) {
+      const cpfLimpo = a.cpf ? a.cpf.replace(/\D/g, '') : null;
+      const data = {
+        nome: a.nome,
+        cpf: a.cpf || null,
+        data_nascimento: a.data_nascimento || null,
+        sexo: a.sexo || null,
+        nome_responsavel: a.nome_responsavel || null,
+        telefone: a.telefone || null,
+        endereco: a.endereco || null,
+        turma_id: a.turma_id || null,
+        escola_id: a.escola_id,
+        status: a.status || 'Ativo'
+      };
+
+      if (cpfLimpo && existingAlunosByCpf.has(cpfLimpo)) {
+        // Aluno já cadastrado com este CPF: atualiza a turma, escola e dados cadastrais
+        const existingId = existingAlunosByCpf.get(cpfLimpo)!;
+        toUpdate.push({ id: existingId, payload: data });
+      } else {
+        // Aluno novo: evita duplicatas na mesma remessa se o CSV tiver linhas duplicadas
+        if (cpfLimpo) {
+          if (seenInsertCpfs.has(cpfLimpo)) {
+            continue;
+          }
+          seenInsertCpfs.add(cpfLimpo);
+        }
+        toInsert.push(data);
+      }
+    }
+
+    // 4. Executa atualizações dos alunos existentes
+    for (const item of toUpdate) {
+      const { error: updateError } = await supabase
+        .from('alunos')
+        .update(item.payload)
+        .eq('id', item.id);
+
+      if (updateError) {
+        console.error('Erro ao atualizar aluno existente:', updateError);
+      }
+    }
+
+    // 5. Executa inserções dos novos alunos
+    if (toInsert.length > 0) {
+      const { error: insertError } = await supabase
+        .from('alunos')
+        .insert(toInsert);
+
+      if (insertError) {
+        console.error('Erro ao importar novos alunos:', insertError);
+        throw new Error(insertError.message || 'Erro ao importar alunos.');
+      }
     }
 
     if (selectedEscola) {

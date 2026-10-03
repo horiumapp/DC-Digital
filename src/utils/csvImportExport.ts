@@ -466,7 +466,14 @@ export function parseAlunosCsv(
   }> = [];
   const errors: string[] = [];
 
-  const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  const norm = (s: string) => s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[º°]/g, 'o')
+    .replace(/ª/g, 'a')
+    .replace(/\s+/g, ' ')
+    .trim();
   const headerMap: Record<string, number> = {};
 
   headers.forEach((h, idx) => {
@@ -482,8 +489,32 @@ export function parseAlunosCsv(
     else if (key.includes('status')) headerMap['status'] = idx;
   });
 
+  const getTurnoEquivalents = (turno?: string) => {
+    if (!turno) return [];
+    const t = norm(turno);
+    if (t.includes('manh') || t.includes('matut')) return ['manha', 'matutino'];
+    if (t.includes('tard') || t.includes('vespert')) return ['tarde', 'vespertino'];
+    if (t.includes('noit') || t.includes('noturn')) return ['noite', 'noturno'];
+    if (t.includes('integr')) return ['integral'];
+    return [t];
+  };
+
   const turmaMapByName = new Map<string, { id: string; escola_id: string }>();
-  turmas.forEach(t => turmaMapByName.set(norm(t.nome), { id: t.id, escola_id: t.escola_id }));
+  turmas.forEach(t => {
+    const nomeNorm = norm(t.nome);
+    // 1. Correspondência pelo nome exato: "1º Ano A" -> "1o ano a"
+    turmaMapByName.set(nomeNorm, { id: t.id, escola_id: t.escola_id });
+
+    // 2. Correspondência com variações de turno (ex: "1º Ano A (Manhã)" ou "1º Ano A (Matutino)")
+    const turnos = getTurnoEquivalents((t as { turno?: string }).turno);
+    turnos.forEach(turnoEquiv => {
+      turmaMapByName.set(`${nomeNorm} (${turnoEquiv})`, { id: t.id, escola_id: t.escola_id });
+      turmaMapByName.set(`${nomeNorm} - ${turnoEquiv}`, { id: t.id, escola_id: t.escola_id });
+      turmaMapByName.set(`${nomeNorm} ${turnoEquiv}`, { id: t.id, escola_id: t.escola_id });
+    });
+  });
+
+  const seenCpfsInCsv = new Set<string>();
 
   rows.forEach((row, i) => {
     const nome = (row[headerMap['nome'] ?? 0] || '').trim();
@@ -498,7 +529,18 @@ export function parseAlunosCsv(
     if (headerMap['turma'] !== undefined) {
       const turmaStr = (row[headerMap['turma']] || '').trim();
       if (turmaStr) {
-        const found = turmaMapByName.get(norm(turmaStr));
+        let found = turmaMapByName.get(norm(turmaStr));
+        if (!found) {
+          // Remove parênteses (ex: "1º Ano A (Manhã)" -> "1º Ano A")
+          const semParenteses = norm(turmaStr.replace(/\(.*?\)/g, ''));
+          found = turmaMapByName.get(semParenteses);
+        }
+        if (!found && turmaStr.includes('-')) {
+          // Remove após hífen (ex: "1º Ano A - Manhã" -> "1º Ano A")
+          const semHifen = norm(turmaStr.split('-')[0]);
+          found = turmaMapByName.get(semHifen);
+        }
+
         if (found) {
           turmaId = found.id;
           escolaId = found.escola_id;
@@ -525,6 +567,14 @@ export function parseAlunosCsv(
 
     const cpfRaw = row[headerMap['cpf'] ?? 1]?.replace(/\D/g, '') || undefined;
     const cpf = (cpfRaw && cpfRaw.length === 11) ? cpfRaw : undefined;
+
+    if (cpf) {
+      if (seenCpfsInCsv.has(cpf)) {
+        errors.push(`Linha ${i + 2}: CPF ${cpf} duplicado no arquivo para o aluno "${nome}".`);
+      } else {
+        seenCpfsInCsv.add(cpf);
+      }
+    }
 
     valid.push({
       nome,
