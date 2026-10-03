@@ -398,42 +398,97 @@ export default function TabProfessores() {
     vinculo: string;
     status: string;
   }>) => {
-    const payload = items.map(p => ({
-      nome: p.nome,
-      email: p.email || null,
-      cpf: p.cpf || null,
-      telefone: p.telefone || null,
-      departamento: p.departamento || 'Geral',
-      disciplinas: p.disciplinas || [],
-      vinculo: p.vinculo || 'Concursado',
-      status: p.status || 'Ativo'
-    }));
+    const targetEscolaId = selectedEscola?.id || ((user?.role === 'GESTOR' || user?.role === 'SECRETARIO') ? user?.escola_id : null) || null;
 
-    const { data: insertedData, error } = await supabase
-      .from('professores')
-      .insert(payload)
-      .select('id');
-
-    if (error) {
-      console.error('Erro ao importar professores:', error);
-      throw new Error(error.message || 'Erro ao importar professores.');
+    if ((user?.role === 'GESTOR' || user?.role === 'SECRETARIO') && !targetEscolaId) {
+      throw new Error('Identificação da escola não encontrada para o usuário atual.');
     }
 
-    if (selectedEscola && insertedData && insertedData.length > 0) {
-      const alocacoes = insertedData.map(p => ({
-        professor_id: p.id,
-        escola_id: selectedEscola.id,
-        turno: 'Manhã'
-      }));
-      const { error: alocError } = await supabase
-        .from('professor_alocacoes')
-        .insert(alocacoes);
-      if (alocError) {
-        console.warn('Aviso ao alocar professores na escola selecionada:', alocError);
+    // Mapear professores já existentes por e-mail ou CPF para vincular caso já existam no cadastro global
+    const existingByEmail = new Map<string, ProfessorRow>();
+    const existingByCpf = new Map<string, ProfessorRow>();
+
+    professores.forEach(p => {
+      if (p.email) existingByEmail.set(p.email.trim().toLowerCase(), p);
+      if (p.cpf) {
+        const limpo = p.cpf.replace(/\D/g, '');
+        if (limpo) existingByCpf.set(limpo, p);
+      }
+    });
+
+    const errors: string[] = [];
+    let novosCount = 0;
+    let vinculadosCount = 0;
+
+    for (const p of items) {
+      const emailTrim = p.email ? p.email.trim().toLowerCase() : null;
+      const cpfLimpo = p.cpf ? p.cpf.replace(/\D/g, '') : null;
+
+      // Verifica se o professor já existe no cadastro
+      const existing = (emailTrim ? existingByEmail.get(emailTrim) : null) ||
+                       (cpfLimpo ? existingByCpf.get(cpfLimpo) : null);
+
+      if (existing) {
+        // Se já existe e há escola de destino, assegura que está vinculado a ela
+        if (targetEscolaId) {
+          const jaAlocado = existing.professor_alocacoes?.some(a => a.escola_id === targetEscolaId);
+          if (!jaAlocado) {
+            const { error: alocError } = await supabase
+              .from('professor_alocacoes')
+              .insert({
+                professor_id: existing.id,
+                escola_id: targetEscolaId,
+                turno: 'Manhã'
+              });
+            if (alocError) {
+              console.warn(`Aviso ao vincular professor existente ${existing.nome}:`, alocError);
+            } else {
+              vinculadosCount++;
+            }
+          }
+        }
+      } else {
+        // Professor novo: insere e aloca com a RPC autorizada criar_professor_com_alocacao
+        const { data: newProf, error: rpcError } = await supabase.rpc('criar_professor_com_alocacao', {
+          p_nome: p.nome.trim(),
+          p_email: emailTrim,
+          p_telefone: p.telefone ? p.telefone.trim() : null,
+          p_departamento: p.departamento || 'Geral',
+          p_disciplinas: p.disciplinas || [],
+          p_escola_id: targetEscolaId,
+          p_turno: 'Manhã',
+          p_cpf: p.cpf ? p.cpf.trim() : null,
+          p_vinculo: p.vinculo || 'Concursado',
+          p_status: p.status || 'Ativo'
+        });
+
+        if (rpcError) {
+          console.error(`Erro ao importar professor ${p.nome}:`, rpcError);
+          errors.push(`${p.nome}: ${rpcError.message}`);
+        } else {
+          novosCount++;
+          // Se criado com sucesso, atualiza o mapa em memória para evitar colisões dentro do mesmo lote
+          if (newProf && typeof newProf === 'object') {
+            const row = newProf as ProfessorRow;
+            if (row.email) existingByEmail.set(row.email.trim().toLowerCase(), row);
+            if (row.cpf) {
+              const c = row.cpf.replace(/\D/g, '');
+              if (c) existingByCpf.set(c, row);
+            }
+          }
+        }
       }
     }
 
     await fetchProfessores();
+
+    if (errors.length > 0) {
+      if (novosCount > 0 || vinculadosCount > 0) {
+        showWarning(`Importação parcial: ${novosCount} cadastrados, ${vinculadosCount} vinculados. Houve ${errors.length} falha(s).`);
+      } else {
+        throw new Error(errors[0]);
+      }
+    }
   };
 
   const professorPreviewColumns: PreviewColumn<{
