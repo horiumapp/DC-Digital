@@ -159,3 +159,64 @@ describe('admin-create-user delete-user Authorization Rules (SEC-01 IDOR Prevent
     expect(result.status).toBe(200);
   });
 });
+
+function evaluateResetProfessorPasswordAuthorization(
+  caller: CallerUser,
+  targetUserData: TargetUser | null,
+  senha: string
+): { status: number; error?: string; authorized: boolean } {
+  const effectiveRole = caller.role;
+  if (!['ADMIN', 'GESTOR', 'SECRETARIO'].includes(effectiveRole)) {
+    return { status: 403, error: 'Sem permissão para redefinir senhas.', authorized: false };
+  }
+  const hasLetter = /[a-zA-Z]/.test(senha);
+  const hasDigit = /\d/.test(senha);
+  if (senha.length < 8 || !hasLetter || !hasDigit) {
+    return { status: 400, error: 'A senha deve ter no mínimo 8 caracteres, incluindo letras e números.', authorized: false };
+  }
+  if (!targetUserData || targetUserData.cargo !== 'PROFESSOR') {
+    return { status: 404, error: 'Conta de professor não encontrada.', authorized: false };
+  }
+  if (effectiveRole !== 'ADMIN') {
+    if (!caller.escola_id || caller.escola_id !== targetUserData.escola_id) {
+      return { status: 403, error: 'Você só pode redefinir senhas de professores da própria escola.', authorized: false };
+    }
+  }
+  return { status: 200, authorized: true };
+}
+
+describe('admin-create-user reset-professor-password Authorization Rules', () => {
+  const escolaA = 'escola-uuid-1111';
+  const escolaB = 'escola-uuid-2222';
+
+  const gestorEscolaA: CallerUser = { id: 'gestor-a', role: 'GESTOR', escola_id: escolaA };
+  const adminGlobal: CallerUser = { id: 'admin-global', role: 'ADMIN' };
+  const profEscolaA: TargetUser = { id: 'prof-a', email: 'prof@escola-a.gov.br', cargo: 'PROFESSOR', escola_id: escolaA };
+  const profEscolaB: TargetUser = { id: 'prof-b', email: 'prof@escola-b.gov.br', cargo: 'PROFESSOR', escola_id: escolaB };
+
+  it('deve autorizar gestor da escola A a resetar senha do professor da escola A com senha válida', () => {
+    const res = evaluateResetProfessorPasswordAuthorization(gestorEscolaA, profEscolaA, '@prof123');
+    expect(res.authorized).toBe(true);
+    expect(res.status).toBe(200);
+  });
+
+  it('deve rejeitar se a senha tiver menos de 8 caracteres ou não tiver números/letras', () => {
+    const res = evaluateResetProfessorPasswordAuthorization(gestorEscolaA, profEscolaA, '123456');
+    expect(res.authorized).toBe(false);
+    expect(res.status).toBe(400);
+  });
+
+  it('deve rejeitar gestor da escola A tentando resetar senha de professor da escola B', () => {
+    const res = evaluateResetProfessorPasswordAuthorization(gestorEscolaA, profEscolaB, '@prof123');
+    expect(res.authorized).toBe(false);
+    expect(res.status).toBe(403);
+    expect(res.error).toBe('Você só pode redefinir senhas de professores da própria escola.');
+  });
+
+  it('deve permitir que ADMIN global resete senha de professor de qualquer escola', () => {
+    const res = evaluateResetProfessorPasswordAuthorization(adminGlobal, profEscolaB, '@prof123');
+    expect(res.authorized).toBe(true);
+    expect(res.status).toBe(200);
+  });
+});
+

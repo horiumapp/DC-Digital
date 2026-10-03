@@ -188,6 +188,34 @@ Deno.serve(async (req: Request) => {
       if (passwordError) throw passwordError;
       return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+    // 2.2 Redefinição segura de senha de professor
+    if (bodyRecord.action === "reset-professor-password") {
+      if (!["ADMIN", "GESTOR", "SECRETARIO"].includes(effectiveRole as string)) {
+        return new Response(JSON.stringify({ error: "Sem permissão para redefinir senhas." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const targetEmail = typeof bodyRecord.email === "string" ? bodyRecord.email.trim().toLowerCase() : "";
+      const novaSenha = typeof bodyRecord.senha === "string" ? bodyRecord.senha : "";
+      const hasLetter = /[a-zA-Z]/.test(novaSenha);
+      const hasDigit = /\d/.test(novaSenha);
+      if (!EMAIL_REGEX.test(targetEmail) || novaSenha.length < 8 || !hasLetter || !hasDigit) {
+        return new Response(JSON.stringify({ error: "A senha deve ter no mínimo 8 caracteres, incluindo letras e números." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data: target } = await supabaseAdmin.from("usuarios").select("id,cargo,escola_id").eq("email", targetEmail).maybeSingle();
+      if (!target || target.cargo !== "PROFESSOR") {
+        return new Response(JSON.stringify({ error: "Conta de professor não encontrada." }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (effectiveRole !== "ADMIN") {
+        const { data: caller } = await supabaseAdmin.from("usuarios").select("escola_id").eq("id", callerUser.id).maybeSingle();
+        if (!caller?.escola_id || caller.escola_id !== target.escola_id) {
+          return new Response(JSON.stringify({ error: "Você só pode redefinir senhas de professores da própria escola." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
+      const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(target.id, { password: novaSenha });
+      if (passwordError) throw passwordError;
+      // Garante sincronia relacional em professores caso usuario_id estivesse nulo
+      await supabaseAdmin.from("professores").update({ usuario_id: target.id }).ilike("email", targetEmail);
+      return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     // 2.1 Ação de exclusão / revogação de usuário
     if (bodyRecord.action === "delete-user") {
       // SEC-01 FIX: Apenas papéis administrativos podem excluir usuários.
