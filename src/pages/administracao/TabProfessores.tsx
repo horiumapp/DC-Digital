@@ -132,7 +132,7 @@ export default function TabProfessores() {
     try {
       const query = supabase
         .from('professores')
-        .select('id, nome, email, cpf, status, departamento, disciplinas, vinculo, telefone, professor_alocacoes(id, escola_id, turno, escolas(nome)), professor_horarios(id, escola_id)')
+        .select('id, nome, email, cpf, status, departamento, disciplinas, vinculo, telefone, usuario_id, professor_alocacoes(id, escola_id, turno, escolas(nome)), professor_horarios(id, escola_id)')
         .order('nome');
         
       const { data } = await readAllRows<ProfessorRow>(query.order('id'));
@@ -172,7 +172,36 @@ export default function TabProfessores() {
       } else if (!updatedData || updatedData.length === 0) {
         showWarning("Nenhum registro foi atualizado. Verifique suas permissões.");
       } else {
-        showSuccess(`Dados do(a) professor(a) ${novoProfessor.nome} atualizados com sucesso!`);
+        const targetEscolaId = selectedEscola?.id || professorParaEditar.professor_alocacoes?.[0]?.escola_id || user?.escola_id;
+        if (novoProfessor.email && !professorParaEditar.usuario_id && targetEscolaId) {
+          const senhaDeAcesso = novoProfessor.senha?.trim() || SENHA_PADRAO_PROFESSOR;
+          try {
+            const { data: authData, error: authError } = await supabase.functions.invoke('admin-create-user', {
+              body: {
+                nome: novoProfessor.nome,
+                email: novoProfessor.email.trim().toLowerCase(),
+                senha: senhaDeAcesso,
+                cargo: 'PROFESSOR',
+                escola_id: targetEscolaId,
+              },
+            });
+            if (!authError && !authData?.error) {
+              setCredenciaisCriadas({
+                nome: novoProfessor.nome,
+                email: novoProfessor.email.trim().toLowerCase(),
+                senha: senhaDeAcesso,
+              });
+              showSuccess(`Dados atualizados e conta de acesso criada para ${novoProfessor.nome}! Senha padrão: ${senhaDeAcesso}`);
+            } else {
+              showSuccess(`Dados do(a) professor(a) ${novoProfessor.nome} atualizados com sucesso!`);
+            }
+          } catch (e) {
+            console.warn("Aviso ao criar conta durante edição:", e);
+            showSuccess(`Dados do(a) professor(a) ${novoProfessor.nome} atualizados com sucesso!`);
+          }
+        } else {
+          showSuccess(`Dados do(a) professor(a) ${novoProfessor.nome} atualizados com sucesso!`);
+        }
         fetchProfessores();
         setProfessorParaEditar(null);
         setIsNovoProfessorModalOpen(false);
@@ -270,6 +299,88 @@ export default function TabProfessores() {
   const handleEditProfessor = (professor: ProfessorRow) => {
     setProfessorParaEditar(professor);
     setIsNovoProfessorModalOpen(true);
+  };
+
+  const handleGerarOuResetarAcesso = async (prof: ProfessorRow) => {
+    if (!prof.email) {
+      showWarning(`O(a) professor(a) ${prof.nome} não possui e-mail cadastrado. Edite o cadastro e informe um e-mail para gerar o acesso.`);
+      return;
+    }
+
+    const emailTrim = prof.email.trim().toLowerCase();
+    const targetEscolaId = selectedEscola?.id || prof.professor_alocacoes?.[0]?.escola_id || user?.escola_id;
+
+    if (!targetEscolaId) {
+      showWarning('Não foi possível identificar a escola para vincular a conta do professor.');
+      return;
+    }
+
+    try {
+      if (prof.usuario_id) {
+        // Já tem usuário: redefinir para a senha padrão
+        const { data, error } = await supabase.functions.invoke('admin-create-user', {
+          body: { action: 'reset-professor-password', email: emailTrim, senha: SENHA_PADRAO_PROFESSOR }
+        });
+
+        if (error || data?.error) {
+          const errorMsg = data?.error || error?.message || '';
+          if (errorMsg.includes('não encontrada')) {
+            const { data: createData, error: createError } = await supabase.functions.invoke('admin-create-user', {
+              body: {
+                nome: prof.nome,
+                email: emailTrim,
+                senha: SENHA_PADRAO_PROFESSOR,
+                cargo: 'PROFESSOR',
+                escola_id: targetEscolaId
+              }
+            });
+            if (createError || createData?.error) {
+              showError(`Não foi possível recriar a conta: ${createData?.error || createError?.message}`);
+              return;
+            }
+          } else {
+            showError(`Erro ao redefinir senha: ${errorMsg}`);
+            return;
+          }
+        }
+
+        setCredenciaisCriadas({
+          nome: prof.nome,
+          email: emailTrim,
+          senha: SENHA_PADRAO_PROFESSOR
+        });
+        showSuccess(`Senha do(a) professor(a) ${prof.nome} redefinida para ${SENHA_PADRAO_PROFESSOR}!`);
+      } else {
+        // Não tem usuário: criar conta no Auth e em usuarios
+        const { data: createData, error: createError } = await supabase.functions.invoke('admin-create-user', {
+          body: {
+            nome: prof.nome,
+            email: emailTrim,
+            senha: SENHA_PADRAO_PROFESSOR,
+            cargo: 'PROFESSOR',
+            escola_id: targetEscolaId
+          }
+        });
+
+        if (createError || createData?.error) {
+          const msg = createData?.error || createError?.message || 'Erro desconhecido';
+          showError(`Não foi possível criar a conta de acesso: ${msg}`);
+          return;
+        }
+
+        setCredenciaisCriadas({
+          nome: prof.nome,
+          email: emailTrim,
+          senha: SENHA_PADRAO_PROFESSOR
+        });
+        showSuccess(`Conta de acesso criada com sucesso para ${prof.nome}! Senha padrão: ${SENHA_PADRAO_PROFESSOR}`);
+      }
+
+      await fetchProfessores();
+    } catch (err: unknown) {
+      console.error('Erro ao gerar/redefinir acesso:', err);
+      showError('Ocorreu um erro ao comunicar com o serviço de autenticação.');
+    }
   };
 
   const confirmDeleteProfessor = async () => {
@@ -467,6 +578,22 @@ export default function TabProfessores() {
           errors.push(`${p.nome}: ${rpcError.message}`);
         } else {
           novosCount++;
+          // Se o professor foi criado e tem e-mail e escola, provisiona a conta de acesso no Supabase Auth
+          if (emailTrim && targetEscolaId) {
+            try {
+              await supabase.functions.invoke('admin-create-user', {
+                body: {
+                  nome: p.nome.trim(),
+                  email: emailTrim,
+                  senha: SENHA_PADRAO_PROFESSOR,
+                  cargo: 'PROFESSOR',
+                  escola_id: targetEscolaId
+                }
+              });
+            } catch (authErr) {
+              console.warn(`Aviso ao provisionar conta Auth para ${p.nome}:`, authErr);
+            }
+          }
           // Se criado com sucesso, atualiza o mapa em memória para evitar colisões dentro do mesmo lote
           if (newProf && typeof newProf === 'object') {
             const row = newProf as ProfessorRow;
@@ -806,12 +933,30 @@ export default function TabProfessores() {
                 >
                   {/* Top: Avatar and Info */}
                   <div className="flex items-center gap-4 mb-6">
-                    <div className="w-14 h-14 bg-[#eef2ff] text-[#0f2851] rounded-full flex items-center justify-center font-bold text-xl border-4 border-white shadow-sm ring-1 ring-blue-50">
+                    <div className="w-14 h-14 bg-[#eef2ff] text-[#0f2851] rounded-full flex items-center justify-center font-bold text-xl border-4 border-white shadow-sm ring-1 ring-blue-50 relative shrink-0">
                       {professor.nome.split(' ').slice(0, 2).map((n: string) => n[0]).join('')}
+                      {professor.usuario_id ? (
+                        <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 border-2 border-white rounded-full flex items-center justify-center text-white shadow-sm" title="Conta de acesso ativa">
+                          <KeyRound className="w-2.5 h-2.5" />
+                        </span>
+                      ) : (
+                        <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-amber-400 border-2 border-white rounded-full flex items-center justify-center text-white shadow-sm" title="Acesso pendente">
+                          <span className="text-[10px] leading-none font-bold">!</span>
+                        </span>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-black text-slate-800 text-base uppercase tracking-tight truncate leading-tight">{professor.nome}</h4>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{professor.departamento || 'GERAL'}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{professor.departamento || 'GERAL'}</p>
+                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase ${
+                          professor.usuario_id 
+                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/60' 
+                            : 'bg-amber-50 text-amber-600 border border-amber-200/60'
+                        }`}>
+                          {professor.usuario_id ? 'Acesso Ativo' : 'Sem Acesso'}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -822,7 +967,7 @@ export default function TabProfessores() {
                         setProfessorParaAlocar(professor);
                         setIsAlocacoesModalOpen(true);
                       }}
-                      className="p-2.5 text-slate-400 hover:text-blue-600 bg-white rounded-lg shadow-sm border border-slate-100 flex-1 flex justify-center transition-colors"
+                      className="p-2 text-slate-400 hover:text-blue-600 bg-white rounded-lg shadow-sm border border-slate-100 flex-1 flex justify-center transition-colors"
                       title="Gerenciar Escolas / Alocações"
                     >
                       <Building2 className="w-4 h-4" />
@@ -833,15 +978,27 @@ export default function TabProfessores() {
                         setProfessorParaHorario(professor);
                         setIsScheduleModalOpen(true);
                       }}
-                      className="p-2.5 text-slate-400 hover:text-emerald-600 bg-white rounded-lg shadow-sm border border-slate-100 flex-1 flex justify-center transition-colors"
+                      className="p-2 text-slate-400 hover:text-emerald-600 bg-white rounded-lg shadow-sm border border-slate-100 flex-1 flex justify-center transition-colors"
                       title="Horário"
                     >
                       <Calendar className="w-4 h-4" />
                     </button>
                     <div className="w-px h-6 bg-slate-200 mx-1" />
                     <button 
+                      onClick={() => handleGerarOuResetarAcesso(professor)}
+                      className={`p-2 rounded-lg shadow-sm border border-slate-100 flex-1 flex justify-center transition-colors ${
+                        professor.usuario_id 
+                          ? 'text-emerald-600 hover:text-emerald-700 bg-emerald-50/80 hover:bg-emerald-100' 
+                          : 'text-amber-600 hover:text-amber-700 bg-amber-50/80 hover:bg-amber-100'
+                      }`}
+                      title={professor.usuario_id ? "Redefinir Senha de Acesso (@prof123)" : "Criar Conta de Acesso (@prof123)"}
+                    >
+                      <KeyRound className="w-4 h-4" />
+                    </button>
+                    <div className="w-px h-6 bg-slate-200 mx-1" />
+                    <button 
                       onClick={() => handleEditProfessor(professor)}
-                      className="p-2.5 text-slate-400 hover:text-blue-600 bg-white rounded-lg shadow-sm border border-slate-100 flex-1 flex justify-center transition-colors"
+                      className="p-2 text-slate-400 hover:text-blue-600 bg-white rounded-lg shadow-sm border border-slate-100 flex-1 flex justify-center transition-colors"
                       title="Editar"
                     >
                       <Edit2 className="w-4 h-4" />
@@ -849,7 +1006,7 @@ export default function TabProfessores() {
                     <div className="w-px h-6 bg-slate-200 mx-1" />
                     <button 
                       onClick={() => setProfessorParaExcluir(professor)}
-                      className="p-2.5 text-slate-400 hover:text-red-500 bg-white rounded-lg shadow-sm border border-slate-100 flex-1 flex justify-center transition-colors"
+                      className="p-2 text-slate-400 hover:text-red-500 bg-white rounded-lg shadow-sm border border-slate-100 flex-1 flex justify-center transition-colors"
                       title="Excluir"
                     >
                       <Trash2 className="w-4 h-4" />
