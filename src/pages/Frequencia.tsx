@@ -95,7 +95,7 @@ export default function Frequencia() {
           <div className="max-w-7xl mx-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap items-center gap-3">
               <Link 
-                to="/diario" 
+                to={`/diario?date=${selectedDate}${turmaAtiva?.id ? `&turmaId=${turmaAtiva.id}` : ''}`} 
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
               >
                 <ArrowLeft className="w-3.5 h-3.5" /> 
