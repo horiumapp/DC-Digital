@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, BookOpen, Folder, ChevronDown, ChevronUp, GraduationCap, Building2, Clock as ClockIcon, ArrowRight, Check, AlertTriangle, Circle, Calendar, Info } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTurma } from '../contexts/TurmaContext';
 import { useOffline } from '../contexts/OfflineContext';
@@ -11,6 +11,9 @@ import { useTurmaProgress } from '../hooks/useTurmaProgress';
 
 export default function Diario() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const dateParam = searchParams.get('date');
+
   const { turmaAtiva, lancamentos, avaliacoes, alunos, horarioTurma, fechamentos, verificarPeriodoFechado } = useTurma();
   const { isOnline, connectionState, pendingCount } = useOffline();
   const year = APP_CONFIG.YEAR;
@@ -68,6 +71,18 @@ export default function Diario() {
     return visiveis[visiveis.length - 1];
   }, [periodosLetivos, checarFechado]);
 
+  const obterPeriodoPorData = useCallback((dataStr: string, visiveis: typeof periodosLetivos) => {
+    const [ano, mes, dia] = dataStr.split('-').map(Number);
+    const data = new Date(ano, mes - 1, dia, 12, 0, 0);
+    return visiveis.find(p => {
+      const [sY, sM, sD] = p.dataInicio.split('-').map(Number);
+      const [eY, eM, eD] = p.dataFim.split('-').map(Number);
+      const start = new Date(sY, sM - 1, sD, 0, 0, 0);
+      const end = new Date(eY, eM - 1, eD, 23, 59, 59);
+      return data >= start && data <= end;
+    }) || null;
+  }, []);
+
   const obterMesValido = useCallback((p?: { dataInicio: string; dataFim: string } | null) => {
     if (!p) return new Date().getMonth();
     const minM = parseInt(p.dataInicio.split('-')[1], 10) - 1;
@@ -76,9 +91,30 @@ export default function Diario() {
     return (actualMonth >= minM && actualMonth <= maxM) ? actualMonth : minM;
   }, []);
 
+  // Último preenchimento da turma ativa (frequência ou conteúdo)
+  const activeTurmaId = turmaAtiva ? String(turmaAtiva.id).split('||')[0] : '';
+  const lancamentosTurma = useMemo(() => {
+    return lancamentos.filter(l => 
+      String(l.turmaId).split('||')[0] === activeTurmaId && 
+      (l.tipo === 'frequencia' || l.tipo === 'conteudo') &&
+      /^\d{4}-\d{2}-\d{2}$/.test(l.data)
+    );
+  }, [lancamentos, activeTurmaId]);
+
+  const ultimaDataLancada = useMemo(() => {
+    if (lancamentosTurma.length === 0) return null;
+    const datas = [...new Set(lancamentosTurma.map(l => l.data))].sort();
+    return datas[datas.length - 1];
+  }, [lancamentosTurma]);
+
+  // Data alvo inicial (da URL se presente)
+  const initialTargetDate = (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) ? dateParam : null;
+  const initialPeriod = initialTargetDate 
+    ? (obterPeriodoPorData(initialTargetDate, periodosVisiveis) || obterPeriodoAberto(periodosVisiveis))
+    : obterPeriodoAberto(periodosVisiveis);
+
   const [periodoSelecionadoId, setPeriodoSelecionadoId] = useState<string>(() => {
-    const inicial = obterPeriodoAberto(periodosVisiveis);
-    return inicial?.id || '1. BIMESTRE';
+    return initialPeriod?.id || '1. BIMESTRE';
   });
 
   const periodoSelecionado = useMemo(() => {
@@ -86,29 +122,80 @@ export default function Diario() {
   }, [periodosVisiveis, periodoSelecionadoId]);
 
   const [currentMonth, setCurrentMonth] = useState<number>(() => {
+    if (initialTargetDate) {
+      const [, m] = initialTargetDate.split('-').map(Number);
+      return m - 1;
+    }
     return obterMesValido(periodoSelecionado);
   });
 
+  // Selected day state
+  const [selectedDay, setSelectedDay] = useState<number | null>(() => {
+    if (initialTargetDate) {
+      const [, , d] = initialTargetDate.split('-').map(Number);
+      return d;
+    }
+    return null;
+  });
+  const [selectedDayDetails, setSelectedDayDetails] = useState<DayDetails | null>(null);
+  const [showTurmaInfo, setShowTurmaInfo] = useState(false);
+
   const [usuarioAlterouManualmente, setUsuarioAlterouManualmente] = useState(false);
   const lastTurmaIdRef = useRef<string | null>(null);
+  const autoPositionedDateRef = useRef<string | null>(initialTargetDate);
 
   useEffect(() => {
     const currentTurmaId = turmaAtiva ? String(turmaAtiva.id) : null;
     if (currentTurmaId !== lastTurmaIdRef.current) {
       lastTurmaIdRef.current = currentTurmaId;
       setUsuarioAlterouManualmente(false);
+      autoPositionedDateRef.current = null;
     }
   }, [turmaAtiva]);
 
+  // Posicionamento inteligente no mês e dia do preenchimento
   useEffect(() => {
-    if (!usuarioAlterouManualmente && turmaAtiva) {
+    if (usuarioAlterouManualmente || !turmaAtiva) return;
+
+    // 1. Data explícita na URL (dateParam)
+    // 2. Última data com lançamento (frequência ou conteúdo) da turma
+    const targetDate = (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam))
+      ? dateParam
+      : ultimaDataLancada;
+
+    if (!targetDate) {
       const periodoAberto = obterPeriodoAberto(periodosVisiveis);
       if (periodoAberto && periodoAberto.id !== periodoSelecionadoId) {
         setPeriodoSelecionadoId(periodoAberto.id);
         setCurrentMonth(obterMesValido(periodoAberto));
       }
+      return;
     }
-  }, [periodosVisiveis, fechamentos, usuarioAlterouManualmente, turmaAtiva, obterPeriodoAberto, obterMesValido, periodoSelecionadoId]);
+
+    if (autoPositionedDateRef.current === targetDate) return;
+
+    const [, m, d] = targetDate.split('-').map(Number);
+    const targetMonth = m - 1;
+    const targetDay = d;
+
+    const periodoTarget = obterPeriodoPorData(targetDate, periodosVisiveis);
+    if (periodoTarget && periodoTarget.id !== periodoSelecionadoId) {
+      setPeriodoSelecionadoId(periodoTarget.id);
+    }
+    setCurrentMonth(targetMonth);
+    setSelectedDay(targetDay);
+    autoPositionedDateRef.current = targetDate;
+  }, [
+    dateParam,
+    ultimaDataLancada,
+    turmaAtiva,
+    usuarioAlterouManualmente,
+    periodosVisiveis,
+    periodoSelecionadoId,
+    obterPeriodoPorData,
+    obterPeriodoAberto,
+    obterMesValido
+  ]);
 
   const isAparataFechada = checarFechado(periodoSelecionadoId);
 
@@ -121,21 +208,25 @@ export default function Diario() {
     alunos
   );
 
-  // Selected day state
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const [selectedDayDetails, setSelectedDayDetails] = useState<DayDetails | null>(null);
-  const [showTurmaInfo, setShowTurmaInfo] = useState(false);
-
   const handleDaySelect = useCallback((day: number | null, details: DayDetails | null) => {
     setSelectedDay(day);
     setSelectedDayDetails(details);
   }, []);
 
-  // Reset selection when period changes
+  // Reset selection when period changes only if selected day is outside the new period
   useEffect(() => {
-    setSelectedDay(null);
-    setSelectedDayDetails(null);
-  }, [periodoSelecionadoId]);
+    if (selectedDay !== null && periodoSelecionado) {
+      const [sY, sM, sD] = periodoSelecionado.dataInicio.split('-').map(Number);
+      const [eY, eM, eD] = periodoSelecionado.dataFim.split('-').map(Number);
+      const pStart = new Date(sY, sM - 1, sD, 0, 0, 0);
+      const end = new Date(eY, eM - 1, eD, 23, 59, 59);
+      const d = new Date(year, currentMonth, selectedDay, 12, 0, 0);
+      if (d < pStart || d > end) {
+        setSelectedDay(null);
+        setSelectedDayDetails(null);
+      }
+    }
+  }, [periodoSelecionadoId, periodoSelecionado, currentMonth, selectedDay, year]);
 
   const monthNames = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -317,7 +408,10 @@ export default function Diario() {
               <CalendarWidget
                 year={year}
                 currentMonth={currentMonth}
-                onMonthChange={setCurrentMonth}
+                onMonthChange={(m) => {
+                  setUsuarioAlterouManualmente(true);
+                  setCurrentMonth(m);
+                }}
                 turmaAtiva={turmaAtiva}
                 lancamentos={lancamentos}
                 avaliacoes={avaliacoes}

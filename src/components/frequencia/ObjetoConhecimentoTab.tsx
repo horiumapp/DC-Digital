@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Check, Pencil, Trash2, X, RefreshCw, AlertTriangle } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Check, Pencil, Trash2, X, RefreshCw, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { useToast } from '../common/Toast';
 import { useTurma } from '../../contexts/TurmaContext';
 import { supabase } from '../../lib/supabase';
@@ -46,6 +47,7 @@ export default function ObjetoConhecimentoTab({
   disponiveisTempos,
   disabled,
 }: ObjetoConhecimentoTabProps) {
+  const navigate = useNavigate();
   const { registrarLancamento: _registrarLancamento, removerLancamento: _removerLancamento, salvarConteudo, buscarConteudo, removerConteudo, lancamentos } = useTurma();
 
   const _isLancado = lancamentos.some(l => 
@@ -251,6 +253,9 @@ export default function ObjetoConhecimentoTab({
       if (nextPendingTempo) {
         setTempoAula(nextPendingTempo);
       }
+
+      // Redireciona diretamente para o Diário no mês e dia do preenchimento
+      navigate(`/diario?date=${selectedDate}${turmaAtiva?.id ? `&turmaId=${turmaAtiva.id}` : ''}`);
     } catch (err) {
       console.error('Erro ao salvar conteúdo ministrado:', err);
       showError('Erro ao salvar conteúdo ministrado. Tente novamente.');
@@ -276,7 +281,7 @@ export default function ObjetoConhecimentoTab({
                 ))}
               </select>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <button
                  onClick={() => {
                    if (objetoSalvo && objetoData) {
@@ -287,7 +292,7 @@ export default function ObjetoConhecimentoTab({
                      setShowObjetoTable(false);
                    }
                  }}
-                 className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] shadow-sm active:scale-95 whitespace-nowrap"
+                 className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] shadow-sm active:scale-95 whitespace-nowrap cursor-pointer"
                >
                  Exibir
                </button>
@@ -299,11 +304,18 @@ export default function ObjetoConhecimentoTab({
                       generateNewCaptcha();
                       setIsAddingObjeto(true);
                     }}
-                    className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-4 sm:px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] flex items-center gap-2 shadow-sm active:scale-95 whitespace-nowrap"
+                    className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-4 sm:px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] flex items-center gap-2 shadow-sm active:scale-95 whitespace-nowrap cursor-pointer"
                   >
                     <span className="text-lg leading-none">+</span> Adicionar Conteúdo
                   </button>
                 )}
+                <Link
+                  to={`/diario?date=${selectedDate}${turmaAtiva?.id ? `&turmaId=${turmaAtiva.id}` : ''}`}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded text-sm font-semibold transition h-[38px] flex items-center gap-1.5 shadow-xs active:scale-95 whitespace-nowrap cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Voltar ao Diário
+                </Link>
             </div>
           </div>
 
