@@ -76,37 +76,29 @@ describe('PortalAluno - Resolução de Gestor(a) e Secretário(a)', () => {
 
     vi.spyOn(supabase, 'from').mockImplementation((table: string) => {
       if (table === 'alunos') {
-        return {
-          select: vi.fn().mockReturnValue({
-            or: vi.fn().mockReturnValue({
-              limit: vi.fn().mockResolvedValue({ data: [mockAluno], error: null }),
-            }),
-          }),
-        } as any;
+        const queryChain: any = {};
+        queryChain.select = vi.fn().mockReturnValue(queryChain);
+        queryChain.or = vi.fn().mockReturnValue(queryChain);
+        queryChain.limit = vi.fn().mockResolvedValue({ data: [mockAluno], error: null });
+        return queryChain;
       }
       if (table === 'usuarios') {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              in: vi.fn().mockReturnValue({
-                order: vi.fn().mockResolvedValue({ data: mockEquipeUsuarios, error: null }),
-              }),
-            }),
-          }),
-        } as any;
+        const queryChain: any = {};
+        queryChain.select = vi.fn().mockReturnValue(queryChain);
+        queryChain.eq = vi.fn().mockReturnValue(queryChain);
+        queryChain.in = vi.fn().mockReturnValue(queryChain);
+        queryChain.order = vi.fn().mockResolvedValue({ data: mockEquipeUsuarios, error: null });
+        return queryChain;
       }
-      if (table === 'frequencias') {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              order: vi.fn().mockResolvedValue({ data: [], error: null }),
-            }),
-          }),
-        } as any;
-      }
-      return {
-        select: vi.fn().mockReturnThis(),
-      } as any;
+      // Outras tabelas: notas, frequencias, etc.
+      const genericChain: any = {};
+      genericChain.select = vi.fn().mockReturnValue(genericChain);
+      genericChain.eq = vi.fn().mockReturnValue(genericChain);
+      genericChain.in = vi.fn().mockReturnValue(genericChain);
+      genericChain.order = vi.fn().mockReturnValue(genericChain);
+      genericChain.range = vi.fn().mockResolvedValue({ data: [], error: null });
+      genericChain.then = (resolve: any) => Promise.resolve({ data: [], error: null }).then(resolve);
+      return genericChain;
     });
 
     vi.spyOn(supabase, 'rpc').mockResolvedValue({ data: null, error: null });
