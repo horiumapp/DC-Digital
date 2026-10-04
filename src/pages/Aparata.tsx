@@ -21,10 +21,24 @@ export default function Aparata() {
   const { showSuccess, showError } = useToast();
   const navigate = useNavigate();
 
+  const isDocente = user?.role === 'PROFESSOR';
+  const disciplinaProfessor = (isDocente && turmaAtiva?.componente && turmaAtiva.componente !== 'POLIVALENTE')
+    ? turmaAtiva.componente
+    : null;
+
   const [periodoSelecionado, setPeriodoSelecionado] = useState('1. BIMESTRE');
   const [disciplinaSelecionada, setDisciplinaSelecionada] = useState<string>(
-    turmaAtiva?.componente && turmaAtiva.componente !== 'POLIVALENTE' ? turmaAtiva.componente : 'TODAS'
+    disciplinaProfessor || 'TODAS'
   );
+
+  // Sincronizar disciplina caso a turma ativa ou alocação do professor mude
+  useEffect(() => {
+    if (disciplinaProfessor) {
+      setDisciplinaSelecionada(disciplinaProfessor);
+    }
+  }, [disciplinaProfessor]);
+
+  const disciplinaAlvo = disciplinaProfessor || disciplinaSelecionada;
   const [disciplinas, setDisciplinas] = useState<string[]>([]);
   const [fechamentosRaw, setFechamentosRaw] = useState<{ id?: string; bimestre: string; status: string; disciplina: string; data_fechamento?: string; created_at?: string; usuario_fechamento_id?: string }[]>([]);
   const [showDados, setShowDados] = useState(true);
@@ -80,24 +94,24 @@ export default function Aparata() {
 
   // Situação para a disciplina atualmente selecionada
   const isDisciplinaSelecionadaFechada = useMemo(() => {
-    if (disciplinaSelecionada === 'TODAS') {
+    if (disciplinaAlvo === 'TODAS') {
       return isPeriodoFechadoGeral;
     }
-    return disciplinasFechadasNoPeriodo.includes(disciplinaSelecionada);
-  }, [disciplinaSelecionada, isPeriodoFechadoGeral, disciplinasFechadasNoPeriodo]);
+    return disciplinasFechadasNoPeriodo.includes(disciplinaAlvo);
+  }, [disciplinaAlvo, isPeriodoFechadoGeral, disciplinasFechadasNoPeriodo]);
 
   // Sincronizar disciplina escolhida no modal quando abre
   useEffect(() => {
     if (disciplinasFechadasNoPeriodo.length > 0) {
-      if (disciplinaSelecionada !== 'TODAS' && disciplinasFechadasNoPeriodo.includes(disciplinaSelecionada)) {
-        setDisciplinaEscolhida(disciplinaSelecionada);
+      if (disciplinaAlvo !== 'TODAS' && disciplinasFechadasNoPeriodo.includes(disciplinaAlvo)) {
+        setDisciplinaEscolhida(disciplinaAlvo);
       } else {
         setDisciplinaEscolhida(disciplinasFechadasNoPeriodo[0]);
       }
     } else if (disciplinas.length > 0) {
-      setDisciplinaEscolhida(disciplinas[0]);
+      setDisciplinaEscolhida(disciplinaProfessor || disciplinas[0]);
     }
-  }, [disciplinasFechadasNoPeriodo, disciplinaSelecionada, disciplinas]);
+  }, [disciplinasFechadasNoPeriodo, disciplinaAlvo, disciplinaProfessor, disciplinas]);
 
   const handleExibir = () => {
     setShowDados(true);
@@ -128,7 +142,14 @@ export default function Aparata() {
   const movimentacoes = useMemo(() => {
     if (!showDados) return [];
 
-    const filtrados = fechamentosRaw.filter(f => f.bimestre === periodoSelecionado);
+    const filtrados = fechamentosRaw.filter(f => {
+      if (f.bimestre !== periodoSelecionado) return false;
+      if (disciplinaAlvo && disciplinaAlvo !== 'TODAS' && f.disciplina !== disciplinaAlvo) {
+        return false;
+      }
+      return true;
+    });
+
     if (filtrados.length === 0) {
       return [];
     }
@@ -140,7 +161,7 @@ export default function Aparata() {
       componente: f.disciplina,
       usuario: user?.name?.toUpperCase() || 'SECRETARIA',
     }));
-  }, [showDados, fechamentosRaw, periodoSelecionado, user?.name]);
+  }, [showDados, fechamentosRaw, periodoSelecionado, disciplinaAlvo, user?.name]);
 
   const movimentacoesFiltradas = movimentacoes.filter(m =>
     searchMovimentacao === '' ||
@@ -232,7 +253,7 @@ export default function Aparata() {
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase">Componente Atual</p>
                   <p className="text-sm font-bold text-[#0f2851] uppercase">
-                    {disciplinaSelecionada === 'TODAS' ? 'Todas as Disciplinas' : disciplinaSelecionada}
+                    {disciplinaAlvo === 'TODAS' ? 'Todas as Disciplinas' : disciplinaAlvo}
                   </p>
                 </div>
               </div>
@@ -257,14 +278,21 @@ export default function Aparata() {
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wide">Componente Curricular</label>
                   <select
-                    value={disciplinaSelecionada}
+                    value={disciplinaAlvo}
                     onChange={(e) => { setDisciplinaSelecionada(e.target.value); }}
-                    className="min-w-[260px] border border-slate-200 bg-white rounded-xl px-4 py-2.5 text-sm text-[#0f2851] font-bold focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer shadow-sm"
+                    disabled={Boolean(disciplinaProfessor)}
+                    className="min-w-[260px] border border-slate-200 bg-white rounded-xl px-4 py-2.5 text-sm text-[#0f2851] font-bold focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer shadow-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                   >
-                    <option value="TODAS">TODAS AS DISCIPLINAS</option>
-                    {disciplinas.map(d => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
+                    {disciplinaProfessor ? (
+                      <option value={disciplinaProfessor}>{disciplinaProfessor}</option>
+                    ) : (
+                      <>
+                        <option value="TODAS">TODAS AS DISCIPLINAS</option>
+                        {disciplinas.map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </>
+                    )}
                   </select>
                 </div>
 
@@ -296,7 +324,7 @@ export default function Aparata() {
                       <div className="flex items-center gap-3">
                         <h3 className="text-base font-bold text-slate-700">Dados da Aparata</h3>
                         <span className={`text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider border ${isDisciplinaSelecionadaFechada ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
-                          {disciplinaSelecionada === 'TODAS'
+                          {disciplinaAlvo === 'TODAS'
                             ? (isPeriodoFechadoGeral
                                 ? `FECHADO (${disciplinasFechadasNoPeriodo.length} de ${disciplinas.length} disciplinas)`
                                 : 'ABERTO')
@@ -330,7 +358,7 @@ export default function Aparata() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {disciplinaSelecionada === 'TODAS' ? (
+                          {disciplinaAlvo === 'TODAS' ? (
                             disciplinas.map(disc => {
                               const fechado = disciplinasFechadasNoPeriodo.includes(disc);
                               return (
@@ -358,7 +386,7 @@ export default function Aparata() {
                           ) : (
                             <tr className="hover:bg-slate-50 transition">
                               <td className="px-4 py-3 text-slate-700 font-medium">{periodoSelecionado}</td>
-                              <td className="px-4 py-3 text-slate-800 font-bold">{disciplinaSelecionada}</td>
+                              <td className="px-4 py-3 text-slate-800 font-bold">{disciplinaAlvo}</td>
                               <td className="px-4 py-3">
                                 <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest border ${isDisciplinaSelecionadaFechada ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
                                   {isDisciplinaSelecionadaFechada ? 'FECHADO' : 'ABERTO'}
@@ -367,7 +395,7 @@ export default function Aparata() {
                               <td className="px-4 py-3 text-slate-600">{turmaAtiva.fase} - {turmaAtiva.turno.toUpperCase()}</td>
                               <td className="px-4 py-3 text-right">
                                 <Link
-                                  to={`/aparata-detalhes?periodo=${encodeURIComponent(periodoSelecionado)}&disciplina=${encodeURIComponent(disciplinaSelecionada)}`}
+                                  to={`/aparata-detalhes?periodo=${encodeURIComponent(periodoSelecionado)}&disciplina=${encodeURIComponent(disciplinaAlvo)}`}
                                   className="bg-[#0f2851] text-white text-[10px] font-bold px-4 py-1.5 rounded-lg hover:bg-[#1a3a6d] transition inline-flex items-center gap-1.5 shadow-sm active:scale-95"
                                 >
                                   <Eye className="w-3.5 h-3.5" />
@@ -412,9 +440,13 @@ export default function Aparata() {
                           {movimentacoesFiltradas.length === 0 ? (
                             <tr>
                               <td colSpan={6} className="px-4 py-6 text-center text-slate-400 text-sm">
-                                {isPeriodoFechadoGeral
-                                  ? 'Nenhum registro encontrado na busca.'
-                                  : 'Nenhum fechamento registrado para este período (Aparata aberta).'}
+                                {searchMovimentacao ? (
+                                  'Nenhum registro encontrado na busca.'
+                                ) : (disciplinaAlvo !== 'TODAS' ? isDisciplinaSelecionadaFechada : isPeriodoFechadoGeral) ? (
+                                  'Nenhuma movimentação registrada.'
+                                ) : (
+                                  'Nenhum fechamento registrado para este período (Aparata aberta).'
+                                )}
                               </td>
                             </tr>
                           ) : movimentacoesFiltradas.map((mov) => (
