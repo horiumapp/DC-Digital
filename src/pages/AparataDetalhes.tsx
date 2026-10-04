@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, Printer, Search, BookOpen, Unlock, Lock } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useTurma } from '../contexts/TurmaContext';
+import { useTurma, Avaliacao } from '../contexts/TurmaContext';
 import { useAuth } from '../contexts/AuthContext';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
 import { supabase } from '../lib/supabase';
 import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
 import { APP_CONFIG, getBimestreAtual } from '../config/appConfig';
+import { getBimestreNumero } from '../utils/dateUtils';
 
 export default function AparataDetalhes() {
   const { turmaAtiva, alunos, avaliacoes, lancamentos, fechamentos, salvarFechamento } = useTurma();
@@ -30,18 +31,27 @@ export default function AparataDetalhes() {
   const [reabrindo, setReabrindo] = useState(false);
   const [isFecharModalOpen, setIsFecharModalOpen] = useState(false);
   const [fechando, setFechando] = useState(false);
+  const [avaliacoesComponente, setAvaliacoesComponente] = useState<Avaliacao[]>(avaliacoes);
+
+  useEffect(() => {
+    setAvaliacoesComponente(avaliacoes);
+  }, [avaliacoes]);
 
   useEffect(() => {
     async function carregarFechamentosEDisciplinas() {
       if (!turmaAtiva) return;
       const rawId = turmaAtiva.id.toString().split('||')[0];
       try {
-        const [fechs, discs] = await Promise.all([
+        const [fechs, discs, avsResult] = await Promise.all([
           OfflineTurmaService.fetchFechamentos(rawId, componenteAtivo),
-          OfflineTurmaService.fetchDisciplinasDaTurma(rawId)
+          OfflineTurmaService.fetchDisciplinasDaTurma(rawId),
+          OfflineTurmaService.fetchAvaliacoes(rawId, componenteAtivo)
         ]);
         setFechamentosLocais(fechs);
         setDisciplinasTurma(discs);
+        if (avsResult && avsResult.avaliacoes && avsResult.avaliacoes.length > 0) {
+          setAvaliacoesComponente(avsResult.avaliacoes);
+        }
       } catch (err) {
         console.error('Erro ao carregar fechamentos e disciplinas:', err);
       }
