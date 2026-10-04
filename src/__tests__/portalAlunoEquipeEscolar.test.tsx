@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
 import PortalAluno from '../pages/PortalAluno';
 import { supabase } from '../lib/supabase';
 
@@ -90,7 +90,6 @@ describe('PortalAluno - Resolução de Gestor(a) e Secretário(a)', () => {
         queryChain.order = vi.fn().mockResolvedValue({ data: mockEquipeUsuarios, error: null });
         return queryChain;
       }
-      // Outras tabelas: notas, frequencias, etc.
       const genericChain: any = {};
       genericChain.select = vi.fn().mockReturnValue(genericChain);
       genericChain.eq = vi.fn().mockReturnValue(genericChain);
@@ -107,11 +106,11 @@ describe('PortalAluno - Resolução de Gestor(a) e Secretário(a)', () => {
 
     // Mudar para a aba de boletim
     await waitFor(() => {
-      expect(screen.getByText('ANTONY GABRIEL NASCIMENTO NERY')).toBeDefined();
+      expect(screen.getAllByText('ANTONY GABRIEL NASCIMENTO NERY').length).toBeGreaterThan(0);
     });
 
     const boletimTabBtn = screen.getByRole('button', { name: /boletim/i });
-    boletimTabBtn.click();
+    fireEvent.click(boletimTabBtn);
 
     // Deve exibir o gestor e secretário alocados
     await waitFor(() => {
