@@ -263,8 +263,9 @@ export default function Aparata() {
             <div className="mt-6 pt-6 border-t border-slate-200">
               <div className="flex flex-wrap items-end gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wide">Período</label>
+                  <label htmlFor="periodo-select" className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wide">Período</label>
                   <select
+                    id="periodo-select"
                     value={periodoSelecionado}
                     onChange={(e) => { setPeriodoSelecionado(e.target.value); }}
                     className="w-56 border border-slate-200 bg-white rounded-xl px-4 py-2.5 text-sm text-[#0f2851] font-bold focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer shadow-sm"
@@ -276,8 +277,9 @@ export default function Aparata() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wide">Componente Curricular</label>
+                  <label htmlFor="componente-curricular-select" className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wide">Componente Curricular</label>
                   <select
+                    id="componente-curricular-select"
                     value={disciplinaAlvo}
                     onChange={(e) => { setDisciplinaSelecionada(e.target.value); }}
                     disabled={Boolean(disciplinaProfessor)}

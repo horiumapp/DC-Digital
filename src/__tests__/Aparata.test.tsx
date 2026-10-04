@@ -106,7 +106,7 @@ describe('Aparata - Filtragem por Disciplina do Professor', () => {
       expect(screen.getByText('Movimentações da Aparata')).toBeDefined();
     });
 
-    // Deve conter Geografia na tabela de movimentações
+    // Deve conter Geografia na tela (nos cards, na tabela de dados da aparata e nas movimentações)
     await waitFor(() => {
       expect(screen.getAllByText('Geografia').length).toBeGreaterThan(0);
     });
@@ -117,7 +117,7 @@ describe('Aparata - Filtragem por Disciplina do Professor', () => {
     expect(screen.queryByText('Artes')).toBeNull();
 
     // No seletor de Componente Curricular, o professor só deve ter a opção Geografia e o select deve estar desabilitado
-    const selectDisciplina = screen.getByRole('combobox', { name: /componente curricular/i }) as HTMLSelectElement;
+    const selectDisciplina = screen.getByLabelText(/componente curricular/i) as HTMLSelectElement;
     expect(selectDisciplina.value).toBe('Geografia');
     expect(selectDisciplina.disabled).toBe(true);
     expect(screen.queryByText('TODAS AS DISCIPLINAS')).toBeNull();
@@ -152,14 +152,14 @@ describe('Aparata - Filtragem por Disciplina do Professor', () => {
 
     // Com perfil admin e TODAS selecionado, aparecem todas as movimentações
     await waitFor(() => {
-      expect(screen.getByText('Educação Física')).toBeDefined();
-      expect(screen.getByText('Geografia')).toBeDefined();
-      expect(screen.getByText('Ensino Religioso')).toBeDefined();
-      expect(screen.getByText('Artes')).toBeDefined();
+      expect(screen.getAllByText('Educação Física').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Geografia').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Ensino Religioso').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Artes').length).toBeGreaterThan(0);
     });
 
     // O select do administrador deve ter opção 'TODAS AS DISCIPLINAS' e não estar desabilitado
-    const selectDisciplina = screen.getByRole('combobox', { name: /componente curricular/i }) as HTMLSelectElement;
+    const selectDisciplina = screen.getByLabelText(/componente curricular/i) as HTMLSelectElement;
     expect(selectDisciplina.disabled).toBe(false);
     expect(screen.getByText('TODAS AS DISCIPLINAS')).toBeDefined();
   });
