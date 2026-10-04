@@ -110,15 +110,42 @@ export default function AparataDetalhes() {
     return uniq.size;
   }, [lancamentos]);
 
-  // Regra de AVs Planejadas
-  const aulasSemanais = (turmaAtiva?.diasDeAula?.length || 0) * (turmaAtiva?.tempos?.length || 0);
-  const avsPlanejadas = aulasSemanais <= 3 ? 2 : 3;
+  // Quantidade real de avaliações feitas no bimestre para o componente
+  const targetBimestreNum = useMemo(() => {
+    return getBimestreNumero(bimestreInfo.id) ?? getBimestreNumero(bimestreInfo.nome) ?? getBimestreNumero(bimestreInfo.label) ?? 1;
+  }, [bimestreInfo]);
+
+  const principalAvs = useMemo(() => {
+    const lista = avaliacoesComponente && avaliacoesComponente.length > 0 ? avaliacoesComponente : avaliacoes;
+    return (lista || []).filter(a => {
+      // Excluir 2ª chamada e recuperação
+      if (a.parent_id) return false;
+      if (a.tipo && (a.tipo.startsWith('RP') || a.tipo.includes('CH') || a.tipo.toLowerCase().includes('recupera') || a.tipo.toLowerCase().includes('chamada'))) {
+        return false;
+      }
+      // Filtrar pelo componente ativo se aplicável
+      if (a.disciplina && componenteAtivo && a.disciplina !== componenteAtivo && componenteAtivo !== 'POLIVALENTE') {
+        return false;
+      }
+      // Filtrar pelo bimestre da aparata
+      const avNum = getBimestreNumero(a.bimestre || '') ?? getBimestreNumero(a.data);
+      if (avNum !== null && targetBimestreNum !== null) {
+        return avNum === targetBimestreNum;
+      }
+      if (a.data && bimestreInfo.dataInicio && bimestreInfo.dataFim) {
+        return a.data >= bimestreInfo.dataInicio && a.data <= bimestreInfo.dataFim;
+      }
+      return true;
+    });
+  }, [avaliacoesComponente, avaliacoes, componenteAtivo, targetBimestreNum, bimestreInfo]);
+
+  const avsFeitas = principalAvs.length;
 
   const hoje = new Date();
   const dataHoje = `${hoje.getDate().toString().padStart(2, '0')}/${(hoje.getMonth() + 1).toString().padStart(2, '0')}/${hoje.getFullYear()}`;
 
   const alunosDetalhados = useMemo(() => {
-    const principalAvs = avaliacoes.filter(a => !a.parent_id && a.tipo.startsWith('AV') && !a.tipo.startsWith('RP') && !a.tipo.includes('CH'));
+    const listaGeral = avaliacoesComponente && avaliacoesComponente.length > 0 ? avaliacoesComponente : avaliacoes;
 
     return (alunos || []).map((aluno, index) => {
       // Cálculo da Soma Parcial (considerando as notas, 2ª chamada e eventuais recuperações)
@@ -126,8 +153,8 @@ export default function AparataDetalhes() {
       if (principalAvs.length > 0) {
         let soma = 0;
         principalAvs.forEach(av => {
-          const rp = avaliacoes.find(a => String(a.parent_id) === String(av.id) && (a.tipo?.includes('RP') || a.tipo?.toLowerCase().includes('recupera')));
-          const ch = avaliacoes.find(a => String(a.parent_id) === String(av.id) && (a.tipo?.includes('2CH') || a.tipo?.includes('CH') || a.tipo?.toLowerCase().includes('chamada')));
+          const rp = listaGeral.find(a => String(a.parent_id) === String(av.id) && (a.tipo?.includes('RP') || a.tipo?.toLowerCase().includes('recupera')));
+          const ch = listaGeral.find(a => String(a.parent_id) === String(av.id) && (a.tipo?.includes('2CH') || a.tipo?.includes('CH') || a.tipo?.toLowerCase().includes('chamada')));
           const valAvStr = aluno.notas?.[av.id];
           const valChStr = ch ? aluno.notas?.[ch.id] : undefined;
           const valRpStr = rp ? aluno.notas?.[rp.id] : undefined;
@@ -151,7 +178,7 @@ export default function AparataDetalhes() {
         faltas
       };
     });
-  }, [alunos, avaliacoes, faltasMap]);
+  }, [alunos, principalAvs, avaliacoesComponente, avaliacoes, faltasMap]);
 
   const alunosFiltrados = alunosDetalhados.filter(a =>
     search === '' ||
