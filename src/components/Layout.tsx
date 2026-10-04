@@ -17,7 +17,8 @@ import {
   RefreshCw,
   WifiOff,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Printer
 } from 'lucide-react';
 import ScheduleModal from './ScheduleModal';
 import ConnectionStatus from './common/ConnectionStatus';
@@ -31,6 +32,7 @@ import { APP_CONFIG } from '../config/appConfig';
 
 type Item = { label: string; to: string; icon: typeof Home; end?: boolean };
 const reports: Item[] = [
+  { label: 'Boletins escolares', to: '/relatorio-boletins', icon: Printer },
   { label: 'Conteúdos ministrados', to: '/relatorio-conteudos', icon: BookOpenCheck },
   { label: 'Frequência da turma', to: '/relatorio-frequencia', icon: ClipboardCheck },
   { label: 'Médias do componente', to: '/relatorio-medias', icon: BarChart3 },

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Edit2, Trash2, Building2, Users, GraduationCap, ChevronRight, ArrowLeft, ArrowRightLeft, KeyRound, Download, Upload } from 'lucide-react';
+import { Search, Edit2, Trash2, Building2, Users, GraduationCap, ChevronRight, ArrowLeft, ArrowRightLeft, KeyRound, Download, Upload, Printer } from 'lucide-react';
 import RemanejarAlunoModal from '../../components/RemanejarAlunoModal';
 import NovoAlunoModal from '../../components/NovoAlunoModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
@@ -65,6 +66,7 @@ export interface TurmaItem {
 export default function TabAlunos() {
   const { user } = useAuth();
   const { showError, showSuccess, showWarning } = useToast();
+  const navigate = useNavigate();
   const [busca, setBusca] = useState('');
   const [isNovoAlunoModalOpen, setIsNovoAlunoModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -846,9 +848,9 @@ export default function TabAlunos() {
                       return (
                         <div key={turma.id} className="space-y-4">
                           {/* Card da Turma (Acordeão) */}
-                          <button
+                          <div
                             onClick={() => toggleTurma(turma.id)}
-                            className={`w-full flex items-center justify-between p-4 bg-white border rounded-2xl transition-all hover:shadow-md ${
+                            className={`w-full flex items-center justify-between p-4 bg-white border rounded-2xl transition-all hover:shadow-md cursor-pointer ${
                               isExpanded ? 'border-blue-200 shadow-sm ring-1 ring-blue-50' : 'border-slate-100 hover:border-slate-200'
                             }`}
                           >
@@ -865,10 +867,24 @@ export default function TabAlunos() {
                                 </p>
                               </div>
                             </div>
-                            <div className={`p-2 rounded-lg transition-transform duration-300 ${isExpanded ? 'rotate-180 bg-blue-50 text-blue-600' : 'text-slate-300'}`}>
-                              <ChevronRight className="w-5 h-5" />
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/relatorio-boletins?turmaId=${turma.id}`);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#0f2851] text-xs font-bold rounded-xl border border-blue-200 transition shadow-sm active:scale-95 cursor-pointer"
+                                title="Emitir e imprimir boletins desta turma"
+                              >
+                                <Printer className="w-3.5 h-3.5 text-blue-600" />
+                                <span className="hidden sm:inline">Boletins da Turma</span>
+                              </button>
+                              <div className={`p-2 rounded-lg transition-transform duration-300 ${isExpanded ? 'rotate-180 bg-blue-50 text-blue-600' : 'text-slate-300'}`}>
+                                <ChevronRight className="w-5 h-5" />
+                              </div>
                             </div>
-                          </button>
+                          </div>
 
                           {/* Lista de Alunos (Expandível) */}
                           {isExpanded && (
@@ -929,6 +945,13 @@ export default function TabAlunos() {
                                           </td>
                                           <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-1">
+                                              <button 
+                                                onClick={() => navigate(`/relatorio-boletins?turmaId=${aluno.turma_id}&alunoId=${aluno.id}`)}
+                                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                                                title="Imprimir Boletim Escolar"
+                                              >
+                                                <Printer className="w-4 h-4" />
+                                              </button>
                                               <button onClick={() => handleResetSenhaAluno(aluno)} className="p-2 text-slate-400 hover:text-violet-700 hover:bg-violet-50 rounded-lg transition-colors" title="Redefinir senha do portal"><KeyRound className="w-4 h-4" /></button>
                                               <button onClick={() => setAlunoParaRemanejar(aluno)} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100 transition-colors" title="Remanejar aluno">
                                                 <ArrowRightLeft className="w-4 h-4" /><span className="hidden xl:inline">Remanejar</span>

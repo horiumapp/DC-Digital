@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Edit2, Trash2, Building2, ChevronRight, GraduationCap, Users, ArrowLeft, Folder, Download, Upload } from 'lucide-react';
+import { Search, Edit2, Trash2, Building2, ChevronRight, GraduationCap, Users, ArrowLeft, Folder, Download, Upload, Printer } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTurma, type Turma } from '../../contexts/TurmaContext';
 import NovaTurmaModal from '../../components/NovaTurmaModal';
@@ -572,17 +572,32 @@ export default function TabTurmas() {
                           </div>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => handleAbrirAparatas(turma)}
-                          className="w-full mt-auto pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-[#0f2851] hover:text-blue-700 py-1.5 transition group/btn cursor-pointer"
-                        >
-                          <span className="flex items-center gap-2">
-                            <Folder className="w-4 h-4 text-[#0f2851]" />
-                            Gerenciar Aparatas
-                          </span>
-                          <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover/btn:translate-x-0.5 transition-transform" />
-                        </button>
+                        <div className="w-full mt-auto pt-3 border-t border-slate-100 flex flex-col gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/relatorio-boletins?turmaId=${turma.id}`)}
+                            className="w-full flex items-center justify-between text-xs font-bold text-slate-700 hover:text-[#0f2851] py-1 transition group/btn cursor-pointer"
+                            title="Emitir e imprimir boletins desta turma"
+                          >
+                            <span className="flex items-center gap-2">
+                              <Printer className="w-4 h-4 text-blue-600" />
+                              Boletins Escolares
+                            </span>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover/btn:translate-x-0.5 transition-transform" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleAbrirAparatas(turma)}
+                            className="w-full flex items-center justify-between text-xs font-bold text-[#0f2851] hover:text-blue-700 py-1 transition group/btn cursor-pointer"
+                          >
+                            <span className="flex items-center gap-2">
+                              <Folder className="w-4 h-4 text-[#0f2851]" />
+                              Gerenciar Aparatas
+                            </span>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover/btn:translate-x-0.5 transition-transform" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
