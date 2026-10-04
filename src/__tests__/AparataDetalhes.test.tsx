@@ -123,4 +123,31 @@ describe('AparataDetalhes', () => {
     const row = screen.getByText('Bruna Teste').closest('tr');
     expect(row?.textContent).toContain('15,50');
   });
+
+  it('exibe a quantidade real de avaliações feitas no bimestre (não exibindo valor fixo 3)', async () => {
+    vi.mocked(OfflineTurmaService.fetchAllFrequencias).mockResolvedValue([]);
+
+    mockUseTurma.mockReturnValue({
+      turmaAtiva,
+      alunos: [],
+      avaliacoes: [
+        { id: 'av-1', tipo: 'AV01', bimestre: '1º BIMESTRE', data: '2026-02-27', disciplina: 'Matemática' },
+        { id: 'av-2', tipo: 'AV02', bimestre: '1º BIMESTRE', data: '2026-04-21', disciplina: 'Matemática' },
+        // Avaliação derivada não deve ser somada
+        { id: 'ch-1', tipo: '2ª CH', bimestre: '1º BIMESTRE', data: '2026-04-25', parent_id: 'av-1', disciplina: 'Matemática' },
+        // Avaliação de outro bimestre não deve ser somada no 1º bimestre
+        { id: 'av-3', tipo: 'AV01', bimestre: '2º BIMESTRE', data: '2026-05-10', disciplina: 'Matemática' },
+      ],
+      lancamentos: [],
+      fechamentos: {},
+      salvarFechamento: vi.fn(),
+    });
+
+    render(<AparataDetalhes />);
+
+    // Deve exibir 2 e não o antigo valor fixo de 3
+    const avsLabel = screen.getByText('Qtde de AVs Feitas');
+    const avsValue = avsLabel.nextElementSibling;
+    expect(avsValue?.textContent).toBe('2');
+  });
 });
