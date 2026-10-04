@@ -20,6 +20,7 @@ vi.mock('../services/turmaServiceOffline', () => ({
   fetchAllFrequencias: vi.fn(),
   fetchFechamentos: vi.fn().mockResolvedValue({}),
   fetchDisciplinasDaTurma: vi.fn().mockResolvedValue(['Matemática']),
+  fetchAvaliacoes: vi.fn().mockResolvedValue({ avaliacoes: [], notasData: [] }),
 }));
 
 vi.mock('../components/common/TurmaHeaderInfo', () => ({
