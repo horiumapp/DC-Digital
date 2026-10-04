@@ -76,4 +76,32 @@ describe('BoletimTab - Exibição de Secretário(a) e Diretor(a)', () => {
     // No cabeçalho, não deve exibir a linha SECRETÁRIO(A):
     expect(screen.queryByText(/SECRETÁRIO\(A\):/i)).toBeNull();
   });
+
+  it('deve descartar strings placeholder como "Não localizado" e exibir fallbacks limpos', () => {
+    const alunoComPlaceholder = {
+      ...baseAlunoData,
+      escola_diretor: 'Não localizado',
+      escola_secretario: 'Não localizado',
+    };
+
+    render(
+      <BoletimTab
+        alunoData={alunoComPlaceholder}
+        notas={[]}
+        frequencias={[]}
+      />
+    );
+
+    // A string "Não localizado" JAMAIS deve aparecer na tela
+    expect(screen.queryByText(/não localizado/i)).toBeNull();
+
+    // No cabeçalho: diretor exibe '---' e linha do secretário é ocultada
+    expect(screen.getByText(/DIRETOR\(A\):/i)).toBeTruthy();
+    expect(screen.queryByText(/SECRETÁRIO\(A\):/i)).toBeNull();
+
+    // Nas assinaturas: exibe os títulos institucionais como fallback
+    expect(screen.getByText('SECRETÁRIO(A) ESCOLAR')).toBeTruthy();
+    expect(screen.getByText('SECRETÁRIO(A)')).toBeTruthy();
+    expect(screen.getAllByText('DIRETOR(A)').length).toBeGreaterThan(0);
+  });
 });

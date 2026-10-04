@@ -91,6 +91,17 @@ export default function NovoUsuarioEscolarModal({
 
       showSuccess(`${cargoLabel} ${formData.nome.trim()} cadastrado(a) com sucesso!`);
 
+      // Sincronizar o campo textual correspondente na tabela escolas para consistência
+      try {
+        if (cargo === 'GESTOR') {
+          await supabase.from('escolas').update({ diretor: formData.nome.trim() }).eq('id', escolaId);
+        } else if (cargo === 'SECRETARIO') {
+          await supabase.from('escolas').update({ secretario: formData.nome.trim() }).eq('id', escolaId);
+        }
+      } catch (syncErr) {
+        console.warn('Aviso: Não foi possível atualizar campo em escolas:', syncErr);
+      }
+
       // Limpar formulário
       setFormData({ nome: '', email: '', senha: '' });
       onSuccess();
