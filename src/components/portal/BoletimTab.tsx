@@ -44,9 +44,37 @@ interface BoletimTabProps {
   frequencias: FrequenciaItem[];
 }
 
+const isNomeValido = (nome?: string | null): boolean => {
+  if (!nome) return false;
+  const clean = nome.trim().toLowerCase();
+  if (!clean) return false;
+  const placeholders = [
+    'não localizado',
+    'nao localizado',
+    'não informado',
+    'nao informado',
+    'não cadastrado',
+    'nao cadastrado',
+    'n/d',
+    'nd',
+    '---',
+    '--',
+    '-',
+    'null',
+    'undefined',
+    'diretor n/d',
+    'secretario n/d',
+    'secretário n/d'
+  ];
+  return !placeholders.includes(clean);
+};
+
 export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTabProps) {
   const bimestres = ['1º', '2º', '3º', '4º'];
   
+  const diretorExibicao = isNomeValido(alunoData.escola_diretor) ? alunoData.escola_diretor.trim() : '';
+  const secretarioExibicao = isNomeValido(alunoData.escola_secretario) ? alunoData.escola_secretario.trim() : '';
+
   // Agrupar disciplinas únicas
   const disciplinas = Array.from(new Set([
     ...notas.map(n => n.disciplina),
@@ -154,9 +182,9 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
               <div className="text-[10px] space-y-1 text-right">
                 <p><strong className="text-[9px]">ESCOLA:</strong> {alunoData.escola_nome}</p>
                 <p><strong className="text-[9px]">ENDEREÇO:</strong> {alunoData.escola_endereco}</p>
-                <p><strong className="text-[9px]">DIRETOR(A):</strong> {alunoData.escola_diretor}</p>
-                {alunoData.escola_secretario && (
-                  <p><strong className="text-[9px]">SECRETÁRIO(A):</strong> {alunoData.escola_secretario}</p>
+                <p><strong className="text-[9px]">DIRETOR(A):</strong> {diretorExibicao || '---'}</p>
+                {secretarioExibicao && (
+                  <p><strong className="text-[9px]">SECRETÁRIO(A):</strong> {secretarioExibicao}</p>
                 )}
                 <p><strong className="text-[9px]">DATA EMISSÃO:</strong> {new Date().toLocaleDateString('pt-BR')}</p>
               </div>
@@ -360,11 +388,11 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
         {/* Rodapé do Boletim - Assinaturas */}
         <div className="mt-16 grid grid-cols-2 gap-12">
           <div className="text-center pt-2 border-t border-black">
-            <p className="text-[8px] font-bold uppercase mb-0.5">{alunoData.escola_diretor || 'DIRETOR(A)'}</p>
+            <p className="text-[8px] font-bold uppercase mb-0.5">{diretorExibicao || 'DIRETOR(A)'}</p>
             <p className="text-[7px] text-slate-500 uppercase">DIRETOR(A)</p>
           </div>
           <div className="text-center pt-2 border-t border-black">
-            <p className="text-[8px] font-bold uppercase mb-0.5">{alunoData.escola_secretario || 'SECRETÁRIO(A)'}</p>
+            <p className="text-[8px] font-bold uppercase mb-0.5">{secretarioExibicao || 'SECRETÁRIO(A)'}</p>
             <p className="text-[7px] text-slate-500 uppercase">SECRETÁRIO(A) ESCOLAR</p>
           </div>
         </div>
