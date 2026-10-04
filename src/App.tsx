@@ -26,6 +26,7 @@ const RelatorioNotas = React.lazy(() => import('./pages/RelatorioNotas'));
 const RelatorioMedias = React.lazy(() => import('./pages/RelatorioMedias'));
 const RelatorioConteudos = React.lazy(() => import('./pages/RelatorioConteudos'));
 const RelatorioFrequencia = React.lazy(() => import('./pages/RelatorioFrequencia'));
+const RelatorioBoletins = React.lazy(() => import('./pages/RelatorioBoletins'));
 const Frequencia = React.lazy(() => import('./pages/Frequencia'));
 const Estatisticas = React.lazy(() => import('./pages/Estatisticas'));
 const PendenciasLancamento = React.lazy(() => import('./pages/PendenciasLancamento'));
@@ -122,6 +123,7 @@ export default function App() {
                       <Route path="/relatorio-medias" element={<RouteErrorBoundary><RelatorioMedias /></RouteErrorBoundary>} />
                       <Route path="/relatorio-conteudos" element={<RouteErrorBoundary><RelatorioConteudos /></RouteErrorBoundary>} />
                       <Route path="/relatorio-frequencia" element={<RouteErrorBoundary><RelatorioFrequencia /></RouteErrorBoundary>} />
+                      <Route path="/relatorio-boletins" element={<RouteErrorBoundary><RelatorioBoletins /></RouteErrorBoundary>} />
                       <Route path="/frequencia" element={<RouteErrorBoundary><Frequencia /></RouteErrorBoundary>} />
                       <Route path="/aparata" element={<RouteErrorBoundary><Aparata /></RouteErrorBoundary>} />
                       <Route path="/aparata-detalhes" element={<RouteErrorBoundary><AparataDetalhes /></RouteErrorBoundary>} />
