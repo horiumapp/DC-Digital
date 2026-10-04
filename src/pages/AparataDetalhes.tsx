@@ -347,8 +347,8 @@ export default function AparataDetalhes() {
                   <div className="border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-slate-50">{aulasDadas}</div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Qtde de AVs Planej</label>
-                  <div className="border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-slate-50">{avsPlanejadas}</div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1" title="Quantidade real de avaliações feitas no bimestre">Qtde de AVs Feitas</label>
+                  <div className="border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-slate-50">{avsFeitas}</div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Usuário</label>
