@@ -66,3 +66,90 @@ export function getEscolaLogo(escola?: EscolaVisualInfo | null): string {
 
   return LOGO_PADRAO_SEMED;
 }
+
+export const isNomeValido = (nome?: string | null): boolean => {
+  if (!nome) return false;
+  const clean = nome.trim().toLowerCase();
+  if (!clean) return false;
+  const placeholders = [
+    'não localizado',
+    'nao localizado',
+    'não informado',
+    'nao informado',
+    'não cadastrado',
+    'nao cadastrado',
+    'n/d',
+    'nd',
+    '---',
+    '--',
+    '-',
+    'null',
+    'undefined',
+    'diretor n/d',
+    'secretario n/d',
+    'secretário n/d'
+  ];
+  return !placeholders.includes(clean);
+};
+
+export async function obterEquipeEscolar(
+  supabaseClient: any,
+  escolaId?: string | null,
+  fallbackDiretor?: string | null,
+  fallbackSecretario?: string | null
+): Promise<{ diretorNome: string; secretarioNome: string }> {
+  let diretorNome = '';
+  let secretarioNome = '';
+
+  if (escolaId && supabaseClient) {
+    try {
+      const { data: equipeUsers } = await supabaseClient
+        .from('usuarios')
+        .select('nome_completo, cargo')
+        .eq('escola_id', escolaId)
+        .in('cargo', ['GESTOR', 'SECRETARIO'])
+        .order('criado_em', { ascending: true });
+
+      if (equipeUsers && equipeUsers.length > 0) {
+        const gestorUser = equipeUsers.find((u: any) => u.cargo === 'GESTOR');
+        if (gestorUser?.nome_completo && isNomeValido(gestorUser.nome_completo)) {
+          diretorNome = gestorUser.nome_completo.trim();
+        }
+
+        const secUser = equipeUsers.find((u: any) => u.cargo === 'SECRETARIO');
+        if (secUser?.nome_completo && isNomeValido(secUser.nome_completo)) {
+          secretarioNome = secUser.nome_completo.trim();
+        }
+      }
+    } catch (err) {
+      console.warn('Erro ao consultar usuarios da equipe escolar:', err);
+    }
+
+    if (!secretarioNome || !diretorNome) {
+      try {
+        const [secRpc, dirRpc] = await Promise.all([
+          !secretarioNome ? supabaseClient.rpc('get_secretario_escola', { p_escola_id: escolaId }) : Promise.resolve({ data: null, error: null }),
+          !diretorNome ? supabaseClient.rpc('get_diretor_escola', { p_escola_id: escolaId }) : Promise.resolve({ data: null, error: null }),
+        ]);
+
+        if (!secretarioNome && secRpc?.data && typeof secRpc.data === 'string' && isNomeValido(secRpc.data)) {
+          secretarioNome = secRpc.data.trim();
+        }
+        if (!diretorNome && dirRpc?.data && typeof dirRpc.data === 'string' && isNomeValido(dirRpc.data)) {
+          diretorNome = dirRpc.data.trim();
+        }
+      } catch {
+        // Fallback silencioso
+      }
+    }
+  }
+
+  if (!diretorNome && isNomeValido(fallbackDiretor)) {
+    diretorNome = fallbackDiretor!.trim();
+  }
+  if (!secretarioNome && isNomeValido(fallbackSecretario)) {
+    secretarioNome = fallbackSecretario!.trim();
+  }
+
+  return { diretorNome, secretarioNome };
+}
