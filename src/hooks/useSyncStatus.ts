@@ -83,7 +83,14 @@ export function useSyncStatus(isOnline: boolean): SyncStatusResult {
           const result = data as SyncEngine.SyncResult;
           setLastSyncAt(new Date());
           if (result.failed > 0) {
-            setLastError(`${result.failed} item(ns) falharam`);
+            const authErr = result.errors?.find(e => e.includes('Sessão') || e.includes('login') || e.includes('Entre novamente'));
+            if (authErr) {
+              setLastError(authErr);
+            } else if (result.errors && result.errors.length > 0) {
+              setLastError(`${result.failed} item(ns) falharam • ${result.errors[0]}`);
+            } else {
+              setLastError(`${result.failed} item(ns) falharam`);
+            }
             setConnectionState('ERROR');
           } else {
             setLastError(null);

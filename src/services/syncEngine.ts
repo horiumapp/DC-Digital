@@ -126,12 +126,33 @@ export async function syncAll(): Promise<SyncResult> {
   }
 
   // FIX P0-#1: Verificar sessão Supabase antes de sincronizar.
-  // Se o JWT expirou, todos os itens falhariam com 401/403, gastando retries
+  // Se o JWT expirou, todos os itens falhariam com 401/403/500, gastando retries
   // e potencialmente movendo dados válidos para dead letter.
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   const ownerId = session?.user.id;
   if (sessionError || !ownerId || offlineOwner() !== ownerId) {
     return { synced: 0, failed: 0, total: 0, remaining: 0, errors: ['Sessão inválida ou identidade offline diferente. Entre novamente.'] };
+  }
+
+  // Se o token de acesso já estiver expirado ou muito próximo de expirar (menos de 60s),
+  // tentar renovar proativamente antes de gastar requisições.
+  if (session.expires_at && session.expires_at <= Math.floor(Date.now() / 1000) + 60) {
+    try {
+      const { error: refreshErr } = await supabase.auth.refreshSession();
+      if (refreshErr) {
+        console.warn('[SyncEngine] Sessão expirada e não pôde ser renovada automaticamente:', refreshErr);
+        const pendingTotal = await Queue.getPendingCount();
+        return {
+          synced: 0,
+          failed: pendingTotal > 0 ? 1 : 0,
+          total: pendingTotal,
+          remaining: pendingTotal,
+          errors: ['Sessão expirada. Entre novamente para sincronizar os dados salvos.']
+        };
+      }
+    } catch (refreshEx) {
+      console.warn('[SyncEngine] Falha ao verificar expiração de token:', refreshEx);
+    }
   }
 
   // FIX M4: Usar Web Locks API para serializar sincronizações entre múltiplas abas.
@@ -250,22 +271,43 @@ async function _runSyncAll(ownerId: string): Promise<SyncResult> {
           await Queue.retry(item.id, errorMsg);
           await logSync(item.table, item.operation, 'error', errorMsg);
           result.failed++;
-          result.errors.push(`${item.table}/${item.operation}: ${errorMsg}`);
-          emit('itemFailed', { table: item.table, error: errorMsg });
-
-          // Se for erro de autenticação ou token JWT expirado (PGRST301),
+          // Se for erro de autenticação ou token JWT expirado,
           // tentar renovar a sessão do usuário e pausar o ciclo corrente
           // para não queimar tentativas de retry nem descartar dados legítimos.
-          const isAuthError = errorCode === 'PGRST301' || errorMsg.toLowerCase().includes('jwt expired') || errorMsg.toLowerCase().includes('token is expired');
+          const isAuthError = errorCode === 'PGRST301' ||
+            errorCode === '401' ||
+            errorMsg.toLowerCase().includes('jwt expired') ||
+            errorMsg.toLowerCase().includes('token is expired') ||
+            errorMsg.toLowerCase().includes('sessão necessária') ||
+            errorMsg.toLowerCase().includes('sessão inválida') ||
+            errorMsg.toLowerCase().includes('invalid refresh token') ||
+            errorMsg.toLowerCase().includes('refresh_token') ||
+            (errorCode === '42501' && (errorMsg.includes('Sessão') || errorMsg.includes('permission denied for function apply_academic_mutation')));
+
           if (isAuthError) {
+            let refreshFailed = false;
             try {
-              console.info('[SyncEngine] JWT expirado (PGRST301) detectado durante sync. Tentando renovar sessão...');
-              await supabase.auth?.refreshSession?.();
+              console.info('[SyncEngine] Erro de autenticação detectado durante sync. Tentando renovar sessão...');
+              const refreshRes = await supabase.auth?.refreshSession?.();
+              if (refreshRes?.error) {
+                console.warn('[SyncEngine] Renovação de sessão falhou:', refreshRes.error);
+                refreshFailed = true;
+              }
             } catch (authErr) {
               console.warn('[SyncEngine] Não foi possível renovar sessão automaticamente:', authErr);
+              refreshFailed = true;
             }
+
+            const authMsg = refreshFailed
+              ? 'Sessão expirada. Entre novamente para sincronizar os dados salvos.'
+              : 'Sessão renovada. Sincronização continuará no próximo ciclo.';
+            result.errors.push(authMsg);
+            emit('itemFailed', { table: item.table, error: authMsg });
             break; // Parar o ciclo atual até haver autenticação válida
           }
+
+          result.errors.push(`${item.table}/${item.operation}: ${errorMsg}`);
+          emit('itemFailed', { table: item.table, error: errorMsg });
 
           // FIX P0-#3: Erros de dependência (avaliação pai pendente) NÃO devem
           // bloquear a fila inteira. Outros itens independentes podem ser sincronizados
