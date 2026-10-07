@@ -29,13 +29,14 @@ const profId = '30000000-0000-0000-0000-000000000001';
 const alunoId = '40000000-0000-0000-0000-000000000001';
 
 await db.exec(`
-  INSERT INTO auth.users(id,email) VALUES ('${teacherId}','teacher@test.local');
-  INSERT INTO public.escolas(id,nome) VALUES('${schoolId}','A');
-  INSERT INTO public.usuarios(id,email,nome_completo,cargo,escola_id) VALUES ('${teacherId}','teacher@test.local','Professor','PROFESSOR','${schoolId}');
-  INSERT INTO public.turmas(id,nome,turno,escola_id,ano_letivo) VALUES('${classId}','1º Ano A','Matutino','${schoolId}','2026');
-  INSERT INTO public.professores(id,nome,email,usuario_id,disciplinas) VALUES('${profId}','P','teacher@test.local','${teacherId}',ARRAY['MAT','HIST']);
-  INSERT INTO public.professor_horarios(professor_id,turma_id,escola_id,dia_semana,tempo_ordem,componente) VALUES('${profId}','${classId}','${schoolId}',1,1,'MAT');
-  INSERT INTO public.alunos(id,escola_id,turma_id,nome,data_nascimento,nome_responsavel,telefone,endereco,cpf) VALUES ('${alunoId}','${schoolId}','${classId}','Aluno','2015-01-01','R','0','Rua','11111111111');
+  INSERT INTO auth.users(id,email) VALUES ('${teacherId}','teacher@test.local') ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.escolas(id,nome) VALUES('${schoolId}','A') ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.usuarios(id,email,nome_completo,cargo,escola_id) VALUES ('${teacherId}','teacher@test.local','Professor','PROFESSOR','${schoolId}')
+  ON CONFLICT(id) DO UPDATE SET cargo=excluded.cargo,escola_id=excluded.escola_id;
+  INSERT INTO public.turmas(id,nome,turno,escola_id,ano_letivo) VALUES('${classId}','1º Ano A','Matutino','${schoolId}','2026') ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.professores(id,nome,email,usuario_id,disciplinas) VALUES('${profId}','P','teacher@test.local','${teacherId}',ARRAY['MAT','HIST']) ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.professor_horarios(professor_id,turma_id,escola_id,dia_semana,tempo_ordem,componente) VALUES('${profId}','${classId}','${schoolId}',1,1,'MAT') ON CONFLICT DO NOTHING;
+  INSERT INTO public.alunos(id,escola_id,turma_id,nome,data_nascimento,nome_responsavel,telefone,endereco,cpf) VALUES ('${alunoId}','${schoolId}','${classId}','Aluno','2015-01-01','R','0','Rua','11111111111') ON CONFLICT (id) DO NOTHING;
 `);
 
 await db.query("SELECT set_config('request.jwt.claims',$1,false)", [
