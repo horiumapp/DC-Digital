@@ -187,6 +187,7 @@ export default function ObjetoConhecimentoTab({
           setObjetoData(null);
           setShowObjetoTable(false);
           setObjetoConhecimento('');
+          setObjetoObservacao('');
         }
       }
     };
@@ -246,16 +247,26 @@ export default function ObjetoConhecimentoTab({
       generateNewCaptcha();
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
-      // Auto-advance to the next tempo that doesn't have content yet
-      const nextPendingTempo = disponiveisTempos.find(t => 
+      // Auto-advance para o próximo tempo pendente (ou próximo sequencial sem lançamento)
+      const currentIndex = disponiveisTempos.indexOf(tempoAula);
+      const subsequentTempos = currentIndex >= 0 ? disponiveisTempos.slice(currentIndex + 1) : [];
+      const previousTempos = currentIndex >= 0 ? disponiveisTempos.slice(0, currentIndex) : disponiveisTempos;
+      const orderedTempos = [...subsequentTempos, ...previousTempos];
+
+      const nextPendingTempo = orderedTempos.find(t => 
         t !== tempoAula && !lancamentos.some(l => l.data === selectedDate && l.tempo === t && l.tipo === 'conteudo')
       );
+
       if (nextPendingTempo) {
         setTempoAula(nextPendingTempo);
+        setObjetoConhecimento('');
+        setObjetoObservacao('');
+        setObjetoSalvo(false);
+        setObjetoData(null);
+      } else {
+        // Redireciona para o Diário apenas quando não houver mais pendências de lançamento no dia
+        navigate(`/diario?date=${selectedDate}${turmaAtiva?.id ? `&turmaId=${turmaAtiva.id}` : ''}`);
       }
-
-      // Redireciona diretamente para o Diário no mês e dia do preenchimento
-      navigate(`/diario?date=${selectedDate}${turmaAtiva?.id ? `&turmaId=${turmaAtiva.id}` : ''}`);
     } catch (err) {
       console.error('Erro ao salvar conteúdo ministrado:', err);
       showError('Erro ao salvar conteúdo ministrado. Tente novamente.');
