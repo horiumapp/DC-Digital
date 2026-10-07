@@ -385,6 +385,11 @@ export default function Turmas() {
     return exploded;
   }, [turmasBD, searchTerm, professorDisciplinas, user?.name, alocacaoAtiva, isStaffRole, staffTurmas]);
 
+  // Perfis administrativos (ADMIN, GESTOR, SECRETARIO) não têm rotina docente; seu destino padrão é Gestão Escolar
+  if (user?.role && ADMIN_ROLES.includes(user.role)) {
+    return <Navigate to="/administracao" replace />;
+  }
+
   // Usuários administrativos sem turmas ou lotações
   const isAdminSemTurmas = isStaffRole && staffTurmas.length === 0 && alocacoes.length === 0;
 
