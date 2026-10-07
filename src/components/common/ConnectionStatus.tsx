@@ -116,17 +116,26 @@ export default function ConnectionStatus() {
       text: lastError ? `Falha na sincronização • ${lastError}` : 'Falha na sincronização',
       action: (
         <div className="flex items-center gap-1.5 ml-2">
-          <button
-            onClick={async () => {
-              const retriedCount = await retryErrors();
-              if (retriedCount === 0 && deadLetterCount > 0) {
-                setShowDeadLetterModal(true);
-              }
-            }}
-            className="px-2.5 py-0.5 bg-white/20 rounded-md text-xs font-semibold hover:bg-white/30 transition-colors cursor-pointer"
-          >
-            Tentar novamente
-          </button>
+          {lastError && (lastError.toLowerCase().includes('sessão') || lastError.toLowerCase().includes('login')) ? (
+            <button
+              onClick={() => { window.location.href = '/'; }}
+              className="px-2.5 py-0.5 bg-white text-rose-700 rounded-md text-xs font-bold hover:bg-white/90 transition-colors cursor-pointer"
+            >
+              Fazer login
+            </button>
+          ) : (
+            <button
+              onClick={async () => {
+                const retriedCount = await retryErrors();
+                if (retriedCount === 0 && deadLetterCount > 0) {
+                  setShowDeadLetterModal(true);
+                }
+              }}
+              className="px-2.5 py-0.5 bg-white/20 rounded-md text-xs font-semibold hover:bg-white/30 transition-colors cursor-pointer"
+            >
+              Tentar novamente
+            </button>
+          )}
           {deadLetterCount > 0 && (
             <button
               onClick={() => setShowDeadLetterModal(true)}
