@@ -28,12 +28,6 @@ interface TurmaBD {
 
 export default function Turmas() {
   const { user } = useAuth();
-
-  // Perfis administrativos (ADMIN, GESTOR, SECRETARIO) não têm rotina docente; seu destino padrão é Gestão Escolar
-  if (user?.role && ADMIN_ROLES.includes(user.role)) {
-    return <Navigate to="/administracao" replace />;
-  }
-
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const { selecionarTurma } = useTurma();
