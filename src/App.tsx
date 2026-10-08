@@ -123,13 +123,13 @@ export default function App() {
                       <Route path="/relatorio-medias" element={<RouteErrorBoundary><RelatorioMedias /></RouteErrorBoundary>} />
                       <Route path="/relatorio-conteudos" element={<RouteErrorBoundary><RelatorioConteudos /></RouteErrorBoundary>} />
                       <Route path="/relatorio-frequencia" element={<RouteErrorBoundary><RelatorioFrequencia /></RouteErrorBoundary>} />
-                      <Route path="/relatorio-boletins" element={<RouteErrorBoundary><RelatorioBoletins /></RouteErrorBoundary>} />
                       <Route path="/frequencia" element={<RouteErrorBoundary><Frequencia /></RouteErrorBoundary>} />
                       <Route path="/aparata" element={<RouteErrorBoundary><Aparata /></RouteErrorBoundary>} />
                       <Route path="/aparata-detalhes" element={<RouteErrorBoundary><AparataDetalhes /></RouteErrorBoundary>} />
                       
                       {/* Rotas Restritas (Administrativo: ADMIN, GESTOR, SECRETARIO) */}
                       <Route element={<ProtectedRoute allowedRoles={ADMIN_ROLES} />}>
+                        <Route path="/relatorio-boletins" element={<RouteErrorBoundary><RelatorioBoletins /></RouteErrorBoundary>} />
                         <Route path="/administracao" element={<RouteErrorBoundary><Administracao /></RouteErrorBoundary>} />
                         <Route path="/estatisticas" element={<RouteErrorBoundary><Estatisticas /></RouteErrorBoundary>} />
                         <Route path="/pendencias-lancamento" element={<RouteErrorBoundary><PendenciasLancamento /></RouteErrorBoundary>} />

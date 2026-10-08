@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { ArrowLeft, Printer, Users, GraduationCap, ChevronDown, CheckCircle2, AlertCircle } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { APP_CONFIG } from '../config/appConfig';
 import { supabase } from '../lib/supabase';
@@ -11,6 +11,7 @@ import BoletimDocumento, { AlunoBoletimData, NotaBoletimItem, FrequenciaBoletimI
 import { formatMatriculaCpf } from '../utils/formatters';
 import { getEscolaLogo, obterEquipeEscolar } from '../utils/escolaUtils';
 import { useToast } from '../components/common/Toast';
+import { ADMIN_ROLES } from '../constants/authConstants';
 
 interface TurmaOpcao {
   id: string;
@@ -31,6 +32,11 @@ export default function RelatorioBoletins() {
   const { user } = useAuth();
   const { showError, showWarning } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Apenas secretário, gestor e administrador podem visualizar/imprimir boletins escolares oficiais
+  if (user && !ADMIN_ROLES.includes(user.role)) {
+    return <Navigate to="/turmas" replace />;
+  }
 
   const paramTurmaId = searchParams.get('turmaId') || '';
   const paramAlunoId = searchParams.get('alunoId') || '';

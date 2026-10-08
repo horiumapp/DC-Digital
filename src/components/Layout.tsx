@@ -58,6 +58,13 @@ export default function Layout() {
   const canManage = !!user && ADMIN_ROLES.includes(user.role);
   const close = () => setMenuOpen(false);
 
+  const availableReports = reports.filter(item => {
+    if (item.to === '/relatorio-boletins') {
+      return canManage;
+    }
+    return true;
+  });
+
   const isDeepInsideClass = ['/diario', '/frequencia', '/aparata', '/aparata-detalhes'].includes(location.pathname);
 
   const openQuickAttendance = () => {
@@ -169,7 +176,7 @@ export default function Layout() {
             <ChevronRight className="w-4 h-4 text-slate-400 group-open:rotate-90 transition-transform" />
           </summary>
           <div className="ml-5 border-l border-slate-200 pl-3 my-1 space-y-0.5 dark:border-slate-800">
-            {reports.map(({ label, to }) => (
+            {availableReports.map(({ label, to }) => (
               <NavLink 
                 key={to} 
                 to={to} 

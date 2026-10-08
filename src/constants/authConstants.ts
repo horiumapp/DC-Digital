@@ -7,9 +7,15 @@ import type { UserRole } from '../contexts/AuthContext';
 export const ADMIN_ROLES: UserRole[] = ['ADMIN', 'GESTOR', 'SECRETARIO'];
 
 /**
- * Roles com acesso de leitura a relatórios administrativos.
+ * Roles com acesso de leitura a relatórios administrativos gerais.
  */
 export const REPORT_ROLES: UserRole[] = ['ADMIN', 'GESTOR', 'SECRETARIO', 'PROFESSOR'];
+
+/**
+ * Roles com acesso exclusivo para visualizar e imprimir boletins escolares oficiais.
+ * Apenas secretário escolar, gestor e administrador. Professores não possuem acesso.
+ */
+export const BOLETIM_ROLES: UserRole[] = ['ADMIN', 'GESTOR', 'SECRETARIO'];
 
 /**
  * Roles com acesso ao painel de servidores (qualquer role exceto ALUNO).
