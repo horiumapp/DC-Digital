@@ -179,4 +179,46 @@ describe('Layout - Visibilidade por Perfil (Role)', () => {
     expect(screen.getByTestId('pagina-administracao')).toBeDefined();
     expect(screen.queryByPlaceholderText('Buscar por nome da turma...')).toBeNull();
   });
+
+  it('para perfil PROFESSOR: NÃO deve exibir "Boletins escolares" no menu de relatórios, mantendo os demais relatórios', () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'prof-1', name: 'Professor Silva', role: 'PROFESSOR', title: 'PROFESSOR' },
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter>
+        <Layout />
+      </MemoryRouter>
+    );
+
+    // Boletins escolares NÃO deve estar acessível para o professor
+    expect(screen.queryByText('Boletins escolares')).toBeNull();
+
+    // Outros relatórios pedagógicos continuam disponíveis
+    expect(screen.getAllByText('Notas da turma').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Frequência da turma').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Médias do componente').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Conteúdos ministrados').length).toBeGreaterThan(0);
+  });
+
+  it('para perfis ADMIN, SECRETARIO e GESTOR: DEVE exibir "Boletins escolares" no menu de relatórios', () => {
+    const rolesAutorizados = ['ADMIN', 'SECRETARIO', 'GESTOR'] as const;
+
+    rolesAutorizados.forEach(role => {
+      cleanup();
+      mockUseAuth.mockReturnValue({
+        user: { id: `user-${role}`, name: `Usuário ${role}`, role, title: role },
+        logout: vi.fn(),
+      });
+
+      render(
+        <MemoryRouter>
+          <Layout />
+        </MemoryRouter>
+      );
+
+      expect(screen.getAllByText('Boletins escolares').length).toBeGreaterThan(0);
+    });
+  });
 });

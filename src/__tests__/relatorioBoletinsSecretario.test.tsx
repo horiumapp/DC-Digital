@@ -4,7 +4,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import BoletimDocumento, { AlunoBoletimData } from '../components/boletim/BoletimDocumento';
 import { isNomeValido, obterEquipeEscolar } from '../utils/escolaUtils';
-import { STAFF_ROLES, ADMIN_ROLES } from '../constants/authConstants';
+import { STAFF_ROLES, ADMIN_ROLES, BOLETIM_ROLES } from '../constants/authConstants';
 
 const alunoExemplo1: AlunoBoletimData = {
   id: 'aluno-1',
@@ -155,7 +155,7 @@ describe('BoletimDocumento e Impressão para Secretário Escolar', () => {
     expect(equipe.secretarioNome).toBe('LUCIA SECRETARIA ATIVA');
   });
 
-  it('SECRETARIO, GESTOR e ADMIN devem estar autorizados em STAFF_ROLES e ADMIN_ROLES', () => {
+  it('SECRETARIO, GESTOR e ADMIN devem estar autorizados em STAFF_ROLES, ADMIN_ROLES e BOLETIM_ROLES', () => {
     expect(STAFF_ROLES.includes('SECRETARIO')).toBe(true);
     expect(STAFF_ROLES.includes('GESTOR')).toBe(true);
     expect(STAFF_ROLES.includes('ADMIN')).toBe(true);
@@ -163,6 +163,15 @@ describe('BoletimDocumento e Impressão para Secretário Escolar', () => {
     expect(ADMIN_ROLES.includes('SECRETARIO')).toBe(true);
     expect(ADMIN_ROLES.includes('GESTOR')).toBe(true);
     expect(ADMIN_ROLES.includes('ADMIN')).toBe(true);
+
+    // BOLETIM_ROLES: apenas SECRETARIO, GESTOR e ADMIN
+    expect(BOLETIM_ROLES.includes('SECRETARIO')).toBe(true);
+    expect(BOLETIM_ROLES.includes('GESTOR')).toBe(true);
+    expect(BOLETIM_ROLES.includes('ADMIN')).toBe(true);
+
+    // Professor e Aluno NÃO devem estar em BOLETIM_ROLES
+    expect(BOLETIM_ROLES.includes('PROFESSOR')).toBe(false);
+    expect(BOLETIM_ROLES.includes('ALUNO' as any)).toBe(false);
 
     // Aluno não deve estar em nenhuma dessas roles
     expect(STAFF_ROLES.includes('ALUNO' as any)).toBe(false);
