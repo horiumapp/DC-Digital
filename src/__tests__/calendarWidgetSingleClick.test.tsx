@@ -50,7 +50,7 @@ describe('CalendarWidget - Abertura do Diário com apenas um clique', () => {
     );
 
     // O dia 4 de maio de 2026 é uma segunda-feira letiva
-    const botaoDia4 = screen.getByTitle('Clique para abrir Frequência e notas');
+    const botaoDia4 = screen.getByLabelText(/4 de Maio, Segunda-feira/i);
     expect(botaoDia4).toBeDefined();
 
     // Dispara UM ÚNICO clique
@@ -82,7 +82,7 @@ describe('CalendarWidget - Abertura do Diário com apenas um clique', () => {
       />
     );
 
-    const cell = screen.getByTitle('Clique para abrir Frequência e notas');
+    const cell = screen.getByLabelText(/4 de Maio, Segunda-feira/i);
     expect(cell.getAttribute('title')).toBe('Clique para abrir Frequência e notas');
     expect(cell.getAttribute('title')).not.toContain('duas vezes');
   });
@@ -105,7 +105,7 @@ describe('CalendarWidget - Abertura do Diário com apenas um clique', () => {
       />
     );
 
-    const botaoDia4 = screen.getByTitle('Clique para abrir Frequência e notas');
+    const botaoDia4 = screen.getByLabelText(/4 de Maio, Segunda-feira/i);
     fireEvent.keyDown(botaoDia4, { key: 'Enter' });
 
     expect(mockNavigate).toHaveBeenCalledWith('/frequencia?date=2026-05-04&turmaId=turma-1');
