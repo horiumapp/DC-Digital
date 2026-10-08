@@ -81,7 +81,7 @@ export default function BoletimDocumento({
   return (
     <div
       id={id}
-      className={`bg-white border border-slate-300 p-8 shadow-sm max-w-[21cm] mx-auto print:shadow-none print:border-none print:p-0 print:m-0 ${
+      className={`bg-white border border-slate-300 p-8 shadow-sm max-w-[21cm] mx-auto print:shadow-none print:border-none print:p-0 print:m-0 print:break-inside-avoid ${
         pageBreak ? 'boletim-page' : ''
       } ${className}`}
     >

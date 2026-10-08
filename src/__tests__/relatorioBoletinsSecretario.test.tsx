@@ -106,6 +106,15 @@ describe('BoletimDocumento e Impressão para Secretário Escolar', () => {
     expect(pages.length).toBe(0);
   });
 
+  it('deve incluir a classe print:break-inside-avoid para evitar quebra no meio do documento', () => {
+    const { container } = render(
+      <BoletimDocumento alunoData={alunoExemplo1} notas={[]} frequencias={[]} pageBreak={false} />
+    );
+
+    const doc = container.querySelector('.print\\:break-inside-avoid');
+    expect(doc).toBeTruthy();
+  });
+
   it('isNomeValido deve rejeitar placeholders comuns e aceitar nomes reais', () => {
     expect(isNomeValido('')).toBe(false);
     expect(isNomeValido(null)).toBe(false);

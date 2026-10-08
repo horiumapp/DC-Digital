@@ -448,22 +448,25 @@ export default function RelatorioBoletins() {
           </div>
         ) : (
           <div id="boletim-impressao-area" className="space-y-8 print:space-y-0">
-            {boletinsFiltrados.map((item, index) => (
-              <div key={item.alunoData.id} className="relative">
-                {/* Indicador na tela para navegação amigável (oculto na impressão) */}
-                <div className="no-print max-w-[21cm] mx-auto mb-2 flex items-center justify-between px-2 text-xs font-bold text-slate-400">
-                  <span>Aluno {index + 1} de {boletinsFiltrados.length}</span>
-                  <span className="uppercase text-[#0f2851]">{item.alunoData.nome}</span>
-                </div>
+            {boletinsFiltrados.map((item, index) => {
+              const isLast = index === boletinsFiltrados.length - 1;
+              return (
+                <div key={item.alunoData.id} className="relative boletim-wrapper">
+                  {/* Indicador na tela para navegação amigável (oculto na impressão) */}
+                  <div className="no-print max-w-[21cm] mx-auto mb-2 flex items-center justify-between px-2 text-xs font-bold text-slate-400">
+                    <span>Aluno {index + 1} de {boletinsFiltrados.length}</span>
+                    <span className="uppercase text-[#0f2851]">{item.alunoData.nome}</span>
+                  </div>
 
-                <BoletimDocumento
-                  alunoData={item.alunoData}
-                  notas={item.notas}
-                  frequencias={item.frequencias}
-                  pageBreak={boletinsFiltrados.length > 1}
-                />
-              </div>
-            ))}
+                  <BoletimDocumento
+                    alunoData={item.alunoData}
+                    notas={item.notas}
+                    frequencias={item.frequencias}
+                    pageBreak={boletinsFiltrados.length > 1 && !isLast}
+                  />
+                </div>
+              );
+            })}
           </div>
         )}
       </main>
@@ -474,6 +477,11 @@ export default function RelatorioBoletins() {
           @page {
             size: A4 portrait;
             margin: 10mm;
+          }
+          html, body {
+            background: white !important;
+            height: auto !important;
+            overflow: visible !important;
           }
           body * {
             visibility: hidden;
@@ -489,20 +497,35 @@ export default function RelatorioBoletins() {
             width: 100%;
             margin: 0 !important;
             padding: 0 !important;
+            display: block !important;
           }
           .no-print {
             display: none !important;
+          }
+          .boletim-wrapper {
+            display: block !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .boletim-wrapper:not(:last-child) {
+            break-after: page !important;
+            page-break-after: always !important;
           }
           .boletim-page {
             display: block !important;
             page-break-after: always !important;
             break-after: page !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
             box-shadow: none !important;
             border: none !important;
             margin: 0 !important;
             padding: 0 !important;
           }
-          .boletim-page:last-child {
+          #boletim-impressao-area > div:last-child,
+          #boletim-impressao-area > div:last-child .boletim-page {
             page-break-after: auto !important;
             break-after: auto !important;
           }
