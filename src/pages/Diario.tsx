@@ -448,13 +448,13 @@ export default function Diario() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.15 }}
-                      className="space-y-4"
-                      onDoubleClick={() => {
+                      className={`space-y-4 ${selectedDayDetails.isDiaDeAula && !isAparataFechada ? 'cursor-pointer' : ''}`}
+                      onClick={() => {
                         if (selectedDayDetails.isDiaDeAula && !isAparataFechada) {
                           navigate(`/frequencia?date=${selectedDayDetails.dayStr}&turmaId=${turmaAtiva.id}`);
                         }
                       }}
-                      title={selectedDayDetails.isDiaDeAula && !isAparataFechada ? "Clique duas vezes para abrir Frequência e notas" : undefined}
+                      title={selectedDayDetails.isDiaDeAula && !isAparataFechada ? "Clique para abrir Frequência e notas" : undefined}
                     >
                       {/* Date display */}
                       <div className="flex items-center gap-3">

@@ -94,8 +94,6 @@ function getStoredViewMode(): 'grid' | 'agenda' {
   return 'grid';
 }
 
-let lastCalendarClick: { day: number; time: number } | null = null;
-
 export default function CalendarWidget({ 
   year, 
   currentMonth,
@@ -122,20 +120,15 @@ export default function CalendarWidget({
   }, [navigate, turmaAtiva]);
 
   const handleDayClick = useCallback((e: React.MouseEvent, day: number, details: DayDetails) => {
-    const now = Date.now();
-    const last = lastCalendarClick;
-
-    // Detect double-click either via browser native e.detail >= 2 or timer interval < 400ms
-    if (e.detail >= 2 || (last && last.day === day && (now - last.time) < 400)) {
-      lastCalendarClick = null;
-      handleOpenFrequencia(details.dayStr);
-      return;
-    }
-
-    lastCalendarClick = { day, time: now };
+    e.preventDefault();
     const signature = `${year}-${currentMonth}-${day}-${details.status}-${details.isFrequenciaFull}-${details.isConteudoFull}-${details.avaliacoesLancadas}`;
     lastEmittedRef.current = signature;
     onDaySelect(day, details);
+
+    // Abre o diário diretamente no primeiro clique se for dia de aula
+    if (details.isDiaDeAula) {
+      handleOpenFrequencia(details.dayStr);
+    }
   }, [onDaySelect, handleOpenFrequencia, year, currentMonth]);
 
   const handleViewChange = (mode: 'grid' | 'agenda') => {
@@ -326,10 +319,9 @@ export default function CalendarWidget({
   const handleKeyDown = (e: React.KeyboardEvent, day: number, details: DayDetails) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (selectedDay === day) {
+      onDaySelect(day, details);
+      if (details.isDiaDeAula) {
         handleOpenFrequencia(details.dayStr);
-      } else {
-        onDaySelect(day, details);
       }
     } else if (e.key === ' ') {
       e.preventDefault();
@@ -521,13 +513,9 @@ export default function CalendarWidget({
                     tabIndex={0}
                     className={`${cellClasses} flex-col justify-between group cursor-pointer select-none`}
                     onClick={(e) => handleDayClick(e, day, details)}
-                    onDoubleClick={(e) => {
-                      e.preventDefault();
-                      handleOpenFrequencia(details.dayStr);
-                    }}
                     onKeyDown={(e) => handleKeyDown(e, day, details)}
                     aria-label={`${day} de ${MONTH_NAMES[currentMonth]}, ${WEEK_DAYS_FULL[details.dayOfWeek]}${details.temposValidos.length > 0 ? `, ${details.temposValidos.join(', ')}` : ''}`}
-                    title="Clique para selecionar ou clique duas vezes para abrir Frequência e notas"
+                    title="Clique para abrir Frequência e notas"
                   >
                     {/* Content inside cell */}
                     <div className="flex items-start justify-between w-full h-full">
@@ -617,14 +605,10 @@ export default function CalendarWidget({
                           : 'hover:bg-[var(--dd-surface-subtle)]'
                       }`}
                       onClick={(e) => handleDayClick(e, item.day, item)}
-                      onDoubleClick={(e) => {
-                        e.preventDefault();
-                        handleOpenFrequencia(item.dayStr);
-                      }}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => handleKeyDown(e, item.day, item)}
-                      title="Clique para selecionar ou clique duas vezes para abrir Frequência e notas"
+                      title="Clique para abrir Frequência e notas"
                     >
                       {/* Date & Time Info */}
                       <div className="flex items-center gap-3">
