@@ -57,8 +57,8 @@ export default function BoletimDocumento({
 }: BoletimDocumentoProps) {
   const bimestres = ['1º', '2º', '3º', '4º'];
 
-  const diretorExibicao = isNomeValido(alunoData.escola_diretor) ? alunoData.escola_diretor.trim() : '';
-  const secretarioExibicao = isNomeValido(alunoData.escola_secretario) ? alunoData.escola_secretario.trim() : '';
+  const diretorExibicao = isNomeValido(alunoData.escola_diretor) ? (alunoData.escola_diretor || '').trim() : '';
+  const secretarioExibicao = isNomeValido(alunoData.escola_secretario) ? (alunoData.escola_secretario || '').trim() : '';
 
   // Agrupar disciplinas únicas
   const disciplinas = Array.from(new Set([

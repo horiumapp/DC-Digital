@@ -126,7 +126,7 @@ export default function RelatorioBoletins() {
         if (localTurma) {
           turmaInfo = localTurma;
           if (localTurma.escola_id) {
-            escolaInfo = await db.escolas.get(localTurma.escola_id);
+            escolaInfo = await (db as any).escolas?.get?.(localTurma.escola_id);
           }
         }
       }
