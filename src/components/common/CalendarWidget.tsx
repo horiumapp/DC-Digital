@@ -604,9 +604,7 @@ export default function CalendarWidget({
                           ? 'bg-[var(--dd-cal-selected-bg)] ring-1 ring-[var(--dd-cal-selected-border)]'
                           : 'hover:bg-[var(--dd-surface-subtle)]'
                       }`}
-                      onClick={(e) => {
-                        handleDayClick(e, item.day, item);
-                      }}
+                      onClick={(e) => { e.preventDefault(); }}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => handleKeyDown(e, item.day, item)}
