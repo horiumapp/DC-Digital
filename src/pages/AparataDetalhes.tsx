@@ -68,6 +68,10 @@ export default function AparataDetalhes() {
         const rawId = turmaAtiva.id.toString().split('||')[0];
         const frequenciasAtuais = await OfflineTurmaService.fetchAllFrequencias(rawId, componenteAtivo);
         const alunosDaTurma = new Set(alunos.map(aluno => String(aluno.id)));
+        if (alunosDaTurma.size === 0) {
+          setFaltasMap({});
+          return;
+        }
         // Histórico permanece na turma de origem; para o aparata, consolidamos por aluno no período do bimestre.
         const { data: frequenciasHistoricas } = await supabase
           .from('frequencias')

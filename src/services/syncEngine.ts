@@ -253,7 +253,7 @@ async function _runSyncAll(ownerId: string): Promise<SyncResult> {
         // FIX #8: Diferenciar erros recuperáveis de não-recuperáveis.
         // Erros fatais (RLS, duplicate, FK) são movidos para dead letter
         // em vez de bloquear toda a fila.
-        if (isNonRecoverableError(errorMsg, errorCode) || errorCode === '40001') {
+        if (isNonRecoverableError(errorMsg, errorCode)) {
           await Queue.fail(item.id, `[DEAD_LETTER] ${errorMsg}`);
           await logSync(item.table, item.operation, 'error', `[DEAD_LETTER] ${errorMsg}`);
           result.failed++;
