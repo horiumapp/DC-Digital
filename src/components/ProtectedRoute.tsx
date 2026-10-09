@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ADMIN_ROLES } from '../constants/authConstants';
+import TrocaSenhaObrigatoria from './TrocaSenhaObrigatoria';
 
 interface ProtectedRouteProps {
   allowedRoles?: string[];
@@ -34,6 +35,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, publicOnl
 
   if (!user) {
     return <Navigate to="/" replace />;
+  }
+
+  if (user.mustChangePassword) {
+    return <TrocaSenhaObrigatoria />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {

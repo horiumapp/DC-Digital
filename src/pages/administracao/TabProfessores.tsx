@@ -13,8 +13,8 @@ import {
   parseProfessoresCsv,
   downloadCsvFile
 } from '../../utils/csvImportExport';
+import { gerarSenhaTemporaria } from '../../utils/senhaTemporaria';
 
-const SENHA_PADRAO_PROFESSOR = '@prof123';
 const DEPARTAMENTOS = ['Geral', 'BIOLÓGICAS', 'HUMANAS', 'EXATAS', 'LINGUAGENS'];
 const DISCIPLINAS = [
   'Português', 'Matemática', 'Ciências', 'História', 'Geografia',
@@ -61,6 +61,7 @@ export default function TabProfessores() {
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [professorParaHorario, setProfessorParaHorario] = useState<ProfessorRow | null>(null);
   const [credenciaisCriadas, setCredenciaisCriadas] = useState<{ nome: string; email: string; senha: string } | null>(null);
+  const [credenciaisLote, setCredenciaisLote] = useState<{ nome: string; email: string; senha: string }[] | null>(null);
   const [copiado, setCopiado] = useState(false);
 
   const [professores, setProfessores] = useState<ProfessorRow[]>([]);
@@ -174,7 +175,7 @@ export default function TabProfessores() {
       } else {
         const targetEscolaId = selectedEscola?.id || professorParaEditar.professor_alocacoes?.[0]?.escola_id || user?.escola_id;
         if (novoProfessor.email && !professorParaEditar.usuario_id && targetEscolaId) {
-          const senhaDeAcesso = novoProfessor.senha?.trim() || SENHA_PADRAO_PROFESSOR;
+          const senhaDeAcesso = novoProfessor.senha?.trim() || gerarSenhaTemporaria();
           try {
             const { data: authData, error: authError } = await supabase.functions.invoke('admin-create-user', {
               body: {
@@ -191,7 +192,7 @@ export default function TabProfessores() {
                 email: novoProfessor.email.trim().toLowerCase(),
                 senha: senhaDeAcesso,
               });
-              showSuccess(`Dados atualizados e conta de acesso criada para ${novoProfessor.nome}! Senha padrão: ${senhaDeAcesso}`);
+              showSuccess(`Dados atualizados e conta criada para ${novoProfessor.nome}. Anote a senha temporária.`);
             } else {
               showSuccess(`Dados do(a) professor(a) ${novoProfessor.nome} atualizados com sucesso!`);
             }
@@ -233,8 +234,7 @@ export default function TabProfessores() {
 
         // Fase 2: Se forneceu e-mail, criar conta de acesso via Edge Function
         if (novoProfessor.email && selectedEscola) {
-          // Senha padrão @prof123 solicitada para acesso inicial
-          const senhaDeAcesso = novoProfessor.senha?.trim() || SENHA_PADRAO_PROFESSOR;
+          const senhaDeAcesso = novoProfessor.senha?.trim() || gerarSenhaTemporaria();
 
           if (senhaDeAcesso.length >= 8) {
             try {
@@ -258,7 +258,7 @@ export default function TabProfessores() {
                   email: novoProfessor.email.trim().toLowerCase(),
                   senha: senhaDeAcesso,
                 });
-                showSuccess(`Professor(a) ${novoProfessor.nome} cadastrado(a) com acesso! Senha padrão: ${senhaDeAcesso}`);
+                showSuccess(`Professor(a) ${novoProfessor.nome} cadastrado(a). Anote a senha temporária.`);
               }
             } catch (err: unknown) {
               console.error("Erro ao criar conta de acesso do professor:", err);
@@ -315,11 +315,11 @@ export default function TabProfessores() {
       return;
     }
 
+    const senhaTemporaria = gerarSenhaTemporaria();
     try {
       if (prof.usuario_id) {
-        // Já tem usuário: redefinir para a senha padrão
         const { data, error } = await supabase.functions.invoke('admin-create-user', {
-          body: { action: 'reset-professor-password', email: emailTrim, senha: SENHA_PADRAO_PROFESSOR }
+          body: { action: 'reset-professor-password', email: emailTrim, senha: senhaTemporaria }
         });
 
         if (error || data?.error) {
@@ -329,7 +329,7 @@ export default function TabProfessores() {
               body: {
                 nome: prof.nome,
                 email: emailTrim,
-                senha: SENHA_PADRAO_PROFESSOR,
+                senha: senhaTemporaria,
                 cargo: 'PROFESSOR',
                 escola_id: targetEscolaId
               }
@@ -347,16 +347,15 @@ export default function TabProfessores() {
         setCredenciaisCriadas({
           nome: prof.nome,
           email: emailTrim,
-          senha: SENHA_PADRAO_PROFESSOR
+          senha: senhaTemporaria
         });
-        showSuccess(`Senha do(a) professor(a) ${prof.nome} redefinida para ${SENHA_PADRAO_PROFESSOR}!`);
+        showSuccess(`Senha do(a) professor(a) ${prof.nome} redefinida. Anote a senha temporária antes de fechar.`);
       } else {
-        // Não tem usuário: criar conta no Auth e em usuarios
         const { data: createData, error: createError } = await supabase.functions.invoke('admin-create-user', {
           body: {
             nome: prof.nome,
             email: emailTrim,
-            senha: SENHA_PADRAO_PROFESSOR,
+            senha: senhaTemporaria,
             cargo: 'PROFESSOR',
             escola_id: targetEscolaId
           }
@@ -371,9 +370,9 @@ export default function TabProfessores() {
         setCredenciaisCriadas({
           nome: prof.nome,
           email: emailTrim,
-          senha: SENHA_PADRAO_PROFESSOR
+          senha: senhaTemporaria
         });
-        showSuccess(`Conta de acesso criada com sucesso para ${prof.nome}! Senha padrão: ${SENHA_PADRAO_PROFESSOR}`);
+        showSuccess(`Conta de acesso criada para ${prof.nome}. Anote a senha temporária antes de fechar.`);
       }
 
       await fetchProfessores();
@@ -528,6 +527,7 @@ export default function TabProfessores() {
     });
 
     const errors: string[] = [];
+    const contasCriadas: { nome: string; email: string; senha: string }[] = [];
     let novosCount = 0;
     let vinculadosCount = 0;
 
@@ -580,16 +580,20 @@ export default function TabProfessores() {
           novosCount++;
           // Se o professor foi criado e tem e-mail e escola, provisiona a conta de acesso no Supabase Auth
           if (emailTrim && targetEscolaId) {
+            const senhaTemporaria = gerarSenhaTemporaria();
             try {
-              await supabase.functions.invoke('admin-create-user', {
+              const { data: authData, error: authError } = await supabase.functions.invoke('admin-create-user', {
                 body: {
                   nome: p.nome.trim(),
                   email: emailTrim,
-                  senha: SENHA_PADRAO_PROFESSOR,
+                  senha: senhaTemporaria,
                   cargo: 'PROFESSOR',
                   escola_id: targetEscolaId
                 }
               });
+              if (!authError && !authData?.error) {
+                contasCriadas.push({ nome: p.nome.trim(), email: emailTrim, senha: senhaTemporaria });
+              }
             } catch (authErr) {
               console.warn(`Aviso ao provisionar conta Auth para ${p.nome}:`, authErr);
             }
@@ -608,6 +612,8 @@ export default function TabProfessores() {
     }
 
     await fetchProfessores();
+    if (contasCriadas.length === 1) setCredenciaisCriadas(contasCriadas[0]);
+    else if (contasCriadas.length > 1) setCredenciaisLote(contasCriadas);
 
     if (errors.length > 0) {
       if (novosCount > 0 || vinculadosCount > 0) {
@@ -775,7 +781,7 @@ export default function TabProfessores() {
                     className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851]"
                   />
                   <p className="text-[10px] text-slate-400 font-medium ml-1">
-                    Ao preencher, a conta é criada com senha padrão: <span className="font-bold text-[#0f2851] bg-slate-100 px-1.5 py-0.5 rounded">@prof123</span>
+                    Ao preencher, a conta é criada com uma senha temporária, exibida uma única vez.
                   </p>
                 </div>
                 {/* Departamento */}
@@ -991,7 +997,7 @@ export default function TabProfessores() {
                           ? 'text-emerald-600 hover:text-emerald-700 bg-emerald-50/80 hover:bg-emerald-100' 
                           : 'text-amber-600 hover:text-amber-700 bg-amber-50/80 hover:bg-amber-100'
                       }`}
-                      title={professor.usuario_id ? "Redefinir Senha de Acesso (@prof123)" : "Criar Conta de Acesso (@prof123)"}
+                      title={professor.usuario_id ? "Redefinir senha de acesso" : "Criar conta de acesso"}
                     >
                       <KeyRound className="w-4 h-4" />
                     </button>
@@ -1126,7 +1132,7 @@ export default function TabProfessores() {
                 <span className="text-sm font-bold text-[#0f2851] font-mono">{credenciaisCriadas.email}</span>
               </div>
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Senha Padrão</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Senha temporária</span>
                 <span className="text-sm font-black text-emerald-700 font-mono bg-emerald-50 px-2.5 py-1 rounded-lg inline-block border border-emerald-200">
                   {credenciaisCriadas.senha}
                 </span>
@@ -1163,6 +1169,47 @@ export default function TabProfessores() {
                   setCopiado(false);
                 }}
                 className="py-3 px-6 bg-[#0f2851] hover:bg-blue-900 text-white font-bold rounded-xl text-xs transition-colors shadow-md"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {credenciaisLote && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60">
+          <div className="bg-white rounded-3xl border border-slate-100 max-w-lg w-full p-6 space-y-4">
+            <h3 className="text-base font-black text-slate-800">Senhas temporárias da importação</h3>
+            <p className="text-xs text-slate-500">Anote ou copie agora. Cada professor precisará trocar a senha no primeiro acesso.</p>
+            <div className="max-h-64 overflow-auto space-y-2">
+              {credenciaisLote.map((conta) => (
+                <div key={conta.email} className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm">
+                  <div className="font-bold text-slate-800">{conta.nome}</div>
+                  <div className="font-mono text-[#0f2851]">{conta.email}</div>
+                  <div className="font-mono text-emerald-700">{conta.senha}</div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  const texto = credenciaisLote.map((conta) =>
+                    `${conta.nome};${conta.email};${conta.senha}`
+                  ).join('\n');
+                  navigator.clipboard.writeText(`Nome;E-mail;Senha temporária\n${texto}`);
+                  setCopiado(true);
+                  setTimeout(() => setCopiado(false), 2000);
+                }}
+                className="flex-1 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs"
+              >
+                {copiado ? 'Copiado!' : 'Copiar lista'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setCredenciaisLote(null); setCopiado(false); }}
+                className="py-3 px-6 bg-[#0f2851] text-white font-bold rounded-xl text-xs"
               >
                 Fechar
               </button>

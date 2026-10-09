@@ -51,6 +51,21 @@ interface RateLimitEntry {
 
 const rateLimitMap = new Map<string, RateLimitEntry>();
 
+async function withMustChangePassword(
+  admin: ReturnType<typeof createClient>,
+  userId: string,
+  patch: { password?: string; user_metadata?: Record<string, unknown>; app_metadata?: Record<string, unknown> },
+  mustChange: boolean,
+) {
+  const { data: current } = await admin.auth.admin.getUserById(userId);
+  const app_metadata = {
+    ...(current.user?.app_metadata || {}),
+    ...(patch.app_metadata || {}),
+    must_change_password: mustChange,
+  };
+  return admin.auth.admin.updateUserById(userId, { ...patch, app_metadata });
+}
+
 function checkRateLimit(userId: string): boolean {
   const now = Date.now();
 
@@ -164,6 +179,30 @@ Deno.serve(async (req: Request) => {
 
     const bodyRecord = (body && typeof body === "object") ? (body as Record<string, unknown>) : {};
 
+    if (bodyRecord.action === "change-own-password") {
+      const novaSenha = typeof bodyRecord.senha === "string" ? bodyRecord.senha : "";
+      const hasLetter = /[a-zA-Z]/.test(novaSenha);
+      const hasDigit = /\d/.test(novaSenha);
+      const minLength = effectiveRole === "ALUNO" ? 10 : 8;
+      if (novaSenha.length < minLength || !hasLetter || !hasDigit || novaSenha.length > 128) {
+        return new Response(
+          JSON.stringify({ error: `A senha deve ter no mínimo ${minLength} caracteres, incluindo letras e números.` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      const { error: passwordError } = await withMustChangePassword(
+        supabaseAdmin,
+        callerUser.id,
+        { password: novaSenha },
+        false,
+      );
+      if (passwordError) throw passwordError;
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // 2.1 Redefinição segura de senha de aluno
     if (bodyRecord.action === "reset-student-password") {
       if (!["ADMIN", "GESTOR", "SECRETARIO"].includes(effectiveRole as string)) {
@@ -184,7 +223,7 @@ Deno.serve(async (req: Request) => {
           return new Response(JSON.stringify({ error: "Você só pode redefinir senhas de alunos da própria escola." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
       }
-      const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(target.id, { password: novaSenha });
+      const { error: passwordError } = await withMustChangePassword(supabaseAdmin, target.id, { password: novaSenha }, true);
       if (passwordError) throw passwordError;
       return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -210,7 +249,7 @@ Deno.serve(async (req: Request) => {
           return new Response(JSON.stringify({ error: "Você só pode redefinir senhas de professores da própria escola." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
       }
-      const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(target.id, { password: novaSenha });
+      const { error: passwordError } = await withMustChangePassword(supabaseAdmin, target.id, { password: novaSenha }, true);
       if (passwordError) throw passwordError;
       // Garante sincronia relacional em professores caso usuario_id estivesse nulo
       await supabaseAdmin.from("professores").update({ usuario_id: target.id }).ilike("email", targetEmail);
@@ -442,6 +481,7 @@ Deno.serve(async (req: Request) => {
       },
       app_metadata: {
         role: "PENDENTE",
+        must_change_password: true,
       },
     });
 
@@ -471,10 +511,10 @@ Deno.serve(async (req: Request) => {
 
         if (isOrphanOrPending) {
           targetUserId = existingAuth.id;
-          await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
+          await withMustChangePassword(supabaseAdmin, targetUserId, {
             password: senha,
             user_metadata: { full_name: nomeTrimmed },
-          });
+          }, true);
         } else {
           return new Response(
             JSON.stringify({ error: "Este e-mail já está cadastrado no sistema" }),
@@ -541,9 +581,9 @@ Deno.serve(async (req: Request) => {
         }
 
         // Promover role no app_metadata do Auth
-        await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
+        await withMustChangePassword(supabaseAdmin, targetUserId, {
           app_metadata: { role: cargoTrimmed },
-        });
+        }, true);
 
         // Vincular ao professor ou aluno
         if (cargoTrimmed === "PROFESSOR") {
@@ -577,7 +617,6 @@ Deno.serve(async (req: Request) => {
         return new Response(
           JSON.stringify({
             error: "Não foi possível vincular a conta institucional. Verifique permissões, escola e vínculos.",
-            details: provisionError.message,
           }),
           { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );

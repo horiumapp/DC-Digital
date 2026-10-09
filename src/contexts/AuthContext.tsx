@@ -33,6 +33,7 @@ export interface User {
   role: UserRole;
   title: string;
   escola_id?: string; // ID da escola vinculada (para GESTOR/SECRETARIO)
+  mustChangePassword?: boolean;
   alocacoes?: Alocacao[];
   professorDisciplinas?: string;
 }
@@ -214,6 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: role,
         title: role,
         escola_id: escolaId,
+        mustChangePassword: authUser.app_metadata?.must_change_password === true,
       };
 
       const isolate = async () => {

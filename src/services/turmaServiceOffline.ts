@@ -1,5 +1,5 @@
 import { offlineOwner } from './offlineIdentity';
-import { hidePendingDeletes, hasPendingMutation, pruneSyncedMissing } from './syncProtocol';
+import { hidePendingDeletes, hasPendingMutation, keepTransactionAlive, pruneSyncedMissing } from './syncProtocol';
 /**
  * turmaServiceOffline.ts — Wrapper offline-first para o TurmaService
  * 
@@ -18,7 +18,7 @@ import { TurmaService } from './turmaService';
 import * as OfflineStorage from './offlineStorage';
 import * as Queue from './offlineQueue';
 import * as SyncEngine from './syncEngine';
-import { db } from '../lib/db';
+import { db, hashOperation, now } from '../lib/db';
 
 import { getTid, normalizarDataISO } from '../utils/turmaUtils';
 
@@ -991,6 +991,52 @@ export async function removerAvaliacao(id: string): Promise<void> {
   if (_isOnline) SyncEngine.scheduleSync();
 }
 
+/**
+ * Tira alunos removidos de UPSERTs de nota que ainda não foram enviados.
+ * Devolve true se algum envio já saiu e precisa de DELETE compensatório.
+ */
+async function retractPendingNotaUpserts(avaliacaoIds: Set<string>, alunoIds: string[]): Promise<boolean> {
+  const removed = new Set(alunoIds.map(String));
+  const items = await db.syncQueue.where('table').equals('notas').toArray();
+  let inflight = false;
+
+  for (const item of items) {
+    if (item.ownerUserId !== offlineOwner() || !item.id) continue;
+    if (item.operation !== 'UPSERT' && item.operation !== 'INSERT') continue;
+    let payload: Record<string, unknown>;
+    try {
+      payload = JSON.parse(item.payload) as Record<string, unknown>;
+    } catch {
+      continue;
+    }
+    const records = Array.isArray(payload.records)
+      ? payload.records as Record<string, unknown>[]
+      : payload.avaliacao_id ? [payload] : [];
+    const hit = records.some((record) =>
+      avaliacaoIds.has(String(record.avaliacao_id)) && removed.has(String(record.aluno_id)));
+    if (!hit) continue;
+    if (item.attempted || item.status === 'processing') {
+      inflight = true;
+      continue;
+    }
+    const kept = records.filter((record) =>
+      !(avaliacaoIds.has(String(record.avaliacao_id)) && removed.has(String(record.aluno_id))));
+    if (kept.length === 0) {
+      await db.syncQueue.delete(item.id);
+      continue;
+    }
+    const next = Array.isArray(payload.records) ? { ...payload, records: kept } : kept[0];
+    const hash = await keepTransactionAlive(hashOperation(item.table, item.operation, next));
+    await db.syncQueue.update(item.id, {
+      payload: JSON.stringify(next),
+      hash,
+      updatedAt: now(),
+    });
+  }
+
+  return inflight;
+}
+
 export async function salvarNotas(
   avaliacaoId: string,
   notas: { alunoId: string; valor: string }[],
@@ -1007,7 +1053,13 @@ export async function salvarNotas(
   // FIX A1: Salvar + enfileirar em transação atômica (incluindo db.avaliacoes para consultas de aliases em deleteNotasLocal)
   await db.transaction('rw', [db.notas, db.syncQueue, db.avaliacoes], async () => {
     const local = await findLocalAvaliacao(avIdStr);
+    const aliases = new Set(
+      [avIdStr, local?.serverId, local?.id, local?.clientTempId]
+        .filter((id): id is string => Boolean(id))
+        .map(String),
+    );
     avIdStr = local?.serverId || local?.id || avIdStr;
+    aliases.add(avIdStr);
     // Processar notas preenchidas
     if (preenchidas.length > 0) {
       const records = preenchidas.map(n => ({
@@ -1022,7 +1074,9 @@ export async function salvarNotas(
 
     // Processar notas removidas (em branco)
     if (removidos.length > 0) {
-      if (!avIdStr.startsWith('temp_') && !avIdStr.startsWith('local_')) {
+      const temporary = avIdStr.startsWith('temp_') || avIdStr.startsWith('local_');
+      const inflight = await retractPendingNotaUpserts(aliases, removidos);
+      if (!temporary || inflight) {
         await Queue.enqueue('notas', 'DELETE', {
           avaliacao_id: avIdStr,
           aluno_ids: removidos,

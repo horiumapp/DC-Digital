@@ -18,20 +18,9 @@ import { formatMatricula, getMatriculaLogin, formatCpfObscured } from '../../uti
 import { readAllRows } from '../../services/pagination';
 import { useToast } from '../../components/common/Toast';
 import { getEscolaLogo } from '../../utils/escolaUtils';
+import { gerarSenhaTemporaria } from '../../utils/senhaTemporaria';
 
 const ALUNO_EMAIL_DOMAIN = 'aluno.dcdigital.local';
-
-/** Gera senha temporária aleatória e segura para primeiro acesso do aluno */
-function gerarSenhaTemporaria(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-  let pwd = '';
-  const arr = new Uint8Array(8);
-  crypto.getRandomValues(arr);
-  for (let i = 0; i < 8; i++) {
-    pwd += chars[arr[i] % chars.length];
-  }
-  return `${pwd}1A`;
-}
 
 export interface AlunoRow {
   id: string;

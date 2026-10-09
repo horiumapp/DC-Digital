@@ -249,11 +249,16 @@ async function _runSyncAll(ownerId: string): Promise<SyncResult> {
         const errorCode = (err as { code?: string })?.code;
         // LGPD: Sanitizar PII antes de persistir no log
         const errorMsg = sanitizePII(rawErrorMsg);
-        
-        // FIX #8: Diferenciar erros recuperáveis de não-recuperáveis.
-        // Erros fatais (RLS, duplicate, FK) são movidos para dead letter
-        // em vez de bloquear toda a fila.
-        if (isNonRecoverableError(errorMsg, errorCode)) {
+
+        // Conflito de revisão não se resolve reenviando o mesmo payload.
+        // O item sai da fila ativa e os lançamentos seguintes continuam.
+        if (isConflictError(errorMsg, errorCode)) {
+          await Queue.fail(item.id, `CONFLICT: ${errorMsg}`);
+          await logSync(item.table, item.operation, 'error', `CONFLICT: ${errorMsg}`);
+          result.failed++;
+          result.errors.push(`${item.table}/${item.operation}: CONFLICT`);
+          emit('itemFailed', { table: item.table, error: errorMsg, conflict: true });
+        } else if (isNonRecoverableError(errorMsg, errorCode)) {
           await Queue.fail(item.id, `[DEAD_LETTER] ${errorMsg}`);
           await logSync(item.table, item.operation, 'error', `[DEAD_LETTER] ${errorMsg}`);
           result.failed++;
@@ -274,15 +279,7 @@ async function _runSyncAll(ownerId: string): Promise<SyncResult> {
           // Se for erro de autenticação ou token JWT expirado,
           // tentar renovar a sessão do usuário e pausar o ciclo corrente
           // para não queimar tentativas de retry nem descartar dados legítimos.
-          const isAuthError = errorCode === 'PGRST301' ||
-            errorCode === '401' ||
-            errorMsg.toLowerCase().includes('jwt expired') ||
-            errorMsg.toLowerCase().includes('token is expired') ||
-            errorMsg.toLowerCase().includes('sessão necessária') ||
-            errorMsg.toLowerCase().includes('sessão inválida') ||
-            errorMsg.toLowerCase().includes('invalid refresh token') ||
-            errorMsg.toLowerCase().includes('refresh_token') ||
-            (errorCode === '42501' && (errorMsg.includes('Sessão') || errorMsg.includes('permission denied for function apply_academic_mutation')));
+          const isAuthError = isRecoverableAuthError(errorMsg, errorCode);
 
           if (isAuthError) {
             let refreshFailed = false;
@@ -410,11 +407,29 @@ async function _runSyncAll(ownerId: string): Promise<SyncResult> {
  * de string matching genérico. Isso evita que erros 404 HTTP temporários (rede/deploy)
  * sejam incorretamente classificados como dead letter permanente.
  */
+function isRecoverableAuthError(errorMsg: string, errorCode?: string): boolean {
+  const msg = errorMsg.toLowerCase();
+  return errorCode === 'PGRST301'
+    || errorCode === '401'
+    || msg.includes('sessão')
+    || msg.includes('sessao')
+    || msg.includes('jwt expired')
+    || msg.includes('token is expired')
+    || msg.includes('invalid refresh token')
+    || msg.includes('refresh_token')
+    || (errorCode === '42501' && msg.includes('permission denied for function apply_academic_mutation'));
+}
+
+function isConflictError(errorMsg: string, errorCode?: string): boolean {
+  return errorCode === '40001' || errorMsg.toLowerCase().includes('conflict');
+}
+
 function isNonRecoverableError(errorMsg: string, errorCode?: string): boolean {
+  if (isRecoverableAuthError(errorMsg, errorCode)) return false;
   const msg = errorMsg.toLowerCase();
 
   // Códigos de erro do PostgREST/Postgres (fonte: https://postgrest.org/en/stable/references/errors.html)
-  // NOTA: 'PGRST301' (JWT expired) NÃO deve entrar em dead-letter permanente, pois é recuperável após refresh de sessão.
+  // NOTA: 'PGRST301' (JWT expired) e 42501 de sessão NÃO entram em dead letter.
   const deadLetterCodes = new Set([
     '23503', // foreign_key_violation
     '23505', // unique_violation

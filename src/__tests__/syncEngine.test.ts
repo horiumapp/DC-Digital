@@ -42,6 +42,26 @@ describe('syncEngine com fila e transações reais',()=>{
   expect((await syncAll()).failed).toBe(1);expect((await db.syncQueue.get(id))?.lastError).toContain('CONFLICT');
   expect((await db.frequencias.toArray())[0].syncStatus).toBe('pending');
  });
+ it('conflito não impede o lançamento seguinte e sessão ausente não vai para dead letter',async()=>{
+  const freqId=await enqueue();
+  await Queue.enqueue('conteudos','UPSERT',{turma_id:owner,data:'2026-03-01',tempo:'1',disciplina:'MAT',descricao:'Aula'});
+  mock.rpc.mockImplementation((_fn:string,args:{p_table:string})=>({abortSignal:()=>Promise.resolve(
+    args.p_table==='frequencias'
+      ? {error:{code:'40001',message:'CONFLICT: revisão'},data:null}
+      : {data:[{id:1,sync_revision:1,turma_id:owner,data:'2026-03-01',tempo:'1',disciplina:'MAT'}],error:null}
+  )}));
+  const result=await syncAll();
+  expect(result.synced).toBe(1);
+  expect((await db.syncQueue.get(freqId))?.status).toBe('error');
+  expect((await db.syncQueue.toArray()).some(i=>i.table==='conteudos')).toBe(false);
+  await db.syncQueue.clear();
+  const id=await enqueue();
+  mock.rpc.mockReturnValue({abortSignal:()=>Promise.resolve({error:{code:'42501',message:'Sessão necessária'},data:null})});
+  await syncAll();
+  const item=await db.syncQueue.get(id);
+  expect(item?.status).toBe('pending');
+  expect(item?.lastError||'').not.toContain('DEAD_LETTER');
+ });
  it('reenvia exatamente o mesmo operation_id e payload após resposta perdida',async()=>{
   const id=await enqueue();mock.rpc.mockReturnValueOnce({abortSignal:()=>Promise.resolve({error:{message:'Failed to fetch'},data:null})});
   await syncAll();const first=mock.rpc.mock.calls[0][1];
@@ -124,4 +144,13 @@ it('a tela pode editar notas e excluir avaliação usando o alias anterior à si
  const deleted=(await db.syncQueue.toArray()).find(i=>i.table==='avaliacoes')!;
  expect(JSON.parse(deleted.payload).id).toBe('99');expect(JSON.parse(deleted.payload)._expected['["99"]']).toBe(4);
  expect(await db.avaliacoes.count()).toBe(0);
+});
+it('apagar nota de avaliação temporária cancela o upsert que ainda não foi enviado',async()=>{
+ vi.stubGlobal('navigator',{onLine:false});
+ const service=await import('../services/turmaServiceOffline');service.setOnlineStatus(false);
+ await db.avaliacoes.add({id:'temp_av',clientTempId:'temp_av',turma_id:owner,tipo:'AV01',data:'2026-03-01',disciplina:'MAT',bimestre:'1. BIMESTRE',valor_maximo:10,instrumento:'Prova',objetos:[],version:1,syncStatus:'pending',createdAt:now(),updatedAt:now()});
+ await service.salvarNotas('temp_av',[{alunoId:row.aluno_id,valor:'8'}]);
+ await service.salvarNotas('temp_av',[{alunoId:row.aluno_id,valor:''}]);
+ expect((await db.syncQueue.toArray()).filter(i=>i.table==='notas')).toHaveLength(0);
+ expect(await db.notas.count()).toBe(0);
 });
