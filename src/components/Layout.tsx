@@ -27,7 +27,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTurma } from '../contexts/TurmaContext';
 import { useToast } from './common/Toast';
 import { useOffline } from '../contexts/OfflineContext';
-import { ADMIN_ROLES } from '../constants/authConstants';
+import { ADMIN_ROLES, SEMEC_ROLE } from '../constants/authConstants';
 import { APP_CONFIG } from '../config/appConfig';
 
 type Item = { label: string; to: string; icon: typeof Home; end?: boolean };
@@ -55,10 +55,12 @@ export default function Layout() {
   
   const [menuOpen, setMenuOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
-  const canManage = !!user && ADMIN_ROLES.includes(user.role);
+  const isSemec = user?.role === SEMEC_ROLE;
+  const canManage = !!user && (ADMIN_ROLES.includes(user.role) || isSemec);
   const close = () => setMenuOpen(false);
 
   const availableReports = reports.filter(item => {
+    if (isSemec) return false;
     if (item.to === '/relatorio-boletins') {
       return canManage;
     }
@@ -132,11 +134,13 @@ export default function Layout() {
     { label: 'Frequência e notas', to: '/frequencia', icon: ClipboardCheck },
   ];
   
-  const management: Item[] = canManage ? [
-    { label: 'Gestão escolar', to: '/administracao', icon: GraduationCap },
-    ...(user?.role === 'ADMIN' ? [{ label: 'Currículo BNCC', to: '/curriculo', icon: BookOpenCheck }] : []),
-    { label: 'Pendências', to: '/estatisticas', icon: BarChart3 },
-  ] : [];
+  const management: Item[] = isSemec
+    ? [{ label: 'Gestão escolar', to: '/administracao', icon: GraduationCap }]
+    : canManage ? [
+      { label: 'Gestão escolar', to: '/administracao', icon: GraduationCap },
+      ...(user?.role === 'ADMIN' ? [{ label: 'Currículo BNCC', to: '/curriculo', icon: BookOpenCheck }] : []),
+      { label: 'Pendências', to: '/estatisticas', icon: BarChart3 },
+    ] : [];
 
   const isDocente = user?.role === 'PROFESSOR';
   const homePath = canManage ? '/administracao' : '/turmas';
@@ -169,7 +173,7 @@ export default function Layout() {
 
       <section>
         <p className="dd-nav-label">Consultas & Apoio</p>
-        <details className="group">
+        {availableReports.length > 0 && <details className="group">
           <summary className="dd-nav-item cursor-pointer list-none">
             <FileBarChart aria-hidden="true" />
             <span className="flex-1">Relatórios</span>
@@ -193,7 +197,7 @@ export default function Layout() {
               </NavLink>
             ))}
           </div>
-        </details>
+        </details>}
         
         <NavLink to="/minha-privacidade" onClick={close} className={navClass}>
           <Shield aria-hidden="true" />
@@ -447,10 +451,12 @@ export default function Layout() {
                 <span>BNCC</span>
               </NavLink>
             )}
-            <NavLink to="/estatisticas">
-              <BarChart3 aria-hidden="true" />
-              <span>Pendências</span>
-            </NavLink>
+            {!isSemec && (
+              <NavLink to="/estatisticas">
+                <BarChart3 aria-hidden="true" />
+                <span>Pendências</span>
+              </NavLink>
+            )}
             <NavLink to="/minha-privacidade">
               <Shield aria-hidden="true" />
               <span>Privacidade</span>

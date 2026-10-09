@@ -6,6 +6,9 @@ import type { UserRole } from '../contexts/AuthContext';
  */
 export const ADMIN_ROLES: UserRole[] = ['ADMIN', 'GESTOR', 'SECRETARIO'];
 
+/** Gestor da secretaria municipal: escolas, turmas, professores e alunos de toda a rede. */
+export const SEMEC_ROLE: UserRole = 'GESTOR_SEMEC';
+
 /**
  * Roles com acesso de leitura a relatórios administrativos gerais.
  */
@@ -20,7 +23,7 @@ export const BOLETIM_ROLES: UserRole[] = ['ADMIN', 'GESTOR', 'SECRETARIO'];
 /**
  * Roles com acesso ao painel de servidores (qualquer role exceto ALUNO).
  */
-export const STAFF_ROLES: UserRole[] = ['ADMIN', 'GESTOR', 'SECRETARIO', 'PROFESSOR'];
+export const STAFF_ROLES: UserRole[] = ['ADMIN', 'GESTOR', 'GESTOR_SEMEC', 'SECRETARIO', 'PROFESSOR'];
 
 /**
  * FIX #19: Status de aluno centralizado para evitar strings mágicas.

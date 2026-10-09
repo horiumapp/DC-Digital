@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Shield, User, GraduationCap, Briefcase, Key, Users, Building2, Mail } from 'lucide-react';
+import { Search, Shield, User, GraduationCap, Briefcase, Key, Users, Building2, Mail, Plus, X, Landmark } from 'lucide-react';
 import { useToast } from '../../components/common/Toast';
 import { readAllRows } from '../../services/pagination';
 
@@ -21,7 +21,10 @@ interface EscolaRow {
 
 export default function TabUsuarios() {
   const { user: _user } = useAuth();
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
+  const [cadastroAberto, setCadastroAberto] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [formSemec, setFormSemec] = useState({ nome: '', email: '', senha: '' });
   
   const [usuarios, setUsuarios] = useState<UsuarioRow[]>([]);
   const [escolas, setEscolas] = useState<EscolaRow[]>([]);
@@ -29,7 +32,7 @@ export default function TabUsuarios() {
   const [busca, setBusca] = useState('');
   const [filtroCargo, setFiltroCargo] = useState('TODOS');
   
-  const CARGOS = ['TODOS', 'ADMIN', 'GESTOR', 'SECRETARIO', 'PROFESSOR', 'ALUNO'];
+  const CARGOS = ['TODOS', 'ADMIN', 'GESTOR_SEMEC', 'GESTOR', 'SECRETARIO', 'PROFESSOR', 'ALUNO'];
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -67,7 +70,36 @@ export default function TabUsuarios() {
     return matchBusca && matchCargo;
   });
 
-  const getEscolaNome = (escolaId?: string) => {
+  const criarGestorSemec = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const nome = formSemec.nome.trim();
+    const email = formSemec.email.trim().toLowerCase();
+    const senha = formSemec.senha;
+    if (!nome || !email) {
+      showError('Informe nome e e-mail.');
+      return;
+    }
+    if (senha.length < 8 || !/[a-zA-Z]/.test(senha) || !/\d/.test(senha)) {
+      showError('A senha deve ter no mínimo 8 caracteres, com letra e número.');
+      return;
+    }
+    setSalvando(true);
+    const { data, error } = await supabase.functions.invoke('admin-create-user', {
+      body: { nome, email, senha, cargo: 'GESTOR_SEMEC', escola_id: '' },
+    });
+    setSalvando(false);
+    if (error || data?.error) {
+      showError(data?.error || 'Não foi possível criar o gestor SEMEC.');
+      return;
+    }
+    showSuccess('Gestor SEMEC cadastrado. No primeiro acesso a senha precisa ser trocada.');
+    setFormSemec({ nome: '', email: '', senha: '' });
+    setCadastroAberto(false);
+    fetchData();
+  };
+
+  const getEscolaNome = (escolaId?: string, cargo?: string) => {
+    if (cargo === 'GESTOR_SEMEC') return 'Rede municipal';
     if (!escolaId) return '-';
     const esc = escolas.find(e => e.id === escolaId);
     return esc ? esc.nome : '-';
@@ -76,6 +108,7 @@ export default function TabUsuarios() {
   const getCargoConfig = (cargo: string) => {
     switch (cargo) {
       case 'ADMIN': return { icon: <Shield className="w-4 h-4" />, color: 'bg-purple-100 text-purple-700 border-purple-200' };
+      case 'GESTOR_SEMEC': return { icon: <Landmark className="w-4 h-4" />, color: 'bg-teal-100 text-teal-800 border-teal-200' };
       case 'GESTOR': return { icon: <Briefcase className="w-4 h-4" />, color: 'bg-blue-100 text-blue-700 border-blue-200' };
       case 'SECRETARIO': return { icon: <Key className="w-4 h-4" />, color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
       case 'PROFESSOR': return { icon: <GraduationCap className="w-4 h-4" />, color: 'bg-orange-100 text-orange-700 border-orange-200' };
@@ -97,7 +130,15 @@ export default function TabUsuarios() {
             Gerencie e visualize as contas de acesso ao sistema agrupadas por perfil.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setCadastroAberto(true)}
+              className="flex items-center gap-2 bg-[#0f2851] hover:bg-[#1a3a6d] text-white px-3 py-2 rounded-lg text-xs font-bold"
+            >
+              <Plus className="w-4 h-4" />
+              Gestor SEMEC
+            </button>
           <div className="flex bg-slate-100 p-1 rounded-lg">
             {CARGOS.map(cargo => (
               <button
@@ -180,8 +221,8 @@ export default function TabUsuarios() {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2 text-slate-600 text-sm font-medium">
                             <Building2 className="w-4 h-4 text-slate-400" />
-                            <span className="truncate max-w-[200px]" title={getEscolaNome(u.escola_id)}>
-                              {getEscolaNome(u.escola_id)}
+                            <span className="truncate max-w-[200px]" title={getEscolaNome(u.escola_id, u.cargo)}>
+                              {getEscolaNome(u.escola_id, u.cargo)}
                             </span>
                           </div>
                         </td>
@@ -199,6 +240,61 @@ export default function TabUsuarios() {
           </div>
         )}
       </div>
+      {cadastroAberto && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+          <form onSubmit={criarGestorSemec} className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800">Cadastrar gestor SEMEC</h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Este perfil vê e gerencia escolas, turmas, professores e alunos de toda a rede. Não acessa frequência nem nota.
+                </p>
+              </div>
+              <button type="button" onClick={() => setCadastroAberto(false)} className="text-slate-400 hover:text-slate-700" aria-label="Fechar">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <label className="block text-sm font-medium text-slate-700">
+              Nome
+              <input
+                value={formSemec.nome}
+                onChange={(event) => setFormSemec({ ...formSemec, nome: event.target.value })}
+                className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2"
+                required
+              />
+            </label>
+            <label className="block text-sm font-medium text-slate-700">
+              E-mail
+              <input
+                type="email"
+                value={formSemec.email}
+                onChange={(event) => setFormSemec({ ...formSemec, email: event.target.value })}
+                className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2"
+                required
+              />
+            </label>
+            <label className="block text-sm font-medium text-slate-700">
+              Senha temporária
+              <input
+                type="text"
+                value={formSemec.senha}
+                onChange={(event) => setFormSemec({ ...formSemec, senha: event.target.value })}
+                className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2"
+                minLength={8}
+                required
+              />
+            </label>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setCadastroAberto(false)} className="px-4 py-2 text-sm font-bold text-slate-600">
+                Cancelar
+              </button>
+              <button type="submit" disabled={salvando} className="px-4 py-2 rounded-lg bg-[#0f2851] text-white text-sm font-bold disabled:opacity-60">
+                {salvando ? 'Salvando...' : 'Cadastrar'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

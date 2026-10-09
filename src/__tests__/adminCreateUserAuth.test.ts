@@ -24,7 +24,11 @@ function evaluateDeleteUserAuthorization(
 ): { status: number; error?: string; authorized: boolean } {
   const effectiveRole = caller.role;
 
-  if (effectiveRole !== 'ADMIN') {
+  if (effectiveRole === 'GESTOR_SEMEC') {
+    if (!targetUserData || !['PROFESSOR', 'ALUNO'].includes(targetUserData.cargo)) {
+      return { status: 403, error: 'O gestor SEMEC só pode excluir contas de professor ou aluno.', authorized: false };
+    }
+  } else if (effectiveRole !== 'ADMIN') {
     if (!caller.escola_id) {
       return { status: 403, error: 'Seu usuário não possui escola vinculada', authorized: false };
     }
@@ -166,7 +170,7 @@ function evaluateResetProfessorPasswordAuthorization(
   senha: string
 ): { status: number; error?: string; authorized: boolean } {
   const effectiveRole = caller.role;
-  if (!['ADMIN', 'GESTOR', 'SECRETARIO'].includes(effectiveRole)) {
+  if (!['ADMIN', 'GESTOR', 'GESTOR_SEMEC', 'SECRETARIO'].includes(effectiveRole)) {
     return { status: 403, error: 'Sem permissão para redefinir senhas.', authorized: false };
   }
   const hasLetter = /[a-zA-Z]/.test(senha);
@@ -177,7 +181,7 @@ function evaluateResetProfessorPasswordAuthorization(
   if (!targetUserData || targetUserData.cargo !== 'PROFESSOR') {
     return { status: 404, error: 'Conta de professor não encontrada.', authorized: false };
   }
-  if (effectiveRole !== 'ADMIN') {
+  if (effectiveRole !== 'ADMIN' && effectiveRole !== 'GESTOR_SEMEC') {
     if (!caller.escola_id || caller.escola_id !== targetUserData.escola_id) {
       return { status: 403, error: 'Você só pode redefinir senhas de professores da própria escola.', authorized: false };
     }
@@ -215,6 +219,13 @@ describe('admin-create-user reset-professor-password Authorization Rules', () =>
 
   it('deve permitir que ADMIN global resete senha de professor de qualquer escola', () => {
     const res = evaluateResetProfessorPasswordAuthorization(adminGlobal, profEscolaB, '@prof123');
+    expect(res.authorized).toBe(true);
+    expect(res.status).toBe(200);
+  });
+
+  it('deve permitir que GESTOR_SEMEC resete senha de professor de qualquer escola', () => {
+    const semec: CallerUser = { id: 'semec-1', role: 'GESTOR_SEMEC' };
+    const res = evaluateResetProfessorPasswordAuthorization(semec, profEscolaB, '@prof123');
     expect(res.authorized).toBe(true);
     expect(res.status).toBe(200);
   });

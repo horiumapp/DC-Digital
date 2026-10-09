@@ -9,7 +9,7 @@ import { OfflineProvider } from './contexts/OfflineContext';
 import { TurmaProvider } from './contexts/TurmaContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ToastProvider } from './components/common/Toast';
-import { ADMIN_ROLES, STAFF_ROLES } from './constants/authConstants';
+import { ADMIN_ROLES, SEMEC_ROLE, STAFF_ROLES } from './constants/authConstants';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import RouteErrorBoundary from './components/common/RouteErrorBoundary';
 import MissingEnvScreen from './components/common/MissingEnvScreen';
@@ -51,7 +51,11 @@ const CookieBanner = React.lazy(() => import('./components/CookieBanner'));
 /** FIX #17: Página 404 com redirect por role para evitar loop ALUNO → /turmas → redirect */
 function NotFoundPage() {
   const { user } = useAuth();
-  const homeUrl = user?.role === 'ALUNO' ? '/portal-aluno' : user?.role && ADMIN_ROLES.includes(user.role) ? '/administracao' : '/turmas';
+  const homeUrl = user?.role === 'ALUNO'
+    ? '/portal-aluno'
+    : user?.role === SEMEC_ROLE || (user?.role && ADMIN_ROLES.includes(user.role))
+    ? '/administracao'
+    : '/turmas';
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
       <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-200 text-center max-w-md w-full">
@@ -127,10 +131,13 @@ export default function App() {
                       <Route path="/aparata" element={<RouteErrorBoundary><Aparata /></RouteErrorBoundary>} />
                       <Route path="/aparata-detalhes" element={<RouteErrorBoundary><AparataDetalhes /></RouteErrorBoundary>} />
                       
-                      {/* Rotas Restritas (Administrativo: ADMIN, GESTOR, SECRETARIO) */}
+                      <Route element={<ProtectedRoute allowedRoles={[...ADMIN_ROLES, SEMEC_ROLE]} />}>
+                        <Route path="/administracao" element={<RouteErrorBoundary><Administracao /></RouteErrorBoundary>} />
+                      </Route>
+
+                      {/* Rotas da escola: diretor, secretário e administrador */}
                       <Route element={<ProtectedRoute allowedRoles={ADMIN_ROLES} />}>
                         <Route path="/relatorio-boletins" element={<RouteErrorBoundary><RelatorioBoletins /></RouteErrorBoundary>} />
-                        <Route path="/administracao" element={<RouteErrorBoundary><Administracao /></RouteErrorBoundary>} />
                         <Route path="/estatisticas" element={<RouteErrorBoundary><Estatisticas /></RouteErrorBoundary>} />
                         <Route path="/pendencias-lancamento" element={<RouteErrorBoundary><PendenciasLancamento /></RouteErrorBoundary>} />
                         <Route path="/pendencias-frequencia" element={<RouteErrorBoundary><PendenciasFrequencia /></RouteErrorBoundary>} />

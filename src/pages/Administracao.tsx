@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { SEMEC_ROLE } from '../constants/authConstants';
 import { Building2, Users, User, GraduationCap, ShieldAlert, CalendarDays } from 'lucide-react';
 import TabEscolas from './administracao/TabEscolas';
 import TabAlunos from './administracao/TabAlunos';
@@ -11,7 +12,9 @@ import TabCalendario from './administracao/TabCalendario';
 
 export default function Administracao() {
   const { user } = useAuth();
-  const defaultTab = user?.role === 'ADMIN' ? 'escolas' : user?.role === 'GESTOR' ? 'professores' : 'turmas';
+  const isSemec = user?.role === SEMEC_ROLE;
+  const seesAllSchools = user?.role === 'ADMIN' || isSemec;
+  const defaultTab = seesAllSchools ? 'escolas' : user?.role === 'GESTOR' ? 'professores' : 'turmas';
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   return (
@@ -23,13 +26,15 @@ export default function Administracao() {
           <p className="text-sm text-slate-500 mt-1">
             {user?.role === 'ADMIN'
               ? 'Gerencie escolas, turmas, professores, alunos e acessos do sistema.'
+              : isSemec
+              ? 'Gerencie escolas, turmas, professores e alunos de toda a rede.'
               : 'Gerencie turmas, professores e alunos do sistema.'}
           </p>
         </div>
 
         {/* Tabs */}
         <div className="overflow-x-auto pb-1"><div className="flex min-w-max bg-slate-50/50 p-1.5 rounded-xl border border-slate-200">
-          {user?.role === 'ADMIN' && (
+          {seesAllSchools && (
             <button
               onClick={() => setActiveTab('escolas')}
               className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'escolas' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
@@ -90,7 +95,7 @@ export default function Administracao() {
 
         {/* Content Area */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          {user?.role === 'ADMIN' && activeTab === 'escolas' && <TabEscolas />}
+          {seesAllSchools && activeTab === 'escolas' && <TabEscolas />}
           {user?.role === 'ADMIN' && activeTab === 'calendario' && <TabCalendario />}
           {user?.role === 'ADMIN' && activeTab === 'usuarios' && <TabUsuarios />}
           {user?.role === 'ADMIN' && activeTab === 'lgpd' && <TabLgpd />}

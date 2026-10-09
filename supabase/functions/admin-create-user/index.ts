@@ -38,7 +38,11 @@ function getCorsHeaders(req: Request): Record<string, string> | null {
 
 // Validação de formato de e-mail
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const VALID_CARGOS = ["ADMIN", "GESTOR", "SECRETARIO", "PROFESSOR", "ALUNO"];
+const VALID_CARGOS = ["ADMIN", "GESTOR", "GESTOR_SEMEC", "SECRETARIO", "PROFESSOR", "ALUNO"];
+
+function hasNetworkScope(role: string | undefined): boolean {
+  return role === "ADMIN" || role === "GESTOR_SEMEC";
+}
 
 // FIX #3: Rate limiting em memória por usuário (reseta em cold start, mas protege contra abuso)
 const RATE_LIMIT_WINDOW_MS = 60_000; // 60 segundos
@@ -205,7 +209,7 @@ Deno.serve(async (req: Request) => {
 
     // 2.1 Redefinição segura de senha de aluno
     if (bodyRecord.action === "reset-student-password") {
-      if (!["ADMIN", "GESTOR", "SECRETARIO"].includes(effectiveRole as string)) {
+      if (!["ADMIN", "GESTOR", "GESTOR_SEMEC", "SECRETARIO"].includes(effectiveRole as string)) {
         return new Response(JSON.stringify({ error: "Sem permissão para redefinir senhas." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       const targetEmail = typeof bodyRecord.email === "string" ? bodyRecord.email.trim().toLowerCase() : "";
@@ -217,7 +221,7 @@ Deno.serve(async (req: Request) => {
       if (!target || target.cargo !== "ALUNO") {
         return new Response(JSON.stringify({ error: "Conta de aluno não encontrada." }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      if (effectiveRole !== "ADMIN") {
+      if (!hasNetworkScope(effectiveRole)) {
         const { data: caller } = await supabaseAdmin.from("usuarios").select("escola_id").eq("id", callerUser.id).maybeSingle();
         if (!caller?.escola_id || caller.escola_id !== target.escola_id) {
           return new Response(JSON.stringify({ error: "Você só pode redefinir senhas de alunos da própria escola." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -229,7 +233,7 @@ Deno.serve(async (req: Request) => {
     }
     // 2.2 Redefinição segura de senha de professor
     if (bodyRecord.action === "reset-professor-password") {
-      if (!["ADMIN", "GESTOR", "SECRETARIO"].includes(effectiveRole as string)) {
+      if (!["ADMIN", "GESTOR", "GESTOR_SEMEC", "SECRETARIO"].includes(effectiveRole as string)) {
         return new Response(JSON.stringify({ error: "Sem permissão para redefinir senhas." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       const targetEmail = typeof bodyRecord.email === "string" ? bodyRecord.email.trim().toLowerCase() : "";
@@ -243,7 +247,7 @@ Deno.serve(async (req: Request) => {
       if (!target || target.cargo !== "PROFESSOR") {
         return new Response(JSON.stringify({ error: "Conta de professor não encontrada." }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      if (effectiveRole !== "ADMIN") {
+      if (!hasNetworkScope(effectiveRole)) {
         const { data: caller } = await supabaseAdmin.from("usuarios").select("escola_id").eq("id", callerUser.id).maybeSingle();
         if (!caller?.escola_id || caller.escola_id !== target.escola_id) {
           return new Response(JSON.stringify({ error: "Você só pode redefinir senhas de professores da própria escola." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -260,7 +264,7 @@ Deno.serve(async (req: Request) => {
       // SEC-01 FIX: Apenas papéis administrativos podem excluir usuários.
       // Antes, qualquer ALUNO/PROFESSOR autenticado da mesma escola podia
       // invocar este endpoint e deletar contas de colegas permanentemente.
-      if (!["ADMIN", "GESTOR", "SECRETARIO"].includes(effectiveRole as string)) {
+      if (!["ADMIN", "GESTOR", "GESTOR_SEMEC", "SECRETARIO"].includes(effectiveRole as string)) {
         return new Response(
           JSON.stringify({ error: "Seu perfil não possui permissão para excluir contas de usuários." }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -286,8 +290,14 @@ Deno.serve(async (req: Request) => {
       }
       const { data: targetUserData } = await targetUserQuery.maybeSingle();
 
-      // Se for não-ADMIN, verificar se tem permissão para deletar este usuário
-      if (effectiveRole !== "ADMIN") {
+      if (effectiveRole === "GESTOR_SEMEC") {
+        if (!targetUserData || !["PROFESSOR", "ALUNO"].includes(targetUserData.cargo)) {
+          return new Response(
+            JSON.stringify({ error: "O gestor SEMEC só pode excluir contas de professor ou aluno." }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } else if (effectiveRole !== "ADMIN") {
         const { data: callerData } = await supabaseAdmin
           .from("usuarios")
           .select("escola_id")
@@ -356,7 +366,7 @@ Deno.serve(async (req: Request) => {
     if (
       typeof nome !== "string" || typeof email !== "string" ||
       typeof senha !== "string" || typeof cargo !== "string" ||
-      typeof escola_id !== "string"
+      (escola_id !== undefined && typeof escola_id !== "string")
     ) {
       return new Response(
         JSON.stringify({ error: "Todos os campos devem ser strings válidas" }),
@@ -368,9 +378,10 @@ Deno.serve(async (req: Request) => {
     const nomeTrimmed = nome.trim();
     const emailTrimmed = email.trim().toLowerCase();
     const cargoTrimmed = cargo.trim().toUpperCase();
-    const escolaIdTrimmed = escola_id.trim();
+    const escolaIdTrimmed = typeof escola_id === "string" ? escola_id.trim() : "";
+    const escolaIdForWrite = cargoTrimmed === "GESTOR_SEMEC" ? null : escolaIdTrimmed;
 
-    if (!nomeTrimmed || !emailTrimmed || !senha || !cargoTrimmed || !escolaIdTrimmed) {
+    if (!nomeTrimmed || !emailTrimmed || !senha || !cargoTrimmed || (cargoTrimmed !== "GESTOR_SEMEC" && !escolaIdTrimmed)) {
       return new Response(
         JSON.stringify({ error: "Campos obrigatórios: nome, email, senha, cargo, escola_id" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -413,7 +424,8 @@ Deno.serve(async (req: Request) => {
 
     // 4. Validar permissões baseadas na hierarquia
     const allowedCargos: Record<string, string[]> = {
-      ADMIN: ["ADMIN", "GESTOR", "SECRETARIO", "PROFESSOR", "ALUNO"],
+      ADMIN: ["ADMIN", "GESTOR", "GESTOR_SEMEC", "SECRETARIO", "PROFESSOR", "ALUNO"],
+      GESTOR_SEMEC: ["GESTOR", "SECRETARIO", "PROFESSOR", "ALUNO"],
       GESTOR: ["PROFESSOR", "ALUNO"],
       SECRETARIO: ["PROFESSOR", "ALUNO"],
     };
@@ -429,24 +441,26 @@ Deno.serve(async (req: Request) => {
     }
 
     // 5. FIX: Verificar se escola_id existe no banco de dados
-    const { data: escolaData, error: escolaError } = await supabaseAdmin
-      .from("escolas")
-      .select("id")
-      .eq("id", escolaIdTrimmed)
-      .maybeSingle();
+    if (cargoTrimmed !== "GESTOR_SEMEC") {
+      const { data: escolaData, error: escolaError } = await supabaseAdmin
+        .from("escolas")
+        .select("id")
+        .eq("id", escolaIdTrimmed)
+        .maybeSingle();
 
-    if (escolaError || !escolaData) {
-      return new Response(
-        JSON.stringify({ error: "Escola não encontrada. Verifique o ID da escola informado." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (escolaError || !escolaData) {
+        return new Response(
+          JSON.stringify({ error: "Escola não encontrada. Verifique o ID da escola informado." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // 6. FIX: Verificar se o chamador (GESTOR/SECRETARIO) tem vínculo com a escola.
     // FIX C2: Antes, se callerData.escola_id fosse NULL (usuário sem escola
     // vinculada), o check era pulado e o chamador podia criar contas em QUALQUER
     // escola. Agora, não-ADMIN só cria usuários da própria escola vinculada.
-    if (effectiveRole !== "ADMIN") {
+    if (!hasNetworkScope(effectiveRole)) {
       const { data: callerData } = await supabaseAdmin
         .from("usuarios")
         .select("escola_id")
@@ -543,7 +557,7 @@ Deno.serve(async (req: Request) => {
       p_email: emailTrimmed,
       p_nome: nomeTrimmed,
       p_cargo: cargoTrimmed,
-      p_escola: escolaIdTrimmed,
+      p_escola: escolaIdForWrite,
     });
 
     if (provisionError) {
@@ -564,7 +578,7 @@ Deno.serve(async (req: Request) => {
               email: emailTrimmed,
               nome_completo: nomeTrimmed,
               cargo: cargoTrimmed,
-              escola_id: escolaIdTrimmed,
+              escola_id: escolaIdForWrite,
             },
             { onConflict: "id" }
           );
@@ -632,7 +646,7 @@ Deno.serve(async (req: Request) => {
           email: emailTrimmed,
           nome: nomeTrimmed,
           cargo: cargoTrimmed,
-          escola_id: escolaIdTrimmed,
+          escola_id: escolaIdForWrite,
         },
       }),
       {

@@ -12,7 +12,7 @@ import { useToast } from '../components/common/Toast';
 import ConfirmActionModal from '../components/ConfirmActionModal';
 import { AlertTriangle, WifiOff } from 'lucide-react';
 
-export type UserRole = 'ADMIN' | 'GESTOR' | 'SECRETARIO' | 'PROFESSOR' | 'ALUNO';
+export type UserRole = 'ADMIN' | 'GESTOR' | 'GESTOR_SEMEC' | 'SECRETARIO' | 'PROFESSOR' | 'ALUNO';
 
 // FIX #10: Interface tipada para alocações (substituindo any[])
 export interface Alocacao {
