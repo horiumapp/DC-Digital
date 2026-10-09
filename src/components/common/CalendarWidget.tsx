@@ -119,7 +119,7 @@ export default function CalendarWidget({
     navigate(`/frequencia?date=${dayStr}${turmaParam}`);
   }, [navigate, turmaAtiva]);
 
-  const handleDayClick = useCallback((e: React.MouseEvent, day: number, details: DayDetails) => {
+  const handleDayClick = (e: React.MouseEvent, day: number, details: DayDetails) => {
     e.preventDefault();
     const signature = `${year}-${currentMonth}-${day}-${details.status}-${details.isFrequenciaFull}-${details.isConteudoFull}-${details.avaliacoesLancadas}`;
     lastEmittedRef.current = signature;
@@ -129,7 +129,7 @@ export default function CalendarWidget({
     if (details.isDiaDeAula) {
       handleOpenFrequencia(details.dayStr);
     }
-  }, [onDaySelect, handleOpenFrequencia, year, currentMonth]);
+  };
 
   const handleViewChange = (mode: 'grid' | 'agenda') => {
     setViewMode(mode);
