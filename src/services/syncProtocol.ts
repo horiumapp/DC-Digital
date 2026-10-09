@@ -67,6 +67,20 @@ export function normalizeMutationResponse(data: unknown, wire: MutationRecord): 
   throw new Error('Resposta de sincronização inválida');
 }
 
+export function isPartialMutation(data: unknown): data is { status: 'partial'; applied: MutationRecord[]; conflicts: MutationRecord[] } {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
+  const row = data as { status?: unknown; applied?: unknown; conflicts?: unknown };
+  return row.status === 'partial' && Array.isArray(row.applied) && Array.isArray(row.conflicts);
+}
+
+export function keepConflictRecords(table: string, payload: MutationRecord, conflicts: MutationRecord[]): MutationRecord {
+  const sent = (Array.isArray(payload.records) ? payload.records : [payload]) as MutationRecord[];
+  const refused = new Set(conflicts.map((row) => recordKey(table, row)));
+  const kept = sent.filter((row) => refused.has(recordKey(table, row)));
+  if (Array.isArray(payload.records)) return { ...payload, records: kept };
+  return kept[0] ?? payload;
+}
+
 export async function acknowledgeMutation(table: string, payload: MutationRecord, returned: MutationRecord[]): Promise<void> {
   const localTable = getOperationalTable(table);
   if (!localTable) return;

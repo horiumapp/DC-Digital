@@ -8,7 +8,7 @@
 import { supabase } from '../lib/supabase';
 import { db, now, hashOperation, type SyncLogEntry, type SyncQueueItem, type LocalFrequencia, type LocalNota } from '../lib/db';
 import * as Queue from './offlineQueue';
-import { acknowledgeMutation, normalizeMutationResponse, type MutationRecord, keepTransactionAlive } from './syncProtocol';
+import { acknowledgeMutation, isPartialMutation, keepConflictRecords, normalizeMutationResponse, type MutationRecord, keepTransactionAlive } from './syncProtocol';
 import { offlineOwner } from './offlineIdentity';
 import { pingInternet, pingSupabase } from '../utils/network';
 import { getTid } from '../utils/turmaUtils';
@@ -187,6 +187,7 @@ async function _runSyncAll(ownerId: string): Promise<SyncResult> {
   emit('start');
 
   const result: SyncResult = { synced: 0, failed: 0, total: 0, remaining: 0, errors: [] };
+  const cycleStarted = Date.now();
 
   // FIX P2-#7: Capturar total de itens pendentes no início do ciclo para progresso
 
@@ -220,23 +221,43 @@ async function _runSyncAll(ownerId: string): Promise<SyncResult> {
           ITEM_SYNC_TIMEOUT_MS
         );
         try {
-          const returned = await processItem(item, itemController.signal);
+          const processed = await processItem(item, itemController.signal);
           if (itemController.signal.aborted || offlineOwner() !== ownerId) throw new Error('Sincronização interrompida; confirmação preservada para retry');
+          const conflictCount = processed.conflicts.length;
           await db.transaction('rw', [db.syncQueue, db.avaliacoes, db.notas, db.frequencias, db.conteudos, db.fechamentos], async () => {
-            if (item!.table === 'avaliacoes' && returned[0]?.id && item!.localId && item!.operation !== 'DELETE') {
-              await updateTempAvaliacaoId(item!.localId, String(returned[0].id), JSON.parse(item!.payload));
+            if (item!.table === 'avaliacoes' && processed.rows[0]?.id && item!.localId && item!.operation !== 'DELETE') {
+              await updateTempAvaliacaoId(item!.localId, String(processed.rows[0].id), JSON.parse(item!.payload));
             }
-            await acknowledgeMutation(item!.table, JSON.parse(item!.payload), returned);
-            await Queue.markDone(item!.id!);
+            await acknowledgeMutation(item!.table, JSON.parse(item!.payload), processed.rows);
+            if (conflictCount === 0) {
+              await Queue.markDone(item!.id!);
+            } else {
+              const nextPayload = keepConflictRecords(item!.table, JSON.parse(item!.payload) as MutationRecord, processed.conflicts);
+              await db.syncQueue.update(item!.id!, {
+                payload: JSON.stringify(nextPayload),
+                operationId: crypto.randomUUID(),
+                requestPayload: '',
+                attempted: false,
+              });
+              await Queue.fail(item!.id!, `CONFLICT: ${conflictCount} registro(s) alterados em outro dispositivo`);
+            }
           });
         } finally {
           clearTimeout(itemTimeout);
           activeController = null;
         }
 
-        await logSync(item.table, item.operation, 'success');
-        result.synced++;
-        emit('itemSynced', { table: item.table, operation: item.operation });
+        if (processed.conflicts.length === 0) {
+          await logSync(item.table, item.operation, 'success');
+          result.synced++;
+          emit('itemSynced', { table: item.table, operation: item.operation });
+        } else {
+          const conflictMsg = `CONFLICT: ${processed.conflicts.length} registro(s) alterados em outro dispositivo`;
+          result.failed++;
+          result.errors.push(`${item.table}/${item.operation}: ${conflictMsg}`);
+          emit('itemFailed', { table: item.table, error: conflictMsg, conflict: true });
+          await logSync(item.table, item.operation, 'conflict', conflictMsg);
+        }
 
       } catch (err) {
         const rawErrorMsg = err instanceof Error
@@ -342,7 +363,25 @@ async function _runSyncAll(ownerId: string): Promise<SyncResult> {
       await reconcileLocalRecords();
     }
 
-    const retryAt = (await Queue.getAllPending()).filter(i => i.ownerUserId === ownerId && i.retryAfter)
+    const pending = await Queue.getAllPending();
+    const dead = await Queue.getDeadLetterItems();
+    const oldestMs = pending.reduce((min, row) => {
+      const created = Date.parse(row.createdAt);
+      return Number.isFinite(created) ? Math.min(min, created) : min;
+    }, Number.POSITIVE_INFINITY);
+    const oldestPendingHours = oldestMs === Number.POSITIVE_INFINITY ? 0 : Math.floor((Date.now() - oldestMs) / 3_600_000);
+    if (dead.length > 0 || oldestPendingHours >= 24) {
+      reportWarning('Fila de sincronização precisa de atenção', {
+        pending: pending.length,
+        deadLetter: dead.length,
+        failed: result.failed,
+        synced: result.synced,
+        oldestPendingHours,
+        durationMs: Date.now() - cycleStarted,
+      });
+    }
+
+    const retryAt = pending.filter(i => i.ownerUserId === ownerId && i.retryAfter)
       .map(i => Date.parse(i.retryAfter!)).sort((a,b) => a-b)[0];
     if (retryAt && !_debounceTimer) _debounceTimer=setTimeout(() => { _debounceTimer=null; void syncAll(); },Math.max(1000,retryAt-Date.now()));
     setState(result.failed > 0 ? 'ERROR' : 'IDLE');
@@ -682,7 +721,7 @@ function sanitizeSecurityLog(payload: SecurityLogPayload): Record<string, unknow
 // ============================================================
 
 // FIX M1: signal opcional para timeout por item
-async function processItem(item: SyncQueueItem, signal: AbortSignal): Promise<MutationRecord[]> {
+async function processItem(item: SyncQueueItem, signal: AbortSignal): Promise<{ rows: MutationRecord[]; conflicts: MutationRecord[] }> {
   if (signal.aborted) throw signal.reason;
   const {data:{session},error:authError} = await supabase.auth.getSession();
   if (authError || !session || session.user.id !== item.ownerUserId) throw new Error('Sessão não pertence à operação pendente');
@@ -692,7 +731,7 @@ async function processItem(item: SyncQueueItem, signal: AbortSignal): Promise<Mu
   if (item.table === 'security_logs') {
     const {error} = await supabase.from('security_logs').insert([sanitizeSecurityLog(payload)]).abortSignal(signal);
     if (error) throw error;
-    return [];
+    return { rows: [], conflicts: [] };
   }
   let wire: MutationRecord;
   if (item.requestPayload) {
@@ -739,7 +778,8 @@ async function processItem(item: SyncQueueItem, signal: AbortSignal): Promise<Mu
     p_table:item.table,p_operation:item.operation,p_payload:wire,p_operation_id:operationId,
   }).abortSignal(signal);
   if (error) throw error;
-  return normalizeMutationResponse(data ?? [], wire);
+  if (isPartialMutation(data)) return { rows: data.applied, conflicts: data.conflicts };
+  return { rows: normalizeMutationResponse(data ?? [], wire), conflicts: [] };
 }
 
 async function updateTempAvaliacaoId(localId: number, serverId: string, original: MutationRecord): Promise<void> {

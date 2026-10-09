@@ -32,8 +32,8 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.record_sync_idempotency_key(uuid, uuid, text, jsonb) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.record_sync_idempotency_key(uuid, uuid, text, jsonb) TO service_role;
+REVOKE ALL ON FUNCTION public.record_sync_idempotency_key(uuid, uuid, text, jsonb) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.record_sync_idempotency_key(uuid, uuid, text, jsonb) TO authenticated, service_role;
 CREATE OR REPLACE FUNCTION public.apply_academic_mutation(
   p_table text,
   p_operation text,
@@ -130,7 +130,8 @@ BEGIN
    old_row:=NULL;
    EXECUTE format('SELECT to_jsonb(t) FROM public.%I t WHERE %s FOR UPDATE',t,predicate) INTO old_row USING r;
    expected:=coalesce((r->>'_expected_revision')::bigint,0);
-   IF coalesce((old_row->>'sync_revision')::bigint,0)<>expected THEN
+   IF coalesce((old_row->>'sync_revision')::bigint,0)<>expected
+      OR (p_operation='UPDATE' AND old_row IS NULL) THEN
     conflicts := conflicts || jsonb_build_array(r);
     CONTINUE;
    END IF;
