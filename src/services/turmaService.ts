@@ -185,6 +185,7 @@ export const TurmaService = {
   },
 
   salvarAvaliacao: async (av: Avaliacao, turmaId: string | number, disciplina: string): Promise<string> => {
+    throw new Error('Gravação acadêmica direta desativada. Use o serviço offline para manter a revisão de sincronização.');
     const tid = getTid(turmaId);
     const payload = {
       turma_id: tid,
@@ -219,6 +220,7 @@ export const TurmaService = {
   },
 
   salvarNotas: async (avaliacaoId: string, notas: { alunoId: string, valor: string }[]): Promise<void> => {
+    throw new Error('Gravação acadêmica direta desativada. Use o serviço offline para manter a revisão de sincronização.');
     const upserts = notas.map(n => ({
       avaliacao_id: avaliacaoId,
       aluno_id: n.alunoId,
@@ -229,6 +231,7 @@ export const TurmaService = {
   },
 
   salvarFrequencia: async (turmaId: string | number, disciplina: string, data: string, tempo: string, alunosFreq: Aluno[]): Promise<void> => {
+    throw new Error('Gravação acadêmica direta desativada. Use o serviço offline para manter a revisão de sincronização.');
     const tid = getTid(turmaId);
     // Normalizar data para ISO (YYYY-MM-DD) antes de gravar
     const dataISO = normalizarDataISO(data);
@@ -246,6 +249,7 @@ export const TurmaService = {
   },
 
   salvarConteudo: async (turmaId: string | number, disciplina: string, cont: Conteudo): Promise<void> => {
+    throw new Error('Gravação acadêmica direta desativada. Use o serviço offline para manter a revisão de sincronização.');
     const tid = getTid(turmaId);
     // Normalizar data para ISO (YYYY-MM-DD) antes de gravar
     const dataISO = normalizarDataISO(cont.data);
