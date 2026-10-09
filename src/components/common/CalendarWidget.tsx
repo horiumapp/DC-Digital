@@ -121,8 +121,6 @@ export default function CalendarWidget({
 
   const handleDayClick = (e: React.MouseEvent, day: number, details: DayDetails) => {
     e.preventDefault();
-    const signature = `${year}-${currentMonth}-${day}-${details.status}-${details.isFrequenciaFull}-${details.isConteudoFull}-${details.avaliacoesLancadas}`;
-    lastEmittedRef.current = signature;
     onDaySelect(day, details);
 
     // Abre o diário diretamente no primeiro clique se for dia de aula
