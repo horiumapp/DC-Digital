@@ -4,7 +4,7 @@ import { beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
 import { db, now } from '../lib/db';
 import * as Queue from '../services/offlineQueue';
 import { setOfflineOwner } from '../services/offlineIdentity';
-import { acknowledgeMutation, normalizeMutationResponse } from '../services/syncProtocol';
+import { acknowledgeMutation, keepConflictRecords, normalizeMutationResponse } from '../services/syncProtocol';
 const storage = new Map<string,string>();
 vi.stubGlobal('localStorage',{getItem:(k:string)=>storage.get(k)||null,setItem:(k:string,v:string)=>storage.set(k,v),removeItem:(k:string)=>storage.delete(k)});
 const owner='00000000-0000-0000-0000-000000000001';
@@ -101,5 +101,15 @@ describe('offlineQueue com IndexedDB real',()=>{
   expect(rows).toHaveLength(1);
   expect(rows[0].sync_revision).toBe(4);
   expect(() => normalizeMutationResponse({ status: 'outro' }, wire)).toThrow('Resposta de sincronização inválida');
+  expect(() => normalizeMutationResponse({ status: 'partial', applied: [], conflicts: [] }, wire)).toThrow('Resposta de sincronização inválida');
+ });
+ it('separa o registro em conflito e preserva os demais do lote', () => {
+  const records = [
+    { turma_id: 't', aluno_id: 'a', data: '2026-03-01', tempo: '1', disciplina: 'MAT', status: 'P' },
+    { turma_id: 't', aluno_id: 'b', data: '2026-03-01', tempo: '1', disciplina: 'MAT', status: 'F' },
+    { turma_id: 't', aluno_id: 'c', data: '2026-03-01', tempo: '1', disciplina: 'MAT', status: 'P' },
+  ];
+  const kept = keepConflictRecords('frequencias', { records }, [records[1]]);
+  expect(kept.records).toEqual([records[1]]);
  });
 });

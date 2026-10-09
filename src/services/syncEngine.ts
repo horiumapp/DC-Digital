@@ -220,8 +220,9 @@ async function _runSyncAll(ownerId: string): Promise<SyncResult> {
           () => itemController.abort(new Error(`[TIMEOUT] Item ${item!.id} (${item!.table}/${item!.operation}) excedeu ${ITEM_SYNC_TIMEOUT_MS / 1000}s`)),
           ITEM_SYNC_TIMEOUT_MS
         );
+        let processed: { rows: MutationRecord[]; conflicts: MutationRecord[] };
         try {
-          const processed = await processItem(item, itemController.signal);
+          processed = await processItem(item, itemController.signal);
           if (itemController.signal.aborted || offlineOwner() !== ownerId) throw new Error('Sincronização interrompida; confirmação preservada para retry');
           const conflictCount = processed.conflicts.length;
           await db.transaction('rw', [db.syncQueue, db.avaliacoes, db.notas, db.frequencias, db.conteudos, db.fechamentos], async () => {
