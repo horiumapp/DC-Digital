@@ -122,6 +122,13 @@ Deno.serve(async (req: Request) => {
     );
   }
 
+  if (!req.headers.get("Origin")) {
+    return new Response(
+      JSON.stringify({ error: "Origem ausente" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
     // 1. Validar que o chamador tem permissão via JWT
     const authHeader = req.headers.get("Authorization");
