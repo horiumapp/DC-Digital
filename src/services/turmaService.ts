@@ -514,9 +514,9 @@ export const TurmaService = {
       query = query.eq('disciplina', disciplina);
     }
 
-    const { data, error } = await readAllRows(query.order('id'));
+    const { data, error } = await readAllRows<{ id?: string; bimestre: string; status: string; disciplina: string; data_fechamento?: string; created_at?: string; usuario_fechamento_id?: string; sync_revision?: number }>(query.order('id'));
     if (error) throw error;
-    return (data || []).map((f: any) => ({
+    return (data || []).map(f => ({
       ...f,
       created_at: f.data_fechamento || f.created_at,
     }));
@@ -661,7 +661,7 @@ export const TurmaService = {
             fase: fase,
             numero: t.turma_codigo || numero,
             escolaId: t.escola_id,
-            escolaNome: (Array.isArray(t.escolas) ? t.escolas[0]?.nome : (t.escolas as any)?.nome) || 'ESCOLA NÃO IDENTIFICADA'
+            escolaNome: (Array.isArray(t.escolas) ? (t.escolas[0] as { nome?: string } | undefined)?.nome : (t.escolas as { nome?: string } | null | undefined)?.nome) || 'ESCOLA NÃO IDENTIFICADA'
           });
         });
       });

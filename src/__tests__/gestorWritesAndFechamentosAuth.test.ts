@@ -28,7 +28,7 @@ function p_escola_permitida(user: UserContext, targetEscolaId: string): boolean 
 }
 
 // Simula a função SQL p_acesso_por_turma(p_turma_id)
-function p_acesso_por_turma(user: UserContext, targetTurma: Turma): boolean {
+function _p_acesso_por_turma(user: UserContext, targetTurma: Turma): boolean {
   if (user.role === 'ADMIN' || user.role === 'GESTOR') {
     return true; // Administradores e Gestores podem gerenciar turmas da rede
   }

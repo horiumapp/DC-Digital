@@ -20,16 +20,19 @@ export async function loadAcademicCalendar(escolaId?: string): Promise<void> {
     const orderedQuery = typeof (query as unknown as Record<string, unknown>).order === 'function'
       ? query.order('periodo').order('id')
       : query;
-    const {data} = await readAllRows<CalendarRow>(orderedQuery);
-    if (data.length) {
-      const byPeriod = new Map<string,CalendarRow>();
-      for (const row of data.filter(r => !r.escola_id)) byPeriod.set(row.periodo,row);
-      for (const row of data.filter(r => r.escola_id === escolaId)) byPeriod.set(row.periodo,row);
-      periods = [...byPeriod.values()].map(row => ({
-        id:row.periodo,label:row.periodo,nome:bundled.find(p => p.id===row.periodo)?.nome || row.periodo,
-        dataInicio:row.data_inicio,dataFim:row.data_fim,
-      })).sort((a,b) => Number(!a.id.includes('BIMESTRE'))-Number(!b.id.includes('BIMESTRE')) || a.dataInicio.localeCompare(b.dataInicio) || a.id.localeCompare(b.id));
-      localStorage.setItem(key,JSON.stringify(periods));
+    const qObj = orderedQuery as unknown as Record<string, unknown>;
+    if (typeof qObj?.range === 'function') {
+      const { data } = await readAllRows<CalendarRow>(orderedQuery);
+      if (data.length) {
+        const byPeriod = new Map<string, CalendarRow>();
+        for (const row of data.filter(r => !r.escola_id)) byPeriod.set(row.periodo, row);
+        for (const row of data.filter(r => r.escola_id === escolaId)) byPeriod.set(row.periodo, row);
+        periods = [...byPeriod.values()].map(row => ({
+          id: row.periodo, label: row.periodo, nome: bundled.find(p => p.id === row.periodo)?.nome || row.periodo,
+          dataInicio: row.data_inicio, dataFim: row.data_fim,
+        })).sort((a, b) => Number(!a.id.includes('BIMESTRE')) - Number(!b.id.includes('BIMESTRE')) || a.dataInicio.localeCompare(b.dataInicio) || a.id.localeCompare(b.id));
+        localStorage.setItem(key, JSON.stringify(periods));
+      }
     }
   } catch (error) { console.warn('[Calendário] Usando calendário local:',error); }
   APP_CONFIG.PERIODOS = periods;

@@ -69,7 +69,7 @@ export async function fetchTurmasRelatorio(user: { id: string; role: string; ema
     if (!_isOnline) throw new Error('Offline');
     const result = await TurmaService.fetchTurmasRelatorio(user);
     if (result.length > 0) {
-      const uniqueTurmasMap = new Map<string, { id: string; nome: string; turno: string; ensino: string; escola_id: string }>();
+      const uniqueTurmasMap = new Map<string, { id: string; nome: string; turno: string; ensino: string; escola_id: string; escola_nome?: string }>();
       result.forEach(t => {
         if (!uniqueTurmasMap.has(t.id)) {
           uniqueTurmasMap.set(t.id, {
@@ -77,7 +77,8 @@ export async function fetchTurmasRelatorio(user: { id: string; role: string; ema
             nome: t.nome,
             turno: t.turno,
             ensino: t.ensino,
-            escola_id: t.escolaId
+            escola_id: t.escolaId,
+            escola_nome: t.escolaNome
           });
         }
       });
@@ -141,7 +142,7 @@ export async function fetchTurmasRelatorio(user: { id: string; role: string; ema
             fase: fase,
             numero: numero,
             escolaId: t.escola_id || '',
-            escolaNome: 'ESCOLA LOCAL'
+            escolaNome: t.escola_nome || 'ESCOLA LOCAL'
           });
         });
       });

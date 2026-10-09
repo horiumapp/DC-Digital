@@ -28,6 +28,60 @@ interface AlunoCompletoBoletim {
   frequencias: FrequenciaBoletimItem[];
 }
 
+interface EscolaRow {
+  id?: string;
+  nome?: string;
+  inep?: string;
+  diretor?: string;
+  distrito?: string;
+  secretario?: string;
+  logo_url?: string | null;
+}
+
+interface TurmaRow {
+  id: string;
+  nome: string;
+  turno?: string;
+  ano_letivo?: number;
+  ensino?: string;
+  escola_id?: string;
+  escola_nome?: string;
+  escolas?: EscolaRow | EscolaRow[] | null;
+}
+
+interface AlunoRow {
+  id: string;
+  nome: string;
+  cpf?: string;
+  data_nascimento?: string;
+  sexo?: string;
+  nome_responsavel?: string;
+  endereco?: string;
+  status?: string;
+  matricula?: string;
+}
+
+interface NotaRow {
+  valor?: number | null;
+  aluno_id?: string;
+  avaliacao_id?: string | number;
+  avaliacoes?: {
+    tipo?: string;
+    disciplina?: string;
+    bimestre?: number | string;
+    valor_maximo?: number;
+    turma_id?: string;
+  } | null;
+}
+
+interface FrequenciaRow {
+  data?: string;
+  disciplina?: string;
+  status?: string;
+  participacao?: string;
+  aluno_id?: string;
+}
+
 export default function RelatorioBoletins() {
   const { user } = useAuth();
   const { showError, showWarning } = useToast();
@@ -97,8 +151,8 @@ export default function RelatorioBoletins() {
     setLoadingDados(true);
     try {
       // 1. Buscar informações da Turma e da Escola
-      let turmaInfo: any = null;
-      let escolaInfo: any = null;
+      let turmaInfo: TurmaRow | null = null;
+      let escolaInfo: EscolaRow | null = null;
 
       try {
         const { data: turmaDb } = await supabase
@@ -108,8 +162,8 @@ export default function RelatorioBoletins() {
           .maybeSingle();
 
         if (turmaDb) {
-          turmaInfo = turmaDb;
-          escolaInfo = (Array.isArray(turmaDb.escolas) ? turmaDb.escolas[0] : turmaDb.escolas) || null;
+          turmaInfo = turmaDb as unknown as TurmaRow;
+          escolaInfo = (Array.isArray(turmaDb.escolas) ? turmaDb.escolas[0] : turmaDb.escolas) as EscolaRow | null;
         }
       } catch (err) {
         console.warn('Erro ao consultar turma online, tentando IndexedDB:', err);
@@ -120,9 +174,14 @@ export default function RelatorioBoletins() {
         const localTurma = await db.turmas.get(turmaId);
         if (localTurma) {
           turmaInfo = localTurma;
-          if (localTurma.escola_id) {
-            escolaInfo = await (db as any).escolas?.get?.(localTurma.escola_id);
-          }
+          escolaInfo = {
+            id: localTurma.escola_id,
+            nome: localTurma.escola_nome || 'Escola',
+            diretor: '',
+            secretario: '',
+            inep: '',
+            logo_url: null,
+          };
         }
       }
 
@@ -137,9 +196,9 @@ export default function RelatorioBoletins() {
       const logoEscola = getEscolaLogo(escolaInfo);
 
       // 2. Buscar Alunos da Turma
-      let alunosLista: any[] = [];
+      let alunosLista: AlunoRow[] = [];
       try {
-        const { data: alunosDb } = await readAllRows(
+        const { data: alunosDb } = await readAllRows<AlunoRow>(
           supabase
             .from('alunos')
             .select('id, nome, cpf, data_nascimento, sexo, nome_responsavel, endereco, status, matricula')
@@ -167,7 +226,7 @@ export default function RelatorioBoletins() {
       const alunoIds = alunosLista.map(a => a.id);
 
       // 3. Buscar Notas de todos os alunos da turma
-      let notasLista: any[] = [];
+      let notasLista: NotaRow[] = [];
       try {
         const { data: notasDb } = await readAllRows(
           supabase
@@ -176,7 +235,7 @@ export default function RelatorioBoletins() {
             .in('aluno_id', alunoIds)
         );
         if (notasDb) {
-          notasLista = notasDb;
+          notasLista = notasDb as unknown as NotaRow[];
         }
       } catch {
         // Fallback offline
@@ -195,9 +254,9 @@ export default function RelatorioBoletins() {
       }
 
       // 4. Buscar Frequências de todos os alunos da turma
-      let frequenciasLista: any[] = [];
+      let frequenciasLista: FrequenciaRow[] = [];
       try {
-        const { data: freqDb } = await readAllRows(
+        const { data: freqDb } = await readAllRows<FrequenciaRow>(
           supabase
             .from('frequencias')
             .select('data, disciplina, status, participacao, aluno_id')
@@ -224,13 +283,13 @@ export default function RelatorioBoletins() {
             tipo: n.avaliacoes?.tipo || 'N/D',
             valor: Number(n.valor) || 0,
             valor_maximo: Number(n.avaliacoes?.valor_maximo) || 10,
-            bimestre: n.avaliacoes?.bimestre || '1º',
+            bimestre: String(n.avaliacoes?.bimestre || '1º'),
           }));
 
         const frequenciasDoAluno: FrequenciaBoletimItem[] = frequenciasLista
           .filter(f => String(f.aluno_id) === String(aluno.id))
           .map(f => ({
-            data: f.data,
+            data: f.data || '',
             disciplina: f.disciplina || 'Geral',
             status: f.status || 'P',
             participacao: f.participacao || 'Presencial'
@@ -247,7 +306,7 @@ export default function RelatorioBoletins() {
           turma_nome: turmaInfo?.nome || 'Turma',
           turma_turno: turmaInfo?.turno || 'Manhã',
           turma_ano: String(turmaInfo?.ano_letivo || APP_CONFIG.YEAR),
-          matricula: formatMatriculaCpf(aluno.cpf || aluno.matricula),
+          matricula: formatMatriculaCpf(aluno.cpf || aluno.matricula || ''),
           data_nascimento: aluno.data_nascimento || '---',
           nome_responsavel: aluno.nome_responsavel || '---',
           endereco: aluno.endereco || '---',

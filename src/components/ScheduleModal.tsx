@@ -23,6 +23,11 @@ interface ScheduleModalProps {
 const DIAS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 const SLOTS = [1, 2, 3, 4, 5, 6, 7];
 
+interface LockableScreenOrientation {
+  lock?: (orientation: string) => Promise<void>;
+  unlock?: () => void;
+}
+
 const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, professorId, escolaId }: ScheduleModalProps) {
   const { showError, showSuccess } = useToast();
   const [loading, setLoading] = useState(false);
@@ -40,12 +45,14 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
         if (el.requestFullscreen) {
           await el.requestFullscreen();
         }
-        if (window.screen.orientation && 'lock' in window.screen.orientation) {
-          await (window.screen.orientation as any).lock('landscape').catch(() => {});
+        const orient = window.screen.orientation as unknown as LockableScreenOrientation | undefined;
+        if (orient && typeof orient.lock === 'function') {
+          await orient.lock('landscape').catch(() => {});
         }
       } else {
-        if (window.screen.orientation && 'unlock' in window.screen.orientation) {
-          (window.screen.orientation as any).unlock();
+        const orient = window.screen.orientation as unknown as LockableScreenOrientation | undefined;
+        if (orient && typeof orient.unlock === 'function') {
+          orient.unlock();
         }
         if (document.exitFullscreen) {
           await document.exitFullscreen().catch(() => {});
@@ -58,8 +65,9 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
 
   const handleClose = useCallback(() => {
     if (document.fullscreenElement) {
-      if (window.screen.orientation && 'unlock' in window.screen.orientation) {
-        (window.screen.orientation as any).unlock();
+      const orient = window.screen.orientation as unknown as LockableScreenOrientation | undefined;
+      if (orient && typeof orient.unlock === 'function') {
+        orient.unlock();
       }
       document.exitFullscreen().catch(() => {});
     }
@@ -69,8 +77,9 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
   useEffect(() => {
     return () => {
       if (document.fullscreenElement) {
-        if (window.screen.orientation && 'unlock' in window.screen.orientation) {
-          (window.screen.orientation as any).unlock();
+        const orient = window.screen.orientation as unknown as LockableScreenOrientation | undefined;
+        if (orient && typeof orient.unlock === 'function') {
+          orient.unlock();
         }
         document.exitFullscreen().catch(() => {});
       }

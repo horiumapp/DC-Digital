@@ -22,6 +22,7 @@ export interface LocalTurma {
   turno: string;
   ensino?: string;
   escola_id?: string;
+  escola_nome?: string;
   syncStatus: SyncStatus;
   updatedAt: string;
 }

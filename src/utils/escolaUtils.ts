@@ -92,8 +92,13 @@ export const isNomeValido = (nome?: string | null): boolean => {
   return !placeholders.includes(clean);
 };
 
+export type EquipeEscolarClient = {
+  from: (table: string) => any;
+  rpc?: (fn: string, args?: Record<string, unknown>) => any;
+};
+
 export async function obterEquipeEscolar(
-  supabaseClient: any,
+  supabaseClient: EquipeEscolarClient | null | undefined,
   escolaId?: string | null,
   fallbackDiretor?: string | null,
   fallbackSecretario?: string | null
@@ -103,20 +108,21 @@ export async function obterEquipeEscolar(
 
   if (escolaId && supabaseClient) {
     try {
-      const { data: equipeUsers } = await supabaseClient
+      const res = await supabaseClient
         .from('usuarios')
         .select('nome_completo, cargo')
         .eq('escola_id', escolaId)
         .in('cargo', ['GESTOR', 'SECRETARIO'])
         .order('criado_em', { ascending: true });
 
-      if (equipeUsers && equipeUsers.length > 0) {
-        const gestorUser = equipeUsers.find((u: any) => u.cargo === 'GESTOR');
+      const equipeUsers = (res?.data || []) as Array<{ cargo?: string | null; nome_completo?: string | null }>;
+      if (equipeUsers.length > 0) {
+        const gestorUser = equipeUsers.find(u => u.cargo === 'GESTOR');
         if (gestorUser?.nome_completo && isNomeValido(gestorUser.nome_completo)) {
           diretorNome = gestorUser.nome_completo.trim();
         }
 
-        const secUser = equipeUsers.find((u: any) => u.cargo === 'SECRETARIO');
+        const secUser = equipeUsers.find(u => u.cargo === 'SECRETARIO');
         if (secUser?.nome_completo && isNomeValido(secUser.nome_completo)) {
           secretarioNome = secUser.nome_completo.trim();
         }
@@ -125,7 +131,7 @@ export async function obterEquipeEscolar(
       console.warn('Erro ao consultar usuarios da equipe escolar:', err);
     }
 
-    if (!secretarioNome || !diretorNome) {
+    if ((!secretarioNome || !diretorNome) && typeof supabaseClient.rpc === 'function') {
       try {
         const [secRpc, dirRpc] = await Promise.all([
           !secretarioNome ? supabaseClient.rpc('get_secretario_escola', { p_escola_id: escolaId }) : Promise.resolve({ data: null, error: null }),

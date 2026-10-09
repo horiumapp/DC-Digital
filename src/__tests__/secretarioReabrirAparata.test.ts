@@ -45,7 +45,7 @@ describe('Reabertura de Aparata / Fechamento de Bimestre (Granular e Total)', ()
         eq: vi.fn().mockReturnThis(),
       };
       // Simula a resolução da query
-      mockQuery.eq.mockImplementation((col: string, val: string) => {
+      mockQuery.eq.mockImplementation((_col: string, _val: string) => {
         return mockQuery;
       });
       // Permite await mockQuery
@@ -67,7 +67,7 @@ describe('Reabertura de Aparata / Fechamento de Bimestre (Granular e Total)', ()
         delete: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
       };
-      mockQuery.eq.mockImplementation((col: string, val: string) => {
+      mockQuery.eq.mockImplementation((_col: string, _val: string) => {
         return mockQuery;
       });
       mockQuery.then = (resolve: any) => resolve({ error: null });
