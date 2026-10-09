@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { ArrowLeft, Printer, Users, GraduationCap, ChevronDown, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Printer, Users, GraduationCap, ChevronDown, AlertCircle } from 'lucide-react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { APP_CONFIG } from '../config/appConfig';
@@ -32,11 +32,6 @@ export default function RelatorioBoletins() {
   const { user } = useAuth();
   const { showError, showWarning } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
-
-  // Apenas secretário, gestor e administrador podem visualizar/imprimir boletins escolares oficiais
-  if (user && !ADMIN_ROLES.includes(user.role)) {
-    return <Navigate to="/turmas" replace />;
-  }
 
   const paramTurmaId = searchParams.get('turmaId') || '';
   const paramAlunoId = searchParams.get('alunoId') || '';
@@ -319,6 +314,11 @@ export default function RelatorioBoletins() {
   };
 
   const homePath = user?.role === 'PROFESSOR' ? '/turmas' : '/administracao';
+
+  // Apenas secretário, gestor e administrador podem visualizar/imprimir boletins escolares oficiais
+  if (user && !ADMIN_ROLES.includes(user.role)) {
+    return <Navigate to="/turmas" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 relative pb-16">
