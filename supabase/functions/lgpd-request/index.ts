@@ -204,6 +204,13 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    if (!req.headers.get("Origin")) {
+      return new Response(
+        JSON.stringify({ error: "Origem ausente" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // 1. Extrair IP do client (Supabase Edge Functions usa o header x-forwarded-for)
     const forwarded = req.headers.get("x-forwarded-for");
     const clientIp = forwarded

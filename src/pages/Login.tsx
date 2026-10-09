@@ -9,7 +9,7 @@ import { translateSupabaseError } from '../utils/supabaseErrors';
 import PrivacyLinksFooter from '../components/PrivacyLinksFooter';
 import { logSecurityEvent } from '../services/securityLogService';
 import { validarCPF } from '../utils/cpfUtils';
-import { ADMIN_ROLES } from '../constants/authConstants';
+import { ADMIN_ROLES, SEMEC_ROLE } from '../constants/authConstants';
 
 const ALUNO_EMAIL_DOMAIN = 'aluno.dcdigital.local';
 
@@ -25,7 +25,7 @@ export default function Login() {
       navigate(
         user.role === 'ALUNO'
           ? '/portal-aluno'
-          : ADMIN_ROLES.includes(user.role)
+          : user.role === SEMEC_ROLE || ADMIN_ROLES.includes(user.role)
           ? '/administracao'
           : '/turmas',
         { replace: true }

@@ -43,18 +43,6 @@ export default defineConfig(() => {
           ],
           // Runtime caching strategies
           runtimeCaching: [
-            // App Shell — StaleWhileRevalidate
-            {
-              urlPattern: /^https:\/\/.*\.(js|css)$/,
-              handler: 'StaleWhileRevalidate',
-              options: {
-                cacheName: 'static-assets-v1',
-                expiration: {
-                  maxEntries: 200,
-                  maxAgeSeconds: 30 * 24 * 60 * 60, // 30 dias
-                },
-              },
-            },
             // Imagens estáticas — CacheFirst
             {
               urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/,

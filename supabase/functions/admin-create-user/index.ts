@@ -145,15 +145,15 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Verificar role do chamador — primeiro via app_metadata (JWT seguro do backend), com fallback seguro
-    let effectiveRole = (callerUser.app_metadata?.role as string | undefined)?.toUpperCase();
+    // O cargo institucional vale mais que um claim antigo do JWT.
+    const { data: actorProfile } = await supabaseAdmin
+      .from("usuarios")
+      .select("cargo")
+      .eq("id", callerUser.id)
+      .maybeSingle();
+    let effectiveRole = actorProfile?.cargo?.toUpperCase();
     if (!effectiveRole) {
-      const { data: actorProfile } = await supabaseAdmin
-        .from("usuarios")
-        .select("cargo")
-        .eq("id", callerUser.id)
-        .maybeSingle();
-      effectiveRole = actorProfile?.cargo?.toUpperCase();
+      effectiveRole = (callerUser.app_metadata?.role as string | undefined)?.toUpperCase();
     }
     if (!effectiveRole) {
       return new Response(
@@ -334,9 +334,8 @@ Deno.serve(async (req: Request) => {
       // Resolver ID do Auth
       let authUserId = targetUserData?.id || targetUserId;
       if (!authUserId && targetEmail) {
-        const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
-        const found = listData?.users?.find((u: { email?: string }) => u.email?.toLowerCase() === targetEmail);
-        if (found) authUserId = found.id;
+        const { data: lookedUp } = await supabaseAdmin.rpc("lookup_auth_user_id", { p_email: targetEmail });
+        if (typeof lookedUp === "string" && lookedUp) authUserId = lookedUp;
       }
 
       if (!authUserId) {
@@ -346,13 +345,17 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      if (targetUserData) {
+        await supabaseAdmin.from("professores").update({ usuario_id: null }).eq("usuario_id", authUserId);
+        await supabaseAdmin.from("alunos").update({ usuario_id: null }).eq("usuario_id", authUserId);
+        const { error: deleteProfileError } = await supabaseAdmin.from("usuarios").delete().eq("id", authUserId);
+        if (deleteProfileError) {
+          return new Response(JSON.stringify({ error: "O cadastro possui vínculos que impedem a exclusão. A conta de acesso foi mantida." }),
+            { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
       const { error: delAuthErr } = await supabaseAdmin.auth.admin.deleteUser(authUserId);
       if (delAuthErr) throw delAuthErr;
-      const { error: deleteProfileError } = await supabaseAdmin.from("usuarios").delete().eq("id", authUserId);
-      if (deleteProfileError) {
-        return new Response(JSON.stringify({ error: "Credenciais revogadas, mas o cadastro possui vínculos que impedem sua remoção. Solicite revisão administrativa." }),
-          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
 
       return new Response(
         JSON.stringify({ success: true, message: "Conta e credenciais removidas com sucesso" }),
@@ -507,10 +510,10 @@ Deno.serve(async (req: Request) => {
       createError?.message?.includes("already exists")
     ) {
       // Se a conta já existe no Auth, verificar se foi deixada pendente/incompleta por falha anterior
-      const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
-      const existingAuth = listData?.users?.find(
-        (u: { email?: string }) => u.email?.toLowerCase() === emailTrimmed
-      );
+      const { data: existingAuthId } = await supabaseAdmin.rpc("lookup_auth_user_id", { p_email: emailTrimmed });
+      const existingAuth = typeof existingAuthId === "string" && existingAuthId
+        ? { id: existingAuthId, app_metadata: {} as { role?: string } }
+        : null;
 
       if (existingAuth) {
         const { data: existingProfile } = await supabaseAdmin
@@ -520,8 +523,7 @@ Deno.serve(async (req: Request) => {
           .maybeSingle();
 
         // Se o usuário não tem perfil na tabela usuarios ou seu cargo está PENDENTE, completar o cadastro
-        const isOrphanOrPending =
-          !existingProfile || existingAuth.app_metadata?.role === "PENDENTE";
+        const isOrphanOrPending = !existingProfile;
 
         if (isOrphanOrPending) {
           targetUserId = existingAuth.id;

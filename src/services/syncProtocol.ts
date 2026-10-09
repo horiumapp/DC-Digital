@@ -57,6 +57,16 @@ export async function snapshotMutation(table: string, operation: string, payload
 export function keepTransactionAlive<T>(promise: Promise<T>): Promise<T> {
   return Dexie.currentTransaction ? Dexie.waitFor(promise) : promise;
 }
+/** Recibo expirado devolve um objeto. O cliente confirma com a revisão que enviou, sem iterar o objeto. */
+export function normalizeMutationResponse(data: unknown, wire: MutationRecord): MutationRecord[] {
+  if (Array.isArray(data)) return data as MutationRecord[];
+  if (data && typeof data === 'object' && (data as { status?: string }).status === 'already_processed') {
+    const records = (Array.isArray(wire.records) ? wire.records : [wire]) as MutationRecord[];
+    return records.map((row) => ({ ...row, sync_revision: Number(row._expected_revision || 0) }));
+  }
+  throw new Error('Resposta de sincronização inválida');
+}
+
 export async function acknowledgeMutation(table: string, payload: MutationRecord, returned: MutationRecord[]): Promise<void> {
   const localTable = getOperationalTable(table);
   if (!localTable) return;

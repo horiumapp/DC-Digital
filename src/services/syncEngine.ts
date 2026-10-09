@@ -8,7 +8,7 @@
 import { supabase } from '../lib/supabase';
 import { db, now, hashOperation, type SyncLogEntry, type SyncQueueItem, type LocalFrequencia, type LocalNota } from '../lib/db';
 import * as Queue from './offlineQueue';
-import { acknowledgeMutation, type MutationRecord, keepTransactionAlive } from './syncProtocol';
+import { acknowledgeMutation, normalizeMutationResponse, type MutationRecord, keepTransactionAlive } from './syncProtocol';
 import { offlineOwner } from './offlineIdentity';
 import { pingInternet, pingSupabase } from '../utils/network';
 import { getTid } from '../utils/turmaUtils';
@@ -739,7 +739,7 @@ async function processItem(item: SyncQueueItem, signal: AbortSignal): Promise<Mu
     p_table:item.table,p_operation:item.operation,p_payload:wire,p_operation_id:operationId,
   }).abortSignal(signal);
   if (error) throw error;
-  return (data || []) as MutationRecord[];
+  return normalizeMutationResponse(data ?? [], wire);
 }
 
 async function updateTempAvaliacaoId(localId: number, serverId: string, original: MutationRecord): Promise<void> {

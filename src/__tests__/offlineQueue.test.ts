@@ -4,7 +4,7 @@ import { beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
 import { db, now } from '../lib/db';
 import * as Queue from '../services/offlineQueue';
 import { setOfflineOwner } from '../services/offlineIdentity';
-import { acknowledgeMutation } from '../services/syncProtocol';
+import { acknowledgeMutation, normalizeMutationResponse } from '../services/syncProtocol';
 const storage = new Map<string,string>();
 vi.stubGlobal('localStorage',{getItem:(k:string)=>storage.get(k)||null,setItem:(k:string,v:string)=>storage.set(k,v),removeItem:(k:string)=>storage.delete(k)});
 const owner='00000000-0000-0000-0000-000000000001';
@@ -94,5 +94,12 @@ describe('offlineQueue com IndexedDB real',()=>{
   expect(claimed).toBeDefined();
   expect(claimed?.id).toBe(newId);
   expect(claimed?.status).toBe('processing');
+ });
+ it('recibo já processado confirma a revisão enviada sem exigir um array', () => {
+  const wire = { records: [{ turma_id: 't', aluno_id: 'a', _expected_revision: 4 }] };
+  const rows = normalizeMutationResponse({ status: 'already_processed', operation_id: 'x' }, wire);
+  expect(rows).toHaveLength(1);
+  expect(rows[0].sync_revision).toBe(4);
+  expect(() => normalizeMutationResponse({ status: 'outro' }, wire)).toThrow('Resposta de sincronização inválida');
  });
 });
