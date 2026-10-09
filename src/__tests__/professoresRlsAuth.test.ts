@@ -208,7 +208,7 @@ describe('Regras de Isolamento de Professores Multi-Escola (SEC-02)', () => {
     }
 
     it('deve permitir que Secretário importe/crie professor para sua própria escola', () => {
-      const state = { professores: [], alocacoes: [] };
+      const state: { professores: Professor[]; alocacoes: ProfessorAllocation[] } = { professores: [], alocacoes: [] };
       const secretario: UserContext = { role: 'SECRETARIO', escola_id: escolaA };
 
       const res = rpcCriarProfessorComAlocacao(
@@ -224,7 +224,7 @@ describe('Regras de Isolamento de Professores Multi-Escola (SEC-02)', () => {
     });
 
     it('deve bloquear Secretário se tentar importar professor para escola diferente da sua', () => {
-      const state = { professores: [], alocacoes: [] };
+      const state: { professores: Professor[]; alocacoes: ProfessorAllocation[] } = { professores: [], alocacoes: [] };
       const secretario: UserContext = { role: 'SECRETARIO', escola_id: escolaA };
 
       const res = rpcCriarProfessorComAlocacao(

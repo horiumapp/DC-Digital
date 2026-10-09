@@ -100,7 +100,7 @@ describe('PortalAluno - Resolução de Gestor(a) e Secretário(a)', () => {
       return genericChain;
     });
 
-    vi.spyOn(supabase, 'rpc').mockResolvedValue({ data: null, error: null });
+    vi.spyOn(supabase, 'rpc').mockResolvedValue({ data: null, error: null } as any);
 
     render(<PortalAluno />);
 

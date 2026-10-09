@@ -482,7 +482,7 @@ export default function TabAlunos() {
     // 1. Extrair CPFs numéricos limpos presentes no arquivo para verificar duplicatas
     const cpfsLimpos = items
       .map(a => a.cpf ? a.cpf.replace(/\D/g, '') : null)
-      .filter((c): c is string => Boolean(c) && c.length === 11);
+      .filter((c): c is string => typeof c === 'string' && c.length === 11);
 
     // 2. Consultar se algum desses CPFs já existe no banco de dados para evitar erro 409 (uq_alunos_cpf_limpo)
     const existingAlunosByCpf = new Map<string, string>(); // cpfLimpo -> alunoId
