@@ -2,7 +2,7 @@ import React from 'react';
 import { Eye, Pencil, Trash2, List, Check, Calendar as CalendarIcon, Plus, Clock } from 'lucide-react';
 import { Avaliacao, Aluno } from '../../../contexts/TurmaContext';
 import { formatarDataParaISO, formatarDataParaExibicao, getBimestreNumero } from '../../../utils/dateUtils';
-import { isAvaliacaoPendente } from '../../../utils/avaliacaoUtils';
+import { isAvaliacaoPendente, parentIdVinculado } from '../../../utils/avaliacaoUtils';
 
 interface AvaliacoesListProps {
   avaliacoes: Avaliacao[];
@@ -41,7 +41,7 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
   const avsBim = React.useMemo(() => {
     const targetNum = getBimestreNumero(currentBimestre);
     return avaliacoes.filter(av => {
-      if (av.parent_id) return false;
+      if (parentIdVinculado(av.parent_id)) return false;
       const avNum = getBimestreNumero(av.bimestre || '') ?? getBimestreNumero(av.data);
       return avNum === targetNum;
     });

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getBimestrePorData, getDayOfWeek, formatarDataParaISO, formatarDataParaExibicao, formatarDiaMes } from '../utils/dateUtils';
+import { parentIdVinculado } from '../utils/parentId';
 import { APP_CONFIG, getPeriodoPorData } from '../config/appConfig';
 
 describe('Utilitários de Data (dateUtils.ts)', () => {
@@ -45,6 +46,17 @@ describe('Utilitários de Data (dateUtils.ts)', () => {
     // 30/05/2026 é Sábado (6)
     expect(getDayOfWeek('30/05/2026')).toBe(6);
     expect(getDayOfWeek('2026-05-30')).toBe(6);
+  });
+});
+
+describe('Vínculo de avaliação', () => {
+  it('não transforma null do IndexedDB no texto null', () => {
+    expect(parentIdVinculado(null)).toBeUndefined();
+    expect(parentIdVinculado(undefined)).toBeUndefined();
+    expect(parentIdVinculado('null')).toBeUndefined();
+    expect(parentIdVinculado('')).toBeUndefined();
+    expect(parentIdVinculado(42)).toBe('42');
+    expect(parentIdVinculado('42')).toBe('42');
   });
 });
 

@@ -11,6 +11,7 @@ import { hidePendingDeletes, hasPendingMutation, keepTransactionAlive, pruneSync
  * na camada de contexto (TurmaContext).
  */
 import { getBimestrePorData } from '../utils/dateUtils';
+import { parentIdVinculado } from '../utils/parentId';
 import type { Aluno, Avaliacao, Conteudo, Horario, Lancamento } from '../contexts/TurmaContext';
 import type { FrequenciaRecord, NotaRecord, TurmaRelatorioInfo } from './turmaService';
 export type { TurmaRelatorioInfo };
@@ -339,7 +340,7 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
         objetos: local.objetos,
         bimestre: local.bimestre,
         valorMaximo: local.valor_maximo,
-        parent_id: local.parent_id !== undefined ? String(local.parent_id) : undefined,
+        parent_id: parentIdVinculado(local.parent_id),
       };
 
       const idToCheck = String(formatted.id);
@@ -465,7 +466,7 @@ export async function fetchAvaliacoes(turmaId: string | number, disciplina: stri
       objetos: av.objetos,
       bimestre: av.bimestre,
       valorMaximo: av.valor_maximo,
-      parent_id: av.parent_id !== undefined ? String(av.parent_id) : undefined,
+      parent_id: parentIdVinculado(av.parent_id),
     }));
 
     // Deduplicar no fallback offline também

@@ -4,7 +4,7 @@ import { useTurma, Avaliacao, ObjetoAvaliacao } from '../../contexts/TurmaContex
 import { APP_CONFIG } from '../../config/appConfig';
 import { useCaptcha } from '../../hooks/useCaptcha';
 import { getBimestrePorData, getBimestreNumero, formatarDataParaISO, formatarDataParaExibicao } from '../../utils/dateUtils';
-import { isAvaliacaoPendente, getMensagemPendenciaAvaliacao, getInfoPontosBimestre } from '../../utils/avaliacaoUtils';
+import { isAvaliacaoPendente, getMensagemPendenciaAvaliacao, getInfoPontosBimestre, parentIdVinculado } from '../../utils/avaliacaoUtils';
 import { useToast } from '../common/Toast';
 
 // Sub-componentes
@@ -60,7 +60,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
   const avaliacoesDoBimestre = React.useMemo(() => {
     const targetNum = getBimestreNumero(currentBimestre);
     return avaliacoes.filter(av => {
-      if (av.parent_id) return false;
+      if (parentIdVinculado(av.parent_id)) return false;
       const avNum = getBimestreNumero(av.bimestre || '') ?? getBimestreNumero(av.data);
       return avNum === targetNum;
     });
@@ -319,7 +319,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
   useEffect(() => {
     if (avaliacoes && avaliacoes.length > 0) {
       avaliacoes.forEach(av => {
-        if (av.data && !av.parent_id) {
+        if (av.data && !parentIdVinculado(av.parent_id)) {
           carregarFaltasDaData(av.data);
         }
       });
@@ -335,7 +335,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
 
     const targetNum = getBimestreNumero(currentBimestre);
     const avsPrincipaisDoBimestre = avaliacoes.filter(av => {
-      if (av.parent_id) return false;
+      if (parentIdVinculado(av.parent_id)) return false;
       const avNum = getBimestreNumero(av.bimestre || '') ?? getBimestreNumero(av.data);
       return avNum === targetNum;
     });
@@ -370,7 +370,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
     if (objetosAvaliacao.length === 0) { showWarning('Adicione pelo menos um Objeto de Conhecimento!'); return; }
 
     const isEditingExisting = selectedAvaliacao && avaliacoes.some(a => String(a.id) === String(selectedAvaliacao.id));
-    const isCreatingChildEvaluation = selectedAvaliacao && !!selectedAvaliacao.parent_id;
+    const isCreatingChildEvaluation = selectedAvaliacao && !!parentIdVinculado(selectedAvaliacao.parent_id);
 
     if (!isEditingExisting && !isCreatingChildEvaluation && avaliacaoPendente) {
       showWarning(getMensagemPendenciaAvaliacao(avaliacaoPendente, avaliacoes, alunos, faltasPorData));

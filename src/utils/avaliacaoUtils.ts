@@ -1,5 +1,8 @@
 import { Avaliacao, Aluno } from '../contexts/TurmaContext';
 import { formatarDataParaISO, formatarDataParaExibicao, getBimestrePorData } from './dateUtils';
+import { parentIdVinculado } from './parentId';
+
+export { parentIdVinculado };
 
 /**
  * Verifica se uma avaliação possui pendências de notas, RP ou 2ª Chamada.
@@ -13,7 +16,7 @@ export function isAvaliacaoPendente(
   if (!alunos || alunos.length === 0) return false;
 
   // 1. Avaliação Principal (!av.parent_id)
-  if (!av.parent_id) {
+  if (!parentIdVinculado(av.parent_id)) {
     const dataIso = formatarDataParaISO(av.data);
     const faltasNoDia = faltasPorData[dataIso] || new Set();
     const alunosPresentes = alunos.filter(a => !faltasNoDia.has(a.id));
@@ -162,7 +165,7 @@ export function getInfoPontosBimestre(
 
   // Filtrar apenas avaliações principais (!av.parent_id) do mesmo bimestre
   const avaliacoesDoBimestre = avaliacoes.filter(av => {
-    if (av.parent_id) return false;
+    if (parentIdVinculado(av.parent_id)) return false;
     if (avaliacaoAtualId && String(av.id) === String(avaliacaoAtualId)) return false;
     const bNome = av.bimestre || getBimestrePorData(av.data);
     return bNome === bimestre;

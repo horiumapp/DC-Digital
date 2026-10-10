@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Avaliacao, Horario, Lancamento, Turma, Aluno } from '../contexts/TurmaContext';
 import { APP_CONFIG, PeriodoLetivo } from '../config/appConfig';
 import { getBimestrePorData, formatarDataParaISO } from '../utils/dateUtils';
+import { parentIdVinculado } from '../utils/avaliacaoUtils';
 
 // Interfazes para as dependências e retornos
 interface ProgressStats {
@@ -124,7 +125,7 @@ export function useTurmaProgress(
     });
     
     // Considerar apenas avaliações principais (!av.parent_id) para a soma dos 20,0 pontos do bimestre
-    const avaliacoesPrincipais = avaliacoesDaTurma.filter(av => !av.parent_id);
+    const avaliacoesPrincipais = avaliacoesDaTurma.filter(av => !parentIdVinculado(av.parent_id));
     const somaPontosCadastrados = avaliacoesPrincipais.reduce((acc, av) => {
       const val = Number(av.valorMaximo ?? 10);
       return acc + (isNaN(val) ? 10 : val);
