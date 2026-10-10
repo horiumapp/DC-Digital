@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Check, Pencil, Trash2, X, RefreshCw, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { Check, Pencil, Trash2, RefreshCw, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { useToast } from '../common/Toast';
 import { useTurma } from '../../contexts/TurmaContext';
 import { supabase } from '../../lib/supabase';
@@ -159,8 +159,6 @@ export default function ObjetoConhecimentoTab({
   const [objetoStatus, setObjetoStatus] = useState('Ministrado');
   const [modoTextoLivre, setModoTextoLivre] = useState(false);
 
-  const [showObjetoTable, setShowObjetoTable] = useState(false);
-  const [showNoRecordsObjeto, setShowNoRecordsObjeto] = useState(false);
   const [showDeleteObjetoModal, setShowDeleteObjetoModal] = useState(false);
 
   // Carregar do banco de dados ao mudar data ou tempo
@@ -185,7 +183,6 @@ export default function ObjetoConhecimentoTab({
         } else {
           setObjetoSalvo(false);
           setObjetoData(null);
-          setShowObjetoTable(false);
           setObjetoConhecimento('');
           setObjetoObservacao('');
         }
@@ -200,7 +197,6 @@ export default function ObjetoConhecimentoTab({
     await removerConteudo(selectedDate, tempoAula);
     setObjetoSalvo(false);
     setObjetoData(null);
-    setShowObjetoTable(false);
     setObjetoObservacao('');
     setShowDeleteObjetoModal(false);
   };
@@ -241,7 +237,6 @@ export default function ObjetoConhecimentoTab({
 
       setObjetoData({ descricao: objParaSalvar, observacao: objetoObservacao, status: objetoStatus });
       setObjetoSalvo(true);
-      setShowObjetoTable(false);
       setIsAddingObjeto(false);
       setCaptchaInput('');
       generateNewCaptcha();
@@ -293,25 +288,9 @@ export default function ObjetoConhecimentoTab({
               </select>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <button
-                 onClick={() => {
-                   if (objetoSalvo && objetoData) {
-                     setShowObjetoTable(true);
-                     setShowNoRecordsObjeto(false);
-                   } else {
-                     setShowNoRecordsObjeto(true);
-                     setShowObjetoTable(false);
-                   }
-                 }}
-                 className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] shadow-sm active:scale-95 whitespace-nowrap cursor-pointer"
-               >
-                 Exibir
-               </button>
                 {!disabled && (
                   <button
                     onClick={() => {
-                      setShowObjetoTable(false);
-                      setShowNoRecordsObjeto(false);
                       generateNewCaptcha();
                       setIsAddingObjeto(true);
                     }}
@@ -330,16 +309,14 @@ export default function ObjetoConhecimentoTab({
             </div>
           </div>
 
-          {showNoRecordsObjeto && !showObjetoTable && (
-            <div className="bg-red-100/80 border border-red-200 text-red-800 px-4 py-3 rounded-lg flex items-center justify-between">
-              <span className="text-sm font-medium">NENHUM REGISTRO ENCONTRADO.</span>
-              <button onClick={() => setShowNoRecordsObjeto(false)} className="text-red-600 hover:text-red-800 transition">
-                <X className="w-5 h-5" />
-              </button>
+          {!objetoSalvo && (
+            <div role="status" className="bg-slate-50 border border-slate-200 text-slate-600 px-4 py-3 rounded-lg text-sm">
+              Nenhum conteúdo registrado para o {tempoAula || 'tempo selecionado'}.
+              {!disabled && ' Use o botão acima para registrar.'}
             </div>
           )}
 
-          {showObjetoTable && objetoData && (
+          {objetoSalvo && objetoData && (
             <div className="border border-slate-200 rounded-lg overflow-hidden">
               <table className="w-full text-sm text-left">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
@@ -363,7 +340,6 @@ export default function ObjetoConhecimentoTab({
                             <>
                               <button
                                 onClick={() => { 
-                                  setShowObjetoTable(false); 
                                   generateNewCaptcha();
                                   setIsAddingObjeto(true); 
                                 }}

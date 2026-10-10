@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { useTurma, Avaliacao, ObjetoAvaliacao } from '../../contexts/TurmaContext';
 import { APP_CONFIG } from '../../config/appConfig';
 import { useCaptcha } from '../../hooks/useCaptcha';
-import { getBimestrePorData, getBimestreNumero, formatarDataParaISO } from '../../utils/dateUtils';
+import { getBimestrePorData, getBimestreNumero, formatarDataParaISO, formatarDataParaExibicao } from '../../utils/dateUtils';
 import { isAvaliacaoPendente, getMensagemPendenciaAvaliacao, getInfoPontosBimestre } from '../../utils/avaliacaoUtils';
 import { useToast } from '../common/Toast';
 
@@ -87,8 +87,9 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
   const PERIODOS_LABELS: Record<string, string> = {};
   APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE')).forEach(b => {
     // Formata a exibição como: "1. BIMESTRE 05/02/2026 - 23/04/2026"
-    const start = new Date(b.dataInicio).toLocaleDateString('pt-BR');
-    const end = new Date(b.dataFim).toLocaleDateString('pt-BR');
+    // A data oficial é uma string AAAA-MM-DD; new Date() a leria em UTC e recuaria um dia no Brasil.
+    const start = formatarDataParaExibicao(b.dataInicio);
+    const end = formatarDataParaExibicao(b.dataFim);
     PERIODOS_LABELS[b.nome] = `${b.label} ${start} - ${end}`;
   });
 

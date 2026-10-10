@@ -18,7 +18,6 @@ export default function AnotacoesTab({
   disabled,
 }: AnotacoesTabProps) {
   const [isAddingAnotacao, setIsAddingAnotacao] = useState(false);
-  const [showNoRecordsAnotacao, setShowNoRecordsAnotacao] = useState(false);
   const [anotacoes, setAnotacoes] = useState<{ id: string; texto: string; tempo: string; data: string }[]>([]);
   const [textoAnotacao, setTextoAnotacao] = useState('');
 
@@ -45,7 +44,7 @@ export default function AnotacoesTab({
     setAnotacoes(prev => [novaAnotacao, ...prev]);
     setIsAddingAnotacao(false);
     setTextoAnotacao('');
-    showSuccess('Anotação salva com sucesso!');
+    showSuccess('Anotação adicionada. Ela fica só nesta tela e ainda não é gravada no servidor.');
   };
 
   return (
@@ -65,12 +64,6 @@ export default function AnotacoesTab({
                 ))}
               </select>
             </div>
-            <button
-              onClick={() => setShowNoRecordsAnotacao(true)}
-              className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] shadow-sm active:scale-95"
-            >
-              Exibir
-            </button>
             {!disabled && (
               <button
                 onClick={() => setIsAddingAnotacao(true)}
@@ -81,18 +74,17 @@ export default function AnotacoesTab({
             )}
           </div>
 
-          {showNoRecordsAnotacao && anotacoes.length === 0 && (
-            <div className="bg-red-100/80 border border-red-200 text-red-800 px-4 py-3 rounded-lg flex items-center justify-between mb-6">
-              <span className="text-sm font-medium">NENHUM REGISTRO ENCONTRADO.</span>
-              <button onClick={() => setShowNoRecordsAnotacao(false)} className="text-red-600 hover:text-red-800 transition">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+          <p role="note" className="text-xs text-slate-500 mb-4">
+            As anotações pedagógicas ficam apenas nesta tela e não são gravadas no servidor nem sincronizadas.
+          </p>
+
+          {anotacoes.filter(a => a.tempo === tempoAula).length === 0 && (
+            <div role="status" className="bg-slate-50 border border-slate-200 text-slate-600 px-4 py-3 rounded-lg text-sm mb-6">
+              Nenhuma anotação para o {tempoAula || 'tempo selecionado'}.
             </div>
           )}
 
-          {anotacoes.length > 0 && (
+          {anotacoes.some(a => a.tempo === tempoAula) && (
             <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
               <table className="w-full text-sm text-left">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
@@ -103,7 +95,7 @@ export default function AnotacoesTab({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {anotacoes.map(anot => (
+                  {anotacoes.filter(a => a.tempo === tempoAula).map(anot => (
                     <tr key={anot.id} className="hover:bg-slate-50 transition">
                       <td className="px-4 py-3 text-slate-500">{anot.data}</td>
                       <td className="px-4 py-3 text-slate-500">{anot.tempo}</td>

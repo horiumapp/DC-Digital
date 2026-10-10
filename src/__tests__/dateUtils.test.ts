@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getBimestrePorData, getDayOfWeek, formatarDataParaISO, formatarDataParaExibicao, formatarDiaMes } from '../utils/dateUtils';
-import { getPeriodoPorData } from '../config/appConfig';
+import { APP_CONFIG, getPeriodoPorData } from '../config/appConfig';
 
 describe('Utilitários de Data (dateUtils.ts)', () => {
   it('deve formatar data para formato ISO YYYY-MM-DD', () => {
@@ -14,6 +14,13 @@ describe('Utilitários de Data (dateUtils.ts)', () => {
     expect(formatarDataParaExibicao('2026-05-30')).toBe('30/05/2026');
     expect(formatarDataParaExibicao('30/05/2026')).toBe('30/05/2026');
     expect(formatarDataParaExibicao('')).toBe('');
+  });
+
+  it('exibe os limites oficiais dos bimestres sem recuar um dia por fuso', () => {
+    const bimestres = APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE'));
+    const segundo = bimestres.find(p => p.id === '2. BIMESTRE')!;
+    expect(formatarDataParaExibicao(segundo.dataInicio)).toBe('24/04/2026');
+    expect(formatarDataParaExibicao(segundo.dataFim)).toBe('07/07/2026');
   });
 
   it('deve formatar data para formato dia/mês (DD/MM)', () => {

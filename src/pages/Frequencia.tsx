@@ -75,6 +75,20 @@ export default function Frequencia() {
     }
   };
 
+  if (!turmaAtiva) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#090e17] flex items-center justify-center p-6">
+        <div role="status" className="bg-white border border-slate-200 rounded-2xl p-8 max-w-md w-full text-center">
+          <h2 className="text-xl font-bold text-slate-800 mb-2">Escolha a turma para lançar</h2>
+          <p className="text-slate-500 mb-6">A frequência, o conteúdo e as avaliações são lançados por turma e componente. Depois de escolher, você volta direto para esta tela.</p>
+          <Link to="/turmas?destino=frequencia" className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#0f2851] text-white font-bold rounded-xl hover:opacity-90 transition">
+            Escolher turma
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#090e17] relative pb-20">
       <div className="relative z-10">

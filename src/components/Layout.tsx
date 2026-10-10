@@ -71,8 +71,8 @@ export default function Layout() {
 
   const openQuickAttendance = () => {
     if (!turmaAtiva) {
-      showInfo('Selecione uma turma antes de registrar a frequência.');
-      navigate('/turmas');
+      showInfo('Escolha a turma para registrar a frequência.');
+      navigate('/turmas?destino=frequencia');
       return;
     }
 

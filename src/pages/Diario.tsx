@@ -252,10 +252,10 @@ export default function Diario() {
             <BookOpen className="w-8 h-8" />
           </div>
           <h2 className="text-xl font-bold text-[var(--dd-ink)] mb-2">Nenhuma turma selecionada</h2>
-          <p className="text-[var(--dd-ink-muted)] mb-6">Por favor, volte à lista de turmas e selecione um diário para visualizar.</p>
+          <p className="text-[var(--dd-ink-muted)] mb-6">Escolha a turma e o componente na lista. Depois de escolher, você abre o diário direto.</p>
           <Link to="/turmas" className="inline-flex flex-1 items-center justify-center gap-2 w-full px-6 py-3 bg-[var(--dd-primary)] text-white font-bold rounded-xl hover:opacity-90 transition shadow-lg">
             <ArrowLeft className="w-5 h-5" />
-            Voltar para Turmas
+            Escolher turma
           </Link>
         </div>
       </div>

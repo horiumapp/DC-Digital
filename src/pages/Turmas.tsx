@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Building2, Clock, Calendar, AlertCircle, Pencil, BookOpen } from 'lucide-react';
-import { useNavigate, Link, Navigate } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link, Navigate } from 'react-router-dom';
 import { APP_CONFIG } from '../config/appConfig';
 import { useTurma, Turma } from '../contexts/TurmaContext';
 import { useAuth, type Alocacao } from '../contexts/AuthContext';
@@ -32,11 +32,14 @@ export default function Turmas() {
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const { selecionarTurma } = useTurma();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Destino lembrado quando o professor veio de uma tela que exigia turma ativa.
+  const destinoPosSelecao = searchParams.get('destino') === 'frequencia' ? '/frequencia' : '/diario';
 
   const handleSelectTurma = (turma: Turma) => {
     selecionarTurma(turma);
     sessionStorage.setItem('turmaAtivaId', turma.id.toString());
-    navigate('/diario');
+    navigate(destinoPosSelecao);
   };
   
   const [alocacoes, setAlocacoes] = useState<EscolaAlocacao[]>([]);
