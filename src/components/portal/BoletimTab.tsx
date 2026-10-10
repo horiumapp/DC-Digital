@@ -1,5 +1,5 @@
-import React from 'react';
-import { Printer } from 'lucide-react';
+import React, { useState } from 'react';
+import { Download, Printer } from 'lucide-react';
 import { getBimestrePorData } from '../../utils/dateUtils';
 import BoletimDocumento, { AlunoBoletimData, NotaBoletimItem, FrequenciaBoletimItem } from '../boletim/BoletimDocumento';
 
@@ -13,8 +13,16 @@ interface BoletimTabProps {
   frequencias: FrequenciaItem[];
 }
 
+function navegadorSemPreviaDeImpressao() {
+  if (typeof navigator === 'undefined') return false;
+  return /Electron|Cursor/i.test(navigator.userAgent);
+}
+
 export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTabProps) {
   const bimestres = ['1º', '2º', '3º', '4º'];
+  const [gerandoPdf, setGerandoPdf] = useState(false);
+  const [erroPdf, setErroPdf] = useState('');
+  const previaIndisponivel = navegadorSemPreviaDeImpressao();
 
   // Agrupar disciplinas únicas para a visão mobile
   const disciplinas = Array.from(new Set([
@@ -22,7 +30,50 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
     ...frequencias.map(f => f.disciplina)
   ])).filter(d => d && d !== 'N/D').sort();
 
+  const salvarPdf = async () => {
+    const elemento = document.getElementById('boletim-view');
+    if (!elemento) {
+      setErroPdf('O boletim ainda não está pronto para salvar.');
+      return;
+    }
+    setGerandoPdf(true);
+    setErroPdf('');
+    const host = elemento.parentElement;
+    host?.classList.add('boletim-captura');
+    try {
+      const html2canvas = (await import('html2canvas-pro')).default;
+      const { jsPDF } = await import('jspdf');
+      const canvas = await html2canvas(elemento, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const largura = pdf.internal.pageSize.getWidth();
+      const alturaPagina = pdf.internal.pageSize.getHeight();
+      const alturaImagem = (canvas.height * largura) / canvas.width;
+      const imagem = canvas.toDataURL('image/jpeg', 0.95);
+      let restante = alturaImagem;
+      let posicao = 0;
+      pdf.addImage(imagem, 'JPEG', 0, posicao, largura, alturaImagem);
+      restante -= alturaPagina;
+      while (restante > 0) {
+        posicao = restante - alturaImagem;
+        pdf.addPage();
+        pdf.addImage(imagem, 'JPEG', 0, posicao, largura, alturaImagem);
+        restante -= alturaPagina;
+      }
+      const nomeArquivo = (alunoData.nome || 'Aluno').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim();
+      pdf.save(`Boletim-${nomeArquivo}.pdf`);
+    } catch {
+      setErroPdf('Não foi possível gerar o PDF. Tente de novo.');
+    } finally {
+      host?.classList.remove('boletim-captura');
+      setGerandoPdf(false);
+    }
+  };
+
   const handlePrint = () => {
+    if (previaIndisponivel) {
+      void salvarPdf();
+      return;
+    }
     window.print();
   };
 
@@ -49,12 +100,24 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
     <div className="space-y-6">
       <div className="flex justify-end gap-3 no-print">
         <button
-          onClick={handlePrint}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm cursor-pointer"
+          type="button"
+          onClick={() => void salvarPdf()}
+          disabled={gerandoPdf}
+          className="flex items-center gap-2 px-4 py-2 bg-[#0f2851] border border-[#0f2851] rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all shadow-sm cursor-pointer disabled:opacity-60"
         >
-          <Printer className="w-4 h-4" /> Imprimir Boletim
+          <Download className="w-4 h-4" /> {gerandoPdf ? 'Gerando PDF…' : 'Salvar PDF'}
         </button>
+        {!previaIndisponivel && (
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm cursor-pointer"
+          >
+            <Printer className="w-4 h-4" /> Imprimir Boletim
+          </button>
+        )}
       </div>
+      {erroPdf && <p className="text-sm font-semibold text-rose-700 no-print">{erroPdf}</p>}
 
       <section className="boletim-mobile-view md:hidden space-y-4" aria-label="Boletim resumido">
         <div className="rounded-2xl bg-[#0f2851] p-5 text-white shadow-sm">
@@ -90,7 +153,7 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
         </div>
       </section>
 
-      <div className="hidden md:block">
+      <div className="boletim-oficial-host">
         <BoletimDocumento
           id="boletim-view"
           alunoData={alunoData}
@@ -100,19 +163,32 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
+        .boletim-oficial-host { display: none; }
+        @media (min-width: 768px) {
+          .boletim-oficial-host { display: block; }
+        }
+        .boletim-captura {
+          display: block !important;
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 210mm;
+          z-index: 0;
+        }
         @media print {
           body * { visibility: hidden; }
-          #boletim-view, #boletim-view * { visibility: visible; }
+          .boletim-oficial-host, .boletim-oficial-host * { visibility: visible; }
+          .boletim-oficial-host { display: block !important; position: absolute; left: 0; top: 0; width: 100%; }
           #boletim-view { 
-            position: absolute; 
+            position: relative; 
             left: 0; 
             top: 0; 
             width: 100%;
             border: none !important;
             padding: 0 !important;
+            display: block !important;
           }
           .no-print, .boletim-mobile-view { display: none !important; }
-          #boletim-view { display: block !important; }
         }
       `}} />
     </div>

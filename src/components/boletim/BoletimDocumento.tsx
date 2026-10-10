@@ -283,10 +283,6 @@ export default function BoletimDocumento({
           <p className="text-[7px] text-slate-500 uppercase">SECRETÁRIO(A) ESCOLAR</p>
         </div>
       </div>
-
-      <div className="mt-8 text-[7px] text-slate-400 italic text-center">
-        Documento gerado eletronicamente pelo Sistema Diário Digital em {new Date().toLocaleString('pt-BR')}.
-      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import React from 'react';
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import BoletimTab from '../components/portal/BoletimTab';
 
@@ -103,5 +103,24 @@ describe('BoletimTab - Exibição de Secretário(a) e Diretor(a)', () => {
     expect(screen.getByText('SECRETÁRIO(A) ESCOLAR')).toBeTruthy();
     expect(screen.getByText('SECRETÁRIO(A)')).toBeTruthy();
     expect(screen.getAllByText('DIRETOR(A)').length).toBeGreaterThan(0);
+  });
+
+  it('dentro do Cursor oferece salvar PDF e não abre a janela de impressão', () => {
+    const imprimir = vi.fn();
+    vi.stubGlobal('print', imprimir);
+    const original = navigator.userAgent;
+    Object.defineProperty(navigator, 'userAgent', { value: 'Mozilla/5.0 Cursor Electron', configurable: true });
+
+    render(
+      <BoletimTab
+        alunoData={baseAlunoData}
+        notas={[]}
+        frequencias={[]}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: /Salvar PDF/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Imprimir Boletim/i })).toBeNull();
+    Object.defineProperty(navigator, 'userAgent', { value: original, configurable: true });
   });
 });
