@@ -225,7 +225,7 @@ async function _runSyncAll(ownerId: string): Promise<SyncResult> {
           processed = await processItem(item, itemController.signal);
           if (itemController.signal.aborted || offlineOwner() !== ownerId) throw new Error('Sincronização interrompida; confirmação preservada para retry');
           const conflictCount = processed.conflicts.length;
-          await db.transaction('rw', [db.syncQueue, db.avaliacoes, db.notas, db.frequencias, db.conteudos, db.fechamentos], async () => {
+          await db.transaction('rw', [db.syncQueue, db.avaliacoes, db.notas, db.frequencias, db.conteudos, db.anotacoes, db.fechamentos], async () => {
             if (item!.table === 'avaliacoes' && processed.rows[0]?.id && item!.localId && item!.operation !== 'DELETE') {
               await updateTempAvaliacaoId(item!.localId, String(processed.rows[0].id), JSON.parse(item!.payload));
             }
@@ -569,6 +569,18 @@ function sanitizeFrequencia(payload: FrequenciaPayload): Record<string, unknown>
   };
 }
 
+function sanitizeAnotacao(payload: { turma_id: unknown; data: unknown; tempo: unknown; disciplina: unknown; texto: unknown }): Record<string, unknown> {
+  const texto = String(payload.texto || '').replace(/<[^>]+>/g, '').trim();
+  if (!texto || texto.length > 4000) throw new Error('[DEAD_LETTER] Anotação vazia ou longa demais.');
+  return {
+    turma_id: assertUUID(getTid(String(payload.turma_id)), 'turma_id'),
+    data: String(payload.data),
+    tempo: String(payload.tempo),
+    disciplina: String(payload.disciplina),
+    texto,
+  };
+}
+
 function sanitizeConteudo(payload: ConteudoPayload): Record<string, unknown> {
   return {
     // FIX M5: assertUUID valida formato antes de enviar ao Supabase
@@ -757,6 +769,7 @@ async function processItem(item: SyncQueueItem, signal: AbortSignal): Promise<{ 
       switch(item.table) {
         case 'frequencias': clean=sanitizeFrequencia(r as unknown as FrequenciaPayload); break;
         case 'conteudos': clean=sanitizeConteudo(r as unknown as ConteudoPayload); break;
+        case 'anotacoes': clean=sanitizeAnotacao(r as unknown as { turma_id: unknown; data: unknown; tempo: unknown; disciplina: unknown; texto: unknown }); break;
         case 'avaliacoes': clean=sanitizeAvaliacao(r as unknown as AvaliacaoPayload); break;
         case 'notas': clean=sanitizeNota(r as unknown as NotaPayload); break;
         case 'fechamentos': clean=sanitizeFechamento(r as unknown as FechamentoPayload); break;

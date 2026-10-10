@@ -62,6 +62,21 @@ export interface LocalFrequencia {
 }
 
 /** Conteúdo ministrado (operação diária) */
+export interface LocalAnotacao {
+  localId?: number;
+  id?: string;
+  turma_id: string;
+  data: string;
+  tempo: string;
+  disciplina: string;
+  texto: string;
+  syncStatus: SyncStatus;
+  createdAt: string;
+  updatedAt: string;
+  version: number;
+  serverRevision?: number;
+}
+
 export interface LocalConteudo {
   localId?: number;
   serverId?: string;
@@ -231,6 +246,7 @@ export class DCDigitalDB extends Dexie {
   alunos!: EntityTable<LocalAluno, 'id'>;
   frequencias!: EntityTable<LocalFrequencia, 'localId'>;
   conteudos!: EntityTable<LocalConteudo, 'localId'>;
+  anotacoes!: EntityTable<LocalAnotacao, 'localId'>;
   avaliacoes!: EntityTable<LocalAvaliacao, 'localId'>;
   notas!: EntityTable<LocalNota, 'localId'>;
   horarios!: EntityTable<LocalHorario, 'localId'>;
@@ -394,6 +410,23 @@ export class DCDigitalDB extends Dexie {
         }
       });
     });
+    this.version(9).stores({
+      turmas:      'id, escola_id',
+      alunos:      'id, turma_id, syncStatus, escola_id',
+      frequencias: '++localId, [turma_id+aluno_id+data+tempo+disciplina], turma_id, syncStatus, updatedAt, [syncStatus+updatedAt]',
+      conteudos:   '++localId, [turma_id+data+tempo+disciplina], turma_id, syncStatus, updatedAt, [syncStatus+updatedAt]',
+      anotacoes:   '++localId, [turma_id+data+tempo+disciplina], turma_id, syncStatus, updatedAt, [syncStatus+updatedAt]',
+      avaliacoes:  '++localId, turma_id, disciplina, syncStatus, id, updatedAt, [syncStatus+updatedAt]',
+      notas:       '++localId, avaliacao_id, [avaliacao_id+aluno_id], syncStatus, updatedAt, [syncStatus+updatedAt]',
+      horarios:    '++localId, turma_id',
+      fechamentos: '++localId, [turma_id+disciplina+bimestre], syncStatus, [syncStatus+updatedAt]',
+      curriculos:  'id, [modalidade+ano+bimestre+disciplina]',
+      syncQueue:   '++id, table, status, createdAt, hash, ownerUserId, operationId',
+      syncLogs:    '++id, timestamp, table, status',
+      cachedUsers: 'id',
+      files:       '++localId, syncStatus, relatedTable, relatedId',
+      userSalts:   'userId',
+    });
   }
 }
 
@@ -408,12 +441,13 @@ export const db = new DCDigitalDB();
  * Acesso tipado a tabelas operacionais do banco.
  * Elimina type assertions perigosas como `(db as unknown as Record<...>)[name]`.
  */
-type OperationalTableName = 'frequencias' | 'conteudos' | 'avaliacoes' | 'notas' | 'fechamentos';
-type OperationalTable = typeof db.frequencias | typeof db.conteudos | typeof db.avaliacoes | typeof db.notas | typeof db.fechamentos;
+type OperationalTableName = 'frequencias' | 'conteudos' | 'anotacoes' | 'avaliacoes' | 'notas' | 'fechamentos';
+type OperationalTable = typeof db.frequencias | typeof db.conteudos | typeof db.anotacoes | typeof db.avaliacoes | typeof db.notas | typeof db.fechamentos;
 
 const OPERATIONAL_TABLES: Record<OperationalTableName, () => OperationalTable> = {
   frequencias: () => db.frequencias,
   conteudos:   () => db.conteudos,
+  anotacoes:   () => db.anotacoes,
   avaliacoes:  () => db.avaliacoes,
   notas:       () => db.notas,
   fechamentos: () => db.fechamentos,
@@ -429,7 +463,7 @@ export function getOperationalTable(name: string): OperationalTable | undefined 
 }
 
 /** Lista de nomes de tabelas operacionais (para iteração segura) */
-export const OPERATIONAL_TABLE_NAMES: OperationalTableName[] = ['frequencias', 'conteudos', 'avaliacoes', 'notas', 'fechamentos'];
+export const OPERATIONAL_TABLE_NAMES: OperationalTableName[] = ['frequencias', 'conteudos', 'anotacoes', 'avaliacoes', 'notas', 'fechamentos'];
 
 /** Gera timestamp ISO atual */
 export const now = (): string => new Date().toISOString();
@@ -445,6 +479,7 @@ export async function hashOperation(
   const keyFields: Record<string, string[]> = {
     frequencias: ['turma_id', 'aluno_id', 'data', 'tempo', 'disciplina'],
     conteudos: ['turma_id', 'data', 'tempo', 'disciplina'],
+    anotacoes: ['id'],
     avaliacoes: ['id', 'parent_id', 'turma_id', 'disciplina', 'data', 'tipo'],
     notas: ['avaliacao_id', 'aluno_id'],
     fechamentos: ['turma_id', 'disciplina', 'bimestre'],

@@ -18,7 +18,8 @@ import { TurmaService } from './turmaService';
 import * as OfflineStorage from './offlineStorage';
 import * as Queue from './offlineQueue';
 import * as SyncEngine from './syncEngine';
-import { db, hashOperation, now } from '../lib/db';
+import { db, hashOperation, now, type LocalAnotacao } from '../lib/db';
+import { supabase } from '../lib/supabase';
 
 import { getTid, normalizarDataISO } from '../utils/turmaUtils';
 
@@ -1173,4 +1174,126 @@ export async function salvarFechamento(
   if (_isOnline) {
     SyncEngine.scheduleSync();
   }
+}
+
+export async function listarAnotacoes(
+  turmaId: string | number,
+  data: string,
+  tempo: string,
+  disciplina: string,
+): Promise<LocalAnotacao[]> {
+  const tid = getTid(turmaId);
+  const dataISO = normalizarDataISO(data);
+  const locais = await db.anotacoes
+    .where('[turma_id+data+tempo+disciplina]')
+    .equals([tid, dataISO, tempo, disciplina])
+    .toArray();
+
+  if (!_isOnline) return locais;
+
+  const { data: rows, error } = await supabase
+    .from('anotacoes_pedagogicas')
+    .select('id, turma_id, data, tempo, disciplina, texto, sync_revision')
+    .eq('turma_id', tid)
+    .eq('data', dataISO)
+    .eq('tempo', tempo)
+    .eq('disciplina', disciplina)
+    .order('id');
+  if (error) return locais;
+
+  const recebidas = rows || [];
+  const fila = await db.syncQueue.where('table').equals('anotacoes').toArray();
+  const apagandoIds = new Set(
+    fila
+      .filter(item => item.operation === 'DELETE')
+      .map(item => String((JSON.parse(item.payload) as { id?: unknown }).id)),
+  );
+  await db.transaction('rw', db.anotacoes, async () => {
+    for (const row of recebidas) {
+      const id = String(row.id);
+      if (apagandoIds.has(id)) continue;
+      const existente = await db.anotacoes.where('turma_id').equals(tid).filter(a => a.id === id).first();
+      if (existente?.syncStatus === 'pending') continue;
+      const gravada: LocalAnotacao = {
+        localId: existente?.localId,
+        id,
+        turma_id: tid,
+        data: row.data,
+        tempo: row.tempo,
+        disciplina: row.disciplina,
+        texto: row.texto,
+        syncStatus: 'synced',
+        createdAt: existente?.createdAt || now(),
+        updatedAt: now(),
+        version: existente?.version || 1,
+        serverRevision: Number(row.sync_revision),
+      };
+      if (existente?.localId) await db.anotacoes.put(gravada);
+      else await db.anotacoes.add(gravada);
+    }
+  });
+
+  const atualizadas = await db.anotacoes
+    .where('[turma_id+data+tempo+disciplina]')
+    .equals([tid, dataISO, tempo, disciplina])
+    .toArray();
+  const idsServidor = new Set(recebidas.map(row => String(row.id)));
+  return atualizadas.filter(item => item.syncStatus === 'pending' || (item.id && idsServidor.has(item.id)));
+}
+
+export async function salvarAnotacao(
+  turmaId: string | number,
+  data: string,
+  tempo: string,
+  disciplina: string,
+  texto: string,
+): Promise<void> {
+  const tid = getTid(turmaId);
+  const dataISO = normalizarDataISO(data);
+  const limpo = texto.replace(/<[^>]+>/g, '').trim();
+  if (!limpo) throw new Error('Descreva a anotação.');
+  const timestamp = now();
+  await db.transaction('rw', [db.anotacoes, db.syncQueue], async () => {
+    const localId = await db.anotacoes.add({
+      turma_id: tid,
+      data: dataISO,
+      tempo,
+      disciplina,
+      texto: limpo,
+      syncStatus: 'pending',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      version: 1,
+    });
+    await Queue.enqueue('anotacoes', 'INSERT', {
+      turma_id: tid,
+      data: dataISO,
+      tempo,
+      disciplina,
+      texto: limpo,
+    }, localId);
+  });
+  if (_isOnline) SyncEngine.scheduleSync();
+}
+
+export async function removerAnotacao(localId: number): Promise<void> {
+  const atual = await db.anotacoes.get(localId);
+  if (!atual) return;
+  await db.transaction('rw', [db.anotacoes, db.syncQueue], async () => {
+    if (!atual.id) {
+      const fila = await db.syncQueue.where('table').equals('anotacoes').toArray();
+      for (const item of fila) {
+        const corpo = JSON.parse(item.payload) as { _local_id?: number };
+        if (corpo._local_id === localId && item.id) await db.syncQueue.delete(item.id);
+      }
+      await db.anotacoes.delete(localId);
+      return;
+    }
+    await Queue.enqueue('anotacoes', 'DELETE', {
+      id: Number(atual.id),
+      turma_id: atual.turma_id,
+    }, localId);
+    await db.anotacoes.delete(localId);
+  });
+  if (_isOnline) SyncEngine.scheduleSync();
 }

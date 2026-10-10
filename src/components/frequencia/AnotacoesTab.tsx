@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
-import { Save } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Save, Trash2 } from 'lucide-react';
 import { useToast } from '../common/Toast';
+import { formatarDataParaExibicao } from '../../utils/dateUtils';
+import { listarAnotacoes, removerAnotacao, salvarAnotacao } from '../../services/turmaServiceOffline';
+import type { LocalAnotacao } from '../../lib/db';
 
 interface AnotacoesTabProps {
-  turmaAtiva: { id: string | number; nome?: string } | null;
+  turmaAtiva: { id: string | number; componente?: string } | null;
+  selectedDate: string;
   tempoAula: string;
   setTempoAula: (v: string) => void;
   disponiveisTempos: string[];
@@ -11,40 +15,69 @@ interface AnotacoesTabProps {
 }
 
 export default function AnotacoesTab({
-  turmaAtiva: _turmaAtiva,
+  turmaAtiva,
+  selectedDate,
   tempoAula,
   setTempoAula,
   disponiveisTempos,
   disabled,
 }: AnotacoesTabProps) {
   const [isAddingAnotacao, setIsAddingAnotacao] = useState(false);
-  const [anotacoes, setAnotacoes] = useState<{ id: string; texto: string; tempo: string; data: string }[]>([]);
+  const [anotacoes, setAnotacoes] = useState<LocalAnotacao[]>([]);
   const [textoAnotacao, setTextoAnotacao] = useState('');
+  const [carregando, setCarregando] = useState(false);
 
-  const { showWarning, showSuccess } = useToast();
+  const { showWarning, showSuccess, showError } = useToast();
+  const disciplina = turmaAtiva?.componente || '';
 
-  const handleSave = () => {
+  const carregar = useCallback(async () => {
+    if (!turmaAtiva || !selectedDate || !tempoAula || !disciplina) {
+      setAnotacoes([]);
+      return;
+    }
+    setCarregando(true);
+    try {
+      const lista = await listarAnotacoes(turmaAtiva.id, selectedDate, tempoAula, disciplina);
+      setAnotacoes(lista);
+    } catch {
+      showError('Não foi possível carregar as anotações desta aula.');
+    } finally {
+      setCarregando(false);
+    }
+  }, [turmaAtiva, selectedDate, tempoAula, disciplina, showError]);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
+
+  const handleSave = async () => {
+    if (!turmaAtiva || !disciplina) {
+      showWarning('Escolha uma turma antes de anotar.');
+      return;
+    }
     if (!textoAnotacao.trim()) {
       showWarning('Por favor, descreva a anotação.');
       return;
     }
-    
-    const sanitizedText = textoAnotacao
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/<[^>]+>/g, '')
-      .trim();
+    try {
+      await salvarAnotacao(turmaAtiva.id, selectedDate, tempoAula, disciplina, textoAnotacao);
+      setIsAddingAnotacao(false);
+      setTextoAnotacao('');
+      showSuccess('Anotação guardada neste aparelho e enviada para sincronizar.');
+      await carregar();
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Não foi possível guardar a anotação.');
+    }
+  };
 
-    const novaAnotacao = {
-      id: Math.random().toString(36).substr(2, 9),
-      texto: sanitizedText,
-      tempo: tempoAula,
-      data: new Date().toLocaleDateString('pt-BR')
-    };
-
-    setAnotacoes(prev => [novaAnotacao, ...prev]);
-    setIsAddingAnotacao(false);
-    setTextoAnotacao('');
-    showSuccess('Anotação adicionada. Ela fica só nesta tela e ainda não é gravada no servidor.');
+  const handleRemove = async (localId?: number) => {
+    if (localId == null) return;
+    try {
+      await removerAnotacao(localId);
+      await carregar();
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Não foi possível excluir a anotação.');
+    }
   };
 
   return (
@@ -75,16 +108,20 @@ export default function AnotacoesTab({
           </div>
 
           <p role="note" className="text-xs text-slate-500 mb-4">
-            As anotações pedagógicas ficam apenas nesta tela e não são gravadas no servidor nem sincronizadas.
+            A anotação fica ligada a esta turma, à data {formatarDataParaExibicao(selectedDate)} e ao {tempoAula || 'tempo selecionado'}.
           </p>
 
-          {anotacoes.filter(a => a.tempo === tempoAula).length === 0 && (
+          {carregando && (
+            <div role="status" className="text-sm text-slate-500 mb-4">Carregando anotações…</div>
+          )}
+
+          {!carregando && anotacoes.length === 0 && (
             <div role="status" className="bg-slate-50 border border-slate-200 text-slate-600 px-4 py-3 rounded-lg text-sm mb-6">
               Nenhuma anotação para o {tempoAula || 'tempo selecionado'}.
             </div>
           )}
 
-          {anotacoes.some(a => a.tempo === tempoAula) && (
+          {anotacoes.length > 0 && (
             <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
               <table className="w-full text-sm text-left">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
@@ -92,14 +129,29 @@ export default function AnotacoesTab({
                     <th className="px-4 py-3 font-medium">Data</th>
                     <th className="px-4 py-3 font-medium">Tempo</th>
                     <th className="px-4 py-3 font-medium">Anotação</th>
+                    <th className="px-4 py-3 font-medium">Estado</th>
+                    {!disabled && <th className="px-4 py-3 font-medium"><span className="sr-only">Ações</span></th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {anotacoes.filter(a => a.tempo === tempoAula).map(anot => (
-                    <tr key={anot.id} className="hover:bg-slate-50 transition">
-                      <td className="px-4 py-3 text-slate-500">{anot.data}</td>
+                  {anotacoes.map(anot => (
+                    <tr key={anot.localId ?? anot.id} className="hover:bg-slate-50 transition">
+                      <td className="px-4 py-3 text-slate-500">{formatarDataParaExibicao(anot.data)}</td>
                       <td className="px-4 py-3 text-slate-500">{anot.tempo}</td>
                       <td className="px-4 py-3 text-slate-700 font-medium">{anot.texto}</td>
+                      <td className="px-4 py-3 text-slate-500">{anot.syncStatus === 'synced' ? 'Sincronizada' : 'Aguardando envio'}</td>
+                      {!disabled && (
+                        <td className="px-4 py-3">
+                          <button
+                            type="button"
+                            onClick={() => void handleRemove(anot.localId)}
+                            className="text-slate-500 hover:text-red-700"
+                            aria-label="Excluir anotação"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -125,13 +177,14 @@ export default function AnotacoesTab({
               className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 min-h-[120px] resize-y bg-slate-50/50"
               value={textoAnotacao}
               onChange={(e) => setTextoAnotacao(e.target.value)}
+              maxLength={4000}
               placeholder="Descreva aqui sua anotação pedagógica..."
             ></textarea>
           </div>
 
           <div className="pt-2">
              <div className="flex items-center gap-3">
-               <button onClick={handleSave} className="flex items-center gap-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-bold hover:bg-[#e0e7ff] transition shadow-sm active:scale-95">
+               <button onClick={() => void handleSave()} className="flex items-center gap-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-bold hover:bg-[#e0e7ff] transition shadow-sm active:scale-95">
                  <Save className="w-4 h-4" /> Salvar anotação
                </button>
                <button

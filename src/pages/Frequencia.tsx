@@ -209,6 +209,7 @@ export default function Frequencia() {
               {activeTab === 'anotacoes' && (
                 <AnotacoesTab
                   turmaAtiva={turmaAtiva}
+                  selectedDate={selectedDate}
                   tempoAula={tempoAula}
                   setTempoAula={setTempoAula}
                   disponiveisTempos={temposParaMostrar}

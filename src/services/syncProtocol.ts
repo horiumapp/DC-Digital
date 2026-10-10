@@ -6,6 +6,7 @@ export type MutationRecord = Record<string, unknown>;
 export const keyFields: Record<string, string[]> = {
   frequencias: ['turma_id','aluno_id','data','tempo','disciplina'],
   conteudos: ['turma_id','data','tempo','disciplina'],
+  anotacoes: ['id'],
   avaliacoes: ['id'], notas: ['avaliacao_id','aluno_id'],
   fechamentos: ['turma_id','disciplina','bimestre'],
 };
@@ -30,7 +31,7 @@ export async function snapshotMutation(table: string, operation: string, payload
         return {
           ...payload,
           _expected: {
-            [recordKey(table, table === 'avaliacoes' ? { ...local, id: payload.id } : local)]: Number(local.serverRevision || 0)
+            [recordKey(table, table === 'avaliacoes' || table === 'anotacoes' ? { ...local, id: payload.id } : local)]: Number(local.serverRevision || 0)
           }
         };
       }
@@ -46,7 +47,7 @@ export async function snapshotMutation(table: string, operation: string, payload
   const all = await localTable.toArray() as unknown as MutationRecord[];
   if (operation === 'DELETE') {
     const matching = all.filter(r => (localId !== undefined && r.localId === localId) || matchesMutation(table,r,payload));
-    return { ...payload, _expected: Object.fromEntries(matching.map(r => [recordKey(table,table === 'avaliacoes' ? {...r,id:payload.id} : r), Number(r.serverRevision || 0)])) };
+    return { ...payload, _expected: Object.fromEntries(matching.map(r => [recordKey(table,table === 'avaliacoes' || table === 'anotacoes' ? {...r,id:payload.id} : r), Number(r.serverRevision || 0)])) };
   }
   const snapshot = (r: MutationRecord) => {
     const local = all.find(l => (localId !== undefined && l.localId === localId) || recordKey(table,l) === recordKey(table,r));
@@ -88,12 +89,13 @@ export async function acknowledgeMutation(table: string, payload: MutationRecord
   const pending = await db.syncQueue.where('table').equals(table).toArray();
   for (const row of returned) {
     const key = recordKey(table,row);
-    const request = sent.find(r => recordKey(table,r)===key) || (table==='avaliacoes' ? sent[0] : undefined);
+    const request = sent.find(r => recordKey(table,r)===key) || (table==='avaliacoes' || table==='anotacoes' ? sent[0] : undefined);
     const localId = request?._local_id as number | undefined;
     if (localId !== undefined) {
       const current = await localTable.get(localId);
       if (current) await localTable.update(localId, {
         serverRevision: Number(row.sync_revision),
+        ...(row.id != null ? { id: String(row.id) } : {}),
         ...(current.version === request?._local_version ? { syncStatus: 'synced' as const } : {}),
       });
     }

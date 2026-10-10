@@ -1135,15 +1135,16 @@ export async function getPendingFiles(): Promise<LocalFile[]> {
 
 /** Retorna contagem de registros pendentes de sincronização em todas as tabelas locais */
 export async function getLocalPendingCount(): Promise<number> {
-  const [freq, cont, aval, notas, fech] = await Promise.all([
+  const [freq, cont, anots, aval, notas, fech] = await Promise.all([
     db.frequencias.where('syncStatus').equals('pending').count(),
     db.conteudos.where('syncStatus').equals('pending').count(),
+    db.anotacoes.where('syncStatus').equals('pending').count(),
     db.avaliacoes.where('syncStatus').equals('pending').count(),
     db.notas.where('syncStatus').equals('pending').count(),
     db.fechamentos.where('syncStatus').equals('pending').count(),
   ]);
   const queued = await db.syncQueue.filter(i => !i.ownerUserId || i.ownerUserId === offlineOwner()).count();
-  return Math.max(freq + cont + aval + notas + fech, queued);
+  return Math.max(freq + cont + anots + aval + notas + fech, queued);
 }
 
 /**
