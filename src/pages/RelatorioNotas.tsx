@@ -3,9 +3,10 @@ import { ArrowLeft, ChevronDown, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { APP_CONFIG } from '../config/appConfig';
+import { labelBimestreAtual, escolherTurmaRelatorio, avaliacaoNoPeriodo } from '../utils/relatorioFiltro';
+import { Aluno, Avaliacao, useTurma } from '../contexts/TurmaContext';
 import type { NotaRecord } from '../services/turmaService';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
-import { Aluno, Avaliacao } from '../contexts/TurmaContext';
 
 import { useToast } from '../components/common/Toast';
 
@@ -49,11 +50,12 @@ interface TurmaRelatorio {
 
 export default function RelatorioNotas() {
   const { user } = useAuth();
+  const { turmaAtiva } = useTurma();
   const { showError } = useToast();
   const [turmas, setTurmas] = useState<TurmaRelatorio[]>([]);
   const [selectedTurma, setSelectedTurma] = useState('');
   const [loading, setLoading] = useState(true);
-  const [periodo, setPeriodo] = useState('1º Bimestre');
+  const [periodo, setPeriodo] = useState(labelBimestreAtual);
   
   const [dataLoading, setDataLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -68,7 +70,7 @@ export default function RelatorioNotas() {
       const finalTurmas = await OfflineTurmaService.fetchTurmasRelatorio(user);
       setTurmas(finalTurmas);
       if (finalTurmas.length > 0) {
-        setSelectedTurma(`${finalTurmas[0].id}|${finalTurmas[0].componente}`);
+        setSelectedTurma(escolherTurmaRelatorio(finalTurmas, turmaAtiva));
       } else {
         setSelectedTurma('');
       }
@@ -78,7 +80,7 @@ export default function RelatorioNotas() {
     } finally {
       setLoading(false);
     }
-  }, [user, showError]);
+  }, [user, showError, turmaAtiva]);
 
    
   useEffect(() => {
@@ -102,8 +104,7 @@ export default function RelatorioNotas() {
       setAlunos(alunosData);
 
       const { avaliacoes: avsData, notasData } = await OfflineTurmaService.fetchAvaliacoes(tid, componente);
-      const bimChar = periodo[0];
-      const filteredAvs = avsData.filter(a => a.bimestre === periodo || (a.bimestre && a.bimestre[0] === bimChar));
+      const filteredAvs = avsData.filter(a => avaliacaoNoPeriodo(a.bimestre, periodo));
       setAvaliacoes(filteredAvs);
       setNotas(notasData);
     } catch (err) {
@@ -229,7 +230,7 @@ export default function RelatorioNotas() {
                     className="w-full border border-slate-300 rounded-md py-3 pl-3 pr-10 text-base appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700 bg-white"
                   >
                     {APP_CONFIG.PERIODOS.filter(p => !p.id.includes('SEMESTRE') && p.id !== 'ÚNICO').map(p => (
-                      <option key={p.id} value={p.nome}>{p.label}</option>
+                      <option key={p.id} value={p.label}>{p.label}</option>
                     ))}
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">

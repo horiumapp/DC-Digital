@@ -5,7 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { APP_CONFIG } from '../config/appConfig';
 import type { NotaRecord } from '../services/turmaService';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
-import { Aluno, Avaliacao } from '../contexts/TurmaContext';
+import { Aluno, Avaliacao, useTurma } from '../contexts/TurmaContext';
+import { escolherTurmaRelatorio } from '../utils/relatorioFiltro';
 import { useToast } from '../components/common/Toast';
 
 const obterLogoEscola = (nomeEscola: string) => {
@@ -36,6 +37,7 @@ interface TurmaRelatorio {
 
 export default function RelatorioMedias() {
   const { user } = useAuth();
+  const { turmaAtiva } = useTurma();
   const { showError } = useToast();
   const [turmas, setTurmas] = useState<TurmaRelatorio[]>([]);
   const [selectedTurma, setSelectedTurma] = useState('');
@@ -55,7 +57,7 @@ export default function RelatorioMedias() {
       const finalTurmas = await OfflineTurmaService.fetchTurmasRelatorio(user);
       setTurmas(finalTurmas);
       if (finalTurmas.length > 0) {
-        setSelectedTurma(`${finalTurmas[0].id}|${finalTurmas[0].componente}`);
+        setSelectedTurma(escolherTurmaRelatorio(finalTurmas, turmaAtiva));
       } else {
         setSelectedTurma('');
       }
@@ -65,7 +67,7 @@ export default function RelatorioMedias() {
     } finally {
       setLoading(false);
     }
-  }, [user, showError]);
+  }, [user, showError, turmaAtiva]);
 
    
   useEffect(() => {

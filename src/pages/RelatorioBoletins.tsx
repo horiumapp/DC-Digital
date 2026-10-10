@@ -11,6 +11,7 @@ import BoletimDocumento, { AlunoBoletimData, NotaBoletimItem, FrequenciaBoletimI
 import { formatMatriculaCpf } from '../utils/formatters';
 import { getEscolaLogo, obterEquipeEscolar } from '../utils/escolaUtils';
 import { useToast } from '../components/common/Toast';
+import { useTurma } from '../contexts/TurmaContext';
 import { ADMIN_ROLES } from '../constants/authConstants';
 
 interface TurmaOpcao {
@@ -84,6 +85,7 @@ interface FrequenciaRow {
 
 export default function RelatorioBoletins() {
   const { user } = useAuth();
+  const { turmaAtiva } = useTurma();
   const { showError, showWarning } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -127,7 +129,9 @@ export default function RelatorioBoletins() {
       if (paramTurmaId && lista.some(t => t.id === paramTurmaId)) {
         setSelectedTurmaId(paramTurmaId);
       } else if (lista.length > 0 && !selectedTurmaId) {
-        setSelectedTurmaId(lista[0].id);
+        const idAtiva = turmaAtiva ? String(turmaAtiva.id).split('||')[0] : '';
+        const daTurmaAtiva = lista.find(t => t.id === idAtiva || t.id.split('||')[0] === idAtiva);
+        setSelectedTurmaId(daTurmaAtiva?.id || lista[0].id);
       }
     } catch (err) {
       console.error('Erro ao carregar turmas:', err);
@@ -135,7 +139,7 @@ export default function RelatorioBoletins() {
     } finally {
       setLoadingTurmas(false);
     }
-  }, [user, paramTurmaId, selectedTurmaId, showError]);
+  }, [user, paramTurmaId, selectedTurmaId, showError, turmaAtiva]);
 
   useEffect(() => {
     carregarTurmas();

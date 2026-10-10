@@ -8,6 +8,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { formatarDataParaISO, getBimestrePorData, getDayOfWeek } from '../utils/dateUtils';
 import { APP_CONFIG } from '../config/appConfig';
+import { labelBimestreAtual, mesAtualRelatorio, escolherTurmaRelatorio } from '../utils/relatorioFiltro';
+import { useTurma } from '../contexts/TurmaContext';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
 import * as OfflineStorage from '../services/offlineStorage';
 import { readAllRows } from '../services/pagination';
@@ -48,6 +50,7 @@ const obterLogoEscola = (nomeEscola: string) => {
 
 export default function RelatorioConteudos() {
   const { user } = useAuth();
+  const { turmaAtiva } = useTurma();
   const { showError, showWarning } = useToast();
   const [turmas, setTurmas] = useState<TurmaRelatorio[]>([]);
   const [selectedTurmaId, setSelectedTurmaId] = useState('');
@@ -57,13 +60,13 @@ export default function RelatorioConteudos() {
   const [conteudosRelatorio, setConteudosRelatorio] = useState<ConteudoLinha[]>([]);
 
   const [opcaoFiltro, setOpcaoFiltro] = useState('Período');
-  const [periodoSelecionado, setPeriodoSelecionado] = useState('1. BIMESTRE');
+  const [periodoSelecionado, setPeriodoSelecionado] = useState(labelBimestreAtual);
 
   useEffect(() => {
     if (opcaoFiltro === 'Período') {
-      setPeriodoSelecionado('1. BIMESTRE');
+      setPeriodoSelecionado(labelBimestreAtual());
     } else {
-      setPeriodoSelecionado('JANEIRO');
+      setPeriodoSelecionado(mesAtualRelatorio());
     }
   }, [opcaoFiltro]);
 
@@ -74,7 +77,7 @@ export default function RelatorioConteudos() {
       const finalTurmas = await OfflineTurmaService.fetchTurmasRelatorio(user);
       setTurmas(finalTurmas);
       if (finalTurmas.length > 0) {
-        setSelectedTurmaId(`${finalTurmas[0].id}|${finalTurmas[0].componente}`);
+        setSelectedTurmaId(escolherTurmaRelatorio(finalTurmas, turmaAtiva));
       } else {
         setSelectedTurmaId('');
       }

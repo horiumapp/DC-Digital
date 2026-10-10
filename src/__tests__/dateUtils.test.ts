@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getBimestrePorData, getDayOfWeek, formatarDataParaISO, formatarDataParaExibicao, formatarDiaMes } from '../utils/dateUtils';
+import { labelBimestreAtual, mesAtualRelatorio, escolherTurmaRelatorio, avaliacaoNoPeriodo } from '../utils/relatorioFiltro';
 import { parentIdVinculado } from '../utils/parentId';
 import { APP_CONFIG, getPeriodoPorData } from '../config/appConfig';
 
@@ -57,6 +58,20 @@ describe('Vínculo de avaliação', () => {
     expect(parentIdVinculado('')).toBeUndefined();
     expect(parentIdVinculado(42)).toBe('42');
     expect(parentIdVinculado('42')).toBe('42');
+  });
+});
+
+describe('Filtro dos relatórios', () => {
+  it('trata 4. BIMESTRE e 4º Bimestre como o mesmo período', () => {
+    expect(avaliacaoNoPeriodo('4º Bimestre', '4. BIMESTRE')).toBe(true);
+    expect(avaliacaoNoPeriodo('4. BIMESTRE', '4º Bimestre')).toBe(true);
+    expect(avaliacaoNoPeriodo('1º Bimestre', '4. BIMESTRE')).toBe(false);
+    expect(escolherTurmaRelatorio(
+      [{ id: 'a', componente: 'Português' }, { id: 'b', componente: 'Matemática' }],
+      { id: 'b||Matemática', componente: 'Matemática' },
+    )).toBe('b|Matemática');
+    expect(labelBimestreAtual()).toMatch(/BIMESTRE/);
+    expect(['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO']).toContain(mesAtualRelatorio());
   });
 });
 
