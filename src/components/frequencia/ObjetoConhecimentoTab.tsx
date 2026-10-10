@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Check, Pencil, Trash2, RefreshCw, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { Check, Pencil, Trash2, RefreshCw, AlertTriangle, ArrowLeft, ChevronDown } from 'lucide-react';
 import { useToast } from '../common/Toast';
 import { useTurma } from '../../contexts/TurmaContext';
 import { supabase } from '../../lib/supabase';
 import * as OfflineStorage from '../../services/offlineStorage';
-import { getBimestrePorData } from '../../utils/dateUtils';
+import { formatarDataParaExibicao, formatarDataParaISO, getBimestrePorData, getPeriodoInfoPorData } from '../../utils/dateUtils';
 import Captcha from '../common/Captcha';
 import { useCaptcha } from '../../hooks/useCaptcha';
 
@@ -30,6 +30,10 @@ interface CurriculoUnidade {
   habilidades: CurriculoHabilidade[];
 }
 
+function normalizarAssunto(valor: string): string {
+  return valor.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
 interface ObjetoConhecimentoTabProps {
   turmaAtiva: { id: string; nome?: string; ensino?: string; fase?: string; componente?: string } | null;
   selectedDate: string;
@@ -48,7 +52,7 @@ export default function ObjetoConhecimentoTab({
   disabled,
 }: ObjetoConhecimentoTabProps) {
   const navigate = useNavigate();
-  const { registrarLancamento: _registrarLancamento, removerLancamento: _removerLancamento, salvarConteudo, buscarConteudo, removerConteudo, lancamentos } = useTurma();
+  const { registrarLancamento: _registrarLancamento, removerLancamento: _removerLancamento, salvarConteudo, buscarConteudo, removerConteudo, lancamentos, conteudos = [] } = useTurma();
 
   const _isLancado = lancamentos.some(l => 
     l.data === selectedDate && 
@@ -154,7 +158,28 @@ export default function ObjetoConhecimentoTab({
     return list;
   }, [unidadesDisponiveis]);
 
+  const lancadosNoBimestre = React.useMemo(() => {
+    const periodo = getPeriodoInfoPorData(selectedDate);
+    const mapa = new Map<string, string>();
+    conteudos.forEach(conteudo => {
+      const data = formatarDataParaISO(conteudo.data);
+      if (periodo && (data < periodo.dataInicio || data > periodo.dataFim)) return;
+      conteudo.objetos?.forEach(objeto => {
+        const chave = normalizarAssunto(String(objeto || ''));
+        if (!chave) return;
+        const anterior = mapa.get(chave);
+        if (!anterior || data > anterior) mapa.set(chave, data);
+      });
+    });
+    return mapa;
+  }, [conteudos, selectedDate]);
+
+  const conteudosPendentes = todosConteudos.filter(item => !lancadosNoBimestre.has(normalizarAssunto(item.descricao)));
+  const conteudosLancados = todosConteudos.filter(item => lancadosNoBimestre.has(normalizarAssunto(item.descricao)));
+
   const [objetoConhecimento, setObjetoConhecimento] = useState('');
+  const [listaConteudosAberta, setListaConteudosAberta] = useState(false);
+  const listaConteudosRef = useRef<HTMLDivElement>(null);
   const [objetoObservacao, setObjetoObservacao] = useState('');
   const [objetoStatus, setObjetoStatus] = useState('Ministrado');
   const [modoTextoLivre, setModoTextoLivre] = useState(false);
@@ -190,6 +215,27 @@ export default function ObjetoConhecimentoTab({
     };
     carregar();
   }, [selectedDate, tempoAula, turmaAtiva, buscarConteudo, unidadesDisponiveis, curriculoIndisponivel]);
+
+  useEffect(() => {
+    if (!listaConteudosAberta) return;
+    const fechar = (evento: MouseEvent) => {
+      if (!listaConteudosRef.current?.contains(evento.target as Node)) setListaConteudosAberta(false);
+    };
+    const tecla = (evento: KeyboardEvent) => {
+      if (evento.key === 'Escape') setListaConteudosAberta(false);
+    };
+    document.addEventListener('mousedown', fechar);
+    document.addEventListener('keydown', tecla);
+    return () => {
+      document.removeEventListener('mousedown', fechar);
+      document.removeEventListener('keydown', tecla);
+    };
+  }, [listaConteudosAberta]);
+
+  const escolherConteudo = (descricao: string) => {
+    setObjetoConhecimento(descricao);
+    setListaConteudosAberta(false);
+  };
 
   const { showWarning, showError } = useToast();
 
@@ -383,26 +429,75 @@ export default function ObjetoConhecimentoTab({
             <div className="sm:col-span-8">
               <label className="block text-sm text-slate-600 mb-1">Conteúdo ministrado</label>
               {todosConteudos.length > 0 && !modoTextoLivre ? (
-                <select
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 bg-white"
-                  value={objetoConhecimento}
-                  onChange={(e) => {
-                    if (e.target.value === 'TEXTO LIVRE') {
-                      setModoTextoLivre(true);
-                      setObjetoConhecimento('');
-                    } else {
-                      setObjetoConhecimento(e.target.value);
-                    }
-                  }}
-                >
-                  <option value="">Selecione o Conteúdo Ministrado...</option>
-                  {todosConteudos.map((item, idx) => (
-                    <option key={idx} value={item.descricao}>
-                      {item.descricao}
-                    </option>
-                  ))}
-                  <option value="TEXTO LIVRE">-- OUTRO / TEXTO LIVRE --</option>
-                </select>
+                <div className="relative" ref={listaConteudosRef}>
+                  <button
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded={listaConteudosAberta}
+                    onClick={() => setListaConteudosAberta(aberta => !aberta)}
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm text-left text-slate-700 focus:outline-none focus:border-blue-500 bg-white flex items-center justify-between gap-2"
+                  >
+                    <span className={objetoConhecimento ? '' : 'text-slate-400'}>
+                      {objetoConhecimento || 'Selecione o Conteúdo Ministrado...'}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 shrink-0 text-slate-400 transition ${listaConteudosAberta ? 'rotate-180' : ''}`} />
+                  </button>
+                  {listaConteudosAberta && (
+                    <div role="listbox" aria-label="Conteúdos do bimestre" className="absolute z-30 mt-1 w-full max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                      {conteudosPendentes.length > 0 && (
+                        <div className="py-1">
+                          {conteudosLancados.length > 0 && (
+                            <p className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Ainda não lançados</p>
+                          )}
+                          {conteudosPendentes.map(item => (
+                            <button
+                              key={item.descricao}
+                              type="button"
+                              role="option"
+                              aria-selected={objetoConhecimento === item.descricao}
+                              onClick={() => escolherConteudo(item.descricao)}
+                              className="w-full px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+                            >
+                              {item.descricao}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {conteudosLancados.length > 0 && (
+                        <div className="border-t border-emerald-100 bg-emerald-50/70 py-1">
+                          <p className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-emerald-700">Já lançados neste bimestre</p>
+                          {conteudosLancados.map(item => {
+                            const data = lancadosNoBimestre.get(normalizarAssunto(item.descricao));
+                            return (
+                              <button
+                                key={item.descricao}
+                                type="button"
+                                role="option"
+                                aria-selected={objetoConhecimento === item.descricao}
+                                onClick={() => escolherConteudo(item.descricao)}
+                                className="w-full px-3 py-2 text-left text-sm text-emerald-900 hover:bg-emerald-100/80"
+                              >
+                                <span className="block">{item.descricao}</span>
+                                <span className="block text-[11px] font-semibold text-emerald-700">Já lançado em {formatarDataParaExibicao(data || '')}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModoTextoLivre(true);
+                          setObjetoConhecimento('');
+                          setListaConteudosAberta(false);
+                        }}
+                        className="w-full border-t border-slate-200 px-3 py-2 text-left text-sm font-semibold text-slate-500 hover:bg-slate-50"
+                      >
+                        -- OUTRO / TEXTO LIVRE --
+                      </button>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="space-y-1">
                   <input
