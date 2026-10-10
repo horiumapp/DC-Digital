@@ -123,7 +123,7 @@ export default function Layout() {
 
     const data = `${ultimaAula.getFullYear()}-${String(ultimaAula.getMonth() + 1).padStart(2, '0')}-${String(ultimaAula.getDate()).padStart(2, '0')}`;
     showInfo(`Abrindo a última aula do ${periodoAberto.nome}: ${ultimaAula.toLocaleDateString('pt-BR')}.`);
-    navigate(`/frequencia?date=${data}&turmaId=${encodeURIComponent(String(turmaAtiva.id))}`);
+    navigate(`/frequencia?date=${data}&turmaId=${encodeURIComponent(String(turmaAtiva.id))}&origem=ultima-aula&periodo=${encodeURIComponent(periodoAberto.nome)}`);
   };
 
   const navClass = ({ isActive }: { isActive: boolean }) => `dd-nav-item ${isActive ? 'dd-nav-item-active' : ''}`;

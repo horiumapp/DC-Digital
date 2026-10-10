@@ -5,6 +5,7 @@ import Captcha from '../common/Captcha';
 import { useTurma, Aluno } from '../../contexts/TurmaContext';
 import { useCaptcha } from '../../hooks/useCaptcha';
 import { useToast } from '../common/Toast';
+import { formatarDataParaExibicao } from '../../utils/dateUtils';
 
 interface FrequenciaTabProps {
   selectedDate: string;
@@ -36,6 +37,7 @@ export default function FrequenciaTab({
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteFreqModal, setShowDeleteFreqModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [baseline, setBaseline] = useState('');
 
   const isLancado = lancamentos.some(l => 
     l.data === selectedDate && 
@@ -62,7 +64,12 @@ export default function FrequenciaTab({
   // Sincronizar estado local com os alunos
   useEffect(() => {
     setStudentData(alunos.map(a => ({ ...a })));
+    setBaseline(alunos.map(a => `${a.id}:${a.freq}:${a.part}`).join('|'));
   }, [alunos]);
+
+  const marcaAtual = studentData.map(a => `${a.id}:${a.freq}:${a.part}`).join('|');
+  const alteradoENaoGravado = isLancado && marcaAtual !== baseline;
+  const dataLegivel = formatarDataParaExibicao(selectedDate);
 
   // Estatísticas pedagógicas em tempo real
   const stats = useMemo(() => {
@@ -225,8 +232,35 @@ export default function FrequenciaTab({
         </div>
       </div>
 
+      {!isLaunching && isLancado && (
+        <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+          <p className="px-4 py-2 text-xs font-semibold text-slate-500 bg-slate-50 dark:bg-slate-800">Frequência gravada em {dataLegivel}, {tempoAula}</p>
+          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+            {studentData.map((aluno) => (
+              <li key={aluno.id} className="px-4 py-2.5 flex items-center justify-between gap-3 text-sm">
+                <span className="font-medium text-slate-800 dark:text-slate-100">{aluno.nome}</span>
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{aluno.freq === 'P' ? 'Presente' : aluno.freq === 'F' ? 'Falta' : aluno.freq === 'FJ' ? 'Falta justificada' : 'Sem registro'}{aluno.part ? ` · ${aluno.part}` : ''}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {!isLaunching && !isLancado && (
+        <p role="status" className="text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3">
+          Nenhuma frequência gravada para {dataLegivel}, {tempoAula}. Ao abrir o lançamento, todos começam marcados como presentes. Isso ainda não é um registro.
+        </p>
+      )}
+
       {isLaunching && (
         <div className="space-y-4 animate-in fade-in slide-in-from-top-3 duration-300">
+          <p role="status" className={`text-sm rounded-xl px-4 py-3 border ${alteradoENaoGravado || !isLancado ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900'}`}>
+            {isLancado
+              ? (alteradoENaoGravado
+                ? `Há alterações ainda não gravadas em ${turmaAtiva?.fase || 'turma'}, ${dataLegivel}, ${tempoAula}.`
+                : `Frequência já gravada de ${turmaAtiva?.fase || 'turma'}, ${dataLegivel}, ${tempoAula}.`)
+              : `Seleção para lançamento de ${turmaAtiva?.fase || 'turma'}, ${turmaAtiva?.componente || 'componente'}, ${dataLegivel}, ${tempoAula}. Estes P, F e FJ só ficam gravados depois de confirmar.`}
+          </p>
           {/* Quick Metrics Bar & Actions */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             {/* Real-time counters */}
@@ -238,7 +272,7 @@ export default function FrequenciaTab({
               <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
               <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                <span>Presentes: <strong className="font-bold">{stats.presentes}</strong></span>
+                <span>{isLancado ? 'Presentes gravados' : 'Marcados presentes'}: <strong className="font-bold">{stats.presentes}</strong></span>
               </div>
               <div className="flex items-center gap-1.5 text-rose-700 dark:text-rose-400">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
@@ -370,6 +404,7 @@ export default function FrequenciaTab({
                       disabled={disabled}
                       onClick={() => !disabled && setDirectFreq(aluno.id, aluno.freq === 'P' ? '' : 'P')}
                       aria-label="Presença"
+                      aria-pressed={aluno.freq === 'P'}
                       className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-black transition-all active:scale-90 cursor-pointer disabled:cursor-not-allowed ${
                         aluno.freq === 'P'
                           ? 'bg-emerald-500 text-white shadow-md ring-2 ring-emerald-300/50 dark:ring-emerald-700/50'
@@ -384,6 +419,7 @@ export default function FrequenciaTab({
                       disabled={disabled}
                       onClick={() => !disabled && setDirectFreq(aluno.id, aluno.freq === 'F' ? '' : 'F')}
                       aria-label="Falta"
+                      aria-pressed={aluno.freq === 'F'}
                       className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-black transition-all active:scale-90 cursor-pointer disabled:cursor-not-allowed ${
                         aluno.freq === 'F'
                           ? 'bg-rose-500 text-white shadow-md ring-2 ring-rose-300/50 dark:ring-rose-700/50'
@@ -398,6 +434,7 @@ export default function FrequenciaTab({
                       disabled={disabled}
                       onClick={() => !disabled && setDirectFreq(aluno.id, aluno.freq === 'FJ' ? '' : 'FJ')}
                       aria-label="Falta Justificada"
+                      aria-pressed={aluno.freq === 'FJ'}
                       className={`w-11 h-11 rounded-full flex items-center justify-center text-[11px] font-black transition-all active:scale-90 cursor-pointer disabled:cursor-not-allowed ${
                         aluno.freq === 'FJ'
                           ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-300/50 dark:ring-amber-700/50'
@@ -610,7 +647,7 @@ export default function FrequenciaTab({
                   ) : (
                     <>
                       <Check className="w-4 h-4" />
-                      Confirmar e Gravar Frequência
+                      Gravar {turmaAtiva?.fase || 'turma'} · {dataLegivel} · {tempoAula}
                     </>
                   )}
                 </button>

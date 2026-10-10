@@ -9,12 +9,14 @@ import FrequenciaTab from '../components/frequencia/FrequenciaTab';
 import ObjetoConhecimentoTab from '../components/frequencia/ObjetoConhecimentoTab';
 import AnotacoesTab from '../components/frequencia/AnotacoesTab';
 import AvaliacoesTab from '../components/frequencia/AvaliacoesTab';
-import { getBimestrePorData } from '../utils/dateUtils';
+import { getBimestrePorData, formatarDataParaExibicao } from '../utils/dateUtils';
 
 export default function Frequencia() {
   const { turmaAtiva, horarioTurma, lancamentos, verificarPeriodoFechado } = useTurma();
   const [searchParams] = useSearchParams();
   const selectedDateParam = searchParams.get('date') || `${APP_CONFIG.YEAR}-02-06`;
+  const veioDaChamadaRapida = searchParams.get('origem') === 'ultima-aula';
+  const periodoDaChamada = searchParams.get('periodo');
 
   // ── Shared state ──
   const [activeTab, setActiveTab] = useState('frequencia');
@@ -101,6 +103,12 @@ export default function Frequencia() {
                 <strong className="font-bold">Bimestre Fechado:</strong> Este período foi encerrado para lançamentos. As informações abaixo estão em modo somente leitura.
               </div>
             </div>
+          </div>
+        )}
+
+        {veioDaChamadaRapida && (
+          <div role="status" className="bg-sky-50 text-sky-950 border-b border-sky-200 px-4 py-2.5 sm:px-8 text-xs sm:text-sm">
+            Chamada rápida abriu a última aula do {periodoDaChamada || 'bimestre aberto'}: {formatarDataParaExibicao(selectedDate)}. Esse é o bimestre ainda aberto com dia de aula previsto. Troque a data ao lado para lançar outro dia.
           </div>
         )}
 
