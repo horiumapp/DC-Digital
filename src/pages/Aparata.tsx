@@ -5,7 +5,7 @@ import { useTurma } from '../contexts/TurmaContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/common/Toast';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
-import { APP_CONFIG } from '../config/appConfig';
+import { APP_CONFIG, getBimestreAtual } from '../config/appConfig';
 
 const PERIODOS = [
   { value: '1. BIMESTRE', label: '1. BIMESTRE' },
@@ -26,7 +26,7 @@ export default function Aparata() {
     ? turmaAtiva.componente
     : null;
 
-  const [periodoSelecionado, setPeriodoSelecionado] = useState('1. BIMESTRE');
+  const [periodoSelecionado, setPeriodoSelecionado] = useState(() => getBimestreAtual()?.id || '4. BIMESTRE');
   const [disciplinaSelecionada, setDisciplinaSelecionada] = useState<string>(
     disciplinaProfessor || 'TODAS'
   );
@@ -191,8 +191,8 @@ export default function Aparata() {
 
   return (
     <div className="min-h-screen bg-slate-50 relative">
-      <div className="relative z-10 p-8 max-w-7xl mx-auto space-y-6">
-        <div className="max-w-[1400px] mx-auto p-4 space-y-4">
+      <div className="relative z-10 p-4 sm:p-8 max-w-7xl mx-auto space-y-6">
+        <div className="max-w-[1400px] mx-auto space-y-4">
 
           {/* Header */}
           <div className="flex items-center gap-4">
@@ -261,14 +261,14 @@ export default function Aparata() {
 
             {/* Filtros: Seletor de Período e Componente Curricular */}
             <div className="mt-6 pt-6 border-t border-slate-200">
-              <div className="flex flex-wrap items-end gap-4">
-                <div>
+              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-4">
+                <div className="w-full sm:w-auto">
                   <label htmlFor="periodo-select" className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wide">Período</label>
                   <select
                     id="periodo-select"
                     value={periodoSelecionado}
                     onChange={(e) => { setPeriodoSelecionado(e.target.value); }}
-                    className="w-56 border border-slate-200 bg-white rounded-xl px-4 py-2.5 text-sm text-[#0f2851] font-bold focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer shadow-sm"
+                    className="w-full sm:w-56 border border-slate-200 bg-white rounded-xl px-4 py-2.5 text-sm text-[#0f2851] font-bold focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer shadow-sm"
                   >
                     {PERIODOS.map(p => (
                       <option key={p.value} value={p.value}>{p.label}</option>
@@ -276,14 +276,14 @@ export default function Aparata() {
                   </select>
                 </div>
 
-                <div>
+                <div className="w-full sm:w-auto">
                   <label htmlFor="componente-curricular-select" className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wide">Componente Curricular</label>
                   <select
                     id="componente-curricular-select"
                     value={disciplinaAlvo}
                     onChange={(e) => { setDisciplinaSelecionada(e.target.value); }}
                     disabled={Boolean(disciplinaProfessor)}
-                    className="min-w-[260px] border border-slate-200 bg-white rounded-xl px-4 py-2.5 text-sm text-[#0f2851] font-bold focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer shadow-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
+                    className="w-full sm:min-w-[260px] border border-slate-200 bg-white rounded-xl px-4 py-2.5 text-sm text-[#0f2851] font-bold focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer shadow-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                   >
                     {disciplinaProfessor ? (
                       <option value={disciplinaProfessor}>{disciplinaProfessor}</option>

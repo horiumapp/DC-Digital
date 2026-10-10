@@ -79,11 +79,11 @@ export default function PoliticaPrivacidade() {
               <ShieldCheck className="w-4 h-4 text-[#0f2851] dark:text-blue-400" />
               4. Uso de Cookies e Cache Offline
             </h2>
-            <p>O Diário Digital utiliza estritamente <strong>cookies essenciais</strong> e recursos de armazenamento local (IndexedDB e localStorage) que servem para:</p>
+            <p>O Diário Digital utiliza estritamente <strong>cookies essenciais</strong> e uma cópia local neste aparelho, que servem para:</p>
             <ul className="list-disc pl-5 space-y-1">
-              <li>Manter a sessão do usuário ativa e segura (tokens JWT de autenticação).</li>
-              <li>Armazenar temporariamente dados offline (Dexie.js) para sincronização posterior em áreas sem acesso à internet.</li>
-              <li>Salvar as preferências de conformidade de privacidade definidas pelo próprio usuário no banner inicial.</li>
+              <li>Manter a sessão do usuário ativa e segura.</li>
+              <li>Guardar temporariamente as aulas neste aparelho, para lançar frequência e notas sem internet e enviar tudo quando a conexão voltar.</li>
+              <li>Salvar as preferências de privacidade definidas pelo próprio usuário no aviso inicial.</li>
             </ul>
             <p>Por serem de natureza essencial para o funcionamento do sistema de diários escolares e portal do aluno, estes cookies não podem ser desativados sem comprometer a usabilidade do aplicativo.</p>
           </section>

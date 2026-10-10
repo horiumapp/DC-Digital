@@ -23,6 +23,16 @@ interface PersonalProfile {
   outrosDados: Record<string, string | string[]>;
 }
 
+function mascararDocumento(valor?: string): string {
+  if (!valor || valor === '---') return '---';
+  const digitos = valor.replace(/\D/g, '');
+  if (digitos.length === 11) {
+    return `***.${digitos.slice(3, 6)}.${digitos.slice(6, 9)}-**`;
+  }
+  if (valor.length <= 4) return '****';
+  return `${'*'.repeat(Math.max(valor.length - 2, 3))}${valor.slice(-2)}`;
+}
+
 export default function MinhaPrivacidade() {
   const { user } = useAuth();
 
@@ -340,7 +350,7 @@ export default function MinhaPrivacidade() {
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">CPF / Matrícula</span>
-                  <p className="font-semibold text-slate-800 dark:text-slate-200">{profile.documento}</p>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">{mascararDocumento(profile.documento)}</p>
                 </div>
 
                 {Object.entries(profile.outrosDados).map(([key, val]) => {
@@ -362,7 +372,7 @@ export default function MinhaPrivacidade() {
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                         {key.replace('_', ' ')}
                       </span>
-                      <p className="font-semibold text-slate-800 dark:text-slate-200">{String(val)}</p>
+                      <p className="font-semibold text-slate-800 dark:text-slate-200">{key === 'telefone' ? mascararDocumento(String(val)) : String(val)}</p>
                     </div>
                   );
                 })}
@@ -545,14 +555,14 @@ export default function MinhaPrivacidade() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
             <ConsentToggle
               label="Cookies Essenciais & Funcionalidades (Obrigatório)"
-              description="Armazenamento de tokens de login e cache local do banco de dados IndexedDB (Dexie.js) para sincronização offline de notas e diários. Não pode ser desativado."
+              description="Guarda o acesso à sua conta e uma cópia das aulas neste aparelho, para o diário funcionar sem internet e enviar os registros quando a conexão voltar. Não pode ser desativado."
               initialChecked={true}
               onChange={() => {}}
             />
             
             <ConsentToggle
               label="Cookies não essenciais / Analíticos"
-              description="Permite que o sistema colete informações sobre uso do sistema para melhorias de performance. Salva suas escolhas no localStorage."
+              description="Permite que o sistema registre como as telas são usadas, para melhorar o desempenho. A escolha fica guardada neste aparelho."
               initialChecked={cookieConsent}
               onChange={handleCookieConsentChange}
             />

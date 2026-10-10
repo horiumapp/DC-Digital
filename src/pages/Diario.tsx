@@ -14,7 +14,7 @@ export default function Diario() {
   const [searchParams] = useSearchParams();
   const dateParam = searchParams.get('date');
 
-  const { turmaAtiva, lancamentos, avaliacoes, alunos, horarioTurma, fechamentos, verificarPeriodoFechado } = useTurma();
+  const { turmaAtiva, lancamentos, avaliacoes, alunos, horarioTurma, fechamentos, verificarPeriodoFechado, loading } = useTurma();
   const { isOnline, connectionState, pendingCount } = useOffline();
   const year = APP_CONFIG.YEAR;
 
@@ -405,25 +405,32 @@ export default function Diario() {
                 </div>
               </div>
             ) : (
-              <CalendarWidget
-                year={year}
-                currentMonth={currentMonth}
-                onMonthChange={(m) => {
-                  setUsuarioAlterouManualmente(true);
-                  setCurrentMonth(m);
-                }}
-                turmaAtiva={turmaAtiva}
-                lancamentos={lancamentos}
-                avaliacoes={avaliacoes}
-                alunos={alunos}
-                horarioTurma={horarioTurma}
-                minMonth={periodoSelecionado ? parseInt(periodoSelecionado.dataInicio.split('-')[1], 10) - 1 : 1}
-                maxMonth={periodoSelecionado ? parseInt(periodoSelecionado.dataFim.split('-')[1], 10) - 1 : 11}
-                periodoStart={periodoSelecionado?.dataInicio}
-                periodoEnd={periodoSelecionado?.dataFim}
-                selectedDay={selectedDay}
-                onDaySelect={handleDaySelect}
-              />
+              <div className="relative">
+                <CalendarWidget
+                  year={year}
+                  currentMonth={currentMonth}
+                  onMonthChange={(m) => {
+                    setUsuarioAlterouManualmente(true);
+                    setCurrentMonth(m);
+                  }}
+                  turmaAtiva={turmaAtiva}
+                  lancamentos={lancamentos}
+                  avaliacoes={avaliacoes}
+                  alunos={alunos}
+                  horarioTurma={horarioTurma}
+                  minMonth={periodoSelecionado ? parseInt(periodoSelecionado.dataInicio.split('-')[1], 10) - 1 : 1}
+                  maxMonth={periodoSelecionado ? parseInt(periodoSelecionado.dataFim.split('-')[1], 10) - 1 : 11}
+                  periodoStart={periodoSelecionado?.dataInicio}
+                  periodoEnd={periodoSelecionado?.dataFim}
+                  selectedDay={selectedDay}
+                  onDaySelect={handleDaySelect}
+                />
+                {loading && (
+                  <div className="absolute inset-0 rounded-2xl bg-white/70 dark:bg-slate-950/60 flex items-center justify-center text-sm font-semibold text-slate-600 dark:text-slate-300">
+                    Carregando as aulas do período…
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -573,20 +580,23 @@ export default function Diario() {
                 </span>
               </div>
               
+              {loading ? (
+                <p className="text-xs font-semibold text-[var(--dd-ink-muted)]">Carregando o resumo do período…</p>
+              ) : (
               <div className="space-y-3">
                 <SummaryIndicator 
                   label="Frequência das aulas" 
                   pct={pFreq} 
                   count={freqLancadas} 
                   total={totalEsperado} 
-                  barColor={barColor(pFreq)} 
+                  barColor={totalEsperado > 0 ? barColor(pFreq) : 'bg-slate-300'} 
                 />
                 <SummaryIndicator 
                   label="Conteúdos ministrados" 
                   pct={pObj} 
                   count={conteudoLancados} 
                   total={totalEsperado} 
-                  barColor={barColor(pObj)} 
+                  barColor={totalEsperado > 0 ? barColor(pObj) : 'bg-slate-300'} 
                 />
                 <SummaryIndicator 
                   label="Avaliações planejadas" 
@@ -599,6 +609,7 @@ export default function Diario() {
                   barColor={barColor(pNotas)} 
                 />
               </div>
+              )}
             </div>
 
             {/* ═══ APARATA & SYNC ═══ */}
@@ -643,7 +654,7 @@ export default function Diario() {
 
 // ── Helper Components ──
 
-function StatusRow({ label, letter, done, partial }: { label: string; letter?: 'F' | 'C' | 'A'; done: boolean; partial: boolean }) {
+function StatusRow({ label, letter, done, partial }: { label: string; letter?: 'F' | 'C' | 'A' | 'R'; done: boolean; partial: boolean }) {
   const icon = done 
     ? <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> 
     : partial 
@@ -679,8 +690,8 @@ function SummaryIndicator({ label, pct, count, total, barColor }: { label: strin
       <div className="flex justify-between text-xs font-bold text-[var(--dd-ink-muted)] mb-1">
         <span>{label}</span>
         <span className="tabular-nums text-[var(--dd-ink)] font-black">
-          {pct}%
-          {count !== undefined && total !== undefined && (
+          {total === 0 && count !== undefined ? 'Sem aulas previstas' : `${pct}%`}
+          {count !== undefined && total !== undefined && total > 0 && (
             <span className="font-semibold text-[var(--dd-ink-muted)] ml-1">
               ({count}/{total})
             </span>

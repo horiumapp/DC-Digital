@@ -1,8 +1,9 @@
 // @vitest-environment happy-dom
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
 import Aparata from '../pages/Aparata';
+import { getBimestreAtual } from '../config/appConfig';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
 
 const mockUseTurma = vi.fn();
@@ -101,6 +102,10 @@ describe('Aparata - Filtragem por Disciplina do Professor', () => {
 
     render(<Aparata />);
 
+    const periodo = await screen.findByLabelText(/período/i) as HTMLSelectElement;
+    expect(periodo.value).toBe(getBimestreAtual()?.id || '4. BIMESTRE');
+    fireEvent.change(periodo, { target: { value: '1. BIMESTRE' } });
+
     // Aguardar carregamento dos dados
     await waitFor(() => {
       expect(screen.getByText('Movimentações da Aparata')).toBeDefined();
@@ -145,6 +150,10 @@ describe('Aparata - Filtragem por Disciplina do Professor', () => {
     });
 
     render(<Aparata />);
+
+    const periodo = await screen.findByLabelText(/período/i) as HTMLSelectElement;
+    expect(periodo.value).toBe(getBimestreAtual()?.id || '4. BIMESTRE');
+    fireEvent.change(periodo, { target: { value: '1. BIMESTRE' } });
 
     await waitFor(() => {
       expect(screen.getByText('Movimentações da Aparata')).toBeDefined();
