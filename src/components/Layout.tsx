@@ -29,6 +29,7 @@ import { useToast } from './common/Toast';
 import { useOffline } from '../contexts/OfflineContext';
 import { ADMIN_ROLES, SEMEC_ROLE } from '../constants/authConstants';
 import { APP_CONFIG } from '../config/appConfig';
+import { nomeFeriado } from '../services/feriados';
 
 type Item = { label: string; to: string; icon: typeof Home; end?: boolean };
 const reports: Item[] = [
@@ -110,7 +111,8 @@ export default function Layout() {
     const ultimaAula = new Date(limiteBusca);
     let encontrouAula = false;
     for (let candidata = new Date(limiteBusca); candidata >= inicioPeriodo; candidata.setDate(candidata.getDate() - 1)) {
-      if (diasComAula.includes(candidata.getDay())) {
+      const dataCandidata = `${candidata.getFullYear()}-${String(candidata.getMonth() + 1).padStart(2, '0')}-${String(candidata.getDate()).padStart(2, '0')}`;
+      if (diasComAula.includes(candidata.getDay()) && !nomeFeriado(dataCandidata)) {
         ultimaAula.setTime(candidata.getTime());
         encontrouAula = true;
         break;

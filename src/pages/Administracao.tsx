@@ -9,6 +9,7 @@ import TabProfessores from './administracao/TabProfessores';
 import TabUsuarios from './administracao/TabUsuarios';
 import TabLgpd from './administracao/TabLgpd';
 import TabCalendario from './administracao/TabCalendario';
+import TabFeriados from './administracao/TabFeriados';
 
 export default function Administracao() {
   const { user } = useAuth();
@@ -82,6 +83,15 @@ export default function Administracao() {
               Calendário
             </button>
           )}
+          {seesAllSchools && (
+            <button
+              onClick={() => setActiveTab('feriados')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'feriados' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
+            >
+              <CalendarDays className="w-5 h-5" />
+              Feriados
+            </button>
+          )}
           {user?.role === 'ADMIN' && (
             <button
               onClick={() => setActiveTab('lgpd')}
@@ -97,6 +107,7 @@ export default function Administracao() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           {seesAllSchools && activeTab === 'escolas' && <TabEscolas />}
           {user?.role === 'ADMIN' && activeTab === 'calendario' && <TabCalendario />}
+          {seesAllSchools && activeTab === 'feriados' && <TabFeriados />}
           {user?.role === 'ADMIN' && activeTab === 'usuarios' && <TabUsuarios />}
           {user?.role === 'ADMIN' && activeTab === 'lgpd' && <TabLgpd />}
           {activeTab === 'alunos' && <TabAlunos />}

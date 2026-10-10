@@ -133,4 +133,29 @@ describe('CalendarWidget - Abertura do Diário com apenas um clique', () => {
     expect(dia13.querySelector('[aria-label^="Recuperação paralela"]')).toBeTruthy();
     expect(dia13.querySelector('[aria-label^="Avaliação"]')).toBeNull();
   });
+
+  it('não abre a frequência quando o dia é feriado', () => {
+    render(
+      <CalendarWidget
+        year={2026}
+        currentMonth={4}
+        onMonthChange={mockOnMonthChange}
+        turmaAtiva={turmaAtivaExemplo}
+        lancamentos={[]}
+        avaliacoes={[]}
+        alunos={[]}
+        horarioTurma={horarioTurma}
+        periodoStart="2026-05-01"
+        periodoEnd="2026-05-31"
+        selectedDay={null}
+        onDaySelect={mockOnDaySelect}
+        feriados={{ '2026-05-04': 'Aniversário da cidade' }}
+      />
+    );
+
+    const feriado = screen.getByLabelText(/4 de Maio, feriado: Aniversário da cidade/i);
+    fireEvent.click(feriado);
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockOnDaySelect).toHaveBeenCalled();
+  });
 });

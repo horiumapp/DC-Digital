@@ -1,6 +1,7 @@
 import { readAllRows } from './pagination';
 import { supabase } from '../lib/supabase';
 import { APP_CONFIG } from '../config/appConfig';
+import { feriadosNoDiaDaSemana } from './feriados';
 
 export interface PendenciaDocente {
   professor: string;
@@ -257,7 +258,9 @@ export const fetchPendenciasPorEscola = async (
         const slotKey = `${h.dia_semana}|${h.tempo_ordem}`;
         if (!mapConsolidado[key].countedSlots.has(slotKey)) {
           mapConsolidado[key].countedSlots.add(slotKey);
-          mapConsolidado[key].totalAulasEsperadas += countWeekDaysInRange(dateStart, dateEnd, h.dia_semana);
+          const dias = countWeekDaysInRange(dateStart, dateEnd, h.dia_semana);
+          const semAula = feriadosNoDiaDaSemana(dateStart, dateEnd, Number(h.dia_semana));
+          mapConsolidado[key].totalAulasEsperadas += Math.max(0, dias - semAula);
         }
       }
     }

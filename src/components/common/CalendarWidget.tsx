@@ -45,6 +45,7 @@ export interface DayDetails {
   recuperacoesLancadas: boolean;
   isWithinSelectedPeriod: boolean;
   isToday: boolean;
+  feriadoNome: string | null;
 }
 
 interface CalendarWidgetProps {
@@ -62,6 +63,7 @@ interface CalendarWidgetProps {
   periodoEnd?: string;
   selectedDay: number | null;
   onDaySelect: (day: number | null, details: DayDetails | null) => void;
+  feriados?: Record<string, string>;
 }
 
 const STORAGE_KEY = 'dd-diario-view-mode';
@@ -111,6 +113,7 @@ export default function CalendarWidget({
   periodoEnd,
   selectedDay,
   onDaySelect,
+  feriados = {},
 }: CalendarWidgetProps) {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'grid' | 'agenda'>(getStoredViewMode);
@@ -205,9 +208,9 @@ export default function CalendarWidget({
 
     const isPastOrToday = currentDate <= todayDate;
     const temAulaHoje = horarioTurma?.some(h => Number(h.dia_semana) === dayOfWeek);
-    const isDiaDeAula = !!(temAulaHoje && isWithinSchoolYear && isPastOrToday && isWithinSelectedPeriod);
-
     const dayStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+    const feriadoNome = feriados[dayStr] || null;
+    const isDiaDeAula = !!(temAulaHoje && isWithinSchoolYear && isPastOrToday && isWithinSelectedPeriod && !feriadoNome);
     const activeTurmaId = String(turmaAtiva?.id).split('||')[0];
     const lancamentosDoDia = lancamentos.filter(l => l.data === dayStr && String(l.turmaId).split('||')[0] === activeTurmaId);
     
@@ -270,8 +273,9 @@ export default function CalendarWidget({
       recuperacoesLancadas,
       isWithinSelectedPeriod,
       isToday,
+      feriadoNome,
     };
-  }, [year, currentMonth, periodoStart, periodoEnd, horarioTurma, turmaAtiva, lancamentos, avaliacoes, alunos]);
+  }, [year, currentMonth, periodoStart, periodoEnd, horarioTurma, turmaAtiva, lancamentos, avaliacoes, alunos, feriados]);
 
   // Coleta dias de aula do mês para a visão em Agenda
   const daysInMonth = new Date(year, currentMonth + 1, 0).getDate();
@@ -579,6 +583,29 @@ export default function CalendarWidget({
                 );
               }
 
+              if (details.feriadoNome) {
+                return (
+                  <div
+                    key={`day-${day}`}
+                    role="button"
+                    tabIndex={0}
+                    className={`dd-cal-cell flex flex-col justify-between cursor-pointer bg-amber-50 border-amber-200 ${details.isToday ? 'dd-cal-today' : ''} ${isSelected ? 'dd-cal-selected' : ''} ${isSunday ? 'hidden sm:flex' : 'flex'}`}
+                    onClick={() => onDaySelect(day, details)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onDaySelect(day, details);
+                      }
+                    }}
+                    aria-label={`${day} de ${MONTH_NAMES[currentMonth]}, feriado: ${details.feriadoNome}`}
+                    title={details.feriadoNome}
+                  >
+                    <span className="text-sm sm:text-lg font-bold leading-none text-amber-950">{day}</span>
+                    <span className="text-[10px] font-bold text-amber-800 leading-tight">Feriado</span>
+                  </div>
+                );
+              }
+
               // Non-lesson day
               const isOutsidePeriod = !details.isWithinSelectedPeriod;
               return (
@@ -708,6 +735,10 @@ export default function CalendarWidget({
           <span className="flex items-center gap-1.5">
             <span className="w-3.5 h-3.5 rounded border border-[#F8D1D1] bg-[#FFF1F1] dark:border-rose-700/40 dark:bg-rose-950/40 shadow-2xs" />
             <span className="font-medium text-[var(--dd-cal-text-secondary)]">Pendente</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-3.5 h-3.5 rounded border border-amber-300 bg-amber-50 shadow-2xs" />
+            <span className="font-medium text-[var(--dd-cal-text-secondary)]">Feriado</span>
           </span>
         </div>
 

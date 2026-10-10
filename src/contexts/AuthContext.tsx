@@ -1,4 +1,6 @@
 import { loadAcademicCalendar } from '../services/academicCalendar';
+import { carregarFeriados } from '../services/feriados';
+import { APP_CONFIG } from '../config/appConfig';
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
@@ -182,6 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       await loadAcademicCalendar(escolaId);
+      await carregarFeriados(APP_CONFIG.YEAR);
       if (isCancelled()) return;
 
       // FIX #1: Se não temos role (nem do JWT, nem do servidor), negar acesso

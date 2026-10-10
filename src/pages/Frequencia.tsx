@@ -10,6 +10,7 @@ import ObjetoConhecimentoTab from '../components/frequencia/ObjetoConhecimentoTa
 import AnotacoesTab from '../components/frequencia/AnotacoesTab';
 import AvaliacoesTab from '../components/frequencia/AvaliacoesTab';
 import { getBimestrePorData, formatarDataParaExibicao } from '../utils/dateUtils';
+import { carregarFeriados, nomeFeriado } from '../services/feriados';
 
 export default function Frequencia() {
   const { turmaAtiva, horarioTurma, lancamentos, verificarPeriodoFechado } = useTurma();
@@ -22,9 +23,16 @@ export default function Frequencia() {
   const [activeTab, setActiveTab] = useState('frequencia');
   const [selectedDate, setSelectedDate] = useState(selectedDateParam);
   
+  const [feriadosVersao, setFeriadosVersao] = useState(0);
+  React.useEffect(() => {
+    carregarFeriados(APP_CONFIG.YEAR).finally(() => setFeriadosVersao(valor => valor + 1));
+  }, []);
+
   const isPeriodoFechado = React.useMemo(() => {
     return verificarPeriodoFechado(selectedDate);
   }, [selectedDate, verificarPeriodoFechado]);
+  const feriadoNome = React.useMemo(() => nomeFeriado(selectedDate), [selectedDate, feriadosVersao]);
+  const somenteLeitura = isPeriodoFechado || Boolean(feriadoNome);
   
   // Obter tempos válidos para o dia selecionado
   const dow = getDayOfWeek(selectedDate);
@@ -95,6 +103,12 @@ export default function Frequencia() {
     <div className="min-h-screen bg-slate-50 dark:bg-[#090e17] relative pb-20">
       <div className="relative z-10">
         {/* Banner de Período Fechado */}
+        {feriadoNome && (
+          <div className="bg-amber-50 text-amber-950 border-b border-amber-200 px-4 py-2.5 sm:px-8 text-xs sm:text-sm">
+            <strong className="font-bold">Feriado:</strong> {feriadoNome}. Não há aula neste dia. O que já foi lançado continua visível, sem edição.
+          </div>
+        )}
+
         {isPeriodoFechado && (
           <div className="bg-amber-600 text-white px-4 py-2.5 sm:px-8 flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-2.5 text-xs font-semibold">
@@ -193,7 +207,7 @@ export default function Frequencia() {
                   tempoAula={tempoAula}
                   setTempoAula={setTempoAula}
                   disponiveisTempos={temposParaMostrar}
-                  disabled={isPeriodoFechado}
+                  disabled={somenteLeitura}
                 />
               )}
               {activeTab === 'objeto' && (
@@ -203,7 +217,7 @@ export default function Frequencia() {
                   tempoAula={tempoAula}
                   setTempoAula={setTempoAula}
                   disponiveisTempos={temposParaMostrar}
-                  disabled={isPeriodoFechado}
+                  disabled={somenteLeitura}
                 />
               )}
               {activeTab === 'anotacoes' && (
@@ -213,13 +227,13 @@ export default function Frequencia() {
                   tempoAula={tempoAula}
                   setTempoAula={setTempoAula}
                   disponiveisTempos={temposParaMostrar}
-                  disabled={isPeriodoFechado}
+                  disabled={somenteLeitura}
                 />
               )}
               {activeTab === 'avaliacoes' && (
                 <AvaliacoesTab 
                   selectedDate={selectedDate}
-                  disabled={isPeriodoFechado} 
+                  disabled={somenteLeitura} 
                 />
               )}
             </div>

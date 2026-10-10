@@ -3,6 +3,7 @@ import { Avaliacao, Horario, Lancamento, Turma, Aluno } from '../contexts/TurmaC
 import { APP_CONFIG, PeriodoLetivo } from '../config/appConfig';
 import { getBimestrePorData, formatarDataParaISO } from '../utils/dateUtils';
 import { parentIdVinculado } from '../utils/avaliacaoUtils';
+import { contarFeriados, mapaFeriados } from '../services/feriados';
 
 // Interfazes para as dependências e retornos
 interface ProgressStats {
@@ -39,7 +40,8 @@ export function useTurmaProgress(
   lancamentos: Lancamento[],
   horarioTurma: Horario[],
   avaliacoes: Avaliacao[],
-  alunos: Aluno[]
+  alunos: Aluno[],
+  feriados: Record<string, string> = {}
 ): ProgressStats {
 
   return useMemo(() => {
@@ -84,8 +86,11 @@ export function useTurmaProgress(
       temposPorDia.get(dow)!.add(`${h.tempo_ordem}º TEMPO`);
     });
     
+    const fonteFeriados = Object.keys(feriados).length > 0 ? feriados : mapaFeriados();
     slotsPorDia.forEach((qtd, dow) => {
-      totalEsperado += countWeekDaysInRange(inicio, fim, dow) * qtd;
+      const dias = countWeekDaysInRange(inicio, fim, dow);
+      const semAula = contarFeriados(fonteFeriados, inicio, fim, dow);
+      totalEsperado += Math.max(0, dias - semAula) * qtd;
     });
 
     // --- Contar lançamentos com Set para O(1) por lookup ---
@@ -178,5 +183,5 @@ export function useTurmaProgress(
     return {
       pFreq, pObj, pAvaliacoes, pNotas, freqLancadas, conteudoLancados, totalEsperado, barColor
     };
-  }, [turmaAtiva, periodoSelecionado, lancamentos, horarioTurma, avaliacoes, alunos]);
+  }, [turmaAtiva, periodoSelecionado, lancamentos, horarioTurma, avaliacoes, alunos, feriados]);
 }

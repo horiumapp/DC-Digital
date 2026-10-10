@@ -8,6 +8,7 @@ import { APP_CONFIG } from '../config/appConfig';
 import CalendarWidget from '../components/common/CalendarWidget';
 import type { DayDetails } from '../components/common/CalendarWidget';
 import { useTurmaProgress } from '../hooks/useTurmaProgress';
+import { carregarFeriados, mapaFeriados } from '../services/feriados';
 
 export default function Diario() {
   const navigate = useNavigate();
@@ -17,6 +18,15 @@ export default function Diario() {
   const { turmaAtiva, lancamentos, avaliacoes, alunos, horarioTurma, fechamentos, verificarPeriodoFechado, loading } = useTurma();
   const { isOnline, connectionState, pendingCount } = useOffline();
   const year = APP_CONFIG.YEAR;
+  const [feriados, setFeriados] = useState<Record<string, string>>(() => mapaFeriados());
+
+  useEffect(() => {
+    let ativo = true;
+    carregarFeriados(year).then(() => {
+      if (ativo) setFeriados(mapaFeriados());
+    });
+    return () => { ativo = false; };
+  }, [year]);
 
   const periodosLetivos = APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE'));
 
@@ -205,7 +215,8 @@ export default function Diario() {
     lancamentos, 
     horarioTurma, 
     avaliacoes, 
-    alunos
+    alunos,
+    feriados
   );
 
   const handleDaySelect = useCallback((day: number | null, details: DayDetails | null) => {
@@ -422,6 +433,7 @@ export default function Diario() {
                   maxMonth={periodoSelecionado ? parseInt(periodoSelecionado.dataFim.split('-')[1], 10) - 1 : 11}
                   periodoStart={periodoSelecionado?.dataInicio}
                   periodoEnd={periodoSelecionado?.dataFim}
+                  feriados={feriados}
                   selectedDay={selectedDay}
                   onDaySelect={handleDaySelect}
                 />
@@ -488,6 +500,12 @@ export default function Diario() {
                         </div>
                       </div>
 
+                      {selectedDayDetails.feriadoNome && (
+                        <p className="text-sm font-semibold text-amber-800">
+                          Feriado: {selectedDayDetails.feriadoNome}. Não há aula neste dia.
+                        </p>
+                      )}
+
                       {selectedDayDetails.isDiaDeAula ? (
                         <>
                           {/* Times */}
@@ -541,7 +559,7 @@ export default function Diario() {
                             </Link>
                           )}
                         </>
-                      ) : (
+                      ) : selectedDayDetails.feriadoNome ? null : (
                         <div className="py-4 text-center">
                           <p className="text-sm text-[var(--dd-ink-muted)]">
                             {!selectedDayDetails.isWithinSelectedPeriod 
