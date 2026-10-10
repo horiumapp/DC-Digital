@@ -1,234 +1,144 @@
 /**
- * DC Digital — Teste de Carga e Estresse (k6)
- * Arquivo: load-tests/simulation.js
+ * DC Digital — Teste de carga (k6)
  *
- * ATENÇÃO / AVISO CRÍTICO:
- * NÃO RODAR EM PRODUÇÃO SEM AUTORIZAÇÃO EXPRESSA E JANELA DE MANUTENÇÃO APROVADA.
+ * Mede a abertura do diário: horário, alunos, fechamento, datas de chamada,
+ * frequência do dia, conteúdo e avaliações. Não grava nada.
  *
- * Uso:
- *   k6 run load-tests/simulation.js
+ * Perfis:
+ *   smoke    1 pessoa, 20s. Confere se o roteiro está certo.
+ *   escola   até 40 ao mesmo tempo, ~2 min. Pico realista de um turno.
+ *   estresse até 500 ao mesmo tempo, ~16 min. Só com CONFIRM_STRESS=sim
+ *            e fora do horário de aula. O pool do banco aceita 200 clientes.
  *
- * Parâmetros via Variáveis de Ambiente (com valores default para desenvolvimento local):
- *   SUPABASE_URL         URL base do Supabase (ex: https://xyz.supabase.co ou http://localhost:54321)
- *   SUPABASE_ANON_KEY    Chave pública (anon) do Supabase
- *   TEST_ACCESS_TOKEN    Token JWT de um usuário autenticado de teste (obrigatório para RLS)
- *   TEST_TURMA_ID        UUID de turma válida para teste de carga
- *   TEST_DISCIPLINA      Nome da disciplina para consultas (default: 'Matemática')
- *   READ_ONLY            Se 'true', pula operações de escrita (default: 'false')
+ *   k6 run -e PROFILE=smoke -e SUPABASE_URL=... -e SUPABASE_ANON_KEY=... -e TEST_ACCESS_TOKEN=... -e TEST_TURMA_ID=... load-tests/simulation.js
  */
 
 import http from 'k6/http';
 import { check, group, sleep } from 'k6';
-import { Trend, Rate, Counter } from 'k6/metrics';
+import { Trend, Rate } from 'k6/metrics';
 
-// Métricas customizadas para isolar leitura de escrita
 const readDuration = new Trend('read_duration', true);
-const writeDuration = new Trend('write_duration', true);
 const errorRate = new Rate('custom_error_rate');
-const successfulTransactions = new Counter('successful_transactions');
 
-// Configuração de Estágios com Ramp-up Gradual até 500 VUs
-export const options = {
-  stages: [
-    { duration: '1m', target: 20 },   // Warm-up inicial
-    { duration: '2m', target: 50 },   // Carga leve de início de turno
-    { duration: '2m', target: 100 },  // Carga moderada
-    { duration: '3m', target: 200 },  // Pico normal de chamada escolar
-    { duration: '3m', target: 300 },  // Alta concorrência
-    { duration: '3m', target: 500 },  // Teste de estresse máximo
-    { duration: '2m', target: 0 },    // Ramp-down / resfriamento
+const PROFILE = (__ENV.PROFILE || 'smoke').toLowerCase();
+
+const stages = {
+  smoke: [
+    { duration: '20s', target: 1 },
   ],
+  escola: [
+    { duration: '30s', target: 10 },
+    { duration: '1m', target: 40 },
+    { duration: '30s', target: 0 },
+  ],
+  estresse: [
+    { duration: '1m', target: 20 },
+    { duration: '2m', target: 50 },
+    { duration: '2m', target: 100 },
+    { duration: '3m', target: 200 },
+    { duration: '3m', target: 300 },
+    { duration: '3m', target: 500 },
+    { duration: '2m', target: 0 },
+  ],
+};
+
+export const options = {
+  stages: stages[PROFILE] || stages.smoke,
   thresholds: {
-    // Taxa de falhas HTTP abaixo de 1%
     http_req_failed: ['rate<0.01'],
     custom_error_rate: ['rate<0.01'],
-    // 95% das consultas de leitura abaixo de 1000ms
     read_duration: ['p(95)<1000', 'p(99)<2500'],
-    // 95% das operações de escrita abaixo de 2000ms
-    write_duration: ['p(95)<2000', 'p(99)<4000'],
   },
 };
 
-const SUPABASE_URL = __ENV.SUPABASE_URL || 'http://localhost:54321';
-const SUPABASE_ANON_KEY = __ENV.SUPABASE_ANON_KEY || 'dummy_anon_key';
+const SUPABASE_URL = __ENV.SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = __ENV.SUPABASE_ANON_KEY || '';
 const TEST_ACCESS_TOKEN = __ENV.TEST_ACCESS_TOKEN || '';
-const TEST_TURMA_ID = __ENV.TEST_TURMA_ID || '00000000-0000-0000-0000-000000000001';
+const TEST_TURMA_ID = __ENV.TEST_TURMA_ID || '';
 const TEST_DISCIPLINA = __ENV.TEST_DISCIPLINA || 'Matemática';
-const READ_ONLY = (__ENV.READ_ONLY || 'false').toLowerCase() === 'true';
+const TEST_DATA = __ENV.TEST_DATA || '2026-05-06';
+
+export function setup() {
+  if (!stages[PROFILE]) {
+    throw new Error('PROFILE deve ser smoke, escola ou estresse.');
+  }
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !TEST_ACCESS_TOKEN || !TEST_TURMA_ID) {
+    throw new Error('Informe SUPABASE_URL, SUPABASE_ANON_KEY, TEST_ACCESS_TOKEN e TEST_TURMA_ID.');
+  }
+  if (TEST_ACCESS_TOKEN === 'cole_o_TOKEN' || TEST_ACCESS_TOKEN.split('.').length < 3) {
+    throw new Error('TEST_ACCESS_TOKEN ainda é o exemplo. No console do navegador, copie só o texto depois de TOKEN=.');
+  }
+  if (!TEST_DISCIPLINA.trim()) {
+    throw new Error('TEST_DISCIPLINA está vazio. Use Matemática.');
+  }
+  if (PROFILE === 'estresse' && (__ENV.CONFIRM_STRESS || '').toLowerCase() !== 'sim') {
+    throw new Error('O perfil estresse chega a 500 acessos ao mesmo tempo. Rode fora do horário de aula com CONFIRM_STRESS=sim.');
+  }
+}
 
 const headers = {
   'Content-Type': 'application/json',
-  'apikey': SUPABASE_ANON_KEY,
-  ...(TEST_ACCESS_TOKEN ? { 'Authorization': `Bearer ${TEST_ACCESS_TOKEN}` } : {}),
+  apikey: SUPABASE_ANON_KEY,
+  Authorization: `Bearer ${TEST_ACCESS_TOKEN}`,
 };
 
-export default function () {
-  // -------------------------------------------------------------
-  // CENÁRIO 1: Abrir aplicação / Consultar Horários da Turma
-  // -------------------------------------------------------------
-  group('1. Consultar Horários da Turma', function () {
-    const url = `${SUPABASE_URL}/rest/v1/professor_horarios?select=dia_semana,tempo_ordem,componente&turma_id=eq.${TEST_TURMA_ID}`;
-    const start = Date.now();
-    const res = http.get(url, { headers, tags: { type: 'read' } });
-    readDuration.add(Date.now() - start);
-
-    const ok = check(res, {
-      'status 200 horários': (r) => r.status === 200,
-    });
-    errorRate.add(!ok);
-  });
-
-  sleep(0.5);
-
-  // -------------------------------------------------------------
-  // CENÁRIO 2: Carregar Turma (Alunos e Fechamentos)
-  // -------------------------------------------------------------
-  group('2. Carregar Alunos e Fechamentos', function () {
-    const alunosUrl = `${SUPABASE_URL}/rest/v1/alunos?select=id,nome,status,numero_chamada&turma_id=eq.${TEST_TURMA_ID}&status=eq.ATIVO&order=numero_chamada`;
-    const fechamentosUrl = `${SUPABASE_URL}/rest/v1/fechamentos_bimestres?select=bimestre,fechado&turma_id=eq.${TEST_TURMA_ID}&disciplina=eq.${encodeURIComponent(TEST_DISCIPLINA)}`;
-
-    const start = Date.now();
-    const responses = http.batch([
-      ['GET', alunosUrl, null, { headers, tags: { type: 'read' } }],
-      ['GET', fechamentosUrl, null, { headers, tags: { type: 'read' } }],
-    ]);
-    readDuration.add(Date.now() - start);
-
-    const okAlunos = check(responses[0], { 'status 200 alunos': (r) => r.status === 200 });
-    const okFech = check(responses[1], { 'status 200 fechamentos': (r) => r.status === 200 });
-    errorRate.add(!okAlunos || !okFech);
-  });
-
-  sleep(0.5);
-
-  // -------------------------------------------------------------
-  // CENÁRIO 3: Consultar Lançamentos de Frequência (RPC Otimizada)
-  // -------------------------------------------------------------
-  group('3. Consultar Lançamentos via RPC', function () {
-    const rpcUrl = `${SUPABASE_URL}/rest/v1/rpc/get_lancamentos_datas_frequencias`;
-    const payload = JSON.stringify({
-      p_turma_id: TEST_TURMA_ID,
-      p_disciplina: TEST_DISCIPLINA,
-    });
-
-    const start = Date.now();
-    const res = http.post(rpcUrl, payload, { headers, tags: { type: 'read' } });
-    readDuration.add(Date.now() - start);
-
-    const ok = check(res, {
-      'status 200 RPC lançamentos': (r) => r.status === 200,
-    });
-    errorRate.add(!ok);
-  });
-
-  sleep(0.5);
-
-  // -------------------------------------------------------------
-  // CENÁRIO 4: Consultar Frequência de um Dia Específico
-  // -------------------------------------------------------------
-  group('4. Consultar Frequência de um Dia', function () {
-    const url = `${SUPABASE_URL}/rest/v1/frequencias?select=aluno_id,status,disciplina&turma_id=eq.${TEST_TURMA_ID}&data=eq.2026-03-10&disciplina=eq.${encodeURIComponent(TEST_DISCIPLINA)}`;
-    const start = Date.now();
-    const res = http.get(url, { headers, tags: { type: 'read' } });
-    readDuration.add(Date.now() - start);
-
-    const ok = check(res, {
-      'status 200 freq dia': (r) => r.status === 200,
-    });
-    errorRate.add(!ok);
-  });
-
-  sleep(0.5);
-
-  // -------------------------------------------------------------
-  // CENÁRIO 5: Consultar Conteúdos do Dia
-  // -------------------------------------------------------------
-  group('5. Consultar Conteúdos', function () {
-    const url = `${SUPABASE_URL}/rest/v1/conteudos?select=id,turma_id,data,tempo,objetos,habilidades,descricao,disciplina&turma_id=eq.${TEST_TURMA_ID}&data=eq.2026-03-10&tempo=eq.1%C2%BA+TEMPO`;
-    const start = Date.now();
-    const res = http.get(url, { headers, tags: { type: 'read' } });
-    readDuration.add(Date.now() - start);
-
-    const ok = check(res, {
-      'status 200 conteúdos': (r) => r.status === 200,
-    });
-    errorRate.add(!ok);
-  });
-
-  sleep(0.5);
-
-  // -------------------------------------------------------------
-  // CENÁRIO 6: Consultar Avaliações e Notas
-  // -------------------------------------------------------------
-  group('6. Consultar Avaliações e Notas', function () {
-    const avsUrl = `${SUPABASE_URL}/rest/v1/avaliacoes?select=id,nome,tipo,data,bimestre,valor_maximo&turma_id=eq.${TEST_TURMA_ID}&disciplina=eq.${encodeURIComponent(TEST_DISCIPLINA)}`;
-    const start = Date.now();
-    const res = http.get(avsUrl, { headers, tags: { type: 'read' } });
-    readDuration.add(Date.now() - start);
-
-    const ok = check(res, {
-      'status 200 avaliações': (r) => r.status === 200,
-    });
-    errorRate.add(!ok);
-  });
-
-  sleep(0.5);
-
-  // -------------------------------------------------------------
-  // CENÁRIO 7: Lançamento em Lote de Frequência (Escrita)
-  // Particionado por VU e Iteração para evitar conflito artificial
-  // -------------------------------------------------------------
-  if (!READ_ONLY) {
-    group('7. Lançar Frequência em Lote', function () {
-      // Gera data e tempo únicos baseados no VU para não colidir
-      const vuId = __VU;
-      const iter = __ITER % 20;
-      const dayOffset = (vuId % 28) + 1;
-      const padDay = dayOffset < 10 ? `0${dayOffset}` : `${dayOffset}`;
-      const fakeDate = `2026-05-${padDay}`;
-      const fakeTempo = `${(iter % 5) + 1}º TEMPO`;
-
-      // Simula chamada de 5 alunos na turma
-      const batchPayload = JSON.stringify([
-        {
-          turma_id: TEST_TURMA_ID,
-          aluno_id: '00000000-0000-0000-0000-000000000001',
-          data: fakeDate,
-          tempo: fakeTempo,
-          disciplina: TEST_DISCIPLINA,
-          status: 'C',
-          participacao: 'Presencial'
-        },
-        {
-          turma_id: TEST_TURMA_ID,
-          aluno_id: '00000000-0000-0000-0000-000000000002',
-          data: fakeDate,
-          tempo: fakeTempo,
-          disciplina: TEST_DISCIPLINA,
-          status: 'C',
-          participacao: 'Presencial'
-        }
-      ]);
-
-      const writeHeaders = {
-        ...headers,
-        'Prefer': 'resolution=merge-duplicates',
-      };
-
-      const start = Date.now();
-      const res = http.post(`${SUPABASE_URL}/rest/v1/frequencias`, batchPayload, {
-        headers: writeHeaders,
-        tags: { type: 'write' },
-      });
-      writeDuration.add(Date.now() - start);
-
-      const ok = check(res, {
-        'status 201/200/204 lançamento lote': (r) => [200, 201, 204].includes(r.status),
-      });
-      errorRate.add(!ok);
-      if (ok) successfulTransactions.add(1);
-    });
+function ler(nome, url) {
+  const inicio = Date.now();
+  const res = http.get(url, { headers, tags: { name: nome } });
+  readDuration.add(Date.now() - inicio);
+  const ok = check(res, { [`${nome} 200`]: (r) => r.status === 200 });
+  if (!ok) {
+    console.error(`${nome} respondeu ${res.status}: ${String(res.body || '').slice(0, 160)}`);
   }
+  errorRate.add(!ok);
+  return res;
+}
+
+export default function () {
+  const disciplina = encodeURIComponent(TEST_DISCIPLINA);
+  const base = `${SUPABASE_URL}/rest/v1`;
+
+  group('horario', () => {
+    ler('horarios', `${base}/professor_horarios?select=dia_semana,tempo_ordem,componente&turma_id=eq.${TEST_TURMA_ID}`);
+  });
+  sleep(0.4);
+
+  group('turma', () => {
+    ler('alunos', `${base}/alunos?select=id,nome,status&turma_id=eq.${TEST_TURMA_ID}&order=nome`);
+    ler('fechamentos', `${base}/fechamentos_bimestres?select=bimestre,status,disciplina&turma_id=eq.${TEST_TURMA_ID}&disciplina=eq.${disciplina}`);
+  });
+  sleep(0.4);
+
+  group('chamada', () => {
+    const rpc = http.post(
+      `${base}/rpc/get_lancamentos_datas_frequencias`,
+      JSON.stringify({ p_turma_id: TEST_TURMA_ID, p_disciplina: TEST_DISCIPLINA }),
+      { headers, tags: { name: 'datas' } },
+    );
+    const ok = check(rpc, { 'datas 200': (r) => r.status === 200 });
+    if (!ok) {
+      console.error(`datas respondeu ${rpc.status}: ${String(rpc.body || '').slice(0, 160)}`);
+    }
+    errorRate.add(!ok);
+    readDuration.add(rpc.timings.duration);
+
+    ler(
+      'frequencia do dia',
+      `${base}/frequencias?select=aluno_id,status,participacao,data,tempo,disciplina&turma_id=eq.${TEST_TURMA_ID}&data=eq.${TEST_DATA}&disciplina=eq.${disciplina}`,
+    );
+  });
+  sleep(0.4);
+
+  group('diario', () => {
+    ler(
+      'conteudos',
+      `${base}/conteudos?select=id,data,tempo,objetos,descricao,disciplina&turma_id=eq.${TEST_TURMA_ID}&data=eq.${TEST_DATA}`,
+    );
+    ler(
+      'avaliacoes',
+      `${base}/avaliacoes?select=id,tipo,data,bimestre,valor_maximo,disciplina&turma_id=eq.${TEST_TURMA_ID}&disciplina=eq.${disciplina}`,
+    );
+  });
 
   sleep(1);
 }

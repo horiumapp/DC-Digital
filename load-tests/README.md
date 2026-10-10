@@ -55,35 +55,30 @@ O script `simulation.js` lê os parâmetros a partir de variáveis de ambiente d
 | `TEST_ACCESS_TOKEN` | Token JWT de um usuário autenticado | `eyJhbGciOi...` |
 | `TEST_TURMA_ID` | UUID de uma turma válida com dados | `11111111-1111-1111-1111-111111111111` |
 | `TEST_DISCIPLINA` | Disciplina a consultar | `Matemática` |
-| `READ_ONLY` | Desativa escritas (`true` ou `false`) | `true` |
+| `PROFILE` | `smoke` (1 pessoa), `escola` (até 40) ou `estresse` (até 500) | `smoke` |
+| `TEST_DATA` | Dia consultado na chamada | `2026-05-06` |
+| `CONFIRM_STRESS` | Obrigatório `sim` só no perfil `estresse` | |
 
 ---
 
 ## 4. Como Executar
 
-### 4.1. Teste de Leitura em Staging/Local (Recomendado Primeiro)
+O teste só lê. Não grava frequência, nota nem conteúdo.
+
+### 4.1. Conferência (comece por aqui)
 ```powershell
 k6 run `
-  -e SUPABASE_URL="https://seu-projeto-staging.supabase.co" `
-  -e SUPABASE_ANON_KEY="sua_anon_key" `
-  -e TEST_ACCESS_TOKEN="seu_jwt_de_teste" `
+  -e PROFILE=smoke `
+  -e SUPABASE_URL="https://seu-projeto.supabase.co" `
+  -e SUPABASE_ANON_KEY="sua_chave_publica" `
+  -e TEST_ACCESS_TOKEN="jwt_de_um_professor_de_teste" `
   -e TEST_TURMA_ID="uuid-da-turma" `
   -e TEST_DISCIPLINA="Matemática" `
-  -e READ_ONLY="true" `
   load-tests/simulation.js
 ```
 
-### 4.2. Teste Completo (Leitura + Escrita Particionada)
-```powershell
-k6 run `
-  -e SUPABASE_URL="https://seu-projeto-staging.supabase.co" `
-  -e SUPABASE_ANON_KEY="sua_anon_key" `
-  -e TEST_ACCESS_TOKEN="seu_jwt_de_teste" `
-  -e TEST_TURMA_ID="uuid-da-turma" `
-  -e TEST_DISCIPLINA="Matemática" `
-  -e READ_ONLY="false" `
-  load-tests/simulation.js
-```
+### 4.2. Pico de um turno e estresse
+`PROFILE=escola` sobe até 40 acessos ao mesmo tempo. `PROFILE=estresse` sobe até 500 e exige `-e CONFIRM_STRESS=sim`. Rode o estresse fora do horário de aula: o pool do banco está em 200 conexões de cliente e 15 conexões reais.
 
 ---
 
