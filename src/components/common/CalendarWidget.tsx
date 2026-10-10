@@ -41,6 +41,8 @@ export interface DayDetails {
   temAvaliacao: boolean;
   avaliacoesDoDia: CalendarAvaliacao[];
   avaliacoesLancadas: boolean;
+  temRecuperacao: boolean;
+  recuperacoesLancadas: boolean;
   isWithinSelectedPeriod: boolean;
   isToday: boolean;
 }
@@ -213,12 +215,17 @@ export default function CalendarWidget({
     const totalTempos = temposValidos.length;
 
     const avaliacoesDoDia = avaliacoes.filter(av => formatarDataParaISO(av.data) === dayStr && String(av.turmaId).split('||')[0] === activeTurmaId);
-    const temAvaliacao = avaliacoesDoDia.length > 0;
-    
-    const avaliacoesLancadas = temAvaliacao && avaliacoesDoDia.every(av => {
-      const notasDessaAv = alunos.filter(a => a.notas && a.notas[av.id]);
-      return notasDessaAv.length > 0;
-    });
+    const ehRecuperacao = (av: CalendarAvaliacao) => {
+      const tipo = (av.tipo || '').toLowerCase();
+      return tipo.startsWith('rp') || tipo.includes('recupera');
+    };
+    const avaliacoesPrincipais = avaliacoesDoDia.filter(av => !ehRecuperacao(av));
+    const recuperacoes = avaliacoesDoDia.filter(ehRecuperacao);
+    const temNotas = (av: CalendarAvaliacao) => alunos.some(a => a.notas && a.notas[av.id] != null && String(a.notas[av.id]).trim() !== '');
+    const temAvaliacao = avaliacoesPrincipais.length > 0;
+    const temRecuperacao = recuperacoes.length > 0;
+    const avaliacoesLancadas = temAvaliacao && avaliacoesPrincipais.every(temNotas);
+    const recuperacoesLancadas = temRecuperacao && recuperacoes.every(temNotas);
 
     const frequenciasLancadas = lancamentosDoDia.filter(l => l.tipo === 'frequencia' && temposValidos.includes(l.tempo));
     const conteudosLancados = lancamentosDoDia.filter(l => l.tipo === 'conteudo' && temposValidos.includes(l.tempo));
@@ -233,8 +240,8 @@ export default function CalendarWidget({
     const isConteudoPartial = uniqueTemposCont > 0 && uniqueTemposCont < totalTempos;
 
     let status: 'none' | 'pending' | 'partial' | 'full' = 'none';
-    const hasAnyLancamento = uniqueTemposFreq > 0 || uniqueTemposCont > 0 || (temAvaliacao && avaliacoesLancadas);
-    const isAllDone = isFrequenciaFull && isConteudoFull && (!temAvaliacao || avaliacoesLancadas);
+    const hasAnyLancamento = uniqueTemposFreq > 0 || uniqueTemposCont > 0 || (temAvaliacao && avaliacoesLancadas) || (temRecuperacao && recuperacoesLancadas);
+    const isAllDone = isFrequenciaFull && isConteudoFull && (!temAvaliacao || avaliacoesLancadas) && (!temRecuperacao || recuperacoesLancadas);
 
     if (isAllDone) {
       status = 'full';
@@ -259,6 +266,8 @@ export default function CalendarWidget({
       temAvaliacao,
       avaliacoesDoDia,
       avaliacoesLancadas,
+      temRecuperacao,
+      recuperacoesLancadas,
       isWithinSelectedPeriod,
       isToday,
     };
@@ -334,7 +343,7 @@ export default function CalendarWidget({
     partial, 
     title 
   }: { 
-    letter: 'F' | 'C' | 'A'; 
+    letter: 'F' | 'C' | 'A' | 'R'; 
     done: boolean; 
     partial?: boolean; 
     title: string; 
@@ -557,6 +566,13 @@ export default function CalendarWidget({
                             title={`Avaliação: ${details.avaliacoesLancadas ? 'Notas lançadas' : 'Pendente de notas'}`} 
                           />
                         )}
+                        {details.temRecuperacao && (
+                          <StatusCircle
+                            letter="R"
+                            done={details.recuperacoesLancadas}
+                            title={`Recuperação paralela: ${details.recuperacoesLancadas ? 'Notas lançadas' : 'Pendente de notas'}`}
+                          />
+                        )}
                       </div>
                     </div>
                   </div>
@@ -592,8 +608,6 @@ export default function CalendarWidget({
                 {/* Days in week */}
                 {week.days.map((item) => {
                   const isSelected = selectedDay === item.day;
-                  const temRP = item.avaliacoesDoDia.some(av => av.tipo?.startsWith('RP'));
-
                   return (
                     <div 
                       key={`agenda-${item.day}`}
@@ -644,8 +658,14 @@ export default function CalendarWidget({
                           </span>
                           {item.temAvaliacao && (
                             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--dd-cal-text-primary)]">
-                              <StatusCircle letter="A" done={item.avaliacoesLancadas} title={temRP ? 'Recuperação Paralela' : 'Avaliação'} />
-                              <span className="hidden sm:inline">{temRP ? 'RP' : 'Aval'}</span>
+                              <StatusCircle letter="A" done={item.avaliacoesLancadas} title="Avaliação" />
+                              <span className="hidden sm:inline">Aval</span>
+                            </span>
+                          )}
+                          {item.temRecuperacao && (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--dd-cal-text-primary)]">
+                              <StatusCircle letter="R" done={item.recuperacoesLancadas} title="Recuperação paralela" />
+                              <span className="hidden sm:inline">RP</span>
                             </span>
                           )}
                         </div>
@@ -705,6 +725,10 @@ export default function CalendarWidget({
           <span className="flex items-center gap-1.5" title="Avaliação (quando agendada)">
             <span className="dd-circle-badge dd-circle-done">A</span>
             <span className="font-medium text-[var(--dd-cal-text-secondary)]">Avaliação</span>
+          </span>
+          <span className="flex items-center gap-1.5" title="Recuperação paralela">
+            <span className="dd-circle-badge dd-circle-done">R</span>
+            <span className="font-medium text-[var(--dd-cal-text-secondary)]">Recuperação</span>
           </span>
         </div>
       </div>

@@ -110,4 +110,27 @@ describe('CalendarWidget - Abertura do Diário com apenas um clique', () => {
 
     expect(mockNavigate).toHaveBeenCalledWith('/frequencia?date=2026-05-04&turmaId=turma-1');
   });
+
+  it('mostra R no dia que só tem recuperação paralela', () => {
+    render(
+      <CalendarWidget
+        year={2026}
+        currentMonth={4}
+        onMonthChange={mockOnMonthChange}
+        turmaAtiva={turmaAtivaExemplo}
+        lancamentos={[]}
+        avaliacoes={[{ id: '9', data: '2026-05-13', turmaId: 'turma-1', tipo: 'RP01' }]}
+        alunos={[]}
+        horarioTurma={[{ dia_semana: 3, tempo_ordem: 4, componente: 'MATEMÁTICA' }]}
+        periodoStart="2026-05-01"
+        periodoEnd="2026-05-31"
+        selectedDay={null}
+        onDaySelect={mockOnDaySelect}
+      />
+    );
+
+    const dia13 = screen.getByLabelText(/13 de Maio, Quarta-feira/i);
+    expect(dia13.querySelector('[aria-label^="Recuperação paralela"]')).toBeTruthy();
+    expect(dia13.querySelector('[aria-label^="Avaliação"]')).toBeNull();
+  });
 });

@@ -507,9 +507,17 @@ export default function Diario() {
                             />
                             {selectedDayDetails.temAvaliacao && (
                               <StatusRow 
-                                label={selectedDayDetails.avaliacoesDoDia.some(av => av.tipo?.startsWith('RP')) ? 'Recuperação Paralela' : 'Avaliação'} 
+                                label="Avaliação" 
                                 letter="A"
                                 done={selectedDayDetails.avaliacoesLancadas} 
+                                partial={false}
+                              />
+                            )}
+                            {selectedDayDetails.temRecuperacao && (
+                              <StatusRow
+                                label="Recuperação paralela"
+                                letter="R"
+                                done={selectedDayDetails.recuperacoesLancadas}
                                 partial={false}
                               />
                             )}
