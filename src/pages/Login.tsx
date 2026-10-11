@@ -185,11 +185,12 @@ export default function Login() {
   };
 
   return <div className="portal-login">
-    <header className="portal-login-top"><PortalBrand/><span>Um novo capítulo na sua rotina escolar.</span></header>
     <main className="portal-login-main">
       <section className="portal-login-editorial"><span className="portal-eyebrow">MENOS BUROCRACIA. MAIS POSSIBILIDADES.</span><h1>O futuro se escreve<br/><em>em cada aula.</em><span className="portal-editorial-star" aria-hidden="true">✳</span></h1><p>Um espaço para organizar, acompanhar e transformar a experiência de ensinar.</p>
         <div className="portal-login-illustration" aria-hidden="true"><div className="illustration-orbit"/><div className="illustration-note"><span>SEU DIÁRIO, REIMAGINADO</span><BookOpen size={56} strokeWidth={1.3}/><strong>Ideias que viram<br/>aprendizado.</strong><div><i/><i/><i/></div></div><div className="illustration-label"><span>✦</span> Tudo começa com uma aula.</div><div className="illustration-calendar"><span>PLANEJAR · ENSINAR · ACOMPANHAR</span><div>{['S','T','Q','Q','S'].map((d,i)=><b key={i} className={i===2?'selected':''}>{d}<small>{i+12}</small></b>)}</div></div></div>
       </section>
+      <div className="portal-login-access">
+      <header className="portal-login-top"><PortalBrand/></header>
       <section className="portal-login-panel"><span className="portal-login-number">01 / ACESSO</span><h2>Seu espaço<br/>de possibilidades.</h2><p>Entre para continuar sua jornada.</p><div className="portal-login-fields">
               {/* Mode Toggle: Servidor / Aluno */}
               <div className="flex bg-slate-100 dark:bg-slate-800/80 rounded-2xl p-1 mb-6 border border-slate-200/60 dark:border-slate-700/60">
@@ -355,6 +356,7 @@ export default function Login() {
                 </div>
               </form>
 </div><div className="portal-login-help"><ArrowUpRight size={16}/><span>Problemas para entrar? Procure a secretaria da sua escola.</span></div></section>
+      </div>
     </main><footer className="portal-login-footer"><span>DC Digital · Feito para quem transforma.</span><PrivacyLinksFooter/></footer>
   </div>;
 }
