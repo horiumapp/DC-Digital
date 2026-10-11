@@ -1,13 +1,14 @@
 import {useEffect,useState} from 'react';
 import {Building2,CalendarDays} from 'lucide-react';
 import {supabase} from '../../lib/supabase';
-import {findSuggestedLogo,getEscolaLogo} from '../../utils/escolaUtils';
+import {findSuggestedLogo,getEscolaLogo,LOGO_PADRAO_SEMED} from '../../utils/escolaUtils';
 
 interface SchoolInfo {id:string;nome:string;logo_url?:string|null;inep?:string|null;distrito?:string|null}
 interface SchoolIdentityProps {schoolId?:string;name:string;year:number;turn?:string;variant?:'banner'|'header'}
-function SchoolMark({name,source}:{name:string;source:string|null}) {
+function SchoolMark({name,source}:{name:string;source:string}) {
   const [failedSources,setFailedSources]=useState<string[]>([]);
-  const currentSource=[source,findSuggestedLogo(name)].find(candidate=>candidate&&!failedSources.includes(candidate))||null;
+  const candidates=[...new Set([source,findSuggestedLogo(name),LOGO_PADRAO_SEMED].filter((candidate): candidate is string => Boolean(candidate)))];
+  const currentSource=candidates.find(candidate=>!failedSources.includes(candidate))||null;
   const initials=name.trim().split(/\s+/).filter(Boolean).slice(0,2).map(word=>word[0]).join('').toUpperCase()||'ES';
   return <div className="portal-school-mark">{currentSource?<img src={currentSource} alt={`Logo da ${name}`} onError={()=>setFailedSources(previous=>[...previous,currentSource])} referrerPolicy="no-referrer"/>:<span title="Identificação da escola — logo indisponível" aria-hidden="true">{initials}</span>}</div>;
 }
@@ -29,6 +30,6 @@ export default function SchoolIdentity({schoolId,name,year,turn,variant='banner'
   // Prevent a previous school's name or logo from appearing while another loads.
   const school=record?.id===schoolId?record:null;
   const schoolName=school?.nome?.trim()||name;
-  const source=school?.logo_url?.trim()?getEscolaLogo(school):findSuggestedLogo(schoolName);
+  const source=getEscolaLogo({logo_url:school?.logo_url,nome:schoolName});
   return <section className={`portal-school-identity ${variant==='header'?'is-header':''}`} aria-label="Identificação da escola"><SchoolMark key={`${schoolId}:${schoolName}:${source}`} name={schoolName} source={source}/><div className="portal-school-name"><span className="portal-eyebrow"><Building2 size={13}/> SUA ESCOLA</span><h2>{schoolName}</h2><div className="portal-school-meta">{school?.distrito&&<span>{school.distrito}</span>}{school?.inep&&<span>INEP {school.inep}</span>}{turn&&<span>{turn}</span>}</div></div><div className="portal-school-year"><CalendarDays size={19}/><span>Ano letivo<strong>{year}</strong></span></div></section>;
 }
