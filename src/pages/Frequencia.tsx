@@ -1,3 +1,4 @@
+import { PageHeading } from '../components/common/PortalUI';
 import React, { useState } from 'react';
 import { ArrowLeft, Calendar as CalendarIcon } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -91,7 +92,7 @@ export default function Frequencia() {
         <div role="status" className="bg-white border border-slate-200 rounded-2xl p-8 max-w-md w-full text-center">
           <h2 className="text-xl font-bold text-slate-800 mb-2">Escolha a turma para lançar</h2>
           <p className="text-slate-500 mb-6">A frequência, o conteúdo e as avaliações são lançados por turma e componente. Depois de escolher, você volta direto para esta tela.</p>
-          <Link to="/turmas?destino=frequencia" className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#0f2851] text-white font-bold rounded-xl hover:opacity-90 transition">
+          <Link to="/turmas?destino=frequencia" className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#6354c7] text-white font-bold rounded-xl hover:opacity-90 transition">
             Escolher turma
           </Link>
         </div>
@@ -99,10 +100,9 @@ export default function Frequencia() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#090e17] relative pb-20">
-      <div className="relative z-10">
-        {/* Banner de Período Fechado */}
+  const registeredTimes=(tipo:'frequencia'|'conteudo')=>new Set(lancamentos.filter(l=>l.data===selectedDate&&l.tipo===tipo&&String(l.turmaId).split('||')[0]===String(turmaAtiva.id).split('||')[0]&&temposValidosDoDia.includes(l.tempo)).map(l=>l.tempo)).size;
+  const steps = [{id:'frequencia',title:'Frequência',hint:'Quem esteve com você'},{id:'objeto',title:'Conteúdo',hint:'O que foi ensinado'},{id:'anotacoes',title:'Anotações',hint:'O que vale lembrar'},{id:'avaliacoes',title:'Avaliações',hint:'Como a turma avançou'}];
+  return <div className="portal-page portal-lesson"><PageHeading eyebrow="SEU DIÁRIO EM AÇÃO" title="Registro da aula" description={turmaAtiva.fase+' · '+turmaAtiva.componente} actions={<Link className="portal-button secondary" to={'/diario?date='+selectedDate}><ArrowLeft size={16}/>Voltar ao diário</Link>}/>
         {feriadoNome && (
           <div className="bg-amber-50 text-amber-950 border-b border-amber-200 px-4 py-2.5 sm:px-8 text-xs sm:text-sm">
             <strong className="font-bold">Feriado:</strong> {feriadoNome}. Não há aula neste dia. O que já foi lançado continua visível, sem edição.
@@ -126,82 +126,8 @@ export default function Frequencia() {
           </div>
         )}
 
-        {/* Workspace Sticky Action Bar */}
-        <div className="bg-white dark:bg-slate-900 border-b border-slate-200/90 dark:border-slate-800 px-4 py-3 sm:px-8">
-          <div className="max-w-7xl mx-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center gap-3">
-              <Link 
-                to={`/diario?date=${selectedDate}${turmaAtiva?.id ? `&turmaId=${turmaAtiva.id}` : ''}`} 
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" /> 
-                <span>Diário</span>
-              </Link>
 
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-black text-[#0b1f3f] dark:text-sky-300 tracking-tight">
-                  {turmaAtiva?.fase}
-                </h2>
-                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-sky-300 font-bold text-xs rounded-md border border-blue-100 dark:border-blue-900">
-                  {turmaAtiva?.componente}
-                </span>
-                <span className="text-slate-300 dark:text-slate-600 text-xs">•</span>
-                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  {getBimestrePorData(selectedDate) || 'Período Letivo'}
-                </span>
-              </div>
-            </div>
-
-            {/* Date Picker Control */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 shadow-xs">
-                <CalendarIcon className="w-3.5 h-3.5 text-blue-600 dark:text-sky-400 mr-2 shrink-0" />
-                <input 
-                  type="date" 
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="text-xs font-bold text-[#0b1f3f] dark:text-slate-100 bg-transparent outline-none cursor-pointer"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content Workspace */}
-        <main className="p-4 sm:p-6 max-w-7xl mx-auto space-y-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xs border border-slate-200/90 dark:border-slate-800 overflow-hidden">
-            {/* Pedagogical Tabs */}
-            <div className="flex overflow-x-auto border-b border-slate-200/90 dark:border-slate-800 px-4 sm:px-6 bg-slate-50/50 dark:bg-slate-800/40 gap-1">
-              {(['frequencia', 'objeto', 'anotacoes', 'avaliacoes'] as const).map((tab) => {
-                const labels: Record<string, string> = { 
-                  frequencia: 'Chamada & Frequência', 
-                  objeto: 'Conteúdo Ministrado', 
-                  anotacoes: 'Anotações Pedagógicas', 
-                  avaliacoes: 'Avaliações & Notas' 
-                };
-                const isActive = activeTab === tab;
-                return (
-                  <button 
-                    key={tab} 
-                    onClick={() => handleTabChange(tab)}
-                    className={`shrink-0 px-4 py-3.5 text-xs font-bold transition-all relative cursor-pointer ${
-                      isActive 
-                        ? 'text-[#0b1f3f] dark:text-sky-300' 
-                        : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                    }`}
-                  >
-                    {labels[tab]}
-                    {isActive && (
-                      <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#0b1f3f] dark:bg-sky-400 rounded-full" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Content Area */}
-            <div className="p-4 sm:p-6">
-              {activeTab === 'frequencia' && (
+    <div className="portal-lesson-workspace"><aside className="portal-lesson-rail"><div className="portal-lesson-date"><CalendarIcon size={24}/><label htmlFor="lesson-date">DATA DA AULA</label><input id="lesson-date" aria-label="Data da aula" type="date" value={selectedDate} onChange={e=>setSelectedDate(e.target.value)}/><span>{getBimestrePorData(selectedDate)||'Período letivo'}</span></div><nav aria-label="Etapas do registro">{steps.map((step,index)=><button key={step.id} aria-pressed={activeTab===step.id} onClick={()=>handleTabChange(step.id)}><span>{String(index+1).padStart(2,'0')}</span><div><strong>{step.title}</strong><small>{step.id==='frequencia'||step.id==='objeto'?`${registeredTimes(step.id==='frequencia'?'frequencia':'conteudo')} de ${temposValidosDoDia.length} tempos registrados`:step.hint}</small></div></button>)}</nav><div className="portal-lesson-rail-note">Confira a turma, a data e o tempo antes de gravar cada etapa.</div></aside><section className="portal-lesson-content"><header><span className="portal-eyebrow">REGISTRO DA AULA · {formatarDataParaExibicao(selectedDate)}</span><h2>{steps.find(s=>s.id===activeTab)?.title}</h2><p>{steps.find(s=>s.id===activeTab)?.hint}.</p></header><details className="portal-step-help"><summary>Como usar esta etapa</summary><p>{activeTab==='frequencia'?'Abra o lançamento, confira as presenças de cada estudante e confirme a gravação. As marcações só são salvas após confirmar.':activeTab==='objeto'?'Selecione o tempo da aula e registre os objetos de conhecimento e as habilidades trabalhadas.':activeTab==='anotacoes'?'Registre as observações pedagógicas relacionadas à aula e confirme a gravação.':'Cadastre as avaliações e confira as notas de cada estudante nos controles desta etapa.'}</p></details><div className="portal-lesson-form">              {activeTab === 'frequencia' && (
                 <FrequenciaTab
                   selectedDate={selectedDate}
                   tempoAula={tempoAula}
@@ -235,11 +161,5 @@ export default function Frequencia() {
                   selectedDate={selectedDate}
                   disabled={somenteLeitura} 
                 />
-              )}
-            </div>
-          </div>
-        </main>
-      </div>
-    </div>
-  );
+              )}</div></section></div></div>;
 }

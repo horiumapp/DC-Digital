@@ -37,6 +37,7 @@ export default function FrequenciaTab({
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteFreqModal, setShowDeleteFreqModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [presenceFilter,setPresenceFilter]=useState<'all'|'P'|'F'|'FJ'|'unmarked'>('all');
   const [baseline, setBaseline] = useState('');
 
   const isLancado = lancamentos.some(l => 
@@ -124,7 +125,7 @@ export default function FrequenciaTab({
   const visibleStudents = studentData.filter(student => 
     student.nome.toLocaleLowerCase().includes(searchTerm.toLocaleLowerCase()) || 
     student.matricula?.includes(searchTerm)
-  );
+  ).filter(student=>presenceFilter==='all'||(presenceFilter==='unmarked'?!student.freq:student.freq===presenceFilter));
 
   const handleConfirm = async () => {
     if (validateCaptcha()) {
@@ -180,7 +181,7 @@ export default function FrequenciaTab({
             </label>
             <select
               id="tempo-aula-select"
-              className="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0b1f3f]/10 focus:border-[#0b1f3f] min-w-[140px]"
+              className="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] min-w-[140px]"
               value={tempoAula}
               onChange={(e) => setTempoAula(e.target.value)}
             >
@@ -209,7 +210,7 @@ export default function FrequenciaTab({
               <button
                 onClick={() => setIsLaunching(true)}
                 disabled={disabled}
-                className="inline-flex items-center justify-center gap-2 bg-[#0b1f3f] hover:bg-[#133060] text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 bg-[#6354c7] hover:bg-[#5142ad] text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {isLancado ? 'Editar Frequência' : 'Efetuar Lançamento'}
               </button>
@@ -323,7 +324,7 @@ export default function FrequenciaTab({
                 placeholder="Pesquisar por nome ou matrícula..."
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0b1f3f]/10 focus:border-[#0b1f3f] shadow-sm"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] shadow-sm"
               />
             </div>
 
@@ -351,12 +352,13 @@ export default function FrequenciaTab({
 
           {/* Student Attendance List: Mobile Cards (< md) & Desktop Table (>= md) */}
           
+          <div className="portal-presence-filters" aria-label="Filtrar estudantes por frequência">{([{id:'all',label:'Todos',count:stats.total},{id:'P',label:'Presentes',count:stats.presentes},{id:'F',label:'Faltas',count:stats.faltas},{id:'FJ',label:'Justificadas',count:stats.justificadas},{id:'unmarked',label:'Sem marcação',count:stats.pendentes}] as const).map(item=><button key={item.id} aria-pressed={presenceFilter===item.id} onClick={()=>setPresenceFilter(item.id)}>{item.label}<span>{item.count}</span></button>)}</div>{visibleStudents.length===0&&<p className="portal-filter-empty" role="status">Nenhum estudante neste filtro. <button onClick={()=>{setPresenceFilter('all');setSearchTerm('')}}>Limpar filtros</button></p>}
           {/* Mobile Attendance Cards */}
-          <div className="md:hidden space-y-3">
+          <div className="portal-attendance-cards">
             {visibleStudents.map((aluno, index) => (
               <div 
                 key={aluno.id}
-                className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3.5"
+                className="portal-attendance-student bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3.5"
               >
                 {/* Card Header: Index, Name, Registration */}
                 <div className="flex items-start justify-between gap-2.5">
@@ -403,7 +405,7 @@ export default function FrequenciaTab({
                       type="button"
                       disabled={disabled}
                       onClick={() => !disabled && setDirectFreq(aluno.id, aluno.freq === 'P' ? '' : 'P')}
-                      aria-label="Presença"
+                      aria-label={`Presença de ${aluno.nome}`}
                       aria-pressed={aluno.freq === 'P'}
                       className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-black transition-all active:scale-90 cursor-pointer disabled:cursor-not-allowed ${
                         aluno.freq === 'P'
@@ -418,7 +420,7 @@ export default function FrequenciaTab({
                       type="button"
                       disabled={disabled}
                       onClick={() => !disabled && setDirectFreq(aluno.id, aluno.freq === 'F' ? '' : 'F')}
-                      aria-label="Falta"
+                      aria-label={`Falta de ${aluno.nome}`}
                       aria-pressed={aluno.freq === 'F'}
                       className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-black transition-all active:scale-90 cursor-pointer disabled:cursor-not-allowed ${
                         aluno.freq === 'F'
@@ -433,7 +435,7 @@ export default function FrequenciaTab({
                       type="button"
                       disabled={disabled}
                       onClick={() => !disabled && setDirectFreq(aluno.id, aluno.freq === 'FJ' ? '' : 'FJ')}
-                      aria-label="Falta Justificada"
+                      aria-label={`Falta justificada de ${aluno.nome}`}
                       aria-pressed={aluno.freq === 'FJ'}
                       className={`w-11 h-11 rounded-full flex items-center justify-center text-[11px] font-black transition-all active:scale-90 cursor-pointer disabled:cursor-not-allowed ${
                         aluno.freq === 'FJ'
@@ -462,7 +464,7 @@ export default function FrequenciaTab({
                       onClick={() => togglePart(aluno.id, 'Presencial')}
                       className={`flex-1 py-2.5 px-3 text-center text-xs font-bold transition-all cursor-pointer ${
                         aluno.part === 'Presencial'
-                          ? 'bg-[#0b1f3f] text-white shadow-xs'
+                          ? 'bg-[#6354c7] text-white shadow-xs'
                           : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-700'
                       }`}
                     >
@@ -474,7 +476,7 @@ export default function FrequenciaTab({
                       onClick={() => togglePart(aluno.id, 'Remoto')}
                       className={`flex-1 py-2.5 px-3 text-center text-xs font-bold transition-all border-l border-slate-200 dark:border-slate-700 cursor-pointer ${
                         aluno.part === 'Remoto'
-                          ? 'bg-[#0b1f3f] text-white shadow-xs'
+                          ? 'bg-[#6354c7] text-white shadow-xs'
                           : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-700'
                       }`}
                     >
@@ -487,7 +489,7 @@ export default function FrequenciaTab({
           </div>
 
           {/* Desktop Attendance Table (>= md) */}
-          <div className="hidden md:block bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+          <div className="portal-legacy-attendance-table hidden bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
             <table className="w-full text-sm text-left">
               <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider border-b border-slate-200/80 dark:border-slate-800">
                 <tr>
@@ -584,7 +586,7 @@ export default function FrequenciaTab({
                           onClick={() => togglePart(aluno.id, 'Presencial')}
                           className={`px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                             aluno.part === 'Presencial' 
-                              ? 'bg-[#0b1f3f] text-white' 
+                              ? 'bg-[#6354c7] text-white' 
                               : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                           }`}
                         >
@@ -596,7 +598,7 @@ export default function FrequenciaTab({
                           onClick={() => togglePart(aluno.id, 'Remoto')}
                           className={`px-3.5 py-1.5 text-xs font-bold transition-all border-l border-slate-200 dark:border-slate-700 cursor-pointer ${
                             aluno.part === 'Remoto' 
-                              ? 'bg-[#0b1f3f] text-white' 
+                              ? 'bg-[#6354c7] text-white' 
                               : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                           }`}
                         >
@@ -617,7 +619,7 @@ export default function FrequenciaTab({
           </div>
 
           {/* Captcha & Save Action Bar */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+          <div className="portal-attendance-save bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
             {!disabled && (
               <div className="max-w-md">
                 <Captcha
@@ -637,7 +639,7 @@ export default function FrequenciaTab({
                   type="button"
                   onClick={handleConfirm}
                   disabled={isSaving}
-                  className="inline-flex items-center gap-2 bg-[#0b1f3f] hover:bg-[#133060] text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-[#0b1f3f]/15 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="inline-flex items-center gap-2 bg-[#6354c7] hover:bg-[#5142ad] text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-[#6354c7]/15 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isSaving ? (
                     <>

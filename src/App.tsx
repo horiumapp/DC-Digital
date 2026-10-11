@@ -1,3 +1,4 @@
+import { PublicDocumentLayout } from './components/common/ModuleWorkspace';
 import React, { Suspense, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Outlet, Link } from 'react-router-dom';
 import { getSavedConsent } from './utils/lgpdConsent';
@@ -62,7 +63,7 @@ function NotFoundPage() {
         <div className="text-6xl font-black text-slate-200 mb-4">404</div>
         <h2 className="text-xl font-bold text-slate-800 mb-2">Página não encontrada</h2>
         <p className="text-slate-500 mb-6">A página que você procura não existe ou foi movida.</p>
-        <Link to={homeUrl} className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#0f2851] text-white font-bold rounded-xl hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20">
+        <Link to={homeUrl} className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#14594f] text-white font-bold rounded-xl hover:bg-[#10483f] transition shadow-lg shadow-[#14594f]/20">
           Voltar ao Início
         </Link>
       </div>
@@ -103,13 +104,13 @@ export default function App() {
                 </Route>
                 
                 {/* Rotas Legais Públicas (Acessíveis a qualquer visitante) */}
-                <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
-                <Route path="/termos-de-uso" element={<TermosUso />} />
-                <Route path="/solicitacao-lgpd" element={<SolicitacaoLgpd />} />
+                <Route path="/politica-de-privacidade" element={<PublicDocumentLayout><PoliticaPrivacidade /></PublicDocumentLayout>} />
+                <Route path="/termos-de-uso" element={<PublicDocumentLayout><TermosUso /></PublicDocumentLayout>} />
+                <Route path="/solicitacao-lgpd" element={<PublicDocumentLayout><SolicitacaoLgpd /></PublicDocumentLayout>} />
 
                 {/* Rota Privada de Privacidade (Acessível a qualquer usuário logado) */}
                 <Route element={<ProtectedRoute />}>
-                  <Route path="/minha-privacidade" element={<RouteErrorBoundary><MinhaPrivacidade /></RouteErrorBoundary>} />
+                  <Route path="/minha-privacidade" element={<RouteErrorBoundary><PublicDocumentLayout><MinhaPrivacidade /></PublicDocumentLayout></RouteErrorBoundary>} />
                 </Route>
 
                 {/* Rota exclusiva do Portal do Aluno (sem Layout/sidebar) */}

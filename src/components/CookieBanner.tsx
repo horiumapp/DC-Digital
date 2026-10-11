@@ -38,7 +38,7 @@ export default function CookieBanner() {
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Descrição */}
         <div className="flex items-start gap-4">
-          <div className="p-3 bg-[#0f2851] rounded-xl text-blue-400 shrink-0 hidden sm:flex">
+          <div className="p-3 bg-[#6354c7] rounded-xl text-blue-400 shrink-0 hidden sm:flex">
             <Cookie className="w-6 h-6 animate-pulse" />
           </div>
           <div className="space-y-1">

@@ -1,3 +1,4 @@
+import { PageHeading } from '../components/common/PortalUI';
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { SEMEC_ROLE } from '../constants/authConstants';
@@ -18,106 +19,21 @@ export default function Administracao() {
   const defaultTab = seesAllSchools ? 'escolas' : user?.role === 'GESTOR' ? 'professores' : 'turmas';
   const [activeTab, setActiveTab] = useState(defaultTab);
 
-  return (
-    <div className="relative z-10 px-4 py-6 sm:p-8 max-w-7xl mx-auto space-y-6">
-      <div className="max-w-[1400px] mx-auto space-y-6">
-        {/* Header Section */}
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Painel Administrativo</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            {user?.role === 'ADMIN'
-              ? 'Gerencie escolas, turmas, professores, alunos e acessos do sistema.'
-              : isSemec
-              ? 'Gerencie escolas, turmas, professores e alunos de toda a rede.'
-              : 'Gerencie turmas, professores e alunos do sistema.'}
-          </p>
-        </div>
-
-        {/* Tabs */}
-        <div className="overflow-x-auto pb-1"><div className="flex min-w-max bg-slate-50/50 p-1.5 rounded-xl border border-slate-200">
-          {seesAllSchools && (
-            <button
-              onClick={() => setActiveTab('escolas')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'escolas' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
-            >
-              <Building2 className="w-5 h-5" />
-              Escolas
-            </button>
-          )}
-          <button
-            onClick={() => setActiveTab('turmas')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'turmas' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
-          >
-            <Users className="w-5 h-5" />
-            Turmas
-          </button>
-          <button
-            onClick={() => setActiveTab('professores')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'professores' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
-          >
-            <GraduationCap className="w-5 h-5" />
-            Professores
-          </button>
-          <button
-            onClick={() => setActiveTab('alunos')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'alunos' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
-          >
-            <User className="w-5 h-5" />
-            Alunos
-          </button>
-          {user?.role === 'ADMIN' && (
-            <button
-              onClick={() => setActiveTab('usuarios')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'usuarios' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
-            >
-              <Users className="w-5 h-5" />
-              Usuários
-            </button>
-          )}
-          {user?.role === 'ADMIN' && (
-            <button
-              onClick={() => setActiveTab('calendario')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'calendario' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
-            >
-              <CalendarDays className="w-5 h-5" />
-              Calendário
-            </button>
-          )}
-          {seesAllSchools && (
-            <button
-              onClick={() => setActiveTab('feriados')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'feriados' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
-            >
-              <CalendarDays className="w-5 h-5" />
-              Feriados
-            </button>
-          )}
-          {user?.role === 'ADMIN' && (
-            <button
-              onClick={() => setActiveTab('lgpd')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition ${activeTab === 'lgpd' ? 'bg-white text-[#0f2851] shadow-sm border border-slate-100' : 'text-slate-500 hover:text-[#0f2851] hover:bg-white/50'}`}
-            >
-              <ShieldAlert className="w-5 h-5" />
-              LGPD
-            </button>
-          )}
-        </div></div>
-
-        {/* Content Area */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          {seesAllSchools && activeTab === 'escolas' && <TabEscolas />}
+  const sections = [
+    ...(seesAllSchools?[{id:'escolas',label:'Escolas',description:'Unidades da rede',icon:Building2}]:[]),
+    {id:'turmas',label:'Turmas',description:'Organização das classes',icon:Users},
+    {id:'professores',label:'Professores',description:'Equipe pedagógica',icon:GraduationCap},
+    {id:'alunos',label:'Alunos',description:'Trajetórias de aprendizagem',icon:User},
+    ...(user?.role==='ADMIN'?[{id:'usuarios',label:'Usuários',description:'Acessos ao sistema',icon:Users},{id:'calendario',label:'Calendário',description:'Planejamento do ano',icon:CalendarDays}]:[]),
+    ...(seesAllSchools?[{id:'feriados',label:'Feriados',description:'Datas da rede',icon:CalendarDays}]:[]),
+    ...(user?.role==='ADMIN'?[{id:'lgpd',label:'LGPD',description:'Cuidado com os dados',icon:ShieldAlert}]:[]),
+  ];
+  return <div className="portal-page portal-admin"><PageHeading eyebrow="CONEXÕES QUE FAZEM A ESCOLA" title="Gestão que aproxima." description={isSemec?'Uma visão integrada de todas as escolas da rede.':'Pessoas, turmas e planejamento. Tudo no seu lugar.'}/><nav className="portal-admin-shortcuts" aria-label="Atalhos da gestão">{sections.filter(section=>['turmas','alunos','professores'].includes(section.id)).map(({id,label,description,icon:Icon})=><button key={id} onClick={()=>setActiveTab(id)} aria-label={`Gerenciar ${label.toLowerCase()}`} aria-pressed={activeTab===id}><span><Icon size={23}/></span><div><strong>{label}</strong><small>{description}</small></div></button>)}</nav><div className="portal-admin-workspace"><aside className="portal-admin-rail"><span className="portal-eyebrow">EXPLORE A ESCOLA</span>{sections.map(({id,label,description,icon:Icon})=><button key={id} onClick={()=>setActiveTab(id)} aria-pressed={activeTab===id}><Icon size={19}/><span><strong>{label}</strong><small>{description}</small></span></button>)}</aside><section className="portal-admin-content"><header><span className="portal-eyebrow">GESTÃO ESCOLAR</span><h2>{sections.find(s=>s.id===activeTab)?.label}</h2></header>          {seesAllSchools && activeTab === 'escolas' && <TabEscolas />}
           {user?.role === 'ADMIN' && activeTab === 'calendario' && <TabCalendario />}
           {seesAllSchools && activeTab === 'feriados' && <TabFeriados />}
           {user?.role === 'ADMIN' && activeTab === 'usuarios' && <TabUsuarios />}
           {user?.role === 'ADMIN' && activeTab === 'lgpd' && <TabLgpd />}
           {activeTab === 'alunos' && <TabAlunos />}
           {activeTab === 'turmas' && <TabTurmas />}
-          {activeTab === 'professores' && <TabProfessores />}
-        </div>
-      </div>
-    </div>
-  );
+          {activeTab === 'professores' && <TabProfessores />}</section></div></div>;
 }
-
-
-

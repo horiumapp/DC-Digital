@@ -89,7 +89,7 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
       <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-8 shadow-sm">
         <div className="flex flex-wrap justify-between items-center gap-3 mb-6 sm:mb-8">
           <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-[#eef2ff] text-[#6354c7] rounded-xl flex items-center justify-center">
               <Pencil className="w-5 h-5" />
             </div>
             {selectedAvaliacao ? (selectedAvaliacao.parent_id ? 'Agendar Recuperação Paralela (RP)' : 'Alterar Avaliação') : 'Cadastrar Nova Avaliação'}
@@ -97,8 +97,8 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
           <div className="flex items-center gap-3">
             {selectedAvaliacao && (
               <div className="px-4 py-2 bg-[#eef2ff] border border-blue-100 rounded-xl">
-                <span className="text-[10px] font-bold text-[#0f2851]/60 uppercase tracking-widest block leading-none mb-1">Tipo</span>
-                <span className="text-sm font-bold text-[#0f2851] uppercase">{selectedAvaliacao.tipo}</span>
+                <span className="text-[10px] font-bold text-[#6354c7]/60 uppercase tracking-widest block leading-none mb-1">Tipo</span>
+                <span className="text-sm font-bold text-[#6354c7] uppercase">{selectedAvaliacao.tipo}</span>
               </div>
             )}
             <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 transition"><X /></button>
@@ -115,9 +115,9 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
                 readOnly 
                 onClick={() => onSetIsDatePickerOpen(!isDatePickerOpen)} 
                 placeholder="DD/MM/AAAA" 
-                className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer" 
+                className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#6354c7]/10 cursor-pointer" 
               />
-              <CalendarIcon className="w-4 h-4 text-[#0f2851] absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <CalendarIcon className="w-4 h-4 text-[#6354c7] absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
               
               {isDatePickerOpen && (
                 <CustomDatePicker
@@ -130,7 +130,7 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
                 />
               )}
             </div>
-            {selectedDate && <p className="text-[10px] font-bold text-[#0f2851] ml-1">BIMESTRE: {getBimestrePorData(selectedDate)}</p>}
+            {selectedDate && <p className="text-[10px] font-bold text-[#6354c7] ml-1">BIMESTRE: {getBimestrePorData(selectedDate)}</p>}
           </div>
 
           <div className="space-y-2">
@@ -138,7 +138,7 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
             <select 
               value={instrumentoAvaliacao} 
               onChange={(e) => onSetInstrumentoAvaliacao(e.target.value)} 
-              className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer appearance-none"
+              className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#6354c7]/10 cursor-pointer appearance-none"
             >
               <option value="AVALIACAO ESCRITA">AVALIAÇÃO ESCRITA</option>
               <option value="AVALIACAO ORAL">AVALIAÇÃO ORAL</option>
@@ -162,12 +162,12 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
                  if (val > 100) val = 100;
                  onSetValorMaximo(val.toFixed(2).replace('.', ','));
               }}
-              className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-black text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10"
+              className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-black text-slate-700 focus:ring-2 focus:ring-[#6354c7]/10"
               placeholder="0,00"
             />
             {!selectedAvaliacao?.parent_id && selectedDate && (
               <p className="text-[11px] font-bold text-slate-500 pl-1 mt-1">
-                Meta do {getBimestrePorData(selectedDate)}: <span className="text-[#0f2851] font-extrabold">{(getBimestrePorData(selectedDate).includes('3') || getBimestrePorData(selectedDate).includes('4') ? 30 : 20).toFixed(2).replace('.', ',')} pts</span>
+                Meta do {getBimestrePorData(selectedDate)}: <span className="text-[#6354c7] font-extrabold">{(getBimestrePorData(selectedDate).includes('3') || getBimestrePorData(selectedDate).includes('4') ? 30 : 20).toFixed(2).replace('.', ',')} pts</span>
               </p>
             )}
           </div>
@@ -177,7 +177,7 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
       {/* Objetos de Conhecimento da Avaliação */}
       <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-8 shadow-sm">
         <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-[#eef2ff] text-[#6354c7] rounded-xl flex items-center justify-center">
             <List className="w-5 h-5" />
           </div>
           Objetos de Conhecimento da Avaliação
@@ -202,7 +202,7 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
                       setModoManualUnidade(false);
                       setModoManualObjeto(false);
                     }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#6354c7]/10 cursor-pointer"
                   >
                     <option value="">Selecione...</option>
                     {Object.entries(PERIODOS_LABELS).map(([bim, label]) => (
@@ -222,7 +222,7 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
                           onSetUnidadeDidatica('');
                           onSetObjetoConhecimento('');
                         }}
-                        className="text-[11px] font-bold text-[#0f2851] hover:underline"
+                        className="text-[11px] font-bold text-[#6354c7] hover:underline"
                       >
                         {isManualUnidade ? '← Escolher da lista' : '+ Digitar manual'}
                       </button>
@@ -241,7 +241,7 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
                           onSetObjetoConhecimento('');
                         }
                       }}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#6354c7]/10 cursor-pointer"
                     >
                       <option value="">Selecione a unidade...</option>
                       {unidadesOpcoes.map(u => <option key={u} value={u}>{u}</option>)}
@@ -253,7 +253,7 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
                       value={unidadeDidatica}
                       onChange={(e) => onSetUnidadeDidatica(e.target.value)}
                       placeholder="Digite a unidade didática (ex: Geometria, Álgebra...)"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#6354c7]/10"
                     />
                   )}
                 </div>
@@ -270,7 +270,7 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
                           setModoManualObjeto(!isManualObjeto);
                           onSetObjetoConhecimento('');
                         }}
-                        className="text-[11px] font-bold text-[#0f2851] hover:underline"
+                        className="text-[11px] font-bold text-[#6354c7] hover:underline"
                       >
                         {isManualObjeto ? '← Escolher da lista' : '+ Digitar manual'}
                       </button>
@@ -287,7 +287,7 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
                           onSetObjetoConhecimento(e.target.value);
                         }
                       }}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#6354c7]/10 cursor-pointer"
                       disabled={!unidadeDidatica}
                     >
                       <option value="">{unidadeDidatica ? 'Selecione o objeto...' : 'Selecione primeiro a unidade'}</option>
@@ -300,7 +300,7 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
                       value={objetoConhecimento}
                       onChange={(e) => onSetObjetoConhecimento(e.target.value)}
                       placeholder="Digite o objeto de conhecimento da avaliação..."
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#0f2851]/10"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-[#6354c7]/10"
                     />
                   )}
                 </div>
@@ -308,7 +308,7 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
                   type="button"
                   onClick={onAddObjeto}
                   disabled={!objetoConhecimento || objetoConhecimento.trim().length === 0}
-                  className="w-full sm:w-auto bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-3.5 rounded-2xl text-sm font-bold hover:bg-[#e0e7ff] transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm active:scale-95 whitespace-nowrap"
+                  className="w-full sm:w-auto bg-[#eef2ff] text-[#6354c7] border border-blue-100 px-6 py-3.5 rounded-2xl text-sm font-bold hover:bg-[#e0e7ff] transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm active:scale-95 whitespace-nowrap"
                 >
                   <Plus className="w-4 h-4" /> Adicionar
                 </button>
@@ -369,7 +369,7 @@ const AvaliacaoForm = React.memo(function AvaliacaoForm({
           <button 
             onClick={onSave} 
             disabled={isSaving}
-            className="flex-1 bg-[#0f2851] text-white py-4 rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 bg-[#6354c7] text-white py-4 rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-[#5142ad] transition shadow-lg shadow-[#6354c7]/20 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Check className="w-5 h-5 text-emerald-400" /> {isSaving ? 'Salvando...' : 'Salvar Avaliação'}
           </button>

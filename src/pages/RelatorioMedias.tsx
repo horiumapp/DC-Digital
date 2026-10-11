@@ -147,10 +147,10 @@ export default function RelatorioMedias() {
         {/* SubHeader */}
         <section className="bg-white/80 backdrop-blur-md px-8 py-3 flex items-center justify-between border-b border-blue-100 shadow-sm sticky top-0 z-20">
           <div className="flex items-center gap-4">
-            <Link to="/turmas" className="bg-[#eef2ff] text-[#0f2851] px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold border border-blue-100 hover:bg-[#e0e7ff] transition-all shadow-sm">
+            <Link to="/turmas" className="bg-[#eef2ff] text-[#6354c7] px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold border border-blue-100 hover:bg-[#e0e7ff] transition-all shadow-sm">
               <ArrowLeft className="w-4 h-4" /> Voltar
             </Link>
-            <h1 className="text-xl font-semibold text-[#0f2851]">Relatório de Notas do Componente</h1>
+            <h1 className="text-xl font-semibold text-[#6354c7]">Relatório de Notas do Componente</h1>
           </div>
           <span className="bg-emerald-100 text-emerald-700 text-[12px] font-bold px-3 py-1 rounded-full border border-emerald-200">Ano: {APP_CONFIG.YEAR}</span>
         </section>
@@ -161,10 +161,10 @@ export default function RelatorioMedias() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6">
           <div className="p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-[#0f2851]">Pesquisa</h2>
+              <h2 className="text-xl font-bold text-[#6354c7]">Pesquisa</h2>
               <button 
                 onClick={() => window.print()}
-                className="px-6 py-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 rounded text-base font-semibold hover:bg-[#e0e7ff] transition shadow-sm cursor-pointer"
+                className="px-6 py-2 bg-[#eef2ff] text-[#6354c7] border border-blue-100 rounded text-base font-semibold hover:bg-[#e0e7ff] transition shadow-sm cursor-pointer"
               >
                 Imprimir
               </button>
@@ -180,7 +180,7 @@ export default function RelatorioMedias() {
                   <select 
                     value={selectedTurma}
                     onChange={(e) => setSelectedTurma(e.target.value)}
-                    className="bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-md focus:ring-[#0f2851] focus:border-[#0f2851] block w-full pl-12 p-2.5 outline-none appearance-none font-semibold"
+                    className="bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-md focus:ring-[#6354c7] focus:border-[#6354c7] block w-full pl-12 p-2.5 outline-none appearance-none font-semibold"
                   >
                     {loading ? (
                       <option>Carregando turmas...</option>
@@ -203,7 +203,7 @@ export default function RelatorioMedias() {
                 <button 
                   onClick={handleExibir}
                   disabled={dataLoading}
-                  className="w-full flex items-center justify-center space-x-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2.5 rounded-md text-sm font-semibold hover:bg-[#e0e7ff] transition disabled:opacity-70 shadow-sm"
+                  className="w-full flex items-center justify-center space-x-2 bg-[#eef2ff] text-[#6354c7] border border-blue-100 px-6 py-2.5 rounded-md text-sm font-semibold hover:bg-[#e0e7ff] transition disabled:opacity-70 shadow-sm"
                 >
                   <Search className="w-5 h-5" />
                   <span>{dataLoading ? 'Buscando...' : 'Exibir'}</span>
@@ -227,7 +227,7 @@ export default function RelatorioMedias() {
                   placeholder="Pesquisar por nome do aluno..." 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="bg-slate-50 border border-slate-200 text-slate-900 text-base rounded-md focus:ring-[#0f2851] focus:border-[#0f2851] block w-full pl-12 p-3 outline-none"
+                  className="bg-slate-50 border border-slate-200 text-slate-900 text-base rounded-md focus:ring-[#6354c7] focus:border-[#6354c7] block w-full pl-12 p-3 outline-none"
                 />
               </div>
             </div>
@@ -237,25 +237,25 @@ export default function RelatorioMedias() {
                 <thead className="bg-[#f8f9fa] border-b border-slate-200">
                   <tr>
                     <th className="px-4 py-4 border-b border-slate-200 w-16 text-center">
-                      <span className="text-[12px] text-[#0f2851] font-bold uppercase">Nº</span>
+                      <span className="text-[12px] text-[#6354c7] font-bold uppercase">Nº</span>
                     </th>
                     <th className="px-6 py-4 border-b border-slate-200 border-l border-slate-100 min-w-[300px]">
-                      <span className="text-[12px] text-[#0f2851] font-bold uppercase">Nome do Aluno</span>
+                      <span className="text-[12px] text-[#6354c7] font-bold uppercase">Nome do Aluno</span>
                     </th>
                     <th className="px-4 py-4 border-b border-slate-200 border-l border-slate-100 text-center">
-                      <span className="text-[12px] text-[#0f2851] font-bold uppercase">Motivo Saída</span>
+                      <span className="text-[12px] text-[#6354c7] font-bold uppercase">Motivo Saída</span>
                     </th>
                     <th className="px-4 py-4 border-b border-slate-200 border-l border-slate-100 text-center">
-                      <span className="text-[12px] text-[#0f2851] font-bold uppercase">Data Saída</span>
+                      <span className="text-[12px] text-[#6354c7] font-bold uppercase">Data Saída</span>
                     </th>
                     {['1º BIM', '2º BIM', '3º BIM', '4º BIM', 'RECUP'].map(label => (
                       <th key={label} className="px-2 py-4 border-b border-slate-200 border-l border-slate-100 text-center min-w-[90px]">
-                        <span className="text-[12px] text-[#0f2851] font-bold uppercase">{label}</span>
+                        <span className="text-[12px] text-[#6354c7] font-bold uppercase">{label}</span>
                       </th>
                     ))}
                     <th className="px-4 py-4 border-b border-slate-200 border-l border-slate-100 text-center min-w-[130px] bg-slate-50/50">
                       <div className="flex items-center justify-center gap-1.5">
-                        <span className="text-[12px] text-[#0f2851] font-bold uppercase">Nota Final</span>
+                        <span className="text-[12px] text-[#6354c7] font-bold uppercase">Nota Final</span>
                         <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
                       </div>
                     </th>
@@ -285,7 +285,7 @@ export default function RelatorioMedias() {
                           <span className={`inline-flex min-w-[52px] justify-center px-2.5 py-1.5 rounded-lg text-[13px] font-black transition-all shadow-sm ${
                             isLow 
                               ? 'bg-red-50 text-red-600 border border-red-100' 
-                              : isFinal ? 'bg-[#0f2851] text-white shadow-[#0f2851]/20' : 'bg-blue-50 text-[#0f2851] border border-blue-100'
+                              : isFinal ? 'bg-[#6354c7] text-white shadow-[#6354c7]/20' : 'bg-blue-50 text-[#6354c7] border border-blue-100'
                           }`}>
                             {val.toFixed(1).replace('.', ',')}
                           </span>
@@ -298,7 +298,7 @@ export default function RelatorioMedias() {
                             {(index + 1).toString().padStart(2, '0')}
                           </td>
                           <td className="px-6 py-4 border-l border-slate-50">
-                            <span className="text-[#0f2851] font-bold uppercase text-[13px] group-hover:text-blue-700 transition-colors tracking-tight">
+                            <span className="text-[#6354c7] font-bold uppercase text-[13px] group-hover:text-blue-700 transition-colors tracking-tight">
                               {aluno.nome}
                             </span>
                           </td>

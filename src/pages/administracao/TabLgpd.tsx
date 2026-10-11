@@ -129,7 +129,7 @@ export default function TabLgpd() {
       <div className="p-6 flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 gap-4 bg-white shrink-0">
         <div>
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <ShieldAlert className="w-5 h-5 text-[#0f2851]" />
+            <ShieldAlert className="w-5 h-5 text-[#6354c7]" />
             Solicitações LGPD / Direitos do Titular
           </h2>
           <p className="text-xs text-slate-500 mt-0.5 font-medium">
@@ -145,7 +145,7 @@ export default function TabLgpd() {
                 onClick={() => setFiltroStatus(status)}
                 className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                   filtroStatus === status 
-                    ? 'bg-white text-[#0f2851] shadow-sm' 
+                    ? 'bg-white text-[#6354c7] shadow-sm' 
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
@@ -162,7 +162,7 @@ export default function TabLgpd() {
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar solicitante ou e-mail..."
-              className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f2851] focus:border-[#0f2851] bg-slate-50/50 transition-all font-medium"
+              className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#6354c7] focus:border-[#6354c7] bg-slate-50/50 transition-all font-medium"
             />
           </div>
         </div>
@@ -172,7 +172,7 @@ export default function TabLgpd() {
       <div className="flex-1 overflow-auto p-6">
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0f2851]"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6354c7]"></div>
           </div>
         ) : requestsFiltrados.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
@@ -208,7 +208,7 @@ export default function TabLgpd() {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="font-semibold text-[#0f2851] bg-[#eef2ff] px-2 py-0.5 rounded text-xs border border-blue-50">
+                          <span className="font-semibold text-[#6354c7] bg-[#eef2ff] px-2 py-0.5 rounded text-xs border border-blue-50">
                             {getTipoLabel(r.tipo)}
                           </span>
                         </td>
@@ -224,7 +224,7 @@ export default function TabLgpd() {
                           <button
                             onClick={() => handleOpenTratar(r)}
                             type="button"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-[#0f2851] hover:text-white transition-all rounded-lg text-xs font-bold text-slate-700 cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-[#6354c7] hover:text-white transition-all rounded-lg text-xs font-bold text-slate-700 cursor-pointer"
                           >
                             <Eye className="w-3.5 h-3.5" />
                             Tratar
@@ -245,7 +245,7 @@ export default function TabLgpd() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="bg-[#0f2851] text-white p-6">
+            <div className="bg-[#6354c7] text-white p-6">
               <h3 className="text-base font-black flex items-center gap-2">
                 <ShieldAlert className="w-5 h-5 text-blue-300" />
                 Processar Solicitação LGPD
@@ -256,7 +256,7 @@ export default function TabLgpd() {
             {/* Modal Form */}
             <form onSubmit={handleSalvarTratamento} className="p-6 space-y-4">
               <div className="space-y-3 bg-slate-50 p-4 rounded-xl text-xs leading-relaxed border border-slate-100 max-h-40 overflow-y-auto">
-                <div className="flex items-center gap-1.5 font-bold text-[#0f2851]">
+                <div className="flex items-center gap-1.5 font-bold text-[#6354c7]">
                   <MessageSquare className="w-4 h-4" />
                   Mensagem Enviada pelo Titular:
                 </div>
@@ -313,7 +313,7 @@ export default function TabLgpd() {
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="inline-flex items-center gap-1.5 px-5 py-2 bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white font-bold rounded-lg text-xs transition-all shadow-md cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-5 py-2 bg-[#6354c7] hover:bg-[#5142ad] disabled:bg-slate-400 text-white font-bold rounded-lg text-xs transition-all shadow-md cursor-pointer"
                 >
                   {isSaving ? (
                     'Salvando...'

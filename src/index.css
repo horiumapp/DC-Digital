@@ -3,9 +3,9 @@
 
 @theme {
   /* ── Paleta de Cores do Sistema (DC Digital - Tinta Azul Profunda & Superfícies Acolhedoras) ── */
-  --color-primary: #0b1f3f;
-  --color-primary-hover: #16325c;
-  --color-primary-light: #f0f4fa;
+  --color-primary: #14594f;
+  --color-primary-hover: #10483f;
+  --color-primary-light: #f0f6f3;
   --color-primary-light-hover: #e2eaf8;
 
   /* ── Escalonamento Tipográfico ── */
@@ -44,8 +44,8 @@
 
 /* ── Design System: Espaço de Trabalho Pedagógico ── */
 :root {
-  --dd-primary: #0b1f3f;
-  --dd-primary-hover: #16325c;
+  --dd-primary: #14594f;
+  --dd-primary-hover: #10483f;
   --dd-surface: #ffffff;
   --dd-canvas: #f8fafc;
   --dd-surface-subtle: #f1f5f9;
@@ -165,8 +165,8 @@
 }
 
 .dd-nav-item-active {
-  background: #eef4fc;
-  color: #0b1f3f;
+  background: #eaf5f0;
+  color: #14594f;
   font-weight: 700;
 }
 
@@ -269,8 +269,8 @@
 }
 
 .dd-mobile-nav .active {
-  background: #eef4fc;
-  color: #0b1f3f;
+  background: #eaf5f0;
+  color: #14594f;
 }
 
 .dark .dd-sidebar, .dark .dd-topbar, .dark .dd-icon-button, .dark .dd-secondary-button, .dark .dd-mobile-nav {

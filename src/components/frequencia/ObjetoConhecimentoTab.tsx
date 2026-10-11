@@ -340,7 +340,7 @@ export default function ObjetoConhecimentoTab({
                       generateNewCaptcha();
                       setIsAddingObjeto(true);
                     }}
-                    className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-4 sm:px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] flex items-center gap-2 shadow-sm active:scale-95 whitespace-nowrap cursor-pointer"
+                    className="bg-[#eef2ff] text-[#6354c7] border border-blue-100 px-4 sm:px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] flex items-center gap-2 shadow-sm active:scale-95 whitespace-nowrap cursor-pointer"
                   >
                     <span className="text-lg leading-none">+</span> Adicionar Conteúdo
                   </button>
@@ -389,7 +389,7 @@ export default function ObjetoConhecimentoTab({
                                   generateNewCaptcha();
                                   setIsAddingObjeto(true); 
                                 }}
-                                className="flex items-center gap-1 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-3 py-1.5 rounded text-xs font-bold hover:bg-[#e0e7ff] transition"
+                                className="flex items-center gap-1 bg-[#eef2ff] text-[#6354c7] border border-blue-100 px-3 py-1.5 rounded text-xs font-bold hover:bg-[#e0e7ff] transition"
                               >
                                 <Pencil className="w-3 h-3" /> Alterar
                               </button>
@@ -409,7 +409,7 @@ export default function ObjetoConhecimentoTab({
                 </tbody>
               </table>
                <div className="px-4 py-3 bg-white border-t border-slate-200 text-sm text-slate-600 font-medium">
-                 Mostrando de 1 até 1 de <span className="font-bold text-[#0f2851]">1</span> registros
+                 Mostrando de 1 até 1 de <span className="font-bold text-[#6354c7]">1</span> registros
                </div>
             </div>
           )}
@@ -577,7 +577,7 @@ export default function ObjetoConhecimentoTab({
                   type="button"
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="inline-flex items-center gap-2 bg-[#0b1f3f] hover:bg-[#133060] text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-[#0b1f3f]/15 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="inline-flex items-center gap-2 bg-[#6354c7] hover:bg-[#5142ad] text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-[#6354c7]/15 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isSaving ? (
                     <>

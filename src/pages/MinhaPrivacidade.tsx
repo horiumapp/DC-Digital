@@ -289,8 +289,8 @@ export default function MinhaPrivacidade() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-[#0f2851] animate-spin" />
+      <div className="portal-data-module min-h-screen bg-slate-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-[#6354c7] animate-spin" />
       </div>
     );
   }
@@ -312,7 +312,7 @@ export default function MinhaPrivacidade() {
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div className="flex items-center gap-2">
-              <Shield className="w-6 h-6 text-[#0f2851] dark:text-blue-400" />
+              <Shield className="w-6 h-6 text-[#6354c7] dark:text-blue-400" />
               <div>
                 <h1 className="text-lg font-black text-slate-800 dark:text-white leading-tight">Centro de Privacidade</h1>
                 <p className="text-xs text-slate-400">Gerencie seus dados pessoais e preferências LGPD</p>
@@ -331,7 +331,7 @@ export default function MinhaPrivacidade() {
           {/* Dados Pessoais Cadastrados */}
           <div className="md:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
             <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
-              <User className="w-5 h-5 text-[#0f2851] dark:text-blue-400" />
+              <User className="w-5 h-5 text-[#6354c7] dark:text-blue-400" />
               Dados Cadastrados no Sistema
             </h2>
             {profile ? (
@@ -386,7 +386,7 @@ export default function MinhaPrivacidade() {
           <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-between gap-6">
             <div className="space-y-4">
               <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
-                <ShieldCheck className="w-5 h-5 text-[#0f2851] dark:text-blue-400" />
+                <ShieldCheck className="w-5 h-5 text-[#6354c7] dark:text-blue-400" />
                 Portabilidade & Direitos
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -432,7 +432,7 @@ export default function MinhaPrivacidade() {
         {/* Alterar Senha (Segurança) */}
         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
           <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
-            <KeyRound className="w-5 h-5 text-[#0f2851] dark:text-blue-400" />
+            <KeyRound className="w-5 h-5 text-[#6354c7] dark:text-blue-400" />
             Alterar Senha de Acesso
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -461,12 +461,12 @@ export default function MinhaPrivacidade() {
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="Digite sua senha atual"
                 autoComplete="current-password"
-                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] dark:bg-slate-750 dark:text-white transition-all text-sm font-medium max-w-sm pr-12"
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#6354c7]/20 focus:border-[#6354c7] dark:bg-slate-750 dark:text-white transition-all text-sm font-medium max-w-sm pr-12"
                />
                 <button
                   type="button"
                   onClick={() => setShowCurrentPassword((visible) => !visible)}
-                  className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#0f2851] dark:hover:text-blue-300"
+                  className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#6354c7] dark:hover:text-blue-300"
                   aria-label={showCurrentPassword ? 'Ocultar senha' : 'Mostrar senha'}
                   title={showCurrentPassword ? 'Ocultar senha' : 'Mostrar senha'}
                 >
@@ -485,12 +485,12 @@ export default function MinhaPrivacidade() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Mínimo 8 caracteres"
                 autoComplete="new-password"
-                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] dark:bg-slate-750 dark:text-white transition-all text-sm font-medium pr-12"
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#6354c7]/20 focus:border-[#6354c7] dark:bg-slate-750 dark:text-white transition-all text-sm font-medium pr-12"
                />
                 <button
                   type="button"
                   onClick={() => setShowPassword((visible) => !visible)}
-                  className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#0f2851] dark:hover:text-blue-300"
+                  className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#6354c7] dark:hover:text-blue-300"
                   aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                   title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                 >
@@ -509,12 +509,12 @@ export default function MinhaPrivacidade() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Repita a nova senha"
                 autoComplete="new-password"
-                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] dark:bg-slate-750 dark:text-white transition-all text-sm font-medium pr-12"
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#6354c7]/20 focus:border-[#6354c7] dark:bg-slate-750 dark:text-white transition-all text-sm font-medium pr-12"
                />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword((visible) => !visible)}
-                  className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#0f2851] dark:hover:text-blue-300"
+                  className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#6354c7] dark:hover:text-blue-300"
                   aria-label={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
                   title={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
                 >
@@ -527,7 +527,7 @@ export default function MinhaPrivacidade() {
               <button
                 type="submit"
                 disabled={passwordLoading}
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95"
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#6354c7] hover:bg-[#5142ad] disabled:bg-slate-400 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95"
               >
                 {passwordLoading ? (
                   <>
@@ -545,7 +545,7 @@ export default function MinhaPrivacidade() {
         {/* Gerenciamento de Consentimentos */}
         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
           <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
-            <Shield className="w-5 h-5 text-[#0f2851] dark:text-blue-400" />
+            <Shield className="w-5 h-5 text-[#6354c7] dark:text-blue-400" />
             Controle de Consentimentos
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">

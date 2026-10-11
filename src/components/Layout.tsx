@@ -1,4 +1,8 @@
-import { useState } from 'react';
+import SchoolIdentity from './common/SchoolIdentity';
+import { ModuleWorkspace } from './common/ModuleWorkspace';
+import ReportsWorkspace from './common/ReportsWorkspace';
+import { PortalBrand } from './common/PortalUI';
+import { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   BarChart3, 
@@ -18,7 +22,7 @@ import {
   WifiOff,
   CheckCircle2,
   AlertTriangle,
-  Printer
+  Printer, Search, ArrowUpRight
 } from 'lucide-react';
 import ScheduleModal from './ScheduleModal';
 import ConnectionStatus from './common/ConnectionStatus';
@@ -54,7 +58,27 @@ export default function Layout() {
     syncNow 
   } = useOffline();
   
+  const [navQuery, setNavQuery] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const drawerRef = useRef<HTMLElement>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const menuTrigger = menuTriggerRef.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    drawerRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+      if (event.key !== 'Tab') return;
+      const nodes = Array.from(drawerRef.current?.querySelectorAll<HTMLElement>('a[href], button, summary, [tabindex="0"]') || []).filter(el => el.getClientRects().length > 0);
+      const first = nodes[0]; const last = nodes[nodes.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', handleKey); menuTrigger?.focus(); };
+  }, [menuOpen]);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const isSemec = user?.role === SEMEC_ROLE;
   const canManage = !!user && (ADMIN_ROLES.includes(user.role) || isSemec);
@@ -152,7 +176,7 @@ export default function Layout() {
       {isDocente && (
         <section>
           <p className="dd-nav-label">Rotina Docente</p>
-          {work.map(({ label, to, icon: Icon, end }) => (
+          {work.filter(item => item.label.toLocaleLowerCase().includes(navQuery.toLocaleLowerCase())).map(({ label, to, icon: Icon, end }) => (
             <NavLink key={label} to={to} end={end} onClick={close} className={navClass}>
               <Icon aria-hidden="true" />
               <span>{label}</span>
@@ -164,7 +188,7 @@ export default function Layout() {
       {management.length > 0 && (
         <section>
           <p className="dd-nav-label">Gestão Pedagógica</p>
-          {management.map(({ label, to, icon: Icon }) => (
+          {management.filter(item => item.label.toLocaleLowerCase().includes(navQuery.toLocaleLowerCase())).map(({ label, to, icon: Icon }) => (
             <NavLink key={to} to={to} onClick={close} className={navClass}>
               <Icon aria-hidden="true" />
               <span>{label}</span>
@@ -175,14 +199,14 @@ export default function Layout() {
 
       <section>
         <p className="dd-nav-label">Consultas & Apoio</p>
-        {availableReports.length > 0 && <details className="group">
+        {availableReports.length > 0 && <details className="group" open={Boolean(navQuery) || location.pathname.startsWith('/relatorio-') || undefined}>
           <summary className="dd-nav-item cursor-pointer list-none">
             <FileBarChart aria-hidden="true" />
             <span className="flex-1">Relatórios</span>
             <ChevronRight className="w-4 h-4 text-slate-400 group-open:rotate-90 transition-transform" />
           </summary>
           <div className="ml-5 border-l border-slate-200 pl-3 my-1 space-y-0.5 dark:border-slate-800">
-            {availableReports.map(({ label, to }) => (
+            {availableReports.filter(item => item.label.toLocaleLowerCase().includes(navQuery.toLocaleLowerCase())).map(({ label, to }) => (
               <NavLink 
                 key={to} 
                 to={to} 
@@ -190,7 +214,7 @@ export default function Layout() {
                 className={({ isActive }) => 
                   `block rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
                     isActive 
-                      ? 'bg-blue-50 text-[#0b1f3f] dark:bg-blue-950/40 dark:text-sky-300 font-bold' 
+                      ? 'bg-blue-50 text-[#6354c7] dark:bg-blue-950/40 dark:text-sky-300 font-bold' 
                       : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
                   }`
                 }
@@ -209,291 +233,37 @@ export default function Layout() {
     </nav>
   );
 
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 dark:bg-[#090e17] dark:text-slate-100">
-      {/* Desktop Persistent Sidebar */}
-      <aside className="dd-sidebar hidden lg:flex">
-        <Link to={homePath} className="dd-brand" aria-label="DC Digital, ir para visão geral">
-          <img src="/logo.png" alt="" className="h-9 w-9 object-contain" />
-          <span>
-            <strong className="text-[#0b1f3f] dark:text-sky-400 text-base tracking-tight font-extrabold">DC Digital</strong>
-            <small className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Espaço Pedagógico</small>
-          </span>
-        </Link>
-        
-        <div className="flex-1 overflow-y-auto px-1.5">
-          {renderNav()}
-        </div>
-
-        {/* User Card */}
-        <div className="border-t border-slate-200 p-4 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-[#eef4fc] text-[#0b1f3f] dark:bg-slate-800 dark:text-sky-400 font-bold flex items-center justify-center text-xs border border-blue-100 dark:border-slate-700">
-              {user?.name ? user.name.slice(0, 2).toUpperCase() : 'US'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="truncate text-xs font-bold text-slate-800 dark:text-slate-200">{user?.name || 'Usuário'}</p>
-              <p className="truncate text-[11px] text-slate-400 dark:text-slate-500 font-medium uppercase tracking-wider">{user?.title || user?.role}</p>
-            </div>
-            <button 
-              onClick={async () => { await logout(); navigate('/'); }} 
-              className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-              title="Sair do sistema"
-              aria-label="Sair"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Content Area */}
-      <div className="lg:pl-72">
-        <header className="dd-topbar">
-          <div className="flex items-center gap-3 min-w-0">
-            <button 
-              onClick={() => setMenuOpen(true)} 
-              className="dd-icon-button lg:hidden" 
-              aria-label="Abrir menu de navegação"
-            >
-              <Menu aria-hidden="true" />
-            </button>
-            
-            <Link to={homePath} className="flex items-center gap-2 lg:hidden">
-              <img src="/logo.png" alt="" className="h-7 w-7 object-contain" />
-              <b className="text-[#0b1f3f] dark:text-sky-400 font-bold text-sm">DC Digital</b>
-            </Link>
-
-            {/* Persistent Workspace Context Indicator */}
-            {isDeepInsideClass && turmaAtiva ? (
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[#f0f4fa] dark:bg-slate-800/80 rounded-xl border border-blue-100/70 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-200">
-                <span className="font-semibold text-slate-500 dark:text-slate-400">Turma ativa:</span>
-                <strong className="text-[#0b1f3f] dark:text-sky-300 font-bold">{turmaAtiva.fase || turmaAtiva.ensino}</strong>
-                <span className="text-slate-300 dark:text-slate-600">•</span>
-                <span className="text-slate-600 dark:text-slate-300 font-medium">{turmaAtiva.componente}</span>
-                <Link 
-                  to="/turmas" 
-                  className="ml-1 text-[11px] font-bold text-blue-600 hover:text-blue-800 dark:text-sky-400 hover:underline"
-                >
-                  (Trocar)
-                </Link>
-              </div>
-            ) : (
-              <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                <span>{canManage ? 'Gestão Escolar' : 'Ambiente Docente'}</span>
-                <span>•</span>
-                <span className="font-bold text-slate-700 dark:text-slate-300">Ano Letivo {APP_CONFIG.YEAR}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Sync Status Capsule */}
-            <div 
-              onClick={pendingCount > 0 && isOnline ? () => syncNow() : undefined}
-              title={
-                !isOnline 
-                  ? `Offline: ${pendingCount} alteração(ões) salva(s) localmente` 
-                  : pendingCount > 0 
-                  ? `${pendingCount} alteração(ões) salva(s) localmente aguardando sincronização com a nuvem. Clique para enviar agora.` 
-                  : 'Conectado e sincronizado'
-              }
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer select-none ${
-                !isOnline 
-                  ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
-                  : connectionState === 'SYNCING'
-                  ? 'bg-blue-50 text-blue-800 border-blue-200 animate-pulse dark:bg-blue-950/40 dark:text-sky-300 dark:border-blue-800'
-                  : deadLetterCount > 0
-                  ? 'bg-red-50 text-red-800 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800'
-                  : pendingCount > 0
-                  ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300'
-                  : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-              }`}
-            >
-              {!isOnline ? (
-                <>
-                  <WifiOff className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                  <span className="hidden md:inline">Offline</span>
-                  {pendingCount > 0 && <span className="font-bold">({pendingCount})</span>}
-                </>
-              ) : connectionState === 'SYNCING' ? (
-                <>
-                  <RefreshCw className="w-3 h-3 text-blue-600 dark:text-sky-400 animate-spin" />
-                  <span className="hidden md:inline">Sincronizando</span>
-                </>
-              ) : deadLetterCount > 0 ? (
-                <>
-                  <AlertTriangle className="w-3 h-3 text-red-600 dark:text-red-400" />
-                  <span className="hidden md:inline">Atenção sync</span>
-                  <span className="font-bold">({deadLetterCount})</span>
-                </>
-              ) : pendingCount > 0 ? (
-                <>
-                  <RefreshCw className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                  <span className="hidden md:inline">Sinc. pendente</span>
-                  <span className="font-bold">({pendingCount})</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                  <span className="hidden md:inline">Sincronizado</span>
-                </>
-              )}
-            </div>
-
-            {!canManage && (
-              <button 
-                onClick={() => setScheduleOpen(true)} 
-                className="dd-icon-button" 
-                aria-label="Ver grade de horários" 
-                title="Grade de Horários"
-              >
-                <CalendarDays aria-hidden="true" />
-              </button>
-            )}
-            
-            <NavLink 
-              to="/minha-privacidade" 
-              className="dd-icon-button" 
-              aria-label="Central de privacidade" 
-              title="Privacidade & LGPD"
-            >
-              <Shield aria-hidden="true" />
-            </NavLink>
-            
-            <button 
-              onClick={async () => { await logout(); navigate('/'); }} 
-              className="dd-icon-button text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40" 
-              aria-label="Sair do sistema" 
-              title="Sair"
-            >
-              <LogOut aria-hidden="true" />
-            </button>
-          </div>
-        </header>
-
-        {/* Sync Notifications & Offline Engine Alerts */}
-        <ConnectionStatus />
-        
-        {deadLetterCount > 0 && (
-          <div className="bg-amber-500 text-white text-xs font-semibold py-2 px-4 text-center shadow-inner flex items-center justify-center gap-2">
-            <AlertTriangle className="w-4 h-4" />
-            <span>Há {deadLetterCount} registro(s) pendentes com erro no envio remoto. Verifique antes de sair.</span>
-          </div>
-        )}
-
-        <main className="min-h-[calc(100vh-4rem)] pb-20 lg:pb-8">
-          <Outlet />
-        </main>
-
-        <PrivacyLinksFooter className="hidden lg:flex" />
-      </div>
-
-      {/* Mobile Drawer Menu */}
-      {menuOpen && (
-        <div 
-          className="fixed inset-0 z-[60] bg-slate-950/50 backdrop-blur-xs lg:hidden animate-in fade-in" 
-          onClick={close}
-        >
-          <aside 
-            className="h-full w-[min(20rem,86vw)] flex flex-col justify-between overflow-y-auto bg-white shadow-2xl dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800" 
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="p-5 flex-1 overflow-y-auto">
-              <div className="mb-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
-                <div className="flex items-center gap-2">
-                  <img src="/logo.png" alt="" className="h-8 w-8 object-contain" />
-                  <div>
-                    <strong className="font-extrabold text-[#0b1f3f] dark:text-sky-400 text-sm block leading-tight">DC Digital</strong>
-                    <small className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Espaço Pedagógico</small>
-                  </div>
-                </div>
-                <button className="dd-icon-button" onClick={close} aria-label="Fechar menu">
-                  <X aria-hidden="true" />
-                </button>
-              </div>
-              {renderNav()}
-            </div>
-
-            {/* Mobile Drawer User Card */}
-            <div className="border-t border-slate-200 p-4 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-[#eef4fc] text-[#0b1f3f] dark:bg-slate-800 dark:text-sky-400 font-bold flex items-center justify-center text-xs border border-blue-100 dark:border-slate-700">
-                  {user?.name ? user.name.slice(0, 2).toUpperCase() : 'US'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="truncate text-xs font-bold text-slate-800 dark:text-slate-200">{user?.name || 'Usuário'}</p>
-                  <p className="truncate text-[11px] text-slate-400 dark:text-slate-500 font-medium uppercase tracking-wider">{user?.title || user?.role}</p>
-                </div>
-                <button 
-                  onClick={async () => { close(); await logout(); navigate('/'); }} 
-                  className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-                  title="Sair do sistema"
-                  aria-label="Sair"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </aside>
-        </div>
-      )}
-
-      {/* Mobile Bottom Navigation Bar */}
-      <nav className="dd-mobile-nav lg:hidden" aria-label={canManage ? 'Ações principais de gestão' : 'Ações principais do professor'}>
-        {canManage ? (
-          <>
-            <NavLink to="/administracao" end>
-              <GraduationCap aria-hidden="true" />
-              <span>Gestão</span>
-            </NavLink>
-            {user?.role === 'ADMIN' && (
-              <NavLink to="/curriculo">
-                <BookOpenCheck aria-hidden="true" />
-                <span>BNCC</span>
-              </NavLink>
-            )}
-            {!isSemec && (
-              <NavLink to="/estatisticas">
-                <BarChart3 aria-hidden="true" />
-                <span>Pendências</span>
-              </NavLink>
-            )}
-            <NavLink to="/minha-privacidade">
-              <Shield aria-hidden="true" />
-              <span>Privacidade</span>
-            </NavLink>
-          </>
-        ) : (
-          <>
-            <NavLink to="/turmas" end>
-              <Home aria-hidden="true" />
-              <span>Início</span>
-            </NavLink>
-            <NavLink to="/diario">
-              <BookOpenCheck aria-hidden="true" />
-              <span>Diário</span>
-            </NavLink>
-            <button onClick={openQuickAttendance} aria-label="Abrir chamada rápida">
-              <ClipboardCheck aria-hidden="true" />
-              <span>Chamada</span>
-            </button>
-            {canManage ? (
-              <NavLink to="/administracao">
-                <GraduationCap aria-hidden="true" />
-                <span>Gestão</span>
-              </NavLink>
-            ) : (
-              <button onClick={() => setScheduleOpen(true)}>
-                <CalendarDays aria-hidden="true" />
-                <span>Horários</span>
-              </button>
-            )}
-          </>
-        )}
-      </nav>
-
-      <ScheduleModal isOpen={scheduleOpen} onClose={() => setScheduleOpen(false)} />
+  const allocations=user?.alocacoes||[];
+  const soleSchool=[...new Set(allocations.map(item=>item.escola_id))];
+  const headerSchoolId=(canManage?user?.escola_id:turmaAtiva?.escola_id||user?.escola_id)||(soleSchool.length===1?soleSchool[0]:undefined);
+  const headerSchoolName=turmaAtiva?.escola_id===headerSchoolId&&turmaAtiva?.escola?turmaAtiva.escola:allocations.find(item=>item.escola_id===headerSchoolId)?.escolas?.nome||(headerSchoolId?'Sua escola':canManage?'Rede de ensino':'Selecione uma turma');
+  const titles: Record<string,string> = { '/turmas':'Meu espaço', '/diario':'Diário de classe', '/frequencia':'Registro da aula', '/administracao':'Gestão escolar', '/estatisticas':'Visão da escola', '/curriculo':'Currículo', '/aparata':'Fechamento de período', '/aparata-detalhes':'Detalhes da aparata' };
+  const pageTitle = titles[location.pathname] || (location.pathname.startsWith('/relatorio-') ? 'Central de relatórios' : 'Acompanhamento');
+  const syncText = !isOnline ? 'Modo offline' : connectionState === 'SYNCING' ? 'Sincronizando' : deadLetterCount > 0 ? 'Revisar envios' : pendingCount > 0 ? pendingCount+' pendentes' : 'Tudo sincronizado';
+  const searchField = <label className="portal-nav-search"><Search size={16}/><input aria-label="Buscar no menu" placeholder="Buscar no menu" value={navQuery} onChange={e=>setNavQuery(e.target.value)}/></label>;
+  const userCard = <div className="portal-user-card"><span className="portal-avatar">{user?.name?.slice(0,2).toUpperCase() || 'DC'}</span><div><strong>{user?.name || 'Usuário'}</strong><small>{user?.title || user?.role}</small></div><button aria-label="Sair" onClick={async()=>{close();await logout();navigate('/');}}><LogOut size={18}/></button></div>;
+  return <div className="portal-app">
+    <a href="#conteudo-principal" className="dd-skip-link">Pular para o conteúdo</a>
+    <aside className="portal-sidebar">
+      <Link to={homePath} className="portal-brand-link" aria-label="DC Digital, ir para visão geral"><PortalBrand/></Link>
+      {searchField}<div className="portal-navigation">{renderNav()}</div>
+      {!canManage && <button className="portal-schedule-card" onClick={()=>setScheduleOpen(true)}><CalendarDays size={21}/><span><strong>Seu tempo, organizado.</strong><small>Consultar grade de horários</small></span><ArrowUpRight size={17}/></button>}
+      {userCard}
+    </aside>
+    <div className="portal-workspace">
+      <header className="portal-topbar portal-school-topbar"><button className="portal-icon-button portal-mobile-only" ref={menuTriggerRef} aria-expanded={menuOpen} aria-controls="menu-mobile" aria-label="Abrir menu de navegação" onClick={()=>setMenuOpen(true)}><Menu size={21}/></button><SchoolIdentity schoolId={headerSchoolId} name={headerSchoolName} year={APP_CONFIG.YEAR} turn={turmaAtiva?.escola_id===headerSchoolId?turmaAtiva?.turno:undefined} variant="header"/><div className="portal-topbar-actions"><button className={'portal-sync '+(!isOnline || pendingCount || deadLetterCount ? 'has-pending':'')} onClick={()=>{if(isOnline && pendingCount>0) void syncNow();}} disabled={!isOnline || pendingCount===0} title={syncText}>{!isOnline?<WifiOff size={15}/>:connectionState==='SYNCING'?<RefreshCw size={15}/>:deadLetterCount>0?<AlertTriangle size={15}/>:<CheckCircle2 size={15}/>}<span>{syncText}</span></button><Link className="portal-top-avatar" to="/minha-privacidade" aria-label="Central de privacidade">{user?.name?.slice(0,1) || 'D'}</Link></div></header>
+      <ConnectionStatus/><div className="portal-page-location" aria-label="Página atual"><span>Meu espaço</span><ChevronRight size={13}/><strong>{pageTitle}</strong></div>
+      {deadLetterCount>0 && <div className="portal-system-alert" role="status"><AlertTriangle size={17}/>Há {deadLetterCount} registro(s) com erro no envio. Verifique antes de sair.</div>}
+      {isDeepInsideClass && turmaAtiva && <div className="portal-class-trail"><BookOpenCheck size={16}/><strong>{turmaAtiva.fase || turmaAtiva.ensino}</strong><span>{turmaAtiva.componente}</span><Link to="/turmas">Trocar turma <ChevronRight size={13}/></Link></div>}
+      <main id="conteudo-principal" tabIndex={-1} className="portal-main">{location.pathname.startsWith('/relatorio-')?<ReportsWorkspace><Outlet/></ReportsWorkspace>:<ModuleWorkspace><Outlet/></ModuleWorkspace>}</main><PrivacyLinksFooter className="portal-workspace-footer"/>
     </div>
-  );
+    {menuOpen && <div className="portal-drawer-backdrop" onClick={close}><aside ref={drawerRef} className="portal-drawer" id="menu-mobile" role="dialog" aria-modal="true" aria-label="Menu de navegação" onClick={e=>e.stopPropagation()}><div className="portal-drawer-heading"><PortalBrand/><button className="portal-icon-button" aria-label="Fechar menu" onClick={close}><X size={21}/></button></div>{searchField}<div className="portal-navigation">{renderNav()}</div>{!canManage&&<button className="portal-button secondary" onClick={()=>{close();setScheduleOpen(true);}}><CalendarDays size={18}/>Horários</button>}{userCard}</aside></div>}
+    <nav className="portal-bottom-nav" aria-label={canManage?'Ações principais de gestão':'Ações principais do professor'}>
+      <NavLink to={homePath} end><Home size={21}/><span>Início</span></NavLink>
+      {canManage ? <NavLink to={isSemec?'/administracao':'/estatisticas'}><BarChart3 size={21}/><span>{isSemec?'Gestão':'Indicadores'}</span></NavLink>:<NavLink to="/diario"><CalendarDays size={21}/><span>Diário</span></NavLink>}
+      {canManage ? <NavLink to="/minha-privacidade"><Shield size={21}/><span>Privacidade</span></NavLink>:<button onClick={openQuickAttendance}><ClipboardCheck size={21}/><span>Chamada</span></button>}
+      <button aria-label="Mais opções de navegação" onClick={()=>setMenuOpen(true)}><Menu size={21}/><span>Mais</span></button>
+    </nav>
+    <ScheduleModal isOpen={scheduleOpen} onClose={()=>setScheduleOpen(false)}/>
+  </div>;
 }

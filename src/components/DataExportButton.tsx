@@ -41,7 +41,7 @@ export default function DataExportButton({ getData, fileName = 'meus_dados_priva
       type="button"
       onClick={handleExport}
       disabled={isExporting}
-      className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white font-bold rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-md cursor-pointer text-sm"
+      className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#6354c7] hover:bg-[#5142ad] disabled:bg-slate-400 text-white font-bold rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-md cursor-pointer text-sm"
     >
       {isExporting ? (
         <>

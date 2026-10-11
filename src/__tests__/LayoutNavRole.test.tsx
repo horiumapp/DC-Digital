@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import Layout from '../components/Layout';
 import Turmas from '../pages/Turmas';
@@ -64,6 +64,20 @@ describe('Layout - Visibilidade por Perfil (Role)', () => {
 
   afterEach(() => {
     cleanup();
+  });
+
+  it('fecha o menu móvel com Escape, restaura foco e libera a rolagem', () => {
+    mockUseAuth.mockReturnValue({ user: { id: 'prof-1', name: 'Professor', role: 'PROFESSOR' }, logout: vi.fn() });
+    render(<MemoryRouter><Layout /></MemoryRouter>);
+    const trigger = screen.getByRole('button', { name: 'Abrir menu de navegação' });
+    fireEvent.click(trigger);
+    expect(screen.getByRole('dialog', { name: 'Menu de navegação' })).toBeTruthy();
+    expect(document.body.style.overflow).toBe('hidden');
+    expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.body.style.overflow).not.toBe('hidden');
+    expect(document.activeElement).toBe(trigger);
   });
 
   it('para perfil ADMIN: NÃO deve renderizar "Rotina Docente" e deve apontar o logo para /administracao', () => {

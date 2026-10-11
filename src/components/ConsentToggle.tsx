@@ -26,7 +26,7 @@ export default function ConsentToggle({ label, description, initialChecked = fal
         type="button"
         onClick={handleToggle}
         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-          checked ? 'bg-[#0f2851] dark:bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'
+          checked ? 'bg-[#6354c7] dark:bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'
         }`}
       >
         <span

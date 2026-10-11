@@ -101,7 +101,7 @@ export default function SolicitacaoLgpd() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-6 h-6 text-[#0f2851] dark:text-blue-400" />
+            <ShieldCheck className="w-6 h-6 text-[#6354c7] dark:text-blue-400" />
             <h1 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white">
               Solicitação LGPD
             </h1>
@@ -123,7 +123,7 @@ export default function SolicitacaoLgpd() {
             </div>
             <button
               onClick={() => setSuccess(false)}
-              className="mt-2 text-xs font-bold text-[#0f2851] dark:text-blue-400 hover:underline cursor-pointer"
+              className="mt-2 text-xs font-bold text-[#6354c7] dark:text-blue-400 hover:underline cursor-pointer"
             >
               Enviar outra solicitação
             </button>
@@ -149,7 +149,7 @@ export default function SolicitacaoLgpd() {
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   placeholder="Seu nome completo"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] dark:focus:border-blue-500 bg-slate-50/50 dark:bg-slate-800/50 transition-all placeholder-slate-400 font-medium text-sm"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] dark:focus:border-blue-500 bg-slate-50/50 dark:bg-slate-800/50 transition-all placeholder-slate-400 font-medium text-sm"
                   required
                 />
               </div>
@@ -165,7 +165,7 @@ export default function SolicitacaoLgpd() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seu@email.com"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] dark:focus:border-blue-500 bg-slate-50/50 dark:bg-slate-800/50 transition-all placeholder-slate-400 font-medium text-sm"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] dark:focus:border-blue-500 bg-slate-50/50 dark:bg-slate-800/50 transition-all placeholder-slate-400 font-medium text-sm"
                   required
                 />
               </div>
@@ -180,7 +180,7 @@ export default function SolicitacaoLgpd() {
                 id="tipo"
                 value={tipo}
                 onChange={(e) => setTipo(e.target.value as typeof tipo)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] dark:focus:border-blue-500 bg-slate-50/50 dark:bg-slate-800/50 transition-all font-medium text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] dark:focus:border-blue-500 bg-slate-50/50 dark:bg-slate-800/50 transition-all font-medium text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
               >
                 <option value="acesso">Confirmação e Acesso Simplificado aos meus dados</option>
                 <option value="correcao">Correção de dados incompletos, inexatos ou desatualizados</option>
@@ -202,7 +202,7 @@ export default function SolicitacaoLgpd() {
                 onChange={(e) => setMensagem(e.target.value)}
                 placeholder="Descreva detalhadamente a sua solicitação..."
                 rows={4}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] dark:focus:border-blue-500 bg-slate-50/50 dark:bg-slate-800/50 transition-all placeholder-slate-400 font-medium text-sm resize-none"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] dark:focus:border-blue-500 bg-slate-50/50 dark:bg-slate-800/50 transition-all placeholder-slate-400 font-medium text-sm resize-none"
                 required
               />
             </div>
@@ -213,7 +213,7 @@ export default function SolicitacaoLgpd() {
                 type="checkbox"
                 checked={declaracao}
                 onChange={(e) => setDeclaracao(e.target.checked)}
-                className="mt-1 rounded border-slate-300 dark:border-slate-700 text-[#0f2851] focus:ring-[#0f2851]/20 h-4 w-4 cursor-pointer"
+                className="mt-1 rounded border-slate-300 dark:border-slate-700 text-[#6354c7] focus:ring-[#6354c7]/20 h-4 w-4 cursor-pointer"
               />
               <span className="text-xs text-slate-500 dark:text-slate-400 leading-normal">
                 Declaro que as informações fornecidas neste formulário são verdadeiras e exatas. Autorizo o uso dos dados informados exclusivamente para o atendimento e processamento desta solicitação de privacidade.
@@ -240,7 +240,7 @@ export default function SolicitacaoLgpd() {
                   maxLength={4}
                   value={captcha.captchaInput}
                   onChange={(e) => captcha.setCaptchaInput(e.target.value)}
-                  className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] dark:focus:border-blue-500 transition-all placeholder-slate-400 font-medium text-sm bg-white dark:bg-slate-800/50"
+                  className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] dark:focus:border-blue-500 transition-all placeholder-slate-400 font-medium text-sm bg-white dark:bg-slate-800/50"
                 />
               </div>
               <p className="text-[10px] text-slate-400 font-medium">
@@ -256,7 +256,7 @@ export default function SolicitacaoLgpd() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center items-center gap-2 bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-4 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
+                className="w-full flex justify-center items-center gap-2 bg-[#6354c7] hover:bg-[#5142ad] disabled:bg-slate-400 text-white text-base font-bold py-4 px-4 rounded-xl shadow-lg shadow-[#6354c7]/20 hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
               >
                 {isLoading ? (
                   'Processando...'

@@ -117,8 +117,8 @@ export default function InstallPrompt() {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleInstall}
-                className="flex items-center gap-1.5 px-4 py-2 bg-[#0f2851] text-white text-xs font-bold rounded-lg
-                  hover:bg-[#1a3a6d] transition-colors shadow-sm active:scale-95"
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#6354c7] text-white text-xs font-bold rounded-lg
+                  hover:bg-[#5142ad] transition-colors shadow-sm active:scale-95"
               >
                 <Download className="w-3.5 h-3.5" />
                 Instalar

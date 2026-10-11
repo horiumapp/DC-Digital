@@ -119,7 +119,7 @@ export default function PendenciasLancamento() {
         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <button 
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#eef2ff] text-[#0f2851] rounded-xl hover:bg-[#e0e7ff] transition-all text-sm font-bold border border-blue-100 shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-[#eef2ff] text-[#6354c7] rounded-xl hover:bg-[#e0e7ff] transition-all text-sm font-bold border border-blue-100 shadow-sm"
           >
             <ArrowLeft className="w-4 h-4" />
             Voltar
@@ -139,7 +139,7 @@ export default function PendenciasLancamento() {
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6 lg:p-8">
           <div className="flex flex-col items-start justify-between gap-4 mb-6 sm:flex-row sm:items-center sm:mb-8">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#0f2851] rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-[#6354c7] rounded-xl flex items-center justify-center">
                 <Search className="w-5 h-5 text-white" />
               </div>
               <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Parâmetros de Consulta</h2>
@@ -156,7 +156,7 @@ export default function PendenciasLancamento() {
               <select 
                 value={escolaId}
                 onChange={(e) => setEscolaId(e.target.value)}
-                className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-[#0f2851] dark:text-slate-200 focus:outline-none focus:ring-4 focus:ring-[#0f2851]/5 transition-all appearance-none"
+                className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-[#6354c7] dark:text-slate-200 focus:outline-none focus:ring-4 focus:ring-[#6354c7]/5 transition-all appearance-none"
                 disabled={loading}
               >
                 {loading ? (
@@ -177,7 +177,7 @@ export default function PendenciasLancamento() {
                 <select 
                   value={distrito}
                   onChange={(e) => setDistrito(e.target.value)}
-                  className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-[#0f2851] dark:text-slate-200 focus:outline-none focus:ring-4 focus:ring-[#0f2851]/5 transition-all appearance-none"
+                  className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-[#6354c7] dark:text-slate-200 focus:outline-none focus:ring-4 focus:ring-[#6354c7]/5 transition-all appearance-none"
                 >
                   {distritos.map((d) => (
                     <option key={d} value={d}>{d === 'TODOS' ? 'TODOS OS DISTRITOS' : d}</option>
@@ -208,9 +208,9 @@ export default function PendenciasLancamento() {
                          setSelectedPeriodos(selectedPeriodos.filter(item => item !== p));
                        }
                      }}
-                     className="w-5 h-5 text-[#0f2851] rounded-md border-slate-300 focus:ring-[#0f2851] transition-all cursor-pointer"
+                     className="w-5 h-5 text-[#6354c7] rounded-md border-slate-300 focus:ring-[#6354c7] transition-all cursor-pointer"
                    />
-                   <span className="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-[#0f2851] transition-colors">{p}</span>
+                   <span className="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-[#6354c7] transition-colors">{p}</span>
                  </label>
                ))}
              </div>
@@ -220,7 +220,7 @@ export default function PendenciasLancamento() {
             <button 
               onClick={handleSearch}
               disabled={loadingDocentes}
-              className="flex items-center gap-3 px-10 py-4 bg-[#0f2851] text-white rounded-2xl hover:bg-[#1a3a6d] transition-all text-sm font-black shadow-xl shadow-[#0f2851]/20 active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-3 px-10 py-4 bg-[#6354c7] text-white rounded-2xl hover:bg-[#5142ad] transition-all text-sm font-black shadow-xl shadow-[#6354c7]/20 active:scale-95 disabled:opacity-50"
             >
               {loadingDocentes ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -251,7 +251,7 @@ export default function PendenciasLancamento() {
                 value={buscaDocente}
                 onChange={(e) => setBuscaDocente(e.target.value)}
                 placeholder="Pesquisar por docente, turma ou componente..."
-                className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-[#0f2851] dark:text-slate-200 focus:outline-none focus:ring-4 focus:ring-[#0f2851]/5 transition-all shadow-sm"
+                className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-[#6354c7] dark:text-slate-200 focus:outline-none focus:ring-4 focus:ring-[#6354c7]/5 transition-all shadow-sm"
               />
             </div>
           </div>
@@ -287,7 +287,7 @@ export default function PendenciasLancamento() {
                   <tr>
                     <td colSpan={11} className="px-8 py-32 text-center text-sm text-slate-500 font-bold">
                        <div className="flex flex-col items-center gap-4">
-                         <div className="w-10 h-10 border-4 border-[#0f2851]/10 border-t-[#0f2851] rounded-full animate-spin" />
+                         <div className="w-10 h-10 border-4 border-[#6354c7]/10 border-t-[#6354c7] rounded-full animate-spin" />
                          Processando dados do sistema...
                        </div>
                     </td>
@@ -307,10 +307,10 @@ export default function PendenciasLancamento() {
 
                     return (
                       <tr key={i} className="hover:bg-blue-50/30 dark:hover:bg-slate-900/50 transition-colors group">
-                        <td className="px-8 py-5 text-[#0f2851] dark:text-white font-black uppercase text-[13px]">{d.professor}</td>
+                        <td className="px-8 py-5 text-[#6354c7] dark:text-white font-black uppercase text-[13px]">{d.professor}</td>
                         <td className="px-4 py-5 text-slate-600 dark:text-slate-400 font-bold text-[12px] uppercase">{d.periodo}</td>
                         <td className="px-4 py-5 text-slate-600 dark:text-slate-400 font-bold text-[13px] uppercase">{d.fase}</td>
-                        <td className="px-2 py-5 text-center text-[#0f2851] dark:text-blue-400 font-black text-[15px] uppercase">{d.turma}</td>
+                        <td className="px-2 py-5 text-center text-[#6354c7] dark:text-blue-400 font-black text-[15px] uppercase">{d.turma}</td>
                         <td className="px-4 py-5 text-slate-500 dark:text-slate-400 text-[12px] font-bold uppercase">{d.turno}</td>
                         <td className="px-6 py-5 text-slate-700 dark:text-slate-200 font-bold text-[13px] uppercase tracking-tight">{d.componente}</td>
                         <td className="px-4 py-5 text-center bg-slate-50/50 dark:bg-slate-900/30">{renderPendency(d.pendNotas)}</td>
@@ -334,7 +334,7 @@ export default function PendenciasLancamento() {
           {hasSearched && !loadingDocentes && totalRecords > 0 && (
             <div className="p-6 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 flex items-center justify-between">
               <div className="text-sm font-bold text-slate-500">
-                Mostrando <span className="text-[#0f2851] dark:text-blue-400">{(currentPage - 1) * pageSize + 1}</span> a <span className="text-[#0f2851] dark:text-blue-400">{Math.min(currentPage * pageSize, totalRecords)}</span> de <span className="text-[#0f2851] dark:text-blue-400">{totalRecords}</span> registros
+                Mostrando <span className="text-[#6354c7] dark:text-blue-400">{(currentPage - 1) * pageSize + 1}</span> a <span className="text-[#6354c7] dark:text-blue-400">{Math.min(currentPage * pageSize, totalRecords)}</span> de <span className="text-[#6354c7] dark:text-blue-400">{totalRecords}</span> registros
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -351,7 +351,7 @@ export default function PendenciasLancamento() {
                       onClick={() => setCurrentPage(i + 1)}
                       className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${
                         currentPage === i + 1
-                          ? 'bg-[#0f2851] text-white shadow-lg shadow-[#0f2851]/20'
+                          ? 'bg-[#6354c7] text-white shadow-lg shadow-[#6354c7]/20'
                           : 'text-slate-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700'
                       }`}
                     >

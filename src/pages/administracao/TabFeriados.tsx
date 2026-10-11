@@ -156,7 +156,7 @@ export default function TabFeriados() {
                 key={data}
                 type="button"
                 onClick={() => escolherDia(dia)}
-                className={`min-h-14 rounded-lg border text-left px-1.5 py-1 ${marcado ? 'bg-amber-50 border-amber-300' : 'bg-white border-slate-200'} ${ativo ? 'ring-2 ring-[#0f2851]' : ''}`}
+                className={`min-h-14 rounded-lg border text-left px-1.5 py-1 ${marcado ? 'bg-amber-50 border-amber-300' : 'bg-white border-slate-200'} ${ativo ? 'ring-2 ring-[#6354c7]' : ''}`}
                 aria-label={marcado ? `${dia} de ${MESES[mes]}, feriado ${marcado}` : `${dia} de ${MESES[mes]}`}
               >
                 <span className="block text-sm font-bold text-slate-800">{dia}</span>
@@ -180,7 +180,7 @@ export default function TabFeriados() {
             className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
           />
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={gravar} disabled={salvando || !nome.trim()} className="px-4 py-2 rounded-xl bg-[#0f2851] text-white text-sm font-bold disabled:opacity-50">
+            <button type="button" onClick={gravar} disabled={salvando || !nome.trim()} className="px-4 py-2 rounded-xl bg-[#6354c7] text-white text-sm font-bold disabled:opacity-50">
               Salvar feriado
             </button>
             {porData.has(diaSelecionado) && (
@@ -200,7 +200,7 @@ export default function TabFeriados() {
           <ul className="space-y-1">
             {doMes.map(item => (
               <li key={item.data} className="text-sm text-slate-700">
-                <button type="button" className="font-bold text-[#0f2851]" onClick={() => { setDiaSelecionado(item.data); setNome(item.nome); }}>
+                <button type="button" className="font-bold text-[#6354c7]" onClick={() => { setDiaSelecionado(item.data); setNome(item.nome); }}>
                   {item.data.split('-').reverse().join('/')}
                 </button>
                 {' — '}{item.nome}

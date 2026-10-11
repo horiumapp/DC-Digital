@@ -173,14 +173,14 @@ export default function Aparata() {
 
   if (!turmaAtiva) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+      <div className="portal-data-module min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-200 text-center max-w-md w-full">
-          <div className="w-16 h-16 bg-[#eef2ff] text-[#0f2851] rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-50">
+          <div className="w-16 h-16 bg-[#eef2ff] text-[#6354c7] rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-50">
             <BookOpen className="w-8 h-8" />
           </div>
           <h2 className="text-xl font-bold text-slate-800 mb-2">Nenhuma turma selecionada</h2>
           <p className="text-slate-600 mb-6">Por favor, volte e selecione uma turma.</p>
-          <Link to="/administracao" className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#0f2851] text-white font-bold rounded-xl hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20">
+          <Link to="/administracao" className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#6354c7] text-white font-bold rounded-xl hover:bg-[#5142ad] transition shadow-lg shadow-[#6354c7]/20">
             <ArrowLeft className="w-5 h-5" />
             Voltar ao Painel
           </Link>
@@ -199,7 +199,7 @@ export default function Aparata() {
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="flex items-center gap-1 px-4 py-2 bg-[#eef2ff] text-[#0f2851] text-sm font-bold rounded-lg border border-blue-100 hover:bg-[#e0e7ff] transition cursor-pointer"
+              className="flex items-center gap-1 px-4 py-2 bg-[#eef2ff] text-[#6354c7] text-sm font-bold rounded-lg border border-blue-100 hover:bg-[#e0e7ff] transition cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
               Voltar
@@ -215,44 +215,44 @@ export default function Aparata() {
             {/* Info da Turma */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="flex items-center gap-3 bg-[#eef2ff]/40 p-4 rounded-2xl border border-blue-50">
-                <div className="w-10 h-10 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#0f2851]">
+                <div className="w-10 h-10 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#6354c7]">
                   <GraduationCap className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase">Turma / Fase</p>
-                  <p className="text-sm font-bold text-[#0f2851]" title={turmaAtiva.fase}>
+                  <p className="text-sm font-bold text-[#6354c7]" title={turmaAtiva.fase}>
                     {turmaAtiva.fase}
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 bg-[#eef2ff]/40 p-4 rounded-2xl border border-blue-50">
-                <div className="w-10 h-10 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#0f2851]">
+                <div className="w-10 h-10 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#6354c7]">
                   <Building2 className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase">Escola</p>
-                  <p className="text-sm font-bold text-[#0f2851]">{turmaAtiva.escola}</p>
+                  <p className="text-sm font-bold text-[#6354c7]">{turmaAtiva.escola}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 bg-[#eef2ff]/40 p-4 rounded-2xl border border-blue-50">
-                <div className="w-10 h-10 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#0f2851]">
+                <div className="w-10 h-10 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#6354c7]">
                   <Clock className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase">Turno</p>
-                  <p className="text-sm font-bold text-[#0f2851]">{turmaAtiva.turno}</p>
+                  <p className="text-sm font-bold text-[#6354c7]">{turmaAtiva.turno}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 bg-[#eef2ff]/40 p-4 rounded-2xl border border-blue-50">
-                <div className="w-10 h-10 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#0f2851]">
+                <div className="w-10 h-10 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#6354c7]">
                   <BookOpen className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase">Componente Atual</p>
-                  <p className="text-sm font-bold text-[#0f2851] uppercase">
+                  <p className="text-sm font-bold text-[#6354c7] uppercase">
                     {disciplinaAlvo === 'TODAS' ? 'Todas as Disciplinas' : disciplinaAlvo}
                   </p>
                 </div>
@@ -268,7 +268,7 @@ export default function Aparata() {
                     id="periodo-select"
                     value={periodoSelecionado}
                     onChange={(e) => { setPeriodoSelecionado(e.target.value); }}
-                    className="w-full sm:w-56 border border-slate-200 bg-white rounded-xl px-4 py-2.5 text-sm text-[#0f2851] font-bold focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer shadow-sm"
+                    className="w-full sm:w-56 border border-slate-200 bg-white rounded-xl px-4 py-2.5 text-sm text-[#6354c7] font-bold focus:ring-2 focus:ring-[#6354c7]/10 cursor-pointer shadow-sm"
                   >
                     {PERIODOS.map(p => (
                       <option key={p.value} value={p.value}>{p.label}</option>
@@ -283,7 +283,7 @@ export default function Aparata() {
                     value={disciplinaAlvo}
                     onChange={(e) => { setDisciplinaSelecionada(e.target.value); }}
                     disabled={Boolean(disciplinaProfessor)}
-                    className="w-full sm:min-w-[260px] border border-slate-200 bg-white rounded-xl px-4 py-2.5 text-sm text-[#0f2851] font-bold focus:ring-2 focus:ring-[#0f2851]/10 cursor-pointer shadow-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
+                    className="w-full sm:min-w-[260px] border border-slate-200 bg-white rounded-xl px-4 py-2.5 text-sm text-[#6354c7] font-bold focus:ring-2 focus:ring-[#6354c7]/10 cursor-pointer shadow-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                   >
                     {disciplinaProfessor ? (
                       <option value={disciplinaProfessor}>{disciplinaProfessor}</option>
@@ -300,7 +300,7 @@ export default function Aparata() {
 
                 <button
                   onClick={handleExibir}
-                  className="px-8 py-2.5 bg-[#0f2851] text-white text-sm font-bold rounded-xl hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20 active:scale-95 cursor-pointer"
+                  className="px-8 py-2.5 bg-[#6354c7] text-white text-sm font-bold rounded-xl hover:bg-[#5142ad] transition shadow-lg shadow-[#6354c7]/20 active:scale-95 cursor-pointer"
                 >
                   Exibir
                 </button>
@@ -376,7 +376,7 @@ export default function Aparata() {
                                   <td className="px-4 py-3 text-right">
                                     <Link
                                       to={`/aparata-detalhes?periodo=${encodeURIComponent(periodoSelecionado)}&disciplina=${encodeURIComponent(disc)}`}
-                                      className="bg-[#0f2851] text-white text-[10px] font-bold px-4 py-1.5 rounded-lg hover:bg-[#1a3a6d] transition inline-flex items-center gap-1.5 shadow-sm active:scale-95"
+                                      className="bg-[#6354c7] text-white text-[10px] font-bold px-4 py-1.5 rounded-lg hover:bg-[#5142ad] transition inline-flex items-center gap-1.5 shadow-sm active:scale-95"
                                     >
                                       <Eye className="w-3.5 h-3.5" />
                                       Detalhes
@@ -398,7 +398,7 @@ export default function Aparata() {
                               <td className="px-4 py-3 text-right">
                                 <Link
                                   to={`/aparata-detalhes?periodo=${encodeURIComponent(periodoSelecionado)}&disciplina=${encodeURIComponent(disciplinaAlvo)}`}
-                                  className="bg-[#0f2851] text-white text-[10px] font-bold px-4 py-1.5 rounded-lg hover:bg-[#1a3a6d] transition inline-flex items-center gap-1.5 shadow-sm active:scale-95"
+                                  className="bg-[#6354c7] text-white text-[10px] font-bold px-4 py-1.5 rounded-lg hover:bg-[#5142ad] transition inline-flex items-center gap-1.5 shadow-sm active:scale-95"
                                 >
                                   <Eye className="w-3.5 h-3.5" />
                                   Detalhes
@@ -422,7 +422,7 @@ export default function Aparata() {
                         placeholder="Pesquisar registros..."
                         value={searchMovimentacao}
                         onChange={(e) => setSearchMovimentacao(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-[#0f2851] font-bold focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10"
+                        className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-[#6354c7] font-bold focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10"
                       />
                     </div>
 
@@ -453,7 +453,7 @@ export default function Aparata() {
                             </tr>
                           ) : movimentacoesFiltradas.map((mov) => (
                             <tr key={mov.seq} className="hover:bg-slate-50 transition border-b border-slate-100 last:border-none">
-                              <td className="px-4 py-3 text-[#0f2851] font-bold tabular-nums">{String(mov.seq).padStart(2, '0')}</td>
+                              <td className="px-4 py-3 text-[#6354c7] font-bold tabular-nums">{String(mov.seq).padStart(2, '0')}</td>
                               <td className="px-4 py-3 text-slate-700 font-medium">{mov.data}</td>
                               <td className="px-4 py-3">
                                 <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest border border-red-100">
@@ -465,7 +465,7 @@ export default function Aparata() {
                               <td className="px-4 py-3 text-right">
                                 <Link
                                   to={`/aparata-detalhes?periodo=${encodeURIComponent(periodoSelecionado)}&disciplina=${encodeURIComponent(mov.componente)}`}
-                                  className="bg-[#0f2851] text-white text-[10px] font-bold px-4 py-1.5 rounded-lg hover:bg-[#1a3a6d] transition inline-flex items-center gap-1.5 shadow-sm active:scale-95"
+                                  className="bg-[#6354c7] text-white text-[10px] font-bold px-4 py-1.5 rounded-lg hover:bg-[#5142ad] transition inline-flex items-center gap-1.5 shadow-sm active:scale-95"
                                 >
                                   <Eye className="w-3.5 h-3.5" />
                                   Detalhes
@@ -540,7 +540,7 @@ export default function Aparata() {
                     <select
                       value={disciplinaEscolhida}
                       onChange={(e) => setDisciplinaEscolhida(e.target.value)}
-                      className="w-full border border-slate-300 bg-white rounded-lg px-3 py-2 text-sm font-bold text-[#0f2851] focus:ring-2 focus:ring-[#0f2851]/10"
+                      className="w-full border border-slate-300 bg-white rounded-lg px-3 py-2 text-sm font-bold text-[#6354c7] focus:ring-2 focus:ring-[#6354c7]/10"
                     >
                       {disciplinasFechadasNoPeriodo.length > 0 ? (
                         disciplinasFechadasNoPeriodo.map(d => (

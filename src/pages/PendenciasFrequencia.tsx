@@ -126,7 +126,7 @@ export default function PendenciasFrequencia() {
       <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 flex items-center gap-4">
         <button 
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#eef2ff] text-[#0f2851] rounded-xl hover:bg-[#e0e7ff] transition-all text-sm font-bold border border-blue-100"
+          className="flex items-center gap-2 px-4 py-2 bg-[#eef2ff] text-[#6354c7] rounded-xl hover:bg-[#e0e7ff] transition-all text-sm font-bold border border-blue-100"
         >
           <ArrowLeft className="w-4 h-4" />
           Voltar
@@ -140,7 +140,7 @@ export default function PendenciasFrequencia() {
         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Consulta</h2>
-            <button className="flex items-center gap-2 px-6 py-2.5 bg-[#0f2851] text-white rounded-xl hover:bg-[#1a3a6d] transition-all text-sm font-bold shadow-lg shadow-[#0f2851]/20 active:scale-95">
+            <button className="flex items-center gap-2 px-6 py-2.5 bg-[#6354c7] text-white rounded-xl hover:bg-[#5142ad] transition-all text-sm font-bold shadow-lg shadow-[#6354c7]/20 active:scale-95">
               <Printer className="w-4 h-4" />
               Imprimir
             </button>
@@ -235,7 +235,7 @@ export default function PendenciasFrequencia() {
                          setSelectedPeriodos(selectedPeriodos.filter(item => item !== p));
                        }
                      }}
-                     className="w-5 h-5 text-[#0f2851] rounded border-slate-300 focus:ring-[#0f2851]"
+                     className="w-5 h-5 text-[#6354c7] rounded border-slate-300 focus:ring-[#6354c7]"
                    />
                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{p}</span>
                  </label>
@@ -246,7 +246,7 @@ export default function PendenciasFrequencia() {
           <div className="mb-6">
             <button 
               onClick={handleSearch}
-              className="flex items-center gap-2 px-8 py-3 bg-[#0f2851] text-white rounded-xl hover:bg-[#1a3a6d] transition-all text-sm font-bold shadow-lg shadow-[#0f2851]/20 active:scale-95"
+              className="flex items-center gap-2 px-8 py-3 bg-[#6354c7] text-white rounded-xl hover:bg-[#5142ad] transition-all text-sm font-bold shadow-lg shadow-[#6354c7]/20 active:scale-95"
             >
               <Search className="w-4 h-4" />
               CONSULTAR
@@ -270,7 +270,7 @@ export default function PendenciasFrequencia() {
                 value={buscaDocente}
                 onChange={(e) => setBuscaDocente(e.target.value)}
                 placeholder="Pesquisar docente..."
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-[#0f2851] focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 shadow-sm"
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-[#6354c7] focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10 shadow-sm"
               />
             </div>
           </div>
@@ -308,9 +308,9 @@ export default function PendenciasFrequencia() {
                 ) : docentesFiltrados.length > 0 ? (
                   docentesFiltrados.map((d, i) => (
                     <tr key={i} className="hover:bg-blue-50/30 dark:hover:bg-slate-900 text-sm text-slate-600 dark:text-slate-300">
-                      <td className="px-6 py-5 text-[#0f2851] dark:text-white font-bold uppercase">{d.professor}</td>
+                      <td className="px-6 py-5 text-[#6354c7] dark:text-white font-bold uppercase">{d.professor}</td>
                       <td className="px-3 py-5 whitespace-nowrap font-medium">{d.dataLotacao}</td>
-                      <td className="px-3 py-5 text-[#0f2851] font-bold uppercase">{d.periodo}</td>
+                      <td className="px-3 py-5 text-[#6354c7] font-bold uppercase">{d.periodo}</td>
                       <td className="px-3 py-5">{d.turno}</td>
                       <td className="px-3 py-5">{d.ensino}</td>
                       <td className="px-3 py-5">{d.fase}</td>
@@ -336,7 +336,7 @@ export default function PendenciasFrequencia() {
           {hasSearched && !loadingDocentes && totalRecords > 0 && (
             <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-center justify-between">
               <div className="text-sm font-bold text-slate-500">
-                Mostrando <span className="text-[#0f2851] dark:text-blue-400">{(currentPage - 1) * pageSize + 1}</span> a <span className="text-[#0f2851] dark:text-blue-400">{Math.min(currentPage * pageSize, totalRecords)}</span> de <span className="text-[#0f2851] dark:text-blue-400">{totalRecords}</span> registros
+                Mostrando <span className="text-[#6354c7] dark:text-blue-400">{(currentPage - 1) * pageSize + 1}</span> a <span className="text-[#6354c7] dark:text-blue-400">{Math.min(currentPage * pageSize, totalRecords)}</span> de <span className="text-[#6354c7] dark:text-blue-400">{totalRecords}</span> registros
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -353,7 +353,7 @@ export default function PendenciasFrequencia() {
                       onClick={() => setCurrentPage(i + 1)}
                       className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${
                         currentPage === i + 1
-                          ? 'bg-[#0f2851] text-white shadow-lg shadow-[#0f2851]/20'
+                          ? 'bg-[#6354c7] text-white shadow-lg shadow-[#6354c7]/20'
                           : 'text-slate-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700'
                       }`}
                     >

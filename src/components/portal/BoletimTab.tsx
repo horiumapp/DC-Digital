@@ -103,7 +103,7 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
           type="button"
           onClick={() => void salvarPdf()}
           disabled={gerandoPdf}
-          className="flex items-center gap-2 px-4 py-2 bg-[#0f2851] border border-[#0f2851] rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all shadow-sm cursor-pointer disabled:opacity-60"
+          className="flex items-center gap-2 px-4 py-2 bg-[#6354c7] border border-[#6354c7] rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all shadow-sm cursor-pointer disabled:opacity-60"
         >
           <Download className="w-4 h-4" /> {gerandoPdf ? 'Gerando PDF…' : 'Salvar PDF'}
         </button>
@@ -120,7 +120,7 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
       {erroPdf && <p className="text-sm font-semibold text-rose-700 no-print">{erroPdf}</p>}
 
       <section className="boletim-mobile-view md:hidden space-y-4" aria-label="Boletim resumido">
-        <div className="rounded-2xl bg-[#0f2851] p-5 text-white shadow-sm">
+        <div className="rounded-2xl bg-[#6354c7] p-5 text-white shadow-sm">
           <p className="text-xs font-bold uppercase tracking-wider text-blue-200">Boletim individual</p>
           <h2 className="mt-1 text-lg font-black uppercase leading-tight">{alunoData.nome}</h2>
           <p className="mt-2 text-sm text-blue-100">{alunoData.turma_nome} · {alunoData.turma_turno.toUpperCase()}</p>
@@ -137,7 +137,7 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
             <article key={resumo.disciplina} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="flex items-start justify-between gap-3 bg-slate-50 px-4 py-3">
                 <h4 className="text-sm font-black uppercase text-slate-800">{resumo.disciplina}</h4>
-                <span className="shrink-0 rounded-full bg-blue-50 px-2 py-1 text-xs font-black text-[#0f2851]">Total {resumo.total > 0 ? resumo.total.toFixed(1) : '—'}</span>
+                <span className="shrink-0 rounded-full bg-blue-50 px-2 py-1 text-xs font-black text-[#6354c7]">Total {resumo.total > 0 ? resumo.total.toFixed(1) : '—'}</span>
               </div>
               <div className="grid grid-cols-2 gap-px bg-slate-200">
                 {resumo.resultadosBimestres.map(resultado => (

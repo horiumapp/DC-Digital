@@ -145,7 +145,7 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
   return (
     <div className="flex flex-col h-full bg-slate-50/50">
       {/* Banner / Header */}
-      <div className="bg-[#0f2851] p-8 relative overflow-hidden shrink-0">
+      <div className="bg-[#6354c7] p-8 relative overflow-hidden shrink-0">
         <Building2 className="absolute -right-8 -bottom-8 w-48 h-48 text-white/5 pointer-events-none rotate-12" />
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-5">
@@ -199,7 +199,7 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
       <div className="flex-1 overflow-y-auto p-8 space-y-6">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-[#0f2851] animate-spin" />
+            <Loader2 className="w-8 h-8 text-[#6354c7] animate-spin" />
           </div>
         ) : (
           <>
@@ -218,7 +218,7 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
                 {gestores.length === 0 && (
                   <button
                     onClick={handleCadastrarGestor}
-                    className="flex items-center gap-2 bg-[#0f2851] text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20 active:scale-95"
+                    className="flex items-center gap-2 bg-[#6354c7] text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-[#5142ad] transition shadow-lg shadow-[#6354c7]/20 active:scale-95"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     Cadastrar Gestor
@@ -286,7 +286,7 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
                 </div>
                 <button
                   onClick={handleCadastrarSecretario}
-                  className="flex items-center gap-2 bg-[#0f2851] text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20 active:scale-95"
+                  className="flex items-center gap-2 bg-[#6354c7] text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-[#5142ad] transition shadow-lg shadow-[#6354c7]/20 active:scale-95"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Adicionar Secretário
@@ -350,7 +350,7 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
                 </div>
                 <button
                   onClick={() => setIsEditEscolaModalOpen(true)}
-                  className="flex items-center gap-2 text-slate-500 hover:text-[#0f2851] px-3 py-2 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors border border-slate-200"
+                  className="flex items-center gap-2 text-slate-500 hover:text-[#6354c7] px-3 py-2 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors border border-slate-200"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                   Editar

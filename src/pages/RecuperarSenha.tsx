@@ -166,7 +166,7 @@ export default function RecuperarSenha() {
   const activeWaitSeconds = lockoutSeconds > 0 ? lockoutSeconds : cooldownSeconds;
 
   return (
-    <div className="dd-auth-shell min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="portal-recovery dd-auth-shell min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       <Background />
       <div className="absolute inset-0 bg-gradient-to-b from-white/80 to-slate-50/40 pointer-events-none" />
 
@@ -222,7 +222,7 @@ export default function RecuperarSenha() {
                   required 
                   autoComplete="email"
                   disabled={isLoading || isBlocked}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition-all placeholder-slate-400 font-medium bg-slate-50/30 disabled:bg-slate-100 disabled:text-slate-400"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] transition-all placeholder-slate-400 font-medium bg-slate-50/30 disabled:bg-slate-100 disabled:text-slate-400"
                 />
               </div>
 
@@ -230,7 +230,7 @@ export default function RecuperarSenha() {
                 <button 
                   type="submit"
                   disabled={isLoading || isBlocked}
-                  className="w-full flex justify-center items-center bg-[#0f2851] hover:bg-[#1a3a6d] disabled:bg-slate-400 text-white text-base font-bold py-4 px-4 rounded-xl shadow-lg shadow-[#0f2851]/20 transition-all active:scale-95 disabled:cursor-not-allowed"
+                  className="w-full flex justify-center items-center bg-[#6354c7] hover:bg-[#5142ad] disabled:bg-slate-400 text-white text-base font-bold py-4 px-4 rounded-xl shadow-lg shadow-[#6354c7]/20 transition-all active:scale-95 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Processando...</>
@@ -245,7 +245,7 @@ export default function RecuperarSenha() {
           )}
 
           <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-            <Link to="/" className="text-[#0f2851] font-bold hover:underline flex items-center justify-center gap-1 transition-all">
+            <Link to="/" className="text-[#6354c7] font-bold hover:underline flex items-center justify-center gap-1 transition-all">
               <ArrowLeft className="w-4 h-4" />
               Voltar ao Login
             </Link>

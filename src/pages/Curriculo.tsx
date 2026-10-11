@@ -218,7 +218,7 @@ export default function Curriculo() {
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-8 sm:py-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-[#0f2851] tracking-tight">Gestão Curricular (BNCC)</h1>
+          <h1 className="text-3xl font-black text-[#6354c7] tracking-tight">Gestão Curricular (BNCC)</h1>
           <p className="text-slate-500 mt-1">Configure o referencial de Conteúdo ministrado.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -245,7 +245,7 @@ export default function Curriculo() {
         {/* Formulário de Cadastro */}
         <div className="lg:col-span-1 space-y-6">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-6 lg:sticky lg:top-24 dark:bg-slate-900 dark:border-slate-800">
-            <div className="flex items-center gap-3 text-[#0f2851]">
+            <div className="flex items-center gap-3 text-[#6354c7]">
               <div className="p-2 bg-blue-50 rounded-xl">
                 {editingId ? <Pencil className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
               </div>
@@ -345,7 +345,7 @@ export default function Curriculo() {
               <button
                 onClick={handleSave}
                 disabled={loading}
-                className={`w-full ${editingId ? 'bg-emerald-600' : 'bg-[#0f2851]'} text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-blue-900/20 active:scale-[0.98] disabled:opacity-50`}
+                className={`w-full ${editingId ? 'bg-emerald-600' : 'bg-[#6354c7]'} text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-blue-900/20 active:scale-[0.98] disabled:opacity-50`}
               >
                 <Save className="w-5 h-5" />
                 {editingId ? 'Atualizar Currículo' : 'Salvar Currículo'}

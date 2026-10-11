@@ -1,9 +1,10 @@
+import { PortalBrand, PageHeading, Metric } from '../components/common/PortalUI';
 import { readAllRows } from '../services/pagination';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { GraduationCap, BookOpen, CalendarCheck, BarChart3, Loader2, LogOut, User, ChevronRight, Calendar, Shield, Key, Lock, X, Eye, EyeOff } from 'lucide-react';
+import { BookOpen, CalendarCheck, BarChart3, Loader2, LogOut, User, ChevronRight, Calendar, Shield, Key, Lock, X, Eye, EyeOff } from 'lucide-react';
 import PrivacyLinksFooter from '../components/PrivacyLinksFooter';
 import { APP_CONFIG } from '../config/appConfig';
 import { formatMatriculaCpf } from '../utils/formatters';
@@ -414,33 +415,14 @@ export default function PortalAluno() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-[#0f2851] animate-spin" />
+        <Loader2 className="w-8 h-8 text-[#6354c7] animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-[#0f2851] text-white shadow-lg">
-        <div className="max-w-5xl mx-auto px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
-              <GraduationCap className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-lg font-black tracking-wide">Portal do Aluno</h1>
-              <p className="text-blue-200 text-xs font-medium">Diário Digital — {APP_CONFIG.YEAR}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-bold">{alunoData?.nome || user?.name}</p>
-              <p className="text-blue-200 text-[10px] font-bold uppercase tracking-wider">
-                Matrícula: {alunoData?.matricula || '---'}
-              </p>
-            </div>
-            <Link
+    <div className="portal-student min-h-screen bg-slate-50">
+      <header className="portal-student-top"><PortalBrand/><div className="portal-student-account">            <Link
               to="/minha-privacidade"
               className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/10 flex items-center justify-center text-white"
               title="Minha Privacidade"
@@ -464,38 +446,11 @@ export default function PortalAluno() {
               title="Sair"
             >
               <LogOut className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </header>
+            </button></div></header>
 
-      <main className="max-w-5xl mx-auto px-4 py-6 sm:px-6 sm:py-8 space-y-5 sm:space-y-6">
-        {/* Info Card */}
-        {alunoData && (
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm sm:p-6">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="space-y-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aluno</span>
-                <p className="text-sm font-bold text-slate-800 uppercase">{alunoData.nome}</p>
-              </div>
-              <div className="space-y-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Escola</span>
-                <p className="text-sm font-bold text-slate-800">{alunoData.escola_nome}</p>
-              </div>
-              <div className="space-y-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Turma</span>
-                <p className="text-sm font-bold text-slate-800">{alunoData.turma_nome}</p>
-              </div>
-              <div className="space-y-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Frequência</span>
-                <p className={`text-sm font-bold ${percentual >= 75 ? 'text-emerald-600' : 'text-red-500'}`}>
-                  {percentual}% ({presencas}/{totalAulas} aulas)
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
+      <main className="portal-page portal-student-page">
+        <PageHeading eyebrow="SUA JORNADA DE APRENDIZAGEM" title={'Você está construindo o futuro, '+(alunoData?.nome||user?.name||'estudante').split(' ')[0]+'.'} description="Cada presença, cada descoberta e cada conquista têm seu lugar aqui."/>
+        {alunoData&&<><section className="portal-student-identity"><div><span className="portal-eyebrow">SEU ESPAÇO ACADÊMICO</span><h2>{alunoData.nome}</h2><p>{alunoData.escola_nome}</p></div><span className="portal-student-class">{alunoData.turma_nome}<small>ANO LETIVO {APP_CONFIG.YEAR}</small></span><span className="portal-student-flower" aria-hidden="true">✳</span></section><div className="portal-metrics"><Metric label="Sua presença" value={percentual+'%'} detail={presencas+' de '+totalAulas+' aulas'} tone="mint"/><Metric label="Componentes" value={Object.keys(notasPorDisciplina).length} detail="Com avaliações registradas" tone="violet"/><Metric label="Minha turma" value={alunoData.turma_nome} detail={'Matrícula: '+(alunoData.matricula||'—')} tone="apricot"/></div></>}
         {!alunoData && (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 shadow-sm text-center">
             <User className="w-16 h-16 text-slate-200 mx-auto mb-4" />
@@ -507,35 +462,35 @@ export default function PortalAluno() {
         {/* Tabs */}
         {alunoData && (
           <>
-            <div className="flex bg-white rounded-xl p-1.5 border border-slate-200 shadow-sm overflow-x-auto no-print">
+            <div className="portal-student-tabs no-print">
               <button
-                onClick={() => setActiveTab('notas')}
+                aria-pressed={activeTab === 'notas'} onClick={() => setActiveTab('notas')}
                 className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
                   activeTab === 'notas'
-                    ? 'bg-[#0f2851] text-white shadow-md'
-                    : 'text-slate-500 hover:text-[#0f2851] hover:bg-slate-50'
+                    ? 'bg-[#6354c7] text-white shadow-md'
+                    : 'text-slate-500 hover:text-[#6354c7] hover:bg-slate-50'
                 }`}
               >
                 <BarChart3 className="w-4 h-4" />
                 Minhas Notas
               </button>
               <button
-                onClick={() => setActiveTab('frequencia')}
+                aria-pressed={activeTab === 'frequencia'} onClick={() => setActiveTab('frequencia')}
                 className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
                   activeTab === 'frequencia'
-                    ? 'bg-[#0f2851] text-white shadow-md'
-                    : 'text-slate-500 hover:text-[#0f2851] hover:bg-slate-50'
+                    ? 'bg-[#6354c7] text-white shadow-md'
+                    : 'text-slate-500 hover:text-[#6354c7] hover:bg-slate-50'
                 }`}
               >
                 <CalendarCheck className="w-4 h-4" />
                 Minha Frequência
               </button>
               <button
-                onClick={() => setActiveTab('boletim')}
+                aria-pressed={activeTab === 'boletim'} onClick={() => setActiveTab('boletim')}
                 className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
                   activeTab === 'boletim'
-                    ? 'bg-[#0f2851] text-white shadow-md'
-                    : 'text-slate-500 hover:text-[#0f2851] hover:bg-slate-50'
+                    ? 'bg-[#6354c7] text-white shadow-md'
+                    : 'text-slate-500 hover:text-[#6354c7] hover:bg-slate-50'
                 }`}
               >
                 <BookOpen className="w-4 h-4" />
@@ -550,7 +505,7 @@ export default function PortalAluno() {
                   Object.entries(notasPorDisciplina).map(([disciplina, notasDisc]: [string, NotaItem[]]) => (
                     <div key={disciplina} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                       <div className="px-5 py-4 bg-gradient-to-r from-blue-50/50 to-white border-b border-slate-100 flex items-center gap-3">
-                        <BookOpen className="w-5 h-5 text-[#0f2851]" />
+                        <BookOpen className="w-5 h-5 text-[#6354c7]" />
                         <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">{disciplina}</h3>
                       </div>
                       <div className="p-4">
@@ -653,12 +608,12 @@ export default function PortalAluno() {
                           >
                             <div className="flex items-center gap-4">
                               <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                                isExpanded ? 'bg-[#0f2851] text-white' : 'bg-slate-50 text-slate-400'
+                                isExpanded ? 'bg-[#6354c7] text-white' : 'bg-slate-50 text-slate-400'
                               }`}>
                                 <Calendar className="w-5 h-5" />
                               </div>
                               <div className="text-left">
-                                <h4 className="font-black text-[#0f2851] text-sm uppercase tracking-wider">{mesNome}</h4>
+                                <h4 className="font-black text-[#6354c7] text-sm uppercase tracking-wider">{mesNome}</h4>
                                 <p className="text-[10px] font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1.5">
                                   <span className="text-blue-400">{freqsDoMes.length.toString().padStart(2, '0')} Aulas</span>
                                   <span className="text-slate-300">•</span>
@@ -749,7 +704,7 @@ export default function PortalAluno() {
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-5 border border-slate-100 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#0f2851] flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#6354c7] flex items-center justify-center">
                   <Lock className="w-5 h-5" />
                 </div>
                 <div>
@@ -810,12 +765,12 @@ export default function PortalAluno() {
                     required
                     minLength={8}
                     disabled={isSavingSenha}
-                    className="w-full px-3.5 py-2.5 pr-11 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition"
+                    className="w-full px-3.5 py-2.5 pr-11 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] transition"
                   />
                   <button
                     type="button"
                     onClick={() => setShowNovaSenha((prev) => !prev)}
-                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#0f2851] transition-colors cursor-pointer"
+                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#6354c7] transition-colors cursor-pointer"
                     aria-label={showNovaSenha ? 'Ocultar senha' : 'Mostrar senha'}
                     title={showNovaSenha ? 'Ocultar senha' : 'Mostrar senha'}
                   >
@@ -837,12 +792,12 @@ export default function PortalAluno() {
                     required
                     minLength={8}
                     disabled={isSavingSenha}
-                    className="w-full px-3.5 py-2.5 pr-11 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] transition"
+                    className="w-full px-3.5 py-2.5 pr-11 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] transition"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmarSenha((prev) => !prev)}
-                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#0f2851] transition-colors cursor-pointer"
+                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#6354c7] transition-colors cursor-pointer"
                     aria-label={showConfirmarSenha ? 'Ocultar senha' : 'Mostrar senha'}
                     title={showConfirmarSenha ? 'Ocultar senha' : 'Mostrar senha'}
                   >
@@ -863,7 +818,7 @@ export default function PortalAluno() {
                 <button
                   type="submit"
                   disabled={isSavingSenha}
-                  className="flex-1 py-2.5 bg-[#0f2851] hover:bg-[#1a3a6d] text-white rounded-xl text-sm font-bold shadow-md shadow-[#0f2851]/20 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="flex-1 py-2.5 bg-[#6354c7] hover:bg-[#5142ad] text-white rounded-xl text-sm font-bold shadow-md shadow-[#6354c7]/20 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   {isSavingSenha ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar Senha'}
                 </button>

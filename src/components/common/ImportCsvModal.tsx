@@ -347,7 +347,7 @@ export default function ImportCsvModal<T>({
               className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white shadow-sm transition ${
                 importing || parsedItems.length === 0
                   ? 'bg-slate-300 cursor-not-allowed text-slate-500'
-                  : 'bg-[#0f2851] hover:bg-[#1a3a6d] shadow-[#0f2851]/20'
+                  : 'bg-[#6354c7] hover:bg-[#5142ad] shadow-[#6354c7]/20'
               }`}
             >
               {importing && <Loader2 className="w-4 h-4 animate-spin" />}

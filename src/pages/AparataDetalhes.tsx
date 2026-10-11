@@ -192,13 +192,13 @@ export default function AparataDetalhes() {
 
   if (!turmaAtiva) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+      <div className="portal-data-module min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-200 text-center max-w-md w-full">
-          <div className="w-16 h-16 bg-[#eef2ff] text-[#0f2851] rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-[#eef2ff] text-[#6354c7] rounded-full flex items-center justify-center mx-auto mb-4">
             <BookOpen className="w-8 h-8" />
           </div>
           <h2 className="text-xl font-bold text-slate-800 mb-2">Nenhuma turma selecionada</h2>
-          <Link to="/diario" className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#0f2851] text-white font-bold rounded-xl hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20 mt-4">
+          <Link to="/diario" className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#6354c7] text-white font-bold rounded-xl hover:bg-[#5142ad] transition shadow-lg shadow-[#6354c7]/20 mt-4">
             <ArrowLeft className="w-5 h-5" /> Voltar ao Diário
           </Link>
         </div>
@@ -263,7 +263,7 @@ export default function AparataDetalhes() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
-              className="flex items-center gap-1 px-4 py-2 bg-[#eef2ff] text-[#0f2851] text-sm font-bold rounded-xl border border-blue-100 hover:bg-[#e0e7ff] transition shadow-sm cursor-pointer"
+              className="flex items-center gap-1 px-4 py-2 bg-[#eef2ff] text-[#6354c7] text-sm font-bold rounded-xl border border-blue-100 hover:bg-[#e0e7ff] transition shadow-sm cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
               Voltar
@@ -271,7 +271,7 @@ export default function AparataDetalhes() {
             <h2 className="text-xl font-medium text-slate-700 flex items-center gap-2">
               Detalhes da Movimentação
               <span className="bg-emerald-100 text-emerald-800 text-sm font-bold px-3 py-1 rounded">Ano: {APP_CONFIG.YEAR}</span>
-              <span className="bg-[#eef2ff] text-[#0f2851] text-sm font-bold px-3 py-1 rounded">Período: {bimestreInfo.id}</span>
+              <span className="bg-[#eef2ff] text-[#6354c7] text-sm font-bold px-3 py-1 rounded">Período: {bimestreInfo.id}</span>
             </h2>
           </div>
 
@@ -288,7 +288,7 @@ export default function AparataDetalhes() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => window.print()}
-                    className="flex items-center gap-2 bg-[#0f2851] text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-[#1a3a6d] transition shadow-md shadow-[#0f2851]/20 active:scale-95"
+                    className="flex items-center gap-2 bg-[#6354c7] text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-[#5142ad] transition shadow-md shadow-[#6354c7]/20 active:scale-95"
                   >
                     <Printer className="w-4 h-4" />
                     Imprimir
@@ -370,7 +370,7 @@ export default function AparataDetalhes() {
                   placeholder="Pesquisar aluno..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-[#0f2851] font-bold focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10"
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-[#6354c7] font-bold focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10"
                 />
               </div>
 
@@ -389,7 +389,7 @@ export default function AparataDetalhes() {
                     {alunosFiltrados.map((aluno, i) => (
                       <tr key={aluno.id} className={`border-b border-slate-100 hover:bg-slate-50 transition ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}>
                         <td className="px-4 py-2.5 text-slate-500 text-sm font-bold tabular-nums">{String(aluno.n).padStart(2, '0')}</td>
-                        <td className="px-4 py-2.5 text-[#0f2851] font-bold text-sm hover:underline cursor-pointer">{aluno.nome}</td>
+                        <td className="px-4 py-2.5 text-[#6354c7] font-bold text-sm hover:underline cursor-pointer">{aluno.nome}</td>
                         <td className="px-4 py-2.5 text-slate-700 text-sm font-mono uppercase">{aluno.matricula}</td>
                         <td className="px-4 py-2.5">
                           <span className={`inline-block text-white text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[42px] text-center ${parseFloat(aluno.somaParcial.replace(',', '.')) >= 6 ? 'bg-emerald-500' : 'bg-red-500'}`}>
@@ -397,7 +397,7 @@ export default function AparataDetalhes() {
                           </span>
                         </td>
                         <td className="px-4 py-2.5">
-                          <span className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[32px] text-center ${aluno.faltas > 0 ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-[#eef2ff] text-[#0f2851] border border-blue-50'}`}>
+                          <span className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[32px] text-center ${aluno.faltas > 0 ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-[#eef2ff] text-[#6354c7] border border-blue-50'}`}>
                             {aluno.faltas}
                           </span>
                         </td>
@@ -423,7 +423,7 @@ export default function AparataDetalhes() {
                     <button className="px-3 py-1 border border-slate-200 rounded text-xs text-slate-500 hover:bg-slate-50 transition disabled:opacity-40" disabled>
                       ← Anterior
                     </button>
-                    <button className="px-3 py-1 bg-[#0f2851] text-white rounded-lg text-xs font-bold">1</button>
+                    <button className="px-3 py-1 bg-[#6354c7] text-white rounded-lg text-xs font-bold">1</button>
                     <button className="px-3 py-1 border border-slate-200 rounded text-xs text-slate-500 hover:bg-slate-50 transition disabled:opacity-40" disabled>
                       Seguinte →
                     </button>
@@ -525,7 +525,7 @@ export default function AparataDetalhes() {
                     <select
                       value={disciplinaEscolhidaReabrir}
                       onChange={(e) => setDisciplinaEscolhidaReabrir(e.target.value)}
-                      className="w-full border border-slate-300 bg-white rounded-lg px-3 py-2 text-sm font-bold text-[#0f2851]"
+                      className="w-full border border-slate-300 bg-white rounded-lg px-3 py-2 text-sm font-bold text-[#6354c7]"
                     >
                       {disciplinasTurma.length > 0 ? (
                         disciplinasTurma.map(d => (

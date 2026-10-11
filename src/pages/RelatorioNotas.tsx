@@ -166,10 +166,10 @@ export default function RelatorioNotas() {
         {/* SubHeader */}
         <div className="bg-white/80 backdrop-blur-md px-8 py-3 flex items-center justify-between border-b border-blue-100 shadow-sm sticky top-0 z-20">
           <div className="flex items-center gap-4">
-            <Link to="/diario" className="bg-[#eef2ff] text-[#0f2851] px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold border border-blue-100 hover:bg-[#e0e7ff] transition-all shadow-sm">
+            <Link to="/diario" className="bg-[#eef2ff] text-[#6354c7] px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold border border-blue-100 hover:bg-[#e0e7ff] transition-all shadow-sm">
               <ArrowLeft className="w-4 h-4" /> Voltar
             </Link>
-            <h1 className="text-xl font-semibold text-[#0f2851]">Relatório de Notas</h1>
+            <h1 className="text-xl font-semibold text-[#6354c7]">Relatório de Notas</h1>
           </div>
           <span className="bg-emerald-100 text-emerald-700 text-[12px] font-bold px-3 py-1 rounded-full border border-emerald-200">Ano: {APP_CONFIG.YEAR}</span>
         </div>
@@ -180,10 +180,10 @@ export default function RelatorioNotas() {
         <div className="w-full max-w-7xl bg-white rounded-xl shadow-sm border border-slate-200 min-h-[600px] overflow-hidden">
           {/* Card Header Area */}
           <div className="p-6 pb-0 flex justify-between items-start">
-            <h3 className="text-xl font-semibold text-[#0f2851]">Pesquisa</h3>
+            <h3 className="text-xl font-semibold text-[#6354c7]">Pesquisa</h3>
             <button 
               onClick={() => window.print()}
-              className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-base font-semibold hover:bg-[#e0e7ff] transition shadow-sm cursor-pointer"
+              className="bg-[#eef2ff] text-[#6354c7] border border-blue-100 px-6 py-2 rounded text-base font-semibold hover:bg-[#e0e7ff] transition shadow-sm cursor-pointer"
             >
               Imprimir
             </button>
@@ -244,7 +244,7 @@ export default function RelatorioNotas() {
                 <button 
                   onClick={handleExibir}
                   disabled={dataLoading}
-                  className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-3 rounded-md flex items-center gap-2 text-base font-semibold hover:bg-[#e0e7ff] transition shadow-sm disabled:opacity-70"
+                  className="bg-[#eef2ff] text-[#6354c7] border border-blue-100 px-6 py-3 rounded-md flex items-center gap-2 text-base font-semibold hover:bg-[#e0e7ff] transition shadow-sm disabled:opacity-70"
                 >
                   <Search className="h-5 w-5" />
                   {dataLoading ? 'Buscando...' : 'Exibir'}
@@ -265,8 +265,8 @@ export default function RelatorioNotas() {
               <div className="flex flex-col h-full">
                 {/* Tabs */}
                 <div className="flex border-b border-slate-200 px-6">
-                  <div className="px-4 py-3 border-b-2 border-[#0f2851] text-sm font-semibold text-[#0f2851]">Alunos</div>
-                  <div className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-[#0f2851] cursor-pointer">Com notas importadas</div>
+                  <div className="px-4 py-3 border-b-2 border-[#6354c7] text-sm font-semibold text-[#6354c7]">Alunos</div>
+                  <div className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-[#6354c7] cursor-pointer">Com notas importadas</div>
                 </div>
 
                 <div className="p-6 pb-4">
@@ -289,7 +289,7 @@ export default function RelatorioNotas() {
                       <tr>
                         <th className="px-4 py-4 border-b border-slate-200 w-16 text-center">
                           <div className="flex flex-col items-center justify-center relative">
-                            <span className="text-[13px] text-[#0f2851] font-bold">Nº</span>
+                            <span className="text-[13px] text-[#6354c7] font-bold">Nº</span>
                             <div className="absolute right-1 flex flex-col text-[10px] text-slate-300 opacity-60 font-black leading-[6px] gap-[1px]">
                               <span>▲</span><span>▼</span>
                             </div>
@@ -297,7 +297,7 @@ export default function RelatorioNotas() {
                         </th>
                         <th className="px-6 py-4 border-b border-slate-200 border-l border-slate-100 min-w-[250px] text-left">
                           <div className="flex items-center justify-between relative pr-4">
-                            <span className="text-[13px] text-[#0f2851] font-bold">NOME DO ALUNO</span>
+                            <span className="text-[13px] text-[#6354c7] font-bold">NOME DO ALUNO</span>
                             <div className="absolute right-0 flex flex-col text-[10px] text-slate-300 opacity-60 font-black leading-[6px] gap-[1px]">
                               <span>▲</span><span>▼</span>
                             </div>
@@ -313,10 +313,10 @@ export default function RelatorioNotas() {
                             <React.Fragment key={av.id}>
                               <th className="px-2 py-4 border-b border-slate-200 border-l border-slate-100 text-center min-w-[80px] hover:bg-slate-50 transition-colors">
                                 <div className="flex flex-col items-center justify-center relative">
-                                  {diaMesAv && <span className="text-[13px] text-[#0f2851] font-bold tracking-tight mb-1">{diaMesAv}</span>}
+                                  {diaMesAv && <span className="text-[13px] text-[#6354c7] font-bold tracking-tight mb-1">{diaMesAv}</span>}
                                   <div className="w-[80%] h-[1px] bg-slate-200 mb-1"></div>
                                   <div className="flex items-center justify-center w-full relative">
-                                    <span className="text-[13px] text-[#0f2851] font-bold">{av.tipo}</span>
+                                    <span className="text-[13px] text-[#6354c7] font-bold">{av.tipo}</span>
                                     <div className="absolute right-0 flex flex-col text-[10px] text-slate-300 opacity-60 font-black leading-[6px] gap-[1px]">
                                       <span>▲</span><span>▼</span>
                                     </div>
@@ -328,10 +328,10 @@ export default function RelatorioNotas() {
                                   <div className="flex flex-col items-center justify-center relative">
                                     {ch ? (
                                       <>
-                                        {diaMesCh ? <span className="text-[13px] text-[#0f2851] font-bold tracking-tight mb-1">{diaMesCh}</span> : <div className="h-[20px] mb-1"></div>}
+                                        {diaMesCh ? <span className="text-[13px] text-[#6354c7] font-bold tracking-tight mb-1">{diaMesCh}</span> : <div className="h-[20px] mb-1"></div>}
                                         <div className="w-[80%] h-[1px] bg-slate-200 mb-1"></div>
                                         <div className="flex items-center justify-center w-full relative">
-                                          <span className="text-[13px] text-[#0f2851] font-bold">2ª CH</span>
+                                          <span className="text-[13px] text-[#6354c7] font-bold">2ª CH</span>
                                           <div className="absolute right-0 flex flex-col text-[10px] text-slate-300 opacity-60 font-black leading-[6px] gap-[1px]">
                                             <span>▲</span><span>▼</span>
                                           </div>
@@ -347,10 +347,10 @@ export default function RelatorioNotas() {
                                 <div className="flex flex-col items-center justify-center relative">
                                   {rp ? (
                                     <>
-                                      {diaMesRp ? <span className="text-[13px] text-[#0f2851] font-bold tracking-tight mb-1">{diaMesRp}</span> : <div className="h-[20px] mb-1"></div>}
+                                      {diaMesRp ? <span className="text-[13px] text-[#6354c7] font-bold tracking-tight mb-1">{diaMesRp}</span> : <div className="h-[20px] mb-1"></div>}
                                       <div className="w-[80%] h-[1px] bg-slate-200 mb-1"></div>
                                       <div className="flex items-center justify-center w-full relative">
-                                        <span className="text-[13px] text-[#0f2851] font-bold">{rp.tipo}</span>
+                                        <span className="text-[13px] text-[#6354c7] font-bold">{rp.tipo}</span>
                                         <div className="absolute right-0 flex flex-col text-[10px] text-slate-300 opacity-60 font-black leading-[6px] gap-[1px]">
                                           <span>▲</span><span>▼</span>
                                         </div>
@@ -366,7 +366,7 @@ export default function RelatorioNotas() {
                         })}
                         <th className="px-4 py-4 border-b border-slate-200 border-l border-slate-100 text-center min-w-[140px]">
                           <div className="flex flex-col items-center justify-center relative">
-                            <span className="text-[13px] text-[#0f2851] font-bold">SOMA PARCIAL</span>
+                            <span className="text-[13px] text-[#6354c7] font-bold">SOMA PARCIAL</span>
                             <div className="absolute right-1 flex flex-col text-[10px] text-slate-300 opacity-60 font-black leading-[6px] gap-[1px]">
                               <span>▲</span><span>▼</span>
                             </div>
@@ -374,7 +374,7 @@ export default function RelatorioNotas() {
                         </th>
                         <th className="px-4 py-4 border-b border-slate-200 border-l border-slate-100 text-center min-w-[140px]">
                           <div className="flex flex-col items-center justify-center relative">
-                            <span className="text-[13px] text-[#0f2851] font-bold">SOMA PROCESSADA</span>
+                            <span className="text-[13px] text-[#6354c7] font-bold">SOMA PROCESSADA</span>
                             <div className="absolute right-1 flex flex-col text-[10px] text-slate-300 opacity-60 font-black leading-[6px] gap-[1px]">
                               <span>▲</span><span>▼</span>
                             </div>
@@ -405,7 +405,7 @@ export default function RelatorioNotas() {
                                 <React.Fragment key={av.id}>
                                   <td className="px-2 py-4 border-l border-slate-100 text-center">
                                     {vAv !== null ? (
-                                      <span className="inline-flex min-w-[50px] justify-center bg-[#0f2851] text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm shadow-blue-200/50 tracking-wide">
+                                      <span className="inline-flex min-w-[50px] justify-center bg-[#6354c7] text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm shadow-blue-200/50 tracking-wide">
                                         {Number(vAv).toFixed(2).replace('.', ',')}
                                       </span>
                                     ) : (
@@ -415,7 +415,7 @@ export default function RelatorioNotas() {
                                   {hasAnySecondCall && (
                                     <td className="px-2 py-4 text-center border-l border-slate-100">
                                       {ch && vCh !== null ? (
-                                        <span className="inline-flex min-w-[50px] justify-center bg-[#0f2851] text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm shadow-blue-200/50 tracking-wide">
+                                        <span className="inline-flex min-w-[50px] justify-center bg-[#6354c7] text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm shadow-blue-200/50 tracking-wide">
                                           {Number(vCh).toFixed(2).replace('.', ',')}
                                         </span>
                                       ) : (
@@ -427,7 +427,7 @@ export default function RelatorioNotas() {
                                   )}
                                   <td className="px-2 py-4 text-center border-l border-slate-100">
                                     {rp && vRp !== null ? (
-                                      <span className="inline-flex min-w-[50px] justify-center bg-[#0f2851] text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm shadow-blue-200/50 tracking-wide">
+                                      <span className="inline-flex min-w-[50px] justify-center bg-[#6354c7] text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm shadow-blue-200/50 tracking-wide">
                                         {Number(vRp).toFixed(2).replace('.', ',')}
                                       </span>
                                     ) : (
@@ -442,7 +442,7 @@ export default function RelatorioNotas() {
                               {somaVal !== null ? (
                                 <span className={`inline-flex min-w-[50px] justify-center px-3 py-1 rounded-full text-[13px] font-bold shadow-sm text-white transition-colors duration-200 ${
                                   somaVal >= minPass 
-                                    ? 'bg-[#0f2851] shadow-blue-200/50' 
+                                    ? 'bg-[#6354c7] shadow-blue-200/50' 
                                     : 'bg-[#c2463e] shadow-red-200/50'
                                 }`}>
                                   {Number(somaVal).toFixed(2).replace('.', ',')}

@@ -95,7 +95,7 @@ export default function ConnectionStatus() {
       ) : null,
     },
     OFFLINE: {
-      bg: isNearCapacity ? 'bg-amber-600/95 font-bold' : 'bg-[#0b1f3f]/95 border-b border-white/10',
+      bg: isNearCapacity ? 'bg-amber-600/95 font-bold' : 'bg-[#6354c7]/95 border-b border-white/10',
       icon: isNearCapacity ? <AlertTriangle className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />,
       text: isNearCapacity
         ? `Atenção: Fila offline próxima do limite (${pendingCount}/5000) • Conecte-se para sincronizar!`

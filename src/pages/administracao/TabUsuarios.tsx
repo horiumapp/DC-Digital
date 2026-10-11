@@ -123,7 +123,7 @@ export default function TabUsuarios() {
       <div className="p-6 flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 gap-4 bg-white shrink-0">
         <div>
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <Users className="w-5 h-5 text-[#0f2851]" />
+            <Users className="w-5 h-5 text-[#6354c7]" />
             Usuários de Acesso
           </h2>
           <p className="text-xs text-slate-500 mt-0.5 font-medium">
@@ -134,7 +134,7 @@ export default function TabUsuarios() {
             <button
               type="button"
               onClick={() => setCadastroAberto(true)}
-              className="flex items-center gap-2 bg-[#0f2851] hover:bg-[#1a3a6d] text-white px-3 py-2 rounded-lg text-xs font-bold"
+              className="flex items-center gap-2 bg-[#6354c7] hover:bg-[#5142ad] text-white px-3 py-2 rounded-lg text-xs font-bold"
             >
               <Plus className="w-4 h-4" />
               Gestor SEMEC
@@ -146,7 +146,7 @@ export default function TabUsuarios() {
                 onClick={() => setFiltroCargo(cargo)}
                 className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
                   filtroCargo === cargo 
-                    ? 'bg-white text-[#0f2851] shadow-sm' 
+                    ? 'bg-white text-[#6354c7] shadow-sm' 
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
@@ -163,7 +163,7 @@ export default function TabUsuarios() {
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar por nome ou e-mail..."
-              className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f2851] focus:border-[#0f2851] bg-slate-50/50 transition-all font-medium"
+              className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#6354c7] focus:border-[#6354c7] bg-slate-50/50 transition-all font-medium"
             />
           </div>
         </div>
@@ -173,7 +173,7 @@ export default function TabUsuarios() {
       <div className="flex-1 overflow-auto p-6">
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0f2851]"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6354c7]"></div>
           </div>
         ) : usuariosFiltrados.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
@@ -288,7 +288,7 @@ export default function TabUsuarios() {
               <button type="button" onClick={() => setCadastroAberto(false)} className="px-4 py-2 text-sm font-bold text-slate-600">
                 Cancelar
               </button>
-              <button type="submit" disabled={salvando} className="px-4 py-2 rounded-lg bg-[#0f2851] text-white text-sm font-bold disabled:opacity-60">
+              <button type="submit" disabled={salvando} className="px-4 py-2 rounded-lg bg-[#6354c7] text-white text-sm font-bold disabled:opacity-60">
                 {salvando ? 'Salvando...' : 'Cadastrar'}
               </button>
             </div>

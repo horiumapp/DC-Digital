@@ -34,8 +34,8 @@ export default function SWUpdatePrompt({ onUpdate, onDismiss }: SWUpdatePromptPr
           <div className="flex items-center gap-2">
             <button
               onClick={onUpdate}
-              className="px-4 py-2 bg-[#0f2851] text-white text-xs font-bold rounded-lg
-                hover:bg-[#1a3a6d] transition-colors shadow-sm active:scale-95"
+              className="px-4 py-2 bg-[#6354c7] text-white text-xs font-bold rounded-lg
+                hover:bg-[#5142ad] transition-colors shadow-sm active:scale-95"
             >
               Atualizar agora
             </button>

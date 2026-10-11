@@ -159,7 +159,7 @@ export default function ImportarCurriculoModal({
               <Sparkles className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-[#0f2851]">Importar Conteúdos Curriculares (BNCC)</h2>
+              <h2 className="text-xl font-bold text-[#6354c7]">Importar Conteúdos Curriculares (BNCC)</h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Carregue um arquivo TXT/CSV ou cole os conteúdos para importação automática em lote.
               </p>
@@ -432,7 +432,7 @@ export default function ImportarCurriculoModal({
             <button
               onClick={handleConfirmImport}
               disabled={importing || !parseResult || parseResult.records.length === 0}
-              className="px-6 py-3 bg-[#0f2851] hover:bg-blue-900 text-white rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 active:scale-[0.98] w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-3 bg-[#6354c7] hover:bg-blue-900 text-white rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 active:scale-[0.98] w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {importing ? (
                 <>

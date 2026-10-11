@@ -171,7 +171,7 @@ export default function NovoUsuarioEscolarModal({
               disabled={loading}
               value={formData.nome}
               onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] transition-all font-medium disabled:opacity-50 disabled:bg-slate-50"
+              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#6354c7]/20 focus:border-[#6354c7] transition-all font-medium disabled:opacity-50 disabled:bg-slate-50"
               placeholder="Ex: Maria da Silva"
             />
           </div>
@@ -187,7 +187,7 @@ export default function NovoUsuarioEscolarModal({
               disabled={loading}
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] transition-all font-medium disabled:opacity-50 disabled:bg-slate-50"
+              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#6354c7]/20 focus:border-[#6354c7] transition-all font-medium disabled:opacity-50 disabled:bg-slate-50"
               placeholder="email@exemplo.com"
             />
           </div>
@@ -205,7 +205,7 @@ export default function NovoUsuarioEscolarModal({
               value={formData.senha}
               onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
               autoComplete="new-password"
-              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] transition-all font-medium disabled:opacity-50 disabled:bg-slate-50"
+              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#6354c7]/20 focus:border-[#6354c7] transition-all font-medium disabled:opacity-50 disabled:bg-slate-50"
               placeholder="Mínimo 6 caracteres"
             />
             <p className="text-[10px] text-slate-400 font-medium ml-1">
@@ -225,7 +225,7 @@ export default function NovoUsuarioEscolarModal({
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2.5 text-sm font-medium text-white bg-[#0f2851] hover:bg-[#1a3a6d] rounded-lg transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
+              className="px-5 py-2.5 text-sm font-medium text-white bg-[#6354c7] hover:bg-[#5142ad] rounded-lg transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
             >
               {loading ? (
                 <>

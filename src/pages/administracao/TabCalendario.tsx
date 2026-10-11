@@ -214,7 +214,7 @@ export default function TabCalendario() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-[#0f2851]/10 rounded-lg text-[#0f2851]">
+            <div className="p-2 bg-[#6354c7]/10 rounded-lg text-[#6354c7]">
               <CalendarDays className="w-6 h-6" />
             </div>
             <div>
@@ -254,7 +254,7 @@ export default function TabCalendario() {
             </button>
 
             <div className="flex items-center gap-1.5 px-2">
-              <Calendar className="w-4 h-4 text-[#0f2851]" />
+              <Calendar className="w-4 h-4 text-[#6354c7]" />
               <select
                 aria-label="Selecionar ano letivo"
                 value={selectedYear}
@@ -325,7 +325,7 @@ export default function TabCalendario() {
             disabled={saving || !hasChanges}
             className={`inline-flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold shadow-sm transition ${
               hasChanges 
-                ? 'bg-[#0f2851] text-white hover:bg-[#1a3a6d] shadow-[#0f2851]/20' 
+                ? 'bg-[#6354c7] text-white hover:bg-[#5142ad] shadow-[#6354c7]/20' 
                 : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
             }`}
           >
@@ -374,7 +374,7 @@ export default function TabCalendario() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
-                        <span className="w-7 h-7 rounded-full bg-[#0f2851] text-white text-xs font-black flex items-center justify-center">
+                        <span className="w-7 h-7 rounded-full bg-[#6354c7] text-white text-xs font-black flex items-center justify-center">
                           {index + 1}
                         </span>
                         <div>
@@ -399,7 +399,7 @@ export default function TabCalendario() {
                           type="date"
                           value={item.dataInicio}
                           onChange={(e) => handleDateChange(item.periodo, 'dataInicio', e.target.value)}
-                          className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] bg-slate-50/50 font-medium text-slate-800"
+                          className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#6354c7]/20 focus:border-[#6354c7] bg-slate-50/50 font-medium text-slate-800"
                         />
                       </div>
 
@@ -411,7 +411,7 @@ export default function TabCalendario() {
                           type="date"
                           value={item.dataFim}
                           onChange={(e) => handleDateChange(item.periodo, 'dataFim', e.target.value)}
-                          className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#0f2851]/20 focus:border-[#0f2851] bg-slate-50/50 font-medium text-slate-800"
+                          className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#6354c7]/20 focus:border-[#6354c7] bg-slate-50/50 font-medium text-slate-800"
                         />
                       </div>
                     </div>
@@ -496,7 +496,7 @@ export default function TabCalendario() {
 
           {/* Barra inferior de confirmação se houver alterações */}
           {hasChanges && (
-            <div className="sticky bottom-4 flex items-center justify-between p-4 bg-[#0f2851] text-white rounded-xl shadow-xl animate-in fade-in slide-in-from-bottom-2">
+            <div className="sticky bottom-4 flex items-center justify-between p-4 bg-[#6354c7] text-white rounded-xl shadow-xl animate-in fade-in slide-in-from-bottom-2">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
                 <span className="text-sm font-semibold">

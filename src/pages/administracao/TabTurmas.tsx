@@ -298,7 +298,7 @@ export default function TabTurmas() {
   if (loading) {
     return (
       <div className="p-12 text-center">
-        <div className="animate-spin w-8 h-8 border-4 border-[#0f2851] border-t-transparent rounded-full mx-auto mb-4"></div>
+        <div className="animate-spin w-8 h-8 border-4 border-[#6354c7] border-t-transparent rounded-full mx-auto mb-4"></div>
         <p className="text-slate-500 font-medium tracking-tight">Preparando ambiente de turmas...</p>
       </div>
     );
@@ -327,7 +327,7 @@ export default function TabTurmas() {
                 value={buscaTurma}
                 onChange={(e) => setBuscaTurma(e.target.value)}
                 placeholder="Filtrar escolas..."
-                className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f2851] focus:border-[#0f2851] bg-slate-50/50 font-bold text-[#0f2851]"
+                className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#6354c7] focus:border-[#6354c7] bg-slate-50/50 font-bold text-[#6354c7]"
               />
             </div>
             <button
@@ -352,7 +352,7 @@ export default function TabTurmas() {
       ) : (
         <div className="flex flex-col">
           {/* Banner Azul (Estilo Referência) */}
-          <div className="bg-[#0f2851] p-8 pt-10 pb-12 relative overflow-hidden">
+          <div className="bg-[#6354c7] p-8 pt-10 pb-12 relative overflow-hidden">
             {/* Background Icon Decor */}
             <Users className="absolute -right-8 -bottom-8 w-48 h-48 text-white/5 pointer-events-none rotate-12" />
             
@@ -418,7 +418,7 @@ export default function TabTurmas() {
                     value={buscaTurma}
                     onChange={(e) => setBuscaTurma(e.target.value)}
                     placeholder="Ex: 1º Ano A"
-                    className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-xl text-base placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851]"
+                    className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-xl text-base placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] bg-slate-50/30 transition-all font-bold text-[#6354c7]"
                   />
                 </div>
               </div>
@@ -448,7 +448,7 @@ export default function TabTurmas() {
                       setTurmaParaEditar(null);
                       setIsNovaTurmaModalOpen(true);
                     }}
-                    className="bg-[#0f2851] hover:bg-[#1a3a6d] text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-[#0f2851]/20 active:scale-95 whitespace-nowrap h-[54px] w-full sm:w-auto"
+                    className="bg-[#6354c7] hover:bg-[#5142ad] text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-[#6354c7]/20 active:scale-95 whitespace-nowrap h-[54px] w-full sm:w-auto"
                   >
                     Adicionar Turma
                   </button>
@@ -485,11 +485,11 @@ export default function TabTurmas() {
                     </div>
                   </div>
                   
-                  <div className="w-12 h-12 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center mb-4 group-hover:bg-[#0f2851] group-hover:text-white transition-colors duration-300">
+                  <div className="w-12 h-12 bg-[#eef2ff] text-[#6354c7] rounded-xl flex items-center justify-center mb-4 group-hover:bg-[#6354c7] group-hover:text-white transition-colors duration-300">
                     <Building2 className="w-6 h-6" />
                   </div>
                   
-                  <h3 className="font-bold text-slate-800 text-lg leading-snug mb-2 group-hover:text-[#0f2851] transition-colors">
+                  <h3 className="font-bold text-slate-800 text-lg leading-snug mb-2 group-hover:text-[#6354c7] transition-colors">
                     {escola.nome}
                   </h3>
                   
@@ -500,7 +500,7 @@ export default function TabTurmas() {
                         {(escola.turmasCount || 0).toString().padStart(2, '0')}
                       </span>
                     </div>
-                    <div className="p-2 bg-slate-50 text-slate-400 rounded-lg group-hover:bg-[#eef2ff] group-hover:text-[#0f2851] transition-colors">
+                    <div className="p-2 bg-slate-50 text-slate-400 rounded-lg group-hover:bg-[#eef2ff] group-hover:text-[#6354c7] transition-colors">
                       <ChevronRight className="w-5 h-5" />
                     </div>
                   </div>
@@ -521,7 +521,7 @@ export default function TabTurmas() {
               turnosOrdenados.map((turno) => (
                 <div key={turno} className="space-y-6">
                   <div className="flex items-center gap-4 px-2">
-                    <h3 className="text-[10px] font-black text-[#0f2851] uppercase tracking-[0.2em] bg-[#eef2ff] px-3 py-1.5 rounded-lg border border-blue-100/50">
+                    <h3 className="text-[10px] font-black text-[#6354c7] uppercase tracking-[0.2em] bg-[#eef2ff] px-3 py-1.5 rounded-lg border border-blue-100/50">
                       TURNO: {turno}
                     </h3>
                     <div className="h-px bg-slate-100 flex-1" />
@@ -540,7 +540,7 @@ export default function TabTurmas() {
                         <div className="absolute top-4 right-4 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           <button 
                             onClick={() => handleEditTurma(turma)}
-                            className="p-2 bg-slate-50 text-slate-400 hover:text-[#0f2851] hover:bg-[#eef2ff] rounded-lg transition-colors"
+                            className="p-2 bg-slate-50 text-slate-400 hover:text-[#6354c7] hover:bg-[#eef2ff] rounded-lg transition-colors"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
@@ -553,7 +553,7 @@ export default function TabTurmas() {
                         </div>
 
                         <div className="flex items-center gap-3 mb-6">
-                          <div className="w-10 h-10 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center font-bold text-lg">
+                          <div className="w-10 h-10 bg-[#eef2ff] text-[#6354c7] rounded-xl flex items-center justify-center font-bold text-lg">
                             {turma.nome.charAt(0)}
                           </div>
                           <h4 className="font-bold text-slate-800 text-xl tracking-tight leading-tight">
@@ -576,7 +576,7 @@ export default function TabTurmas() {
                           <button
                             type="button"
                             onClick={() => navigate(`/relatorio-boletins?turmaId=${turma.id}`)}
-                            className="w-full flex items-center justify-between text-xs font-bold text-slate-700 hover:text-[#0f2851] py-1 transition group/btn cursor-pointer"
+                            className="w-full flex items-center justify-between text-xs font-bold text-slate-700 hover:text-[#6354c7] py-1 transition group/btn cursor-pointer"
                             title="Emitir e imprimir boletins desta turma"
                           >
                             <span className="flex items-center gap-2">
@@ -589,10 +589,10 @@ export default function TabTurmas() {
                           <button
                             type="button"
                             onClick={() => handleAbrirAparatas(turma)}
-                            className="w-full flex items-center justify-between text-xs font-bold text-[#0f2851] hover:text-blue-700 py-1 transition group/btn cursor-pointer"
+                            className="w-full flex items-center justify-between text-xs font-bold text-[#6354c7] hover:text-blue-700 py-1 transition group/btn cursor-pointer"
                           >
                             <span className="flex items-center gap-2">
-                              <Folder className="w-4 h-4 text-[#0f2851]" />
+                              <Folder className="w-4 h-4 text-[#6354c7]" />
                               Gerenciar Aparatas
                             </span>
                             <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover/btn:translate-x-0.5 transition-transform" />

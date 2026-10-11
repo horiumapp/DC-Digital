@@ -53,7 +53,7 @@ export default class ErrorBoundary extends Component<Props, State> {
             )}
             <button
               onClick={this.handleReset}
-              className="inline-flex items-center justify-center gap-2 w-full px-6 py-3.5 bg-[#0f2851] text-white font-bold rounded-xl hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20 active:scale-95"
+              className="inline-flex items-center justify-center gap-2 w-full px-6 py-3.5 bg-[#6354c7] text-white font-bold rounded-xl hover:bg-[#5142ad] transition shadow-lg shadow-[#6354c7]/20 active:scale-95"
             >
               Recarregar e Ir para o Início
             </button>

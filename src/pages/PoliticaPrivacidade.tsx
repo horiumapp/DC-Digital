@@ -19,7 +19,7 @@ export default function PoliticaPrivacidade() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-6 h-6 text-[#0f2851] dark:text-blue-400" />
+            <ShieldCheck className="w-6 h-6 text-[#6354c7] dark:text-blue-400" />
             <h1 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white">
               Política de Privacidade
             </h1>
@@ -27,7 +27,7 @@ export default function PoliticaPrivacidade() {
         </div>
 
         <div className="space-y-6 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          <div className="p-4 bg-[#eef2ff] dark:bg-blue-950/40 text-[#0f2851] dark:text-blue-300 rounded-xl border border-blue-100 dark:border-blue-900/50 flex items-start gap-3">
+          <div className="p-4 bg-[#eef2ff] dark:bg-blue-950/40 text-[#6354c7] dark:text-blue-300 rounded-xl border border-blue-100 dark:border-blue-900/50 flex items-start gap-3">
             <Info className="w-5 h-5 shrink-0 mt-0.5" />
             <div>
               <p className="font-bold text-xs uppercase tracking-wide">Recursos de apoio à conformidade com a LGPD</p>
@@ -37,7 +37,7 @@ export default function PoliticaPrivacidade() {
 
           <section className="space-y-3">
             <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <Database className="w-4 h-4 text-[#0f2851] dark:text-blue-400" />
+              <Database className="w-4 h-4 text-[#6354c7] dark:text-blue-400" />
               1. Quais dados são coletados?
             </h2>
             <p>O Diário Digital coleta e processa apenas os dados estritamente necessários para viabilizar a gestão escolar e o acompanhamento pedagógico. Os dados incluem:</p>
@@ -50,7 +50,7 @@ export default function PoliticaPrivacidade() {
 
           <section className="space-y-3">
             <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-[#0f2851] dark:text-blue-400" />
+              <ShieldCheck className="w-4 h-4 text-[#6354c7] dark:text-blue-400" />
               2. Finalidade e Base Legal do Tratamento
             </h2>
             <p>O tratamento de dados pessoais no Diário Digital fundamenta-se nas seguintes bases legais e finalidades:</p>
@@ -63,7 +63,7 @@ export default function PoliticaPrivacidade() {
 
           <section className="space-y-3">
             <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <Users className="w-4 h-4 text-[#0f2851] dark:text-blue-400" />
+              <Users className="w-4 h-4 text-[#6354c7] dark:text-blue-400" />
               3. Compartilhamento de Dados com Terceiros
             </h2>
             <p>Não comercializamos ou compartilhamos dados pessoais para fins de publicidade. O compartilhamento ocorre apenas quando indispensável para a prestação do serviço público ou cumprimento legal:</p>
@@ -76,7 +76,7 @@ export default function PoliticaPrivacidade() {
 
           <section className="space-y-3">
             <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-[#0f2851] dark:text-blue-400" />
+              <ShieldCheck className="w-4 h-4 text-[#6354c7] dark:text-blue-400" />
               4. Uso de Cookies e Cache Offline
             </h2>
             <p>O Diário Digital utiliza estritamente <strong>cookies essenciais</strong> e uma cópia local neste aparelho, que servem para:</p>
@@ -90,7 +90,7 @@ export default function PoliticaPrivacidade() {
 
           <section className="space-y-3">
             <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-[#0f2851] dark:text-blue-400" />
+              <ShieldCheck className="w-4 h-4 text-[#6354c7] dark:text-blue-400" />
               5. Direitos do Titular de Dados
             </h2>
             <p>Em conformidade com o Artigo 18 da LGPD, os usuários e seus responsáveis legais podem exercer os seguintes direitos a qualquer momento:</p>
@@ -101,12 +101,12 @@ export default function PoliticaPrivacidade() {
               <li>Requerer a eliminação de dados pessoais que não sejam obrigatórios por lei.</li>
               <li>Revogar consentimentos anteriormente concedidos.</li>
             </ul>
-            <p>Para exercer esses direitos, utilize nosso <Link to="/solicitacao-lgpd" className="text-[#0f2851] dark:text-blue-400 font-bold hover:underline">Formulário de Solicitação LGPD</Link> disponível publicamente no rodapé.</p>
+            <p>Para exercer esses direitos, utilize nosso <Link to="/solicitacao-lgpd" className="text-[#6354c7] dark:text-blue-400 font-bold hover:underline">Formulário de Solicitação LGPD</Link> disponível publicamente no rodapé.</p>
           </section>
 
           <section className="space-y-3">
             <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-[#0f2851] dark:text-blue-400" />
+              <Calendar className="w-4 h-4 text-[#6354c7] dark:text-blue-400" />
               6. Retenção de Dados
             </h2>
             <p>Os dados acadêmicos e cadastrais são mantidos no sistema durante todo o período letivo ativo ou pelo prazo regulatório necessário para a emissão de históricos e documentos oficiais, conforme normas do Ministério da Educação e órgãos estaduais/municipais de ensino.</p>
@@ -114,10 +114,10 @@ export default function PoliticaPrivacidade() {
 
           <section className="space-y-3">
             <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <Mail className="w-4 h-4 text-[#0f2851] dark:text-blue-400" />
+              <Mail className="w-4 h-4 text-[#6354c7] dark:text-blue-400" />
               7. Contato do Encarregado (DPO)
             </h2>
-            <p>Se você tiver alguma dúvida sobre esta política de privacidade ou sobre as atividades de tratamento de dados do Diário Digital, entre em contato com nosso Encarregado pelo e-mail: <a href="mailto:dpo@dcdigital.org" className="text-[#0f2851] dark:text-blue-400 font-bold hover:underline">dpo@dcdigital.org</a>.</p>
+            <p>Se você tiver alguma dúvida sobre esta política de privacidade ou sobre as atividades de tratamento de dados do Diário Digital, entre em contato com nosso Encarregado pelo e-mail: <a href="mailto:dpo@dcdigital.org" className="text-[#6354c7] dark:text-blue-400 font-bold hover:underline">dpo@dcdigital.org</a>.</p>
           </section>
         </div>
       </div>

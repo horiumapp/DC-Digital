@@ -55,7 +55,7 @@ const NotasEditor = React.memo(function NotasEditor({
 
   return (
     <div className="space-y-6 text-left">
-      <div className="bg-[#0f2851] p-5 sm:p-8 rounded-2xl sm:rounded-[32px] text-white shadow-2xl relative overflow-hidden">
+      <div className="bg-[#6354c7] p-5 sm:p-8 rounded-2xl sm:rounded-[32px] text-white shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 blur-[100px] rounded-full -mr-20 -mt-20"></div>
         <div className="relative z-10">
           <div className="flex items-center gap-3 sm:gap-4 mb-4">
@@ -107,7 +107,7 @@ const NotasEditor = React.memo(function NotasEditor({
                           value={localNotas[aluno.id] || ''} 
                           onChange={(e) => onNotaChange(aluno.id, e.target.value)} 
                           disabled={disabled}
-                          className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-center text-lg font-bold text-[#0f2851] focus:ring-2 focus:ring-[#0f2851]/20 transition-all group-hover:bg-white placeholder:text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed" 
+                          className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-center text-lg font-bold text-[#6354c7] focus:ring-2 focus:ring-[#6354c7]/20 transition-all group-hover:bg-white placeholder:text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed" 
                         />
                       )}
                     </div>
@@ -134,7 +134,7 @@ const NotasEditor = React.memo(function NotasEditor({
           {!disabled && (
             <button 
               onClick={onConfirm} 
-              className="flex-1 bg-[#0f2851] text-white py-4 sm:py-5 rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-[#1a3a6d] transition shadow-xl shadow-[#0f2851]/30 flex items-center justify-center gap-3 active:scale-95"
+              className="flex-1 bg-[#6354c7] text-white py-4 sm:py-5 rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-[#5142ad] transition shadow-xl shadow-[#6354c7]/30 flex items-center justify-center gap-3 active:scale-95"
             >
               <Check className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" /> Confirmar Notas
             </button>

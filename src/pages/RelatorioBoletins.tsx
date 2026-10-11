@@ -390,12 +390,12 @@ export default function RelatorioBoletins() {
         <div className="flex items-center gap-4">
           <Link
             to={homePath}
-            className="bg-[#eef2ff] text-[#0f2851] px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold border border-blue-100 hover:bg-[#e0e7ff] transition-all shadow-sm cursor-pointer"
+            className="bg-[#eef2ff] text-[#6354c7] px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold border border-blue-100 hover:bg-[#e0e7ff] transition-all shadow-sm cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" /> Voltar
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-[#0f2851] flex items-center gap-2 leading-tight">
+            <h1 className="text-xl font-bold text-[#6354c7] flex items-center gap-2 leading-tight">
               Boletins Escolares
             </h1>
             <p className="text-xs text-slate-500 font-medium hidden sm:block">
@@ -408,7 +408,7 @@ export default function RelatorioBoletins() {
           <button
             onClick={handleImprimir}
             disabled={loadingDados || boletinsFiltrados.length === 0}
-            className="flex items-center gap-2 px-6 py-2.5 bg-[#0f2851] text-white rounded-xl text-sm font-bold hover:bg-[#1a3a6d] transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="flex items-center gap-2 px-6 py-2.5 bg-[#6354c7] text-white rounded-xl text-sm font-bold hover:bg-[#5142ad] transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             title="Imprimir boletins visualizados"
           >
             <Printer className="w-4 h-4" />
@@ -434,7 +434,7 @@ export default function RelatorioBoletins() {
                   value={selectedTurmaId}
                   onChange={(e) => handleMudarTurma(e.target.value)}
                   disabled={loadingTurmas || turmas.length === 0}
-                  className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-[#0f2851] focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] appearance-none cursor-pointer transition disabled:opacity-50"
+                  className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-[#6354c7] focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] appearance-none cursor-pointer transition disabled:opacity-50"
                 >
                   {turmas.length === 0 ? (
                     <option value="">Nenhuma turma disponível</option>
@@ -461,7 +461,7 @@ export default function RelatorioBoletins() {
                   value={selectedAlunoId}
                   onChange={(e) => handleMudarAluno(e.target.value)}
                   disabled={loadingDados || boletins.length === 0}
-                  className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-[#0f2851] focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] appearance-none cursor-pointer transition disabled:opacity-50"
+                  className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-[#6354c7] focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] appearance-none cursor-pointer transition disabled:opacity-50"
                 >
                   <option value="">
                     📄 Turma Completa em Lote (Todos os {boletins.length} alunos)
@@ -481,7 +481,7 @@ export default function RelatorioBoletins() {
           {turmaAtual && (
             <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 text-xs font-semibold text-slate-600">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="bg-blue-50 text-[#0f2851] px-3 py-1 rounded-lg border border-blue-100">
+                <span className="bg-blue-50 text-[#6354c7] px-3 py-1 rounded-lg border border-blue-100">
                   <strong>Turma:</strong> {turmaAtual.nome}
                 </span>
                 <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-lg border border-slate-200">
@@ -505,7 +505,7 @@ export default function RelatorioBoletins() {
       <main className="max-w-7xl mx-auto px-4 sm:px-8 mt-4">
         {loadingDados ? (
           <div className="p-16 text-center bg-white rounded-2xl border border-slate-200 shadow-sm no-print">
-            <div className="animate-spin w-10 h-10 border-4 border-[#0f2851] border-t-transparent rounded-full mx-auto mb-4"></div>
+            <div className="animate-spin w-10 h-10 border-4 border-[#6354c7] border-t-transparent rounded-full mx-auto mb-4"></div>
             <p className="text-slate-600 font-bold text-base">Consolidando notas, frequências e dados dos alunos...</p>
             <p className="text-slate-400 text-xs mt-1">Isso levará apenas alguns segundos.</p>
           </div>
@@ -524,7 +524,7 @@ export default function RelatorioBoletins() {
                   {/* Indicador na tela para navegação amigável (oculto na impressão) */}
                   <div className="no-print max-w-[21cm] mx-auto mb-2 flex items-center justify-between px-2 text-xs font-bold text-slate-400">
                     <span>Aluno {index + 1} de {boletinsFiltrados.length}</span>
-                    <span className="uppercase text-[#0f2851]">{item.alunoData.nome}</span>
+                    <span className="uppercase text-[#6354c7]">{item.alunoData.nome}</span>
                   </div>
 
                   <BoletimDocumento

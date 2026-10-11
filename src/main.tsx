@@ -4,6 +4,9 @@ import {createRoot} from 'react-dom/client';
 import {useRegisterSW} from 'virtual:pwa-register/react';
 import App from './App.tsx';
 import './index.css';
+import './portal.css';
+import './modules.css';
+import './refined.css';
 import SWUpdatePrompt from './components/common/SWUpdatePrompt';
 import InstallPrompt from './components/common/InstallPrompt';
 

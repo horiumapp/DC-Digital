@@ -679,7 +679,7 @@ export default function TabProfessores() {
                 value={buscaProfessor}
                 onChange={(e) => setBuscaProfessor(e.target.value)}
                 placeholder="Filtrar escolas..."
-                className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f2851] focus:border-[#0f2851] bg-slate-50/50 transition-all font-medium"
+                className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#6354c7] focus:border-[#6354c7] bg-slate-50/50 transition-all font-medium"
               />
             </div>
             <button
@@ -704,7 +704,7 @@ export default function TabProfessores() {
       ) : (
         <div className="flex flex-col shrink-0">
           {/* Banner */}
-          <div className="bg-[#0f2851] p-8 relative overflow-hidden">
+          <div className="bg-[#6354c7] p-8 relative overflow-hidden">
             <Users className="absolute -right-8 -bottom-8 w-48 h-48 text-white/5 pointer-events-none rotate-12" />
             <div className="relative z-10 flex items-center justify-between">
               <div className="flex items-center gap-5">
@@ -767,7 +767,7 @@ export default function TabProfessores() {
                     value={inlineFormData.nome}
                     onChange={(e) => setInlineFormData({...inlineFormData, nome: e.target.value})}
                     placeholder="Nome Completo"
-                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851]"
+                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] bg-slate-50/30 transition-all font-bold text-[#6354c7]"
                   />
                 </div>
                 {/* E-mail */}
@@ -778,7 +778,7 @@ export default function TabProfessores() {
                     value={inlineFormData.email}
                     onChange={(e) => setInlineFormData({...inlineFormData, email: e.target.value})}
                     placeholder="E-mail de acesso"
-                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851]"
+                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] bg-slate-50/30 transition-all font-bold text-[#6354c7]"
                   />
                   <p className="text-[10px] text-slate-400 font-medium ml-1">
                     Ao preencher, a conta é criada com uma senha temporária, exibida uma única vez.
@@ -790,7 +790,7 @@ export default function TabProfessores() {
                   <select
                     value={inlineFormData.departamento}
                     onChange={(e) => setInlineFormData({...inlineFormData, departamento: e.target.value})}
-                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851] appearance-none"
+                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] bg-slate-50/30 transition-all font-bold text-[#6354c7] appearance-none"
                   >
                     {DEPARTAMENTOS.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
@@ -810,8 +810,8 @@ export default function TabProfessores() {
                         onClick={() => toggleDisciplinaInline(disc)}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-bold tracking-wider transition-all border ${
                           isSelected 
-                            ? 'bg-[#0f2851] border-[#0f2851] text-white shadow-md' 
-                            : 'bg-white border-slate-100 text-slate-400 hover:border-[#0f2851]/30'
+                            ? 'bg-[#6354c7] border-[#6354c7] text-white shadow-md' 
+                            : 'bg-white border-slate-100 text-slate-400 hover:border-[#6354c7]/30'
                         }`}
                       >
                         <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#eef2ff]'}`} />
@@ -831,7 +831,7 @@ export default function TabProfessores() {
                         className="px-3 py-1.5 w-32 rounded-full text-[10px] font-bold border border-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-600 bg-white"
                         autoFocus
                       />
-                      <button onClick={handleAddCustomDisciplinaInline} type="button" className="p-1.5 rounded-full bg-[#0f2851] text-white hover:bg-blue-800 transition-colors">
+                      <button onClick={handleAddCustomDisciplinaInline} type="button" className="p-1.5 rounded-full bg-[#6354c7] text-white hover:bg-blue-800 transition-colors">
                         <Plus className="w-3 h-3" />
                       </button>
                       <button onClick={() => { setShowNovaDisciplinaInline(false); setNovaDisciplinaInline(''); }} type="button" className="p-1.5 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors">
@@ -842,7 +842,7 @@ export default function TabProfessores() {
                     <button
                       onClick={() => setShowNovaDisciplinaInline(true)}
                       type="button"
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[9px] font-bold tracking-wider transition-all border border-dashed border-slate-300 text-slate-500 hover:text-[#0f2851] hover:border-[#0f2851]/50 bg-slate-50 hover:bg-blue-50"
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[9px] font-bold tracking-wider transition-all border border-dashed border-slate-300 text-slate-500 hover:text-[#6354c7] hover:border-[#6354c7]/50 bg-slate-50 hover:bg-blue-50"
                     >
                       <Plus className="w-3 h-3" />
                       ADICIONAR
@@ -855,7 +855,7 @@ export default function TabProfessores() {
               <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
                 <button 
                   onClick={handleInlineSubmit}
-                  className="flex-1 w-full sm:w-auto bg-[#0f2851] hover:bg-[#1a3a6d] text-white py-3.5 px-6 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-[#0f2851]/20 active:scale-[0.98] min-h-[46px]"
+                  className="flex-1 w-full sm:w-auto bg-[#6354c7] hover:bg-[#5142ad] text-white py-3.5 px-6 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-[#6354c7]/20 active:scale-[0.98] min-h-[46px]"
                 >
                   Cadastrar Professor
                 </button>
@@ -912,16 +912,16 @@ export default function TabProfessores() {
                       />
                     </div>
                   </div>
-                  <div className="w-12 h-12 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center mb-4 group-hover:bg-[#0f2851] group-hover:text-white transition-colors duration-300">
+                  <div className="w-12 h-12 bg-[#eef2ff] text-[#6354c7] rounded-xl flex items-center justify-center mb-4 group-hover:bg-[#6354c7] group-hover:text-white transition-colors duration-300">
                     <Building2 className="w-6 h-6" />
                   </div>
-                  <h3 className="font-bold text-slate-800 text-lg leading-snug mb-2 group-hover:text-[#0f2851] transition-colors pr-10">{escola.nome}</h3>
+                  <h3 className="font-bold text-slate-800 text-lg leading-snug mb-2 group-hover:text-[#6354c7] transition-colors pr-10">{escola.nome}</h3>
                   <div className="mt-auto flex items-center justify-between">
                     <div className="flex flex-col">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total de Professores</span>
                       <span className="text-2xl font-black text-slate-700 tabular-nums">{count.toString().padStart(2, '0')}</span>
                     </div>
-                    <div className="p-2 bg-slate-50 text-slate-400 rounded-lg group-hover:bg-[#eef2ff] group-hover:text-[#0f2851] transition-colors">
+                    <div className="p-2 bg-slate-50 text-slate-400 rounded-lg group-hover:bg-[#eef2ff] group-hover:text-[#6354c7] transition-colors">
                       <ChevronRight className="w-5 h-5" />
                     </div>
                   </div>
@@ -939,7 +939,7 @@ export default function TabProfessores() {
                 >
                   {/* Top: Avatar and Info */}
                   <div className="flex items-center gap-4 mb-6">
-                    <div className="w-14 h-14 bg-[#eef2ff] text-[#0f2851] rounded-full flex items-center justify-center font-bold text-xl border-4 border-white shadow-sm ring-1 ring-blue-50 relative shrink-0">
+                    <div className="w-14 h-14 bg-[#eef2ff] text-[#6354c7] rounded-full flex items-center justify-center font-bold text-xl border-4 border-white shadow-sm ring-1 ring-blue-50 relative shrink-0">
                       {professor.nome.split(' ').slice(0, 2).map((n: string) => n[0]).join('')}
                       {professor.usuario_id ? (
                         <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 border-2 border-white rounded-full flex items-center justify-center text-white shadow-sm" title="Conta de acesso ativa">
@@ -1023,7 +1023,7 @@ export default function TabProfessores() {
                   <div className="mt-auto flex items-center justify-between gap-4">
                     <div className="flex flex-wrap gap-1">
                       {professor.disciplinas?.slice(0, 2).map((d: string) => (
-                        <span key={d} className="px-2 py-0.5 bg-[#eef2ff] text-[#0f2851] rounded text-[8px] font-bold uppercase tracking-tighter">
+                        <span key={d} className="px-2 py-0.5 bg-[#eef2ff] text-[#6354c7] rounded text-[8px] font-bold uppercase tracking-tighter">
                           {d.slice(0, 4)}
                         </span>
                       ))}
@@ -1129,7 +1129,7 @@ export default function TabProfessores() {
               </div>
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">E-mail de Login</span>
-                <span className="text-sm font-bold text-[#0f2851] font-mono">{credenciaisCriadas.email}</span>
+                <span className="text-sm font-bold text-[#6354c7] font-mono">{credenciaisCriadas.email}</span>
               </div>
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Senha temporária</span>
@@ -1168,7 +1168,7 @@ export default function TabProfessores() {
                   setCredenciaisCriadas(null);
                   setCopiado(false);
                 }}
-                className="py-3 px-6 bg-[#0f2851] hover:bg-blue-900 text-white font-bold rounded-xl text-xs transition-colors shadow-md"
+                className="py-3 px-6 bg-[#6354c7] hover:bg-blue-900 text-white font-bold rounded-xl text-xs transition-colors shadow-md"
               >
                 Fechar
               </button>
@@ -1186,7 +1186,7 @@ export default function TabProfessores() {
               {credenciaisLote.map((conta) => (
                 <div key={conta.email} className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm">
                   <div className="font-bold text-slate-800">{conta.nome}</div>
-                  <div className="font-mono text-[#0f2851]">{conta.email}</div>
+                  <div className="font-mono text-[#6354c7]">{conta.email}</div>
                   <div className="font-mono text-emerald-700">{conta.senha}</div>
                 </div>
               ))}
@@ -1209,7 +1209,7 @@ export default function TabProfessores() {
               <button
                 type="button"
                 onClick={() => { setCredenciaisLote(null); setCopiado(false); }}
-                className="py-3 px-6 bg-[#0f2851] text-white font-bold rounded-xl text-xs"
+                className="py-3 px-6 bg-[#6354c7] text-white font-bold rounded-xl text-xs"
               >
                 Fechar
               </button>

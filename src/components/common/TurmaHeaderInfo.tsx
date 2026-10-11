@@ -9,11 +9,11 @@ interface TurmaHeaderInfoProps {
 const TurmaHeaderInfo = React.memo(function TurmaHeaderInfo({ turmaAtiva }: TurmaHeaderInfoProps) {
   return (
     <div 
-      className="bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/90 dark:border-slate-700/80 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs"
+      className="dd-class-context bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/90 dark:border-slate-700/80 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs"
       data-testid="turma-header"
     >
       <div className="flex items-center gap-2 min-w-0">
-        <div className="w-6 h-6 rounded-md bg-blue-50 dark:bg-slate-700 text-[#0b1f3f] dark:text-sky-400 flex items-center justify-center shrink-0">
+        <div className="w-6 h-6 rounded-md bg-blue-50 dark:bg-slate-700 text-[#6354c7] dark:text-sky-400 flex items-center justify-center shrink-0">
           <GraduationCap className="w-3.5 h-3.5" />
         </div>
         <div className="truncate">
@@ -23,7 +23,7 @@ const TurmaHeaderInfo = React.memo(function TurmaHeaderInfo({ turmaAtiva }: Turm
       </div>
 
       <div className="flex items-center gap-2 min-w-0">
-        <div className="w-6 h-6 rounded-md bg-blue-50 dark:bg-slate-700 text-[#0b1f3f] dark:text-sky-400 flex items-center justify-center shrink-0">
+        <div className="w-6 h-6 rounded-md bg-blue-50 dark:bg-slate-700 text-[#6354c7] dark:text-sky-400 flex items-center justify-center shrink-0">
           <Building2 className="w-3.5 h-3.5" />
         </div>
         <div className="truncate">
@@ -33,7 +33,7 @@ const TurmaHeaderInfo = React.memo(function TurmaHeaderInfo({ turmaAtiva }: Turm
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
-        <div className="w-6 h-6 rounded-md bg-blue-50 dark:bg-slate-700 text-[#0b1f3f] dark:text-sky-400 flex items-center justify-center shrink-0">
+        <div className="w-6 h-6 rounded-md bg-blue-50 dark:bg-slate-700 text-[#6354c7] dark:text-sky-400 flex items-center justify-center shrink-0">
           <Clock className="w-3.5 h-3.5" />
         </div>
         <div>
@@ -43,7 +43,7 @@ const TurmaHeaderInfo = React.memo(function TurmaHeaderInfo({ turmaAtiva }: Turm
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
-        <div className="w-6 h-6 rounded-md bg-blue-50 dark:bg-slate-700 text-[#0b1f3f] dark:text-sky-400 flex items-center justify-center shrink-0">
+        <div className="w-6 h-6 rounded-md bg-blue-50 dark:bg-slate-700 text-[#6354c7] dark:text-sky-400 flex items-center justify-center shrink-0">
           <BookOpen className="w-3.5 h-3.5" />
         </div>
         <div>

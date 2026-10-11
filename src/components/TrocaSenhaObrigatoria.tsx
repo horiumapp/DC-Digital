@@ -64,7 +64,7 @@ export default function TrocaSenhaObrigatoria() {
         <label className="block text-sm font-medium text-slate-700" htmlFor="confirmPassword">Confirmar senha</label>
         <input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" required className="w-full border border-slate-300 rounded-lg px-3 py-2" />
         {error && <p className="text-sm text-red-600">{error}</p>}
-        <button type="submit" disabled={loading} className="w-full py-3 bg-[#0f2851] text-white font-bold rounded-xl disabled:opacity-60">
+        <button type="submit" disabled={loading} className="w-full py-3 bg-[#6354c7] text-white font-bold rounded-xl disabled:opacity-60">
           {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Salvar senha'}
         </button>
         <button type="button" onClick={() => logout()} className="w-full py-2 text-sm text-slate-500">

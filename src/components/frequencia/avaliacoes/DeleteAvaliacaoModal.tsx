@@ -25,7 +25,7 @@ const DeleteAvaliacaoModal = React.memo(function DeleteAvaliacaoModal({
         <div className="bg-slate-50 p-8 flex gap-4">
           <button 
             onClick={onCancel} 
-            className="flex-1 px-6 py-4 bg-white text-[#0f2851] font-bold uppercase text-[10px] tracking-widest rounded-2xl hover:bg-[#eef2ff] border border-slate-200 transition"
+            className="flex-1 px-6 py-4 bg-white text-[#6354c7] font-bold uppercase text-[10px] tracking-widest rounded-2xl hover:bg-[#eef2ff] border border-slate-200 transition"
           >
             Voltar
           </button>

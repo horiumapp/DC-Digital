@@ -19,7 +19,7 @@ const AvaliacaoDetailsView = React.memo(function AvaliacaoDetailsView({
     <div className="space-y-6">
       <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-8 shadow-sm">
         <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6 sm:mb-8">
-          <div className="w-10 h-10 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-[#eef2ff] text-[#6354c7] rounded-xl flex items-center justify-center">
             <Eye className="w-5 h-5" />
           </div>
           Identificação da Avaliação
@@ -81,7 +81,7 @@ const AvaliacaoDetailsView = React.memo(function AvaliacaoDetailsView({
 
       <button
         onClick={onBack}
-        className="w-full sm:w-auto bg-[#0f2851] text-white px-8 py-3.5 rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20 active:scale-95"
+        className="w-full sm:w-auto bg-[#6354c7] text-white px-8 py-3.5 rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-[#5142ad] transition shadow-lg shadow-[#6354c7]/20 active:scale-95"
       >
         Voltar para a listagem
       </button>

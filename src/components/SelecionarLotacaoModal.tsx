@@ -56,19 +56,19 @@ export default function SelecionarLotacaoModal({
                 }}
                 className={`w-full text-left flex items-center justify-between p-4 rounded-xl border transition-all ${
                   isSelected
-                    ? 'bg-slate-50 border-[#0f2851] shadow-sm ring-1 ring-[#0f2851]/20'
-                    : 'bg-white border-slate-200 hover:border-[#0f2851]/50 hover:bg-slate-50/50 hover:shadow-sm'
+                    ? 'bg-slate-50 border-[#6354c7] shadow-sm ring-1 ring-[#6354c7]/20'
+                    : 'bg-white border-slate-200 hover:border-[#6354c7]/50 hover:bg-slate-50/50 hover:shadow-sm'
                 }`}
               >
                 <div className="flex items-start gap-3">
                   <div className={`p-2 rounded-lg shrink-0 mt-0.5 ${
-                    isSelected ? 'bg-[#0f2851] text-white' : 'bg-slate-100 text-slate-500'
+                    isSelected ? 'bg-[#6354c7] text-white' : 'bg-slate-100 text-slate-500'
                   }`}>
                     <Building2 className="w-5 h-5" />
                   </div>
                   <div>
                     <h4 className={`text-sm font-bold ${
-                      isSelected ? 'text-[#0f2851]' : 'text-slate-800'
+                      isSelected ? 'text-[#6354c7]' : 'text-slate-800'
                     }`}>
                       {aloc.escolas?.nome || 'Escola sem nome'}
                     </h4>
@@ -79,7 +79,7 @@ export default function SelecionarLotacaoModal({
                   </div>
                 </div>
                 {isSelected && (
-                  <div className="bg-[#0f2851] text-white p-1 rounded-full shrink-0">
+                  <div className="bg-[#6354c7] text-white p-1 rounded-full shrink-0">
                     <Check className="w-4 h-4" />
                   </div>
                 )}

@@ -18,7 +18,7 @@ export default function TermosUso() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div className="flex items-center gap-2">
-            <BookOpen className="w-6 h-6 text-[#0f2851] dark:text-blue-400" />
+            <BookOpen className="w-6 h-6 text-[#6354c7] dark:text-blue-400" />
             <h1 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white">
               Termos de Uso
             </h1>
@@ -26,7 +26,7 @@ export default function TermosUso() {
         </div>
 
         <div className="space-y-6 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          <div className="p-4 bg-[#eef2ff] dark:bg-blue-950/40 text-[#0f2851] dark:text-blue-300 rounded-xl border border-blue-100 dark:border-blue-900/50 flex items-start gap-3">
+          <div className="p-4 bg-[#eef2ff] dark:bg-blue-950/40 text-[#6354c7] dark:text-blue-300 rounded-xl border border-blue-100 dark:border-blue-900/50 flex items-start gap-3">
             <Info className="w-5 h-5 shrink-0 mt-0.5" />
             <div>
               <p className="font-bold text-xs uppercase tracking-wide">Termos de Utilização do Sistema</p>
@@ -36,7 +36,7 @@ export default function TermosUso() {
 
           <section className="space-y-3">
             <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-[#0f2851] dark:text-blue-400" />
+              <UserCheck className="w-4 h-4 text-[#6354c7] dark:text-blue-400" />
               1. Aceite dos Termos
             </h2>
             <p>Ao acessar e utilizar o sistema Diário Digital, você declara ter lido, compreendido e concordado em cumprir estes Termos de Uso em sua totalidade. Caso não concorde com qualquer uma das condições estabelecidas, você não deve utilizar a plataforma.</p>
@@ -44,7 +44,7 @@ export default function TermosUso() {
 
           <section className="space-y-3">
             <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <Key className="w-4 h-4 text-[#0f2851] dark:text-blue-400" />
+              <Key className="w-4 h-4 text-[#6354c7] dark:text-blue-400" />
               2. Conta, Senha e Acesso
             </h2>
             <p>O acesso ao sistema é restrito a servidores escolares autorizados (administradores, gestores, secretários, professores) e alunos regularmente matriculados. Você é responsável por:</p>
@@ -57,7 +57,7 @@ export default function TermosUso() {
 
           <section className="space-y-3">
             <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-[#0f2851] dark:text-blue-400" />
+              <ShieldAlert className="w-4 h-4 text-[#6354c7] dark:text-blue-400" />
               3. Regras de Uso e Proibições
             </h2>
             <p>Os usuários concordam em utilizar o Diário Digital estritamente para finalidades educacionais e pedagógicas legítimas. É terminantemente proibido:</p>
@@ -71,7 +71,7 @@ export default function TermosUso() {
 
           <section className="space-y-3">
             <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <Globe className="w-4 h-4 text-[#0f2851] dark:text-blue-400" />
+              <Globe className="w-4 h-4 text-[#6354c7] dark:text-blue-400" />
               4. Responsabilidade da Plataforma e Limitações
             </h2>
             <p>O Diário Digital empenha-se em manter a estabilidade do sistema e a proteção de dados pessoais, no entanto:</p>
@@ -84,7 +84,7 @@ export default function TermosUso() {
 
           <section className="space-y-3">
             <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-[#0f2851] dark:text-blue-400" />
+              <ShieldAlert className="w-4 h-4 text-[#6354c7] dark:text-blue-400" />
               5. Suspensão de Acesso e Rescisão
             </h2>
             <p>O descumprimento de qualquer uma das regras de conduta descritas nestes Termos de Uso poderá resultar na suspensão temporária ou cancelamento definitivo da conta do usuário pela administração escolar, sem prejuízo de eventuais responsabilizações administrativas, civis ou criminais.</p>
@@ -92,7 +92,7 @@ export default function TermosUso() {
 
           <section className="space-y-3">
             <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-[#0f2851] dark:text-blue-400" />
+              <BookOpen className="w-4 h-4 text-[#6354c7] dark:text-blue-400" />
               6. Alterações Futuras
             </h2>
             <p>Estes Termos de Uso podem ser alterados periodicamente pela equipe de desenvolvimento para refletir modificações técnicas ou novos requisitos legais. Sempre que houver uma alteração significativa, a nova versão será informada através de avisos no sistema ou exigência de novo aceite de termos no login.</p>

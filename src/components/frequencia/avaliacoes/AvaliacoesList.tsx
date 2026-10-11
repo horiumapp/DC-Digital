@@ -52,9 +52,9 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
       {/* Barra de Bimestre Atual e Ação */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200/90 dark:border-slate-800">
         <div className="flex items-center gap-2">
-          <div className="px-3.5 py-1.5 bg-slate-100/80 dark:bg-slate-800/60 rounded-xl text-xs font-bold text-[#0f2851] dark:text-sky-300 border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-2 shadow-xs">
+          <div className="px-3.5 py-1.5 bg-slate-100/80 dark:bg-slate-800/60 rounded-xl text-xs font-bold text-[#6354c7] dark:text-sky-300 border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-2 shadow-xs">
             <span>{currentBimestre}</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-black bg-[#eef2ff] text-[#0f2851] dark:bg-sky-950 dark:text-sky-300">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-black bg-[#eef2ff] text-[#6354c7] dark:bg-sky-950 dark:text-sky-300">
               {avsBim.length}
             </span>
           </div>
@@ -63,7 +63,7 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
         {!disabled && (
           <button
             onClick={onAddAvaliacao}
-            className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 hover:bg-[#e0e7ff] dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-900 px-5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-xs active:scale-95 cursor-pointer"
+            className="bg-[#eef2ff] text-[#6354c7] border border-blue-100 hover:bg-[#e0e7ff] dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-900 px-5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-xs active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4" /> Adicionar Avaliação
           </button>
@@ -72,7 +72,7 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
 
       {avsBim.length === 0 ? (
         <div className="py-16 px-4 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/30 space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-sky-950/50 text-[#0f2851] dark:text-sky-400 flex items-center justify-center mx-auto shadow-xs">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-sky-950/50 text-[#6354c7] dark:text-sky-400 flex items-center justify-center mx-auto shadow-xs">
             <CalendarIcon className="w-6 h-6" />
           </div>
           <div className="space-y-1 max-w-md mx-auto">
@@ -87,7 +87,7 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
             <div className="pt-2">
               <button
                 onClick={onAddAvaliacao}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-[#0f2851] hover:bg-[#1a3a6d] text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#6354c7] hover:bg-[#5142ad] text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
               >
                 <Plus className="w-4 h-4" /> Cadastrar Avaliação
               </button>
@@ -98,9 +98,9 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
         <>
           {/* Visualização Mobile (Cards) - para telas menores que md */}
           <div className="block md:hidden space-y-4">
-            <div className="bg-[#eef2ff] border border-blue-100 px-4 py-2.5 rounded-xl font-bold text-[#0f2851] text-xs uppercase tracking-wider flex items-center justify-between">
+            <div className="bg-[#eef2ff] border border-blue-100 px-4 py-2.5 rounded-xl font-bold text-[#6354c7] text-xs uppercase tracking-wider flex items-center justify-between">
               <span>{currentBimestre}</span>
-              <span className="text-[10px] font-bold text-[#0f2851] bg-white px-2.5 py-0.5 rounded-full border border-blue-100 shadow-xs">
+              <span className="text-[10px] font-bold text-[#6354c7] bg-white px-2.5 py-0.5 rounded-full border border-blue-100 shadow-xs">
                 {avsBim.length} {avsBim.length === 1 ? 'avaliação' : 'avaliações'}
               </span>
             </div>
@@ -140,7 +140,7 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                               <span className="text-slate-900 font-extrabold text-base">{av.tipo}</span>
                             </div>
                             {av.valorMaximo && (
-                              <span className="text-xs font-extrabold text-[#0f2851] bg-[#eef2ff] px-2.5 py-1 rounded-lg border border-blue-100">
+                              <span className="text-xs font-extrabold text-[#6354c7] bg-[#eef2ff] px-2.5 py-1 rounded-lg border border-blue-100">
                                 {Number(av.valorMaximo).toFixed(2).replace('.', ',')} pts
                               </span>
                             )}
@@ -167,7 +167,7 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                       {is2CH ? (
-                                        <div className="w-5 h-5 rounded-md bg-blue-100 text-[#0f2851] flex items-center justify-center font-bold text-xs">
+                                        <div className="w-5 h-5 rounded-md bg-blue-100 text-[#6354c7] flex items-center justify-center font-bold text-xs">
                                           2
                                         </div>
                                       ) : (
@@ -192,7 +192,7 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                                   <div className="grid grid-cols-2 gap-2 pt-1 border-t border-amber-200/50">
                                     <button
                                       onClick={() => onShowGrades(rp)}
-                                      className="flex items-center justify-center gap-1.5 px-3 py-2 bg-white text-[#0f2851] hover:bg-[#eef2ff] rounded-lg font-bold text-[11px] uppercase border border-blue-100 shadow-xs active:scale-95"
+                                      className="flex items-center justify-center gap-1.5 px-3 py-2 bg-white text-[#6354c7] hover:bg-[#eef2ff] rounded-lg font-bold text-[11px] uppercase border border-blue-100 shadow-xs active:scale-95"
                                     >
                                       <List className="w-3.5 h-3.5" /> Notas
                                     </button>
@@ -230,7 +230,7 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                             <div className={`grid ${disabled ? 'grid-cols-2' : 'grid-cols-3'} gap-2`}>
                               <button
                                 onClick={() => onShowGrades(av)}
-                                className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-[#0f2851] text-white hover:bg-[#1a3a6d] rounded-xl font-bold text-xs uppercase transition shadow-sm active:scale-95"
+                                className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-[#6354c7] text-white hover:bg-[#5142ad] rounded-xl font-bold text-xs uppercase transition shadow-sm active:scale-95"
                               >
                                 <List className="w-3.5 h-3.5" /> Notas
                               </button>
@@ -238,9 +238,9 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                               {!disabled && (
                                 <button
                                   onClick={() => onEdit(av)}
-                                  className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-[#eef2ff] text-[#0f2851] hover:bg-[#e0e7ff] border border-blue-100 rounded-xl font-bold text-xs uppercase transition active:scale-95 shadow-xs"
+                                  className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-[#eef2ff] text-[#6354c7] hover:bg-[#e0e7ff] border border-blue-100 rounded-xl font-bold text-xs uppercase transition active:scale-95 shadow-xs"
                                 >
-                                  <Pencil className="w-3.5 h-3.5 text-[#0f2851]" /> Alterar
+                                  <Pencil className="w-3.5 h-3.5 text-[#6354c7]" /> Alterar
                                 </button>
                               )}
 
@@ -267,9 +267,9 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                                 {hasAbsences && !alreadyHasSecondCall && (
                                   <button
                                     onClick={() => onSecondCall(av)}
-                                    className="flex-1 min-w-[120px] flex items-center justify-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#0f2851] hover:bg-[#e0e7ff] border border-blue-100 rounded-xl font-bold text-[11px] uppercase transition shadow-xs active:scale-95"
+                                    className="flex-1 min-w-[120px] flex items-center justify-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#6354c7] hover:bg-[#e0e7ff] border border-blue-100 rounded-xl font-bold text-[11px] uppercase transition shadow-xs active:scale-95"
                                   >
-                                    <div className="w-4 h-4 bg-[#0f2851] text-white rounded-full flex items-center justify-center text-[9px] font-bold">2</div>
+                                    <div className="w-4 h-4 bg-[#6354c7] text-white rounded-full flex items-center justify-center text-[9px] font-bold">2</div>
                                     2ª chamada
                                   </button>
                                 )}
@@ -295,15 +295,15 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
               <table className="w-full text-sm text-left">
                 <thead className="bg-[#f8f9fa] border-b border-slate-200">
                   <tr>
-                    <th className="px-6 py-4 font-bold text-[#0f2851] text-[11px] tracking-wider uppercase">Tipo</th>
-                    <th className="px-6 py-4 font-bold text-[#0f2851] text-[11px] tracking-wider uppercase">Data</th>
-                    <th className="px-6 py-4 font-bold text-[#0f2851] text-[11px] tracking-wider uppercase">Instrumento</th>
-                    <th className="px-6 py-4 font-bold text-[#0f2851] text-[11px] tracking-wider uppercase text-center">Ações</th>
+                    <th className="px-6 py-4 font-bold text-[#6354c7] text-[11px] tracking-wider uppercase">Tipo</th>
+                    <th className="px-6 py-4 font-bold text-[#6354c7] text-[11px] tracking-wider uppercase">Data</th>
+                    <th className="px-6 py-4 font-bold text-[#6354c7] text-[11px] tracking-wider uppercase">Instrumento</th>
+                    <th className="px-6 py-4 font-bold text-[#6354c7] text-[11px] tracking-wider uppercase text-center">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   <tr className="bg-[#eef2ff]/30">
-                    <td colSpan={4} className="px-6 py-2.5 font-bold text-[#0f2851] text-[11px] uppercase tracking-wider">
+                    <td colSpan={4} className="px-6 py-2.5 font-bold text-[#6354c7] text-[11px] uppercase tracking-wider">
                       {currentBimestre} ({avsBim.length} {avsBim.length === 1 ? 'avaliação' : 'avaliações'})
                     </td>
                   </tr>
@@ -338,7 +338,7 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                                <td className="px-6 py-4">
                                  <div className="flex items-center justify-center gap-2">
                                   <button onClick={() => onViewDetails(av)}
-                                    className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#0f2851] hover:bg-[#e0e7ff] rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
+                                    className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#6354c7] hover:bg-[#e0e7ff] rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
                                     <Eye className="w-3.5 h-3.5" /> Detalhes
                                   </button>
                                   
@@ -363,16 +363,16 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                                       }) && !avaliacoes.some(rp => String(rp.parent_id) === String(av.id)) && (
                                         <button 
                                           onClick={() => onAddRP(av)}
-                                          className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-white text-[#0f2851] border border-blue-100 hover:bg-[#eef2ff] rounded-lg font-bold text-[10px] uppercase transition-all"
+                                          className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-white text-[#6354c7] border border-blue-100 hover:bg-[#eef2ff] rounded-lg font-bold text-[10px] uppercase transition-all"
                                         >
-                                          <Plus className="w-3.5 h-3.5 text-[#0f2851]" /> ADICIONAR RP
+                                          <Plus className="w-3.5 h-3.5 text-[#6354c7]" /> ADICIONAR RP
                                         </button>
                                       )}
                                     </>
                                   )}
 
                                   <button onClick={() => onShowGrades(av)}
-                                    className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#0f2851] hover:bg-[#e0e7ff] rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
+                                    className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#6354c7] hover:bg-[#e0e7ff] rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
                                     <List className="w-3.5 h-3.5" /> Notas
                                   </button>
                                   
@@ -383,8 +383,8 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                                     if (hasAbsences && !alreadyHasSecondCall) {
                                       return (
                                         <button onClick={() => onSecondCall(av)}
-                                          className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#0f2851] hover:bg-[#e0e7ff] rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100 shadow-sm">
-                                          <div className="w-5 h-5 bg-[#0f2851] text-white rounded-full flex items-center justify-center text-[10px] scale-90">2</div> 2ª chamada
+                                          className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#6354c7] hover:bg-[#e0e7ff] rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100 shadow-sm">
+                                          <div className="w-5 h-5 bg-[#6354c7] text-white rounded-full flex items-center justify-center text-[10px] scale-90">2</div> 2ª chamada
                                         </button>
                                       );
                                     }
@@ -404,7 +404,7 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                                     <td className="px-6 py-4">
                                       <div className="flex items-center gap-3">
                                         {is2CH ? (
-                                          <div className="w-6 h-6 rounded-lg bg-blue-100 text-[#0f2851] flex items-center justify-center font-bold text-xs">
+                                          <div className="w-6 h-6 rounded-lg bg-blue-100 text-[#6354c7] flex items-center justify-center font-bold text-xs">
                                             2
                                           </div>
                                         ) : (
@@ -429,7 +429,7 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                                     <td className="px-6 py-5">
                                       <div className="flex items-center justify-center gap-2">
                                         <button onClick={() => onViewDetails(rp)}
-                                          className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#0f2851] hover:bg-[#e0e7ff] rounded-lg font-bold text-[10px] uppercase transition-all">
+                                          className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#6354c7] hover:bg-[#e0e7ff] rounded-lg font-bold text-[10px] uppercase transition-all">
                                           <Eye className="w-3.5 h-3.5" /> Detalhes
                                         </button>
                                         
@@ -448,7 +448,7 @@ const AvaliacoesList = React.memo(function AvaliacoesList({
                                         )}
 
                                         <button onClick={() => onShowGrades(rp)}
-                                          className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#0f2851] hover:bg-[#e0e7ff] rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
+                                          className="whitespace-nowrap flex items-center gap-1.5 px-3 py-2 bg-[#eef2ff] text-[#6354c7] hover:bg-[#e0e7ff] rounded-lg font-bold text-[10px] uppercase transition-all border border-blue-100">
                                           <List className="w-3.5 h-3.5" /> Notas
                                         </button>
                                       </div>

@@ -60,7 +60,7 @@ export default class RouteErrorBoundary extends Component<Props, State> {
               <Link
                 to="/turmas"
                 onClick={this.handleReset}
-                className="flex-1 px-4 py-3 bg-[#0f2851] text-white font-bold rounded-xl hover:bg-[#1a3a6d] transition shadow-lg shadow-[#0f2851]/20 active:scale-95 flex items-center justify-center"
+                className="flex-1 px-4 py-3 bg-[#6354c7] text-white font-bold rounded-xl hover:bg-[#5142ad] transition shadow-lg shadow-[#6354c7]/20 active:scale-95 flex items-center justify-center"
               >
                 Ir ao Início
               </Link>

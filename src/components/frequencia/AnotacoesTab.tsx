@@ -100,7 +100,7 @@ export default function AnotacoesTab({
             {!disabled && (
               <button
                 onClick={() => setIsAddingAnotacao(true)}
-                className="bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] flex items-center gap-2 shadow-sm active:scale-95"
+                className="bg-[#eef2ff] text-[#6354c7] border border-blue-100 px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] flex items-center gap-2 shadow-sm active:scale-95"
               >
                 <span className="text-lg leading-none">+</span> Adicionar anotação
               </button>
@@ -184,7 +184,7 @@ export default function AnotacoesTab({
 
           <div className="pt-2">
              <div className="flex items-center gap-3">
-               <button onClick={() => void handleSave()} className="flex items-center gap-2 bg-[#eef2ff] text-[#0f2851] border border-blue-100 px-6 py-2 rounded text-sm font-bold hover:bg-[#e0e7ff] transition shadow-sm active:scale-95">
+               <button onClick={() => void handleSave()} className="flex items-center gap-2 bg-[#eef2ff] text-[#6354c7] border border-blue-100 px-6 py-2 rounded text-sm font-bold hover:bg-[#e0e7ff] transition shadow-sm active:scale-95">
                  <Save className="w-4 h-4" /> Salvar anotação
                </button>
                <button

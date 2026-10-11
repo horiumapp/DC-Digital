@@ -599,7 +599,7 @@ export default function TabAlunos() {
   if (loading) {
     return (
       <div className="p-12 text-center">
-        <div className="animate-spin w-8 h-8 border-4 border-[#0f2851] border-t-transparent rounded-full mx-auto mb-4"></div>
+        <div className="animate-spin w-8 h-8 border-4 border-[#6354c7] border-t-transparent rounded-full mx-auto mb-4"></div>
         <p className="text-slate-500 font-medium tracking-tight">Carregando dados dos alunos...</p>
       </div>
     );
@@ -628,7 +628,7 @@ export default function TabAlunos() {
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Filtrar escolas..."
-                className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f2851] focus:border-[#0f2851] bg-slate-50/50 transition-all font-bold text-[#0f2851]"
+                className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#6354c7] focus:border-[#6354c7] bg-slate-50/50 transition-all font-bold text-[#6354c7]"
               />
             </div>
             <button
@@ -654,7 +654,7 @@ export default function TabAlunos() {
       ) : (
         <div className="flex flex-col shrink-0">
           {/* Banner Azul */}
-          <div className="bg-[#0f2851] p-8 pt-10 pb-12 relative overflow-hidden">
+          <div className="bg-[#6354c7] p-8 pt-10 pb-12 relative overflow-hidden">
             <GraduationCap className="absolute -right-8 -bottom-8 w-48 h-48 text-white/5 pointer-events-none rotate-12" />
             
             <div className="relative z-10 flex items-center justify-between">
@@ -721,7 +721,7 @@ export default function TabAlunos() {
                     value={busca}
                     onChange={(e) => setBusca(e.target.value)}
                     placeholder="Ex: João Silva ou 123.456..."
-                    className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-xl text-base placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] bg-slate-50/30 transition-all font-bold text-[#0f2851]"
+                    className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-xl text-base placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] bg-slate-50/30 transition-all font-bold text-[#6354c7]"
                   />
                 </div>
               </div>
@@ -751,7 +751,7 @@ export default function TabAlunos() {
                       setAlunoParaEditar(null);
                       setIsNovoAlunoModalOpen(true);
                     }}
-                    className="bg-[#0f2851] hover:bg-[#1a3a6d] text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-[#0f2851]/20 active:scale-95 whitespace-nowrap h-[54px] w-full sm:w-auto"
+                    className="bg-[#6354c7] hover:bg-[#5142ad] text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-[#6354c7]/20 active:scale-95 whitespace-nowrap h-[54px] w-full sm:w-auto"
                   >
                     Novo Aluno
                   </button>
@@ -791,11 +791,11 @@ export default function TabAlunos() {
                   </div>
                 </div>
                 
-                <div className="w-12 h-12 bg-[#eef2ff] text-[#0f2851] rounded-xl flex items-center justify-center mb-4 group-hover:bg-[#0f2851] group-hover:text-white transition-colors duration-300">
+                <div className="w-12 h-12 bg-[#eef2ff] text-[#6354c7] rounded-xl flex items-center justify-center mb-4 group-hover:bg-[#6354c7] group-hover:text-white transition-colors duration-300">
                   <Building2 className="w-6 h-6" />
                 </div>
                 
-                <h3 className="font-bold text-slate-800 text-lg leading-snug mb-2 group-hover:text-[#0f2851] transition-colors pr-10">
+                <h3 className="font-bold text-slate-800 text-lg leading-snug mb-2 group-hover:text-[#6354c7] transition-colors pr-10">
                   {escola.nome}
                 </h3>
                 
@@ -806,7 +806,7 @@ export default function TabAlunos() {
                       {(escola.alunosCount || 0).toString().padStart(2, '0')}
                     </span>
                   </div>
-                  <div className="p-2 bg-slate-50 text-slate-400 rounded-lg group-hover:bg-[#eef2ff] group-hover:text-[#0f2851] transition-colors">
+                  <div className="p-2 bg-slate-50 text-slate-400 rounded-lg group-hover:bg-[#eef2ff] group-hover:text-[#6354c7] transition-colors">
                     <ChevronRight className="w-5 h-5" />
                   </div>
                 </div>
@@ -823,7 +823,7 @@ export default function TabAlunos() {
                 <div key={turno} className="space-y-6">
                   {/* Cabeçalho do Turno */}
                   <div className="flex items-center gap-4 px-2">
-                    <h3 className="text-[10px] font-black text-[#0f2851] uppercase tracking-[0.2em] bg-[#eef2ff] px-3 py-1.5 rounded-lg border border-blue-100/50">
+                    <h3 className="text-[10px] font-black text-[#6354c7] uppercase tracking-[0.2em] bg-[#eef2ff] px-3 py-1.5 rounded-lg border border-blue-100/50">
                       TURNO: {turno}
                     </h3>
                     <div className="flex-1 h-px bg-slate-200/60" />
@@ -845,12 +845,12 @@ export default function TabAlunos() {
                           >
                             <div className="flex items-center gap-4">
                               <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                                isExpanded ? 'bg-[#0f2851] text-white' : 'bg-slate-50 text-slate-400'
+                                isExpanded ? 'bg-[#6354c7] text-white' : 'bg-slate-50 text-slate-400'
                               }`}>
                                 <Users className="w-5 h-5" />
                               </div>
                               <div className="text-left">
-                                <h4 className="font-black text-[#0f2851] text-sm uppercase tracking-wider">{turma.nome}</h4>
+                                <h4 className="font-black text-[#6354c7] text-sm uppercase tracking-wider">{turma.nome}</h4>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
                                   {turno} • {alunosDaTurma.length.toString().padStart(2, '0')} Alunos
                                 </p>
@@ -863,7 +863,7 @@ export default function TabAlunos() {
                                   e.stopPropagation();
                                   navigate(`/relatorio-boletins?turmaId=${turma.id}`);
                                 }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#0f2851] text-xs font-bold rounded-xl border border-blue-200 transition shadow-sm active:scale-95 cursor-pointer"
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#6354c7] text-xs font-bold rounded-xl border border-blue-200 transition shadow-sm active:scale-95 cursor-pointer"
                                 title="Emitir e imprimir boletins desta turma"
                               >
                                 <Printer className="w-3.5 h-3.5 text-blue-600" />
@@ -899,7 +899,7 @@ export default function TabAlunos() {
                                           </td>
                                           <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                              <div className="w-8 h-8 bg-[#eef2ff] text-[#0f2851] rounded-full flex items-center justify-center font-bold text-xs border border-blue-100 shrink-0">
+                                              <div className="w-8 h-8 bg-[#eef2ff] text-[#6354c7] rounded-full flex items-center justify-center font-bold text-xs border border-blue-100 shrink-0">
                                                 {aluno.nome.charAt(0)}
                                               </div>
                                               <div className="flex flex-col min-w-0">

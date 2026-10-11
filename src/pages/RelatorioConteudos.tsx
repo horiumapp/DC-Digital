@@ -266,10 +266,10 @@ export default function RelatorioConteudos() {
         {/* SubHeader */}
         <div className="bg-white/80 backdrop-blur-md px-8 py-3 flex items-center justify-between border-b border-blue-100 shadow-sm sticky top-0 z-20">
           <div className="flex items-center gap-4">
-            <Link to="/diario" className="bg-[#eef2ff] text-[#0f2851] px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold border border-blue-100 hover:bg-[#e0e7ff] transition-all shadow-sm">
+            <Link to="/diario" className="bg-[#eef2ff] text-[#6354c7] px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold border border-blue-100 hover:bg-[#e0e7ff] transition-all shadow-sm">
               <ArrowLeft className="w-4 h-4" /> Voltar
             </Link>
-            <h1 className="text-xl font-semibold text-[#0f2851]">Relatório de Conteúdo Ministrado</h1>
+            <h1 className="text-xl font-semibold text-[#6354c7]">Relatório de Conteúdo Ministrado</h1>
           </div>
           <span className="bg-emerald-100 text-emerald-700 text-[12px] font-bold px-3 py-1 rounded-full border border-emerald-200">Ano: {APP_CONFIG.YEAR}</span>
         </div>
@@ -281,7 +281,7 @@ export default function RelatorioConteudos() {
           {/* Main Card: Turmas */}
           <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
             <div className="p-6 border-b border-slate-100 bg-white">
-              <h2 className="text-lg font-bold text-[#0f2851]">Turmas</h2>
+              <h2 className="text-lg font-bold text-[#6354c7]">Turmas</h2>
             </div>
 
             <div className="p-6 space-y-6">
@@ -295,14 +295,14 @@ export default function RelatorioConteudos() {
                   placeholder="Pesquisar"
                   value={buscaTurma}
                   onChange={(e) => setBuscaTurma(e.target.value)}
-                  className="block w-full pl-12 pr-4 py-3 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f2851] focus:border-[#0f2851] bg-[#f8f9fa]"
+                  className="block w-full pl-12 pr-4 py-3 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#6354c7] focus:border-[#6354c7] bg-[#f8f9fa]"
                 />
               </div>
 
               {/* Tabela de Turmas */}
               <div className="border border-slate-200 rounded-lg overflow-hidden">
                 <table className="w-full text-sm text-left">
-                  <thead className="bg-[#f0f4f8] text-[#0f2851] font-bold border-b border-slate-200">
+                  <thead className="bg-[#f0f4f8] text-[#6354c7] font-bold border-b border-slate-200">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Ensino / Projeto</th>
                       <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Fase / Turma</th>
@@ -339,7 +339,7 @@ export default function RelatorioConteudos() {
                                   name="turma-select"
                                   checked={isSelected}
                                   onChange={() => setSelectedTurmaId(rowKey)}
-                                  className="w-5 h-5 text-[#0f2851] border-slate-300 focus:ring-[#0f2851]"
+                                  className="w-5 h-5 text-[#6354c7] border-slate-300 focus:ring-[#6354c7]"
                                 />
                               </div>
                             </td>
@@ -366,7 +366,7 @@ export default function RelatorioConteudos() {
                     <select
                       value={opcaoFiltro}
                       onChange={(e) => setOpcaoFiltro(e.target.value)}
-                      className="w-full py-3 px-4 bg-white border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] outline-none font-medium"
+                      className="w-full py-3 px-4 bg-white border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] outline-none font-medium"
                     >
                       <option value="Período">Período</option>
                       <option value="Mensal">Mensal</option>
@@ -381,7 +381,7 @@ export default function RelatorioConteudos() {
                     <select
                       value={periodoSelecionado}
                       onChange={(e) => setPeriodoSelecionado(e.target.value)}
-                      className="w-full py-3 px-4 bg-white border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-[#0f2851]/10 focus:border-[#0f2851] outline-none font-medium"
+                      className="w-full py-3 px-4 bg-white border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] outline-none font-medium"
                     >
                       {opcaoFiltro === 'Período' ? (
                         APP_CONFIG.PERIODOS.filter(p => !p.id.includes('SEMESTRE') && p.id !== 'ÚNICO').map(p => (
@@ -411,7 +411,7 @@ export default function RelatorioConteudos() {
                 <button
                   onClick={handleExibir}
                   disabled={dataLoading}
-                  className="px-8 py-3 bg-[#0f2851] text-white rounded-xl text-sm font-bold hover:bg-[#0a1b38] transition-all shadow-lg shadow-[#0f2851]/20 active:scale-95 mb-[2px] disabled:opacity-50"
+                  className="px-8 py-3 bg-[#6354c7] text-white rounded-xl text-sm font-bold hover:bg-[#0a1b38] transition-all shadow-lg shadow-[#6354c7]/20 active:scale-95 mb-[2px] disabled:opacity-50"
                 >
                   {dataLoading ? 'Gerando...' : 'Exibir Relatório'}
                 </button>
