@@ -134,6 +134,7 @@ export default function Frequencia() {
                   setTempoAula={setTempoAula}
                   disponiveisTempos={temposParaMostrar}
                   disabled={somenteLeitura}
+                  onDiaSemPendencia={() => handleTabChange('objeto')}
                 />
               )}
               {activeTab === 'objeto' && (

@@ -6,6 +6,7 @@ import { useTurma, Aluno } from '../../contexts/TurmaContext';
 import { useCaptcha } from '../../hooks/useCaptcha';
 import { useToast } from '../common/Toast';
 import { formatarDataParaExibicao } from '../../utils/dateUtils';
+import { proximoPassoAposFrequencia } from '../../utils/frequenciaFluxo';
 
 interface FrequenciaTabProps {
   selectedDate: string;
@@ -13,6 +14,7 @@ interface FrequenciaTabProps {
   setTempoAula: (v: string) => void;
   disponiveisTempos: string[];
   disabled?: boolean;
+  onDiaSemPendencia?: () => void;
 }
 
 export default function FrequenciaTab({
@@ -21,6 +23,7 @@ export default function FrequenciaTab({
   setTempoAula,
   disponiveisTempos,
   disabled,
+  onDiaSemPendencia,
 }: FrequenciaTabProps) {
   const { 
     turmaAtiva, 
@@ -139,18 +142,9 @@ export default function FrequenciaTab({
             generateNewCaptcha();
             window.scrollTo({ top: 0, behavior: 'smooth' });
 
-            // Auto-advance para o próximo tempo pendente (ou próximo sequencial)
-            const nextPendingTempo = disponiveisTempos.find(t => 
-              t !== tempoAula && !lancamentos.some(l => l.data === selectedDate && l.tempo === t && l.tipo === 'frequencia')
-            );
-            if (nextPendingTempo) {
-              setTempoAula(nextPendingTempo);
-            } else {
-              const currentIndex = disponiveisTempos.indexOf(tempoAula);
-              if (currentIndex >= 0 && currentIndex < disponiveisTempos.length - 1) {
-                setTempoAula(disponiveisTempos[currentIndex + 1]);
-              }
-            }
+            const passo = proximoPassoAposFrequencia(disponiveisTempos, tempoAula, lancamentos, selectedDate);
+            if (passo.tipo === 'proximo-tempo') setTempoAula(passo.tempo);
+            else onDiaSemPendencia?.();
           }
         } finally {
           setIsSaving(false);
