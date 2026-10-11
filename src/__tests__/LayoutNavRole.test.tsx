@@ -80,6 +80,17 @@ describe('Layout - Visibilidade por Perfil (Role)', () => {
     expect(document.activeElement).toBe(trigger);
   });
 
+  it('devolve o foco ao botão Mais quando o menu foi aberto por ele', () => {
+    mockUseAuth.mockReturnValue({ user: { id: 'prof-1', name: 'Professor', role: 'PROFESSOR' }, logout: vi.fn() });
+    render(<MemoryRouter><Layout /></MemoryRouter>);
+    const more = screen.getByRole('button', { name: 'Mais opções de navegação' });
+    fireEvent.click(more);
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(more);
+  });
+
   it('para perfil ADMIN: NÃO deve renderizar "Rotina Docente" e deve apontar o logo para /administracao', () => {
     mockUseAuth.mockReturnValue({
       user: { id: 'admin-1', name: 'Administrador Geral', role: 'ADMIN', title: 'ADMIN' },

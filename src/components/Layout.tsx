@@ -62,9 +62,14 @@ export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const drawerRef = useRef<HTMLElement>(null);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const menuOpenerRef = useRef<HTMLElement | null>(null);
+  const openMenu = (event: { currentTarget: HTMLButtonElement }) => {
+    menuOpenerRef.current = event.currentTarget;
+    setMenuOpen(true);
+  };
   useEffect(() => {
     if (!menuOpen) return;
-    const menuTrigger = menuTriggerRef.current;
+    const opener = menuOpenerRef.current ?? menuTriggerRef.current;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     drawerRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
@@ -77,7 +82,7 @@ export default function Layout() {
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
     };
     document.addEventListener('keydown', handleKey);
-    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', handleKey); menuTrigger?.focus(); };
+    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', handleKey); opener?.focus(); };
   }, [menuOpen]);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const isSemec = user?.role === SEMEC_ROLE;
@@ -251,7 +256,7 @@ export default function Layout() {
       {userCard}
     </aside>
     <div className="portal-workspace">
-      <header className="portal-topbar portal-school-topbar"><button className="portal-icon-button portal-mobile-only" ref={menuTriggerRef} aria-expanded={menuOpen} aria-controls="menu-mobile" aria-label="Abrir menu de navegação" onClick={()=>setMenuOpen(true)}><Menu size={21}/></button><SchoolIdentity schoolId={headerSchoolId} name={headerSchoolName} year={APP_CONFIG.YEAR} turn={turmaAtiva?.escola_id===headerSchoolId?turmaAtiva?.turno:undefined} variant="header"/><div className="portal-topbar-actions"><button className={'portal-sync '+(!isOnline || pendingCount || deadLetterCount ? 'has-pending':'')} onClick={()=>{if(isOnline && pendingCount>0) void syncNow();}} disabled={!isOnline || pendingCount===0} title={syncText}>{!isOnline?<WifiOff size={15}/>:connectionState==='SYNCING'?<RefreshCw size={15}/>:deadLetterCount>0?<AlertTriangle size={15}/>:<CheckCircle2 size={15}/>}<span>{syncText}</span></button><Link className="portal-top-avatar" to="/minha-privacidade" aria-label="Central de privacidade">{user?.name?.slice(0,1) || 'D'}</Link></div></header>
+      <header className="portal-topbar portal-school-topbar"><button className="portal-icon-button portal-mobile-only" ref={menuTriggerRef} aria-expanded={menuOpen} aria-controls="menu-mobile" aria-label="Abrir menu de navegação" onClick={openMenu}><Menu size={21}/></button><SchoolIdentity schoolId={headerSchoolId} name={headerSchoolName} year={APP_CONFIG.YEAR} turn={turmaAtiva?.escola_id===headerSchoolId?turmaAtiva?.turno:undefined} variant="header"/><div className="portal-topbar-actions"><button className={'portal-sync '+(!isOnline || pendingCount || deadLetterCount ? 'has-pending':'')} onClick={()=>{if(isOnline && pendingCount>0) void syncNow();}} disabled={!isOnline || pendingCount===0} title={syncText}>{!isOnline?<WifiOff size={15}/>:connectionState==='SYNCING'?<RefreshCw size={15}/>:deadLetterCount>0?<AlertTriangle size={15}/>:<CheckCircle2 size={15}/>}<span>{syncText}</span></button><Link className="portal-top-avatar" to="/minha-privacidade" aria-label="Central de privacidade">{user?.name?.slice(0,1) || 'D'}</Link></div></header>
       <ConnectionStatus/><div className="portal-page-location" aria-label="Página atual"><span>Meu espaço</span><ChevronRight size={13}/><strong>{pageTitle}</strong></div>
       {deadLetterCount>0 && <div className="portal-system-alert" role="status"><AlertTriangle size={17}/>Há {deadLetterCount} registro(s) com erro no envio. Verifique antes de sair.</div>}
       {isDeepInsideClass && turmaAtiva && <div className="portal-class-trail"><BookOpenCheck size={16}/><strong>{turmaAtiva.fase || turmaAtiva.ensino}</strong><span>{turmaAtiva.componente}</span><Link to="/turmas">Trocar turma <ChevronRight size={13}/></Link></div>}
@@ -262,7 +267,7 @@ export default function Layout() {
       <NavLink to={homePath} end><Home size={21}/><span>Início</span></NavLink>
       {canManage ? <NavLink to={isSemec?'/administracao':'/estatisticas'}><BarChart3 size={21}/><span>{isSemec?'Gestão':'Indicadores'}</span></NavLink>:<NavLink to="/diario"><CalendarDays size={21}/><span>Diário</span></NavLink>}
       {canManage ? <NavLink to="/minha-privacidade"><Shield size={21}/><span>Privacidade</span></NavLink>:<button onClick={openQuickAttendance}><ClipboardCheck size={21}/><span>Chamada</span></button>}
-      <button aria-label="Mais opções de navegação" onClick={()=>setMenuOpen(true)}><Menu size={21}/><span>Mais</span></button>
+      <button aria-label="Mais opções de navegação" aria-expanded={menuOpen} aria-controls="menu-mobile" onClick={openMenu}><Menu size={21}/><span>Mais</span></button>
     </nav>
     <ScheduleModal isOpen={scheduleOpen} onClose={()=>setScheduleOpen(false)}/>
   </div>;
