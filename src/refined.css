@@ -50,7 +50,7 @@
 @media(max-width:359px){.is-header .portal-school-mark{display:grid;height:36px;width:36px;padding:3px}.is-header .portal-school-name h2{font-size:17px}.portal-school-topbar{gap:6px}.portal-school-topbar>.portal-icon-button{width:32px}.portal-school-topbar .portal-top-avatar{width:26px;height:26px}}
 @media print{.portal-school-topbar{display:flex!important;position:static;border:0;background:white;padding:0 0 20px;min-height:0}.portal-school-topbar>.portal-icon-button,.portal-school-topbar .portal-topbar-actions,.portal-page-location{display:none!important}.portal-school-identity.is-header{border:0}.is-header .portal-school-year{display:flex}}
 /* Brand sits just above the sign-in card. The legal footer stays on that same column. */
-.portal-login-access{display:flex;flex-direction:column;align-items:stretch;gap:14px;min-width:0}
+.portal-login-access{display:flex;flex-direction:column;align-items:stretch;align-self:stretch;gap:14px;min-width:0}.portal-login-access .portal-login-panel{align-self:stretch;width:100%}
 .portal-login-top{width:100%;max-width:none;margin:0;display:flex;justify-content:center}
 .portal-login-footer{width:100%;max-width:1280px;margin-inline:auto;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(320px,.8fr);gap:8%;align-items:center}
 .portal-login-footer>footer{grid-column:2;justify-self:center;width:100%;text-align:center}
