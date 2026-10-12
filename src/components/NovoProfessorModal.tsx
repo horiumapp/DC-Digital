@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, Mail, CreditCard, Phone, Activity, Briefcase, GraduationCap, LayoutGrid, KeyRound, Plus } from 'lucide-react';
+import CampoSenha from './CampoSenha';
 
 export interface NovoProfessorFormData {
   nome: string;
@@ -223,8 +224,7 @@ const NovoProfessorModal = React.memo(function NovoProfessorModal({ isOpen, onCl
                     <KeyRound className="w-4 h-4 text-slate-400" />
                     Senha de Acesso
                   </label>
-                  <input
-                    type="password"
+                  <CampoSenha
                     value={formData.senha}
                     onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
                     autoComplete="new-password"

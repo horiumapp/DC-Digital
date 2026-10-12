@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Search, Shield, User, GraduationCap, Briefcase, Key, Users, Building2, Mail, Plus, X, Landmark } from 'lucide-react';
 import { useToast } from '../../components/common/Toast';
+import CampoSenha from '../../components/CampoSenha';
 import { readAllRows } from '../../services/pagination';
 
 interface UsuarioRow {
@@ -275,12 +276,12 @@ export default function TabUsuarios() {
             </label>
             <label className="block text-sm font-medium text-slate-700">
               Senha temporária
-              <input
-                type="text"
+              <CampoSenha
                 value={formSemec.senha}
                 onChange={(event) => setFormSemec({ ...formSemec, senha: event.target.value })}
                 className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2"
                 minLength={8}
+                autoComplete="new-password"
                 required
               />
             </label>

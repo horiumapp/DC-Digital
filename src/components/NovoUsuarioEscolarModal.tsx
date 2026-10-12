@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, User, Mail, KeyRound, Loader2, Shield, Crown, Plus } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useToast } from './common/Toast';
+import CampoSenha from './CampoSenha';
 
 interface NovoUsuarioEscolarModalProps {
   isOpen: boolean;
@@ -207,8 +208,7 @@ export default function NovoUsuarioEscolarModal({
               <KeyRound className="w-4 h-4 text-slate-400" />
               Senha de Acesso
             </label>
-            <input
-              type="password"
+            <CampoSenha
               required
               disabled={loading}
               minLength={8}

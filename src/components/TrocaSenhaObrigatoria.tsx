@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { translateSupabaseError } from '../utils/supabaseErrors';
+import CampoSenha from './CampoSenha';
 
 function validarSenha(senha: string, aluno: boolean): string | null {
   const minimo = aluno ? 10 : 8;
@@ -60,9 +61,9 @@ export default function TrocaSenhaObrigatoria() {
           A senha temporária precisa ser trocada antes de entrar no diário.
         </p>
         <label className="block text-sm font-medium text-slate-700" htmlFor="password">Nova senha</label>
-        <input id="password" name="password" type="password" autoComplete="new-password" required className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+        <CampoSenha id="password" name="password" autoComplete="new-password" required className="w-full border border-slate-300 rounded-lg px-3 py-2" />
         <label className="block text-sm font-medium text-slate-700" htmlFor="confirmPassword">Confirmar senha</label>
-        <input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" required className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+        <CampoSenha id="confirmPassword" name="confirmPassword" autoComplete="new-password" required className="w-full border border-slate-300 rounded-lg px-3 py-2" />
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button type="submit" disabled={loading} className="w-full py-3 bg-[#6354c7] text-white font-bold rounded-xl disabled:opacity-60">
           {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Salvar senha'}

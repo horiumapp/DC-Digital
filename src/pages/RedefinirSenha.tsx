@@ -5,6 +5,7 @@ import Background from '../components/Background';
 import { supabase } from '../lib/supabase';
 import { APP_CONFIG } from '../config/appConfig';
 import { translateSupabaseError } from '../utils/supabaseErrors';
+import CampoSenha from '../components/CampoSenha';
 
 /** SEC-05 FIX: mesma validação de força usada no Cadastro */
 function validarForcaSenha(senha: string): string | null {
@@ -175,8 +176,7 @@ export default function RedefinirSenha() {
                 <form onSubmit={handleRedefinir} className="space-y-6">
                   <div className="space-y-2">
                     <label htmlFor="password" className="block text-base font-medium text-slate-700">Nova Senha</label>
-                    <input 
-                      type="password" 
+                    <CampoSenha
                       id="password" 
                       name="password" 
                       placeholder="••••••••" 
@@ -189,8 +189,7 @@ export default function RedefinirSenha() {
 
                   <div className="space-y-2">
                     <label htmlFor="confirmPassword" className="block text-base font-medium text-slate-700">Confirmar Nova Senha</label>
-                    <input 
-                      type="password" 
+                    <CampoSenha
                       id="confirmPassword" 
                       name="confirmPassword" 
                       placeholder="••••••••" 
