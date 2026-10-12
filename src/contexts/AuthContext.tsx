@@ -13,6 +13,7 @@ import { pingInternet } from '../utils/network';
 import { useToast } from '../components/common/Toast';
 import ConfirmActionModal from '../components/ConfirmActionModal';
 import { AlertTriangle, WifiOff } from 'lucide-react';
+import { CHAVE_LOTACAO_CONFIRMADA, lotacaoConfirmadaNaSessao } from '../utils/lotacaoProfessor';
 
 export type UserRole = 'ADMIN' | 'GESTOR' | 'GESTOR_SEMEC' | 'SECRETARIO' | 'PROFESSOR' | 'ALUNO';
 
@@ -35,6 +36,10 @@ export interface User {
   role: UserRole;
   title: string;
   escola_id?: string; // ID da escola vinculada (para GESTOR/SECRETARIO)
+  /** Escola escolhida pelo professor nesta sessão, entre as lotações. */
+  escolaAtivaId?: string;
+  escolaAtivaNome?: string;
+  escolaAtivaTurno?: string;
   mustChangePassword?: boolean;
   alocacoes?: Alocacao[];
   professorDisciplinas?: string;
@@ -46,6 +51,7 @@ interface AuthContextType {
   logout: () => Promise<void>;             // Logout Real
   // FIX B1: refreshUser para re-fetch sem logout (ex: mudança de role pelo admin)
   refreshUser: () => Promise<void>;
+  definirEscolaDeTrabalho: (alocacao: Alocacao, todas?: Alocacao[]) => void;
 }
 
 // ============================================================
@@ -211,6 +217,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (isCancelled()) return;
 
+      const alocacoesSessao = (cached && cached.id === authUser.id) ? cached.alocacoes : undefined;
+      const sessaoLotacao = role === 'PROFESSOR' ? lotacaoConfirmadaNaSessao() : null;
+      const lotacaoAtiva = sessaoLotacao
+        ? alocacoesSessao?.find(item => item.escola_id === sessaoLotacao.escolaId && item.turno === sessaoLotacao.turno)
+        : undefined;
+
       const userObj: User = {
         id: authUser.id,
         name: name,
@@ -218,7 +230,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: role,
         title: role,
         escola_id: escolaId,
+        escolaAtivaId: sessaoLotacao?.escolaId,
+        escolaAtivaNome: lotacaoAtiva?.escolas?.nome,
+        escolaAtivaTurno: sessaoLotacao?.turno,
         mustChangePassword: authUser.app_metadata?.must_change_password === true,
+        alocacoes: alocacoesSessao,
       };
 
       const isolate = async () => {
@@ -442,6 +458,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await clearAllLocalData(true, false);
         sessionStorage.removeItem('activeEscolaId');
         sessionStorage.removeItem('activeTurno');
+        sessionStorage.removeItem(CHAVE_LOTACAO_CONFIRMADA);
         localStorage.removeItem('dc_last_user_id');
       }
 
@@ -487,6 +504,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // FIX B1: refreshUser estável via ref — não recria a closure a cada render
       refreshUser: useCallback(async () => {
         if (refreshUserRef.current) await refreshUserRef.current();
+      }, []),
+      definirEscolaDeTrabalho: useCallback((alocacao: Alocacao, todas?: Alocacao[]) => {
+        setUser(prev => {
+          if (!prev) return prev;
+          const alocacoes = todas ?? prev.alocacoes;
+          const mesmasEscolas = (prev.alocacoes || []).map(item => `${item.escola_id}|${item.turno}`).join(',')
+            === (alocacoes || []).map(item => `${item.escola_id}|${item.turno}`).join(',');
+          if (
+            prev.escolaAtivaId === alocacao.escola_id
+            && prev.escolaAtivaTurno === alocacao.turno
+            && prev.escolaAtivaNome === alocacao.escolas?.nome
+            && mesmasEscolas
+          ) return prev;
+          return {
+            ...prev,
+            alocacoes,
+            escolaAtivaId: alocacao.escola_id,
+            escolaAtivaNome: alocacao.escolas?.nome,
+            escolaAtivaTurno: alocacao.turno,
+          };
+        });
       }, []),
     }}>
       {loading ? <LoadingFallback /> : children}

@@ -11,6 +11,8 @@ interface SelecionarLotacaoModalProps {
   alocacoes: EscolaAlocacao[];
   alocacaoAtiva: EscolaAlocacao | null;
   onSelect: (aloc: EscolaAlocacao) => void;
+  /** Sem fechar: o professor precisa escolher a escola desta sessão. */
+  obrigatoria?: boolean;
 }
 
 export default function SelecionarLotacaoModal({
@@ -19,6 +21,7 @@ export default function SelecionarLotacaoModal({
   alocacoes,
   alocacaoAtiva,
   onSelect,
+  obrigatoria = false,
 }: SelecionarLotacaoModalProps) {
   if (!isOpen) return null;
 
@@ -28,11 +31,16 @@ export default function SelecionarLotacaoModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-white z-10 shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-slate-800">Alterar Lotação</h2>
+            <h2 className="text-lg font-bold text-slate-800">
+              {obrigatoria ? 'Onde você vai trabalhar agora?' : 'Alterar Lotação'}
+            </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Selecione a escola e turno para visualizar suas turmas
+              {obrigatoria
+                ? 'Escolha a escola e o turno desta sessão. Você pode trocar depois, sem sair da conta.'
+                : 'Selecione a escola e turno para visualizar suas turmas'}
             </p>
           </div>
+          {!obrigatoria && (
           <button
             type="button"
             onClick={onClose}
@@ -40,6 +48,7 @@ export default function SelecionarLotacaoModal({
           >
             <X className="w-5 h-5" />
           </button>
+          )}
         </div>
 
         {/* List of Allocations */}
@@ -89,6 +98,7 @@ export default function SelecionarLotacaoModal({
         </div>
 
         {/* Footer */}
+        {!obrigatoria && (
         <div className="flex justify-end p-5 border-t border-slate-200 bg-white sticky bottom-0 z-10 shrink-0">
           <button
             type="button"
@@ -98,6 +108,7 @@ export default function SelecionarLotacaoModal({
             Cancelar
           </button>
         </div>
+        )}
       </div>
     </div>
   );

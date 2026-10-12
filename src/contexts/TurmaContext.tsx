@@ -8,6 +8,7 @@ import { useToast } from '../components/common/Toast';
 import { useAuth } from './AuthContext';
 import { alunosComAtestadoNaData } from '../services/atestadoService';
 import { aplicarAtestadoNaChamada, separarAusenciasDaProva, statusAusenteNaProva, statusCobertoPorAtestado } from '../utils/atestadoFrequencia';
+import { professorPodeAbrirTurma } from '../utils/lotacaoProfessor';
 
 export interface TurmaMetricas {
   frequencia: number;
@@ -94,6 +95,7 @@ export interface Horario {
 interface TurmaContextType {
   turmaAtiva: Turma | null;
   selecionarTurma: (turma: Turma) => void;
+  limparTurmaAtiva: () => void;
   lancamentos: Lancamento[];
   registrarLancamento: (lancamento: Lancamento) => void;
   removerLancamento: (lancamento: Lancamento) => void;
@@ -277,17 +279,17 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   // FIX #3: Validar IDOR usando turma.escola_id diretamente em vez de sessionStorage
   // sessionStorage é mutável via DevTools — não é fonte confiável para autorização.
   const selecionarTurma = useCallback((turma: Turma) => {
-    if (user && user.role !== 'ADMIN') {
-      // Para não-ADMIN, verificar se a turma pertence à escola do usuário
-      // usando o campo da turma diretamente (fonte confiável: dado do servidor)
-      if (user.escola_id && turma.escola_id && user.escola_id !== turma.escola_id) {
-        showErrorRef.current('Acesso negado: Você não tem permissão para acessar turmas de outra escola.');
-        console.error(`[TurmaContext] IDOR bloqueado: user.escola_id=${user.escola_id}, turma.escola_id=${turma.escola_id}`);
-        return;
-      }
+    if (!professorPodeAbrirTurma(user, turma.escola_id)) {
+      showErrorRef.current('Acesso negado: Você não tem permissão para acessar turmas de outra escola.');
+      console.error(`[TurmaContext] IDOR bloqueado: user.escola_id=${user?.escola_id}, turma.escola_id=${turma.escola_id}`);
+      return;
     }
     setTurmaAtiva(turma);
   }, [user]);
+
+  const limparTurmaAtiva = useCallback(() => {
+    setTurmaAtiva(null);
+  }, []);
 
   const registrarLancamento = useCallback((novo: Lancamento) => {
     const tidNovo = getTid(novo.turmaId);
@@ -569,7 +571,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   // FIX M1: Memorizar o value do Provider para evitar re-renders desnecessários
   // em todos os consumidores quando nenhum dado mudou de fato.
   const contextValue = useMemo(() => ({
-    turmaAtiva, selecionarTurma, 
+    turmaAtiva, selecionarTurma, limparTurmaAtiva,
     lancamentos, registrarLancamento, removerLancamento,
     alunos, avaliacoes, conteudos, horarioTurma, loading, 
     salvarAvaliacao, removerAvaliacao, salvarNotas,
@@ -577,7 +579,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     removerFrequencia, removerConteudo, carregarFaltasDaData, faltasPorData, atestadosPorData,
     fechamentos, salvarFechamento, verificarPeriodoFechado
   }), [
-    turmaAtiva, selecionarTurma,
+    turmaAtiva, selecionarTurma, limparTurmaAtiva,
     lancamentos, registrarLancamento, removerLancamento,
     alunos, avaliacoes, conteudos, horarioTurma, loading,
     salvarAvaliacao, removerAvaliacao, salvarNotas,

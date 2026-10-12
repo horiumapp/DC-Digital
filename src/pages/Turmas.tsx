@@ -12,6 +12,7 @@ import * as OfflineTurmaService from '../services/turmaServiceOffline';
 import type { TurmaRelatorioInfo } from '../services/turmaService';
 import SelecionarLotacaoModal from '../components/SelecionarLotacaoModal';
 import { ADMIN_ROLES } from '../constants/authConstants';
+import { CHAVE_LOTACAO_CONFIRMADA, marcaLotacao, resolverLotacaoInicial } from '../utils/lotacaoProfessor';
 
 // FIX #10: Reutilizar Alocacao do AuthContext em vez de definição local duplicada
 type EscolaAlocacao = Alocacao;
@@ -28,10 +29,10 @@ interface TurmaBD {
 }
 
 export default function Turmas() {
-  const { user } = useAuth();
+  const { user, definirEscolaDeTrabalho } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
-  const { selecionarTurma, turmaAtiva } = useTurma();
+  const { selecionarTurma, turmaAtiva, limparTurmaAtiva } = useTurma();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   // Destino lembrado quando o professor veio de uma tela que exigia turma ativa.
@@ -46,11 +47,14 @@ export default function Turmas() {
   const [alocacoes, setAlocacoes] = useState<EscolaAlocacao[]>([]);
   const [alocacaoAtiva, setAlocacaoAtiva] = useState<EscolaAlocacao | null>(null);
   const [isLotacaoModalOpen, setIsLotacaoModalOpen] = useState(false);
+  const [lotacaoObrigatoria, setLotacaoObrigatoria] = useState(false);
   const [turmasBD, setTurmasBD] = useState<TurmaBD[]>([]);
   const [staffTurmas, setStaffTurmas] = useState<TurmaRelatorioInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [professorDisciplinas, setProfessorDisciplinas] = useState<string>('');
   const isMounted = React.useRef(true);
+  const userRef = React.useRef(user);
+  userRef.current = user;
 
   React.useEffect(() => {
     isMounted.current = true;
@@ -60,6 +64,38 @@ export default function Turmas() {
   }, []);
 
   const { showSuccess: _showSuccess, showError } = useToast();
+
+  const confirmarLotacao = React.useCallback((aloc: EscolaAlocacao, todas: EscolaAlocacao[]) => {
+    if (turmaAtiva?.escola_id && turmaAtiva.escola_id !== aloc.escola_id) {
+      limparTurmaAtiva();
+    }
+    setAlocacaoAtiva(aloc);
+    sessionStorage.setItem('activeEscolaId', aloc.escola_id);
+    sessionStorage.setItem('activeTurno', aloc.turno);
+    sessionStorage.setItem(CHAVE_LOTACAO_CONFIRMADA, marcaLotacao(aloc.escola_id, aloc.turno));
+    definirEscolaDeTrabalho(aloc, todas);
+    setLotacaoObrigatoria(false);
+    setIsLotacaoModalOpen(false);
+  }, [definirEscolaDeTrabalho, limparTurmaAtiva, turmaAtiva?.escola_id]);
+
+  const publicarLotacoes = React.useCallback((mappedAlocs: EscolaAlocacao[]) => {
+    const escolha = resolverLotacaoInicial(
+      mappedAlocs,
+      sessionStorage.getItem(CHAVE_LOTACAO_CONFIRMADA),
+      sessionStorage.getItem('activeEscolaId'),
+      sessionStorage.getItem('activeTurno'),
+    );
+    setAlocacoes(mappedAlocs);
+    if (escolha.ativa) {
+      confirmarLotacao(escolha.ativa, mappedAlocs);
+      return;
+    }
+    if (escolha.pedirEscolha) {
+      setAlocacaoAtiva(null);
+      setLotacaoObrigatoria(true);
+      setIsLotacaoModalOpen(true);
+    }
+  }, [confirmarLotacao]);
 
   const fetchTurmasBD = React.useCallback(async () => {
     if (!alocacaoAtiva) return;
@@ -129,6 +165,7 @@ export default function Turmas() {
   }, [alocacaoAtiva, showError]);
 
   const fetchAlocacoes = React.useCallback(async () => {
+    const user = userRef.current;
     if (!user || !user.email) return;
     
     // Usuários administrativos e secretaria: carregar as turmas da escola
@@ -155,14 +192,7 @@ export default function Turmas() {
         if (cached && cached.id === user.id && cached.alocacoes && cached.alocacoes.length > 0) {
           if (isMounted.current) {
             setProfessorDisciplinas(cached.professorDisciplinas || 'POLIVALENTE');
-            setAlocacoes(cached.alocacoes);
-            const savedEscolaId = sessionStorage.getItem('activeEscolaId');
-            const savedTurno = sessionStorage.getItem('activeTurno');
-            const restoredAloc = cached.alocacoes.find(a => a.escola_id === savedEscolaId && a.turno === savedTurno);
-            const initialAloc = restoredAloc || cached.alocacoes[0];
-            setAlocacaoAtiva(initialAloc);
-            sessionStorage.setItem('activeEscolaId', initialAloc.escola_id);
-            sessionStorage.setItem('activeTurno', initialAloc.turno);
+            publicarLotacoes(cached.alocacoes);
           }
           return;
         }
@@ -226,14 +256,7 @@ export default function Turmas() {
             };
           });
 
-          setAlocacoes(mappedAlocs);
-          const savedEscolaId = sessionStorage.getItem('activeEscolaId');
-          const savedTurno = sessionStorage.getItem('activeTurno');
-          const restoredAloc = mappedAlocs.find(a => a.escola_id === savedEscolaId && a.turno === savedTurno);
-          const initialAloc = restoredAloc || mappedAlocs[0];
-          setAlocacaoAtiva(initialAloc);
-          sessionStorage.setItem('activeEscolaId', initialAloc.escola_id);
-          sessionStorage.setItem('activeTurno', initialAloc.turno);
+          publicarLotacoes(mappedAlocs);
 
           // Atualizar o cache local do usuário com as alocações e disciplinas obtidas
           const cached = await getCachedUser();
@@ -260,14 +283,7 @@ export default function Turmas() {
           const cached = await getCachedUser();
           if (cached && cached.id === user.id && cached.alocacoes && cached.alocacoes.length > 0) {
             setProfessorDisciplinas(cached.professorDisciplinas || 'POLIVALENTE');
-            setAlocacoes(cached.alocacoes);
-            const savedEscolaId = sessionStorage.getItem('activeEscolaId');
-            const savedTurno = sessionStorage.getItem('activeTurno');
-            const restoredAloc = cached.alocacoes.find(a => a.escola_id === savedEscolaId && a.turno === savedTurno);
-            const initialAloc = restoredAloc || cached.alocacoes[0];
-            setAlocacaoAtiva(initialAloc);
-            sessionStorage.setItem('activeEscolaId', initialAloc.escola_id);
-            sessionStorage.setItem('activeTurno', initialAloc.turno);
+            publicarLotacoes(cached.alocacoes);
             return;
           }
         } catch (cacheErr) {
@@ -280,7 +296,7 @@ export default function Turmas() {
         setLoading(false);
       }
     }
-  }, [user, showError]);
+  }, [showError, publicarLotacoes]);
 
    
   React.useEffect(() => {
@@ -433,17 +449,14 @@ export default function Turmas() {
       <ClassWorkspace key={user?.id || 'default'} name={user?.name || 'professor'} year={APP_CONFIG.YEAR}
         school={alocacaoAtiva?.escolas?.nome || staffTurmas[0]?.escolaNome || 'Sua escola'}
         classes={filteredTurmas} activeClass={turmaAtiva} preferenceKey={user?.id || 'default'} search={searchTerm} onSearch={setSearchTerm} view={viewMode} onView={setViewMode} onOpen={handleSelectTurma}
-        schoolAction={alocacoes.length > 1 ? <button className="portal-button secondary" onClick={()=>setIsLotacaoModalOpen(true)}><Pencil size={16}/> Trocar lotação</button> : undefined}/>
+        schoolAction={alocacoes.length > 1 ? <button className="portal-button secondary" onClick={()=>{ setLotacaoObrigatoria(false); setIsLotacaoModalOpen(true); }}><Pencil size={16}/> Trocar lotação</button> : undefined}/>
       <SelecionarLotacaoModal
         isOpen={isLotacaoModalOpen}
-        onClose={() => setIsLotacaoModalOpen(false)}
+        obrigatoria={lotacaoObrigatoria}
+        onClose={() => { if (!lotacaoObrigatoria) setIsLotacaoModalOpen(false); }}
         alocacoes={alocacoes}
         alocacaoAtiva={alocacaoAtiva}
-        onSelect={(aloc) => {
-          setAlocacaoAtiva(aloc);
-          sessionStorage.setItem('activeEscolaId', aloc.escola_id);
-          sessionStorage.setItem('activeTurno', aloc.turno);
-        }}
+        onSelect={(aloc) => confirmarLotacao(aloc, alocacoes)}
       />
     </>
   );
