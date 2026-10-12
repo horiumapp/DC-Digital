@@ -13,7 +13,7 @@ import { pingInternet } from '../utils/network';
 import { useToast } from '../components/common/Toast';
 import ConfirmActionModal from '../components/ConfirmActionModal';
 import { AlertTriangle, WifiOff } from 'lucide-react';
-import { CHAVE_LOTACAO_CONFIRMADA, lotacaoConfirmadaNaSessao } from '../utils/lotacaoProfessor';
+import { CHAVE_LOTACAO_CONFIRMADA, CHAVE_LOTACAO_QUANTIDADE, lotacaoConfirmadaNaSessao } from '../utils/lotacaoProfessor';
 
 export type UserRole = 'ADMIN' | 'GESTOR' | 'GESTOR_SEMEC' | 'SECRETARIO' | 'PROFESSOR' | 'ALUNO';
 
@@ -459,6 +459,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionStorage.removeItem('activeEscolaId');
         sessionStorage.removeItem('activeTurno');
         sessionStorage.removeItem(CHAVE_LOTACAO_CONFIRMADA);
+        sessionStorage.removeItem(CHAVE_LOTACAO_QUANTIDADE);
         localStorage.removeItem('dc_last_user_id');
       }
 

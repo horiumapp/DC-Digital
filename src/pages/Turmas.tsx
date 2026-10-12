@@ -12,7 +12,7 @@ import * as OfflineTurmaService from '../services/turmaServiceOffline';
 import type { TurmaRelatorioInfo } from '../services/turmaService';
 import SelecionarLotacaoModal from '../components/SelecionarLotacaoModal';
 import { ADMIN_ROLES } from '../constants/authConstants';
-import { CHAVE_LOTACAO_CONFIRMADA, marcaLotacao, resolverLotacaoInicial } from '../utils/lotacaoProfessor';
+import { CHAVE_LOTACAO_CONFIRMADA, CHAVE_LOTACAO_QUANTIDADE, marcaLotacao, resolverLotacaoInicial } from '../utils/lotacaoProfessor';
 
 // FIX #10: Reutilizar Alocacao do AuthContext em vez de definição local duplicada
 type EscolaAlocacao = Alocacao;
@@ -73,6 +73,7 @@ export default function Turmas() {
     sessionStorage.setItem('activeEscolaId', aloc.escola_id);
     sessionStorage.setItem('activeTurno', aloc.turno);
     sessionStorage.setItem(CHAVE_LOTACAO_CONFIRMADA, marcaLotacao(aloc.escola_id, aloc.turno));
+    sessionStorage.setItem(CHAVE_LOTACAO_QUANTIDADE, String(todas.length));
     definirEscolaDeTrabalho(aloc, todas);
     setLotacaoObrigatoria(false);
     setIsLotacaoModalOpen(false);
@@ -84,6 +85,7 @@ export default function Turmas() {
       sessionStorage.getItem(CHAVE_LOTACAO_CONFIRMADA),
       sessionStorage.getItem('activeEscolaId'),
       sessionStorage.getItem('activeTurno'),
+      Number(sessionStorage.getItem(CHAVE_LOTACAO_QUANTIDADE)) || null,
     );
     setAlocacoes(mappedAlocs);
     if (escolha.ativa) {
