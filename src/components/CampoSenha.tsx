@@ -16,7 +16,6 @@ export default function CampoSenha({ className = '', disabled, ...props }: Campo
       />
       <button
         type="button"
-        tabIndex={-1}
         disabled={disabled}
         onClick={() => setVisivel((atual) => !atual)}
         className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#6354c7] disabled:opacity-40 transition-colors"
