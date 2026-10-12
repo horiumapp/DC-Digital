@@ -7,7 +7,7 @@ import { OfflineNoCacheError } from '../services/turmaServiceOffline';
 import { useToast } from '../components/common/Toast';
 import { useAuth } from './AuthContext';
 import { alunosComAtestadoNaData } from '../services/atestadoService';
-import { aplicarAtestadoNaChamada } from '../utils/atestadoFrequencia';
+import { aplicarAtestadoNaChamada, separarAusenciasDaProva, statusAusenteNaProva, statusCobertoPorAtestado } from '../utils/atestadoFrequencia';
 
 export interface TurmaMetricas {
   frequencia: number;
@@ -113,6 +113,7 @@ interface TurmaContextType {
   removerConteudo: (data: string, tempo: string) => Promise<void>;
   carregarFaltasDaData: (data: string) => Promise<void>;
   faltasPorData: Record<string, Set<string>>;
+  atestadosPorData: Record<string, Set<string>>;
   fechamentos: Record<string, boolean>;
   salvarFechamento: (bimestre: string, status: 'ABERTO' | 'FECHADO', disciplinaOverride?: string) => Promise<void>;
   verificarPeriodoFechado: (dateOrBimestreId: string) => boolean;
@@ -130,6 +131,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
   const [horarioTurma, setHorarioTurma] = useState<Horario[]>([]);
   const [loading, setLoading] = useState(false);
   const [faltasPorData, setFaltasPorData] = useState<Record<string, Set<string>>>({});
+  const [atestadosPorData, setAtestadosPorData] = useState<Record<string, Set<string>>>({});
   const [fechamentos, setFechamentos] = useState<Record<string, boolean>>({});
 
   // FIX Race Condition: Ref para alunos evita stale closure em callbacks assíncronos
@@ -224,7 +226,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
             OfflineTurmaService.fetchHorario(rawId, turmaAtiva.componente),
             OfflineTurmaService.fetchAlunos(rawId),
             OfflineTurmaService.fetchConteudosPeriodo(rawId, turmaAtiva.componente),
-            OfflineTurmaService.fetchFaltasPeriodo(rawId, turmaAtiva.componente, undefined, undefined, ['F']),
+            OfflineTurmaService.fetchFaltasPeriodo(rawId, turmaAtiva.componente, undefined, undefined, ['F', 'FJ', 'Ausente']),
             OfflineTurmaService.fetchFechamentos(rawId, turmaAtiva.componente)
           ]);
           
@@ -237,14 +239,19 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
           setFechamentos(fechamentosData);
 
           const faltasMap: Record<string, Set<string>> = {};
+          const atestadosMap: Record<string, Set<string>> = {};
           freqs.forEach((f) => {
-            if (f.status === 'F') {
-              const normalizedDate = formatarDataParaISO(f.data || '');
-              if (!faltasMap[normalizedDate]) faltasMap[normalizedDate] = new Set();
-              faltasMap[normalizedDate].add(f.aluno_id.toString());
+            if (!statusAusenteNaProva(f.status)) return;
+            const normalizedDate = formatarDataParaISO(f.data || '');
+            if (!faltasMap[normalizedDate]) faltasMap[normalizedDate] = new Set();
+            faltasMap[normalizedDate].add(f.aluno_id.toString());
+            if (statusCobertoPorAtestado(f.status)) {
+              if (!atestadosMap[normalizedDate]) atestadosMap[normalizedDate] = new Set();
+              atestadosMap[normalizedDate].add(f.aluno_id.toString());
             }
           });
           setFaltasPorData(faltasMap);
+          setAtestadosPorData(atestadosMap);
           
           await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alumnosData, signal);
         } catch (err) {
@@ -428,9 +435,11 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     try {
       const rawId = getTid(turmaAtiva.id);
       const resp = await OfflineTurmaService.buscarFrequenciaPorDia(rawId, turmaAtiva.componente, data);
-      const idsFaltosos = new Set(resp.filter(f => f.status === 'F').map(f => f.aluno_id.toString()));
       const normalizedDate = formatarDataParaISO(data);
-      setFaltasPorData(prev => ({ ...prev, [normalizedDate]: idsFaltosos }));
+      const cobertos = await alunosComAtestadoNaData(rawId, normalizedDate);
+      const { ausentes, atestados } = separarAusenciasDaProva(resp, cobertos);
+      setFaltasPorData(prev => ({ ...prev, [normalizedDate]: ausentes }));
+      setAtestadosPorData(prev => ({ ...prev, [normalizedDate]: atestados }));
     } catch (err) {
       console.error('Erro ao carregar faltas:', err);
     }
@@ -565,7 +574,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     alunos, avaliacoes, conteudos, horarioTurma, loading, 
     salvarAvaliacao, removerAvaliacao, salvarNotas,
     salvarFrequencia, salvarConteudo, buscarFrequencia, buscarConteudo,
-    removerFrequencia, removerConteudo, carregarFaltasDaData, faltasPorData,
+    removerFrequencia, removerConteudo, carregarFaltasDaData, faltasPorData, atestadosPorData,
     fechamentos, salvarFechamento, verificarPeriodoFechado
   }), [
     turmaAtiva, selecionarTurma,
@@ -573,7 +582,7 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     alunos, avaliacoes, conteudos, horarioTurma, loading,
     salvarAvaliacao, removerAvaliacao, salvarNotas,
     salvarFrequencia, salvarConteudo, buscarFrequencia, buscarConteudo,
-    removerFrequencia, removerConteudo, carregarFaltasDaData, faltasPorData,
+    removerFrequencia, removerConteudo, carregarFaltasDaData, faltasPorData, atestadosPorData,
     fechamentos, salvarFechamento, verificarPeriodoFechado
   ]);
 

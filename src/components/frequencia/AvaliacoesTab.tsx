@@ -49,7 +49,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
   const { 
     turmaAtiva, alunos, avaliacoes, conteudos, loading, 
     salvarAvaliacao, removerAvaliacao, salvarNotas, 
-    carregarFaltasDaData, faltasPorData 
+    carregarFaltasDaData, faltasPorData, atestadosPorData
   } = useTurma();
   const { showWarning, showError } = useToast();
 
@@ -83,6 +83,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
   const [isSaving, setIsSaving] = useState(false);
   const [secondCallRows, setSecondCallRows] = useState<Record<string, { selected: boolean, date: string, grade: string }>>({});
+  const notasRetiradasRef = React.useRef(new Set<string>());
 
   const PERIODOS_LABELS: Record<string, string> = {};
   APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE')).forEach(b => {
@@ -278,13 +279,38 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
    
   useEffect(() => {
     if (avaliacaoViewMode === 'grades' && selectedAvaliacao) {
+      const segundaChamada = Boolean(selectedAvaliacao.tipo?.includes('2CH'));
+      const ausentes = segundaChamada
+        ? new Set<string>()
+        : (faltasPorData[formatarDataParaISO(selectedAvaliacao.data || '')] || new Set<string>());
       const notasMap: Record<string, string> = {};
       alunosParaNotas.forEach(aluno => {
-        notasMap[aluno.id] = aluno.notas?.[selectedAvaliacao.id] || '';
+        notasMap[aluno.id] = ausentes.has(aluno.id) ? '' : (aluno.notas?.[selectedAvaliacao.id] || '');
       });
       setLocalNotas(notasMap);
     }
-  }, [avaliacaoViewMode, selectedAvaliacao, alunosParaNotas]);
+  }, [avaliacaoViewMode, selectedAvaliacao, alunosParaNotas, faltasPorData]);
+
+  useEffect(() => {
+    if (avaliacaoViewMode !== 'grades' || !selectedAvaliacao || selectedAvaliacao.tipo?.includes('2CH')) return;
+    const ausentes = faltasPorData[formatarDataParaISO(selectedAvaliacao.data || '')];
+    if (!ausentes || ausentes.size === 0) return;
+    const removidos = alunos
+      .filter(aluno => ausentes.has(aluno.id))
+      .filter(aluno => {
+        const chave = `${selectedAvaliacao.id}:${aluno.id}`;
+        if (notasRetiradasRef.current.has(chave)) return false;
+        const nota = aluno.notas?.[selectedAvaliacao.id] ?? aluno.notas?.[String(selectedAvaliacao.id)];
+        return nota !== undefined && nota !== null && String(nota).trim() !== '';
+      })
+      .map(aluno => aluno.id);
+    if (removidos.length === 0) return;
+    removidos.forEach(id => notasRetiradasRef.current.add(`${selectedAvaliacao.id}:${id}`));
+    void salvarNotas(selectedAvaliacao.id, [], removidos).catch(() => {
+      removidos.forEach(id => notasRetiradasRef.current.delete(`${selectedAvaliacao.id}:${id}`));
+      showError('Não foi possível retirar a nota de quem está com atestado ou falta nesta data.');
+    });
+  }, [avaliacaoViewMode, selectedAvaliacao, faltasPorData, alunos, salvarNotas, showError]);
    
 
   // Handlers para sincronização de período letivo e data
@@ -428,8 +454,16 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
 
     const notasToSave: { alunoId: string; valor: string }[] = [];
     const removidos: string[] = [];
+    const segundaChamada = Boolean(selectedAvaliacao.tipo?.includes('2CH'));
+    const ausentesNaProva = segundaChamada
+      ? new Set<string>()
+      : (faltasPorData[formatarDataParaISO(selectedAvaliacao.data || '')] || new Set<string>());
 
     Object.entries(localNotas).forEach(([alunoId, valor]) => {
+      if (ausentesNaProva.has(alunoId)) {
+        removidos.push(alunoId);
+        return;
+      }
       if (valor !== '') {
         notasToSave.push({ alunoId, valor });
       } else {
@@ -697,6 +731,7 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
           alunosParaNotas={alunosParaNotas}
           localNotas={localNotas}
           faltasPorData={faltasPorData}
+          atestadosPorData={atestadosPorData}
           generatedCaptcha={generatedCaptcha}
           captchaInput={captchaInput}
           captchaError={captchaError}

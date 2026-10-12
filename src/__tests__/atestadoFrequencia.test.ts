@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aplicarAtestadoNaChamada, dataCobertaPeloAtestado } from '../utils/atestadoFrequencia';
+import { aplicarAtestadoNaChamada, dataCobertaPeloAtestado, separarAusenciasDaProva } from '../utils/atestadoFrequencia';
 
 describe('atestado na chamada', () => {
   it('trava o aluno em falta justificada e não deixa o professor remover', () => {
@@ -26,6 +26,19 @@ describe('atestado na chamada', () => {
     );
     expect(resultado.freq).toBe('F');
     expect(resultado.atestado).toBe(false);
+  });
+
+  it('impede nota de quem faltou ou está coberto pelo atestado no dia da prova', () => {
+    const { ausentes, atestados } = separarAusenciasDaProva(
+      [
+        { aluno_id: 'ana', status: 'FJ' },
+        { aluno_id: 'bruno', status: 'P' },
+        { aluno_id: 'clara', status: 'F' },
+      ],
+      new Set(['daniel'])
+    );
+    expect([...ausentes].sort()).toEqual(['ana', 'clara', 'daniel']);
+    expect([...atestados].sort()).toEqual(['ana', 'daniel']);
   });
 
   it('cobre o dia inteiro do período do atestado, inclusive o primeiro e o último', () => {

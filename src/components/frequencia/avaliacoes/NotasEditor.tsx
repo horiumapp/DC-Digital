@@ -25,6 +25,7 @@ interface NotasEditorProps {
   alunosParaNotas: AlunoNotaItem[];
   localNotas: Record<string, string>;
   faltasPorData: Record<string, Set<string>>;
+  atestadosPorData?: Record<string, Set<string>>;
   generatedCaptcha: string;
   captchaInput: string;
   captchaError: boolean;
@@ -41,6 +42,7 @@ const NotasEditor = React.memo(function NotasEditor({
   alunosParaNotas,
   localNotas,
   faltasPorData,
+  atestadosPorData = {},
   generatedCaptcha,
   captchaInput,
   captchaError,
@@ -87,7 +89,12 @@ const NotasEditor = React.memo(function NotasEditor({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {alunosParaNotas.map((aluno, index) => (
+              {alunosParaNotas.map((aluno, index) => {
+                const dataIso = formatarDataParaISO(selectedAvaliacao.data || '');
+                const bloqueiaNota = !selectedAvaliacao.tipo?.includes('2CH');
+                const comAtestado = bloqueiaNota && Boolean(atestadosPorData[dataIso]?.has(aluno.id));
+                const comFalta = bloqueiaNota && Boolean(faltasPorData[dataIso]?.has(aluno.id));
+                return (
                 <tr key={aluno.id} className="group hover:bg-blue-50/30 transition-colors text-left">
                   <td className="px-4 sm:px-8 py-3.5 sm:py-6 text-slate-400 font-bold tabular-nums">{String(index + 1).padStart(2, '0')}</td>
                   <td className="px-4 sm:px-8 py-3.5 sm:py-6">
@@ -95,8 +102,12 @@ const NotasEditor = React.memo(function NotasEditor({
                     <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mt-0.5">Matrícula: {aluno.matricula}</p>
                   </td>
                   <td className="px-4 sm:px-8 py-3.5 sm:py-6">
-                    <div className="relative max-w-[140px] mx-auto">
-                      {(!selectedAvaliacao.tipo?.includes('2CH') && faltasPorData[formatarDataParaISO(selectedAvaliacao.data || '')]?.has(aluno.id)) ? (
+                    <div className="relative max-w-[180px] mx-auto">
+                      {comAtestado ? (
+                        <div className="w-full bg-amber-50 border-2 border-amber-100 rounded-2xl px-3 py-3 text-center text-[11px] font-black text-amber-800 uppercase tracking-widest flex items-center justify-center gap-2">
+                          <AlertCircle className="w-4 h-4 shrink-0" /> Atestado
+                        </div>
+                      ) : comFalta ? (
                         <div className="w-full bg-red-50 border-2 border-red-100 rounded-2xl px-4 py-3 text-center text-sm font-black text-red-600 uppercase tracking-widest flex items-center justify-center gap-2">
                           <AlertCircle className="w-4 h-4" /> Falta
                         </div>
@@ -113,7 +124,7 @@ const NotasEditor = React.memo(function NotasEditor({
                     </div>
                   </td>
                 </tr>
-              ))}
+              );})}
             </tbody>
           </table>
         </div>
