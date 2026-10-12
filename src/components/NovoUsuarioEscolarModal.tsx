@@ -50,8 +50,9 @@ export default function NovoUsuarioEscolarModal({
         setLoading(false);
         return;
       }
-      if (formData.senha.length < 6) {
-        showError('A senha deve ter no mínimo 6 caracteres.');
+      const senhaValida = formData.senha.length >= 8 && /[a-zA-Z]/.test(formData.senha) && /\d/.test(formData.senha);
+      if (!senhaValida) {
+        showError('A senha deve ter no mínimo 8 caracteres, incluindo letras e números.');
         setLoading(false);
         return;
       }
@@ -76,8 +77,17 @@ export default function NovoUsuarioEscolarModal({
       });
 
       if (error) {
-        console.error("Erro ao chamar admin-create-user:", error);
-        showError('Não foi possível criar a conta. Verifique sua conexão e tente novamente.');
+        let message = 'Não foi possível criar a conta. Tente novamente.';
+        if ('context' in error && error.context) {
+          try {
+            const response = await error.context.json();
+            if (typeof response?.error === 'string' && response.error.trim()) message = response.error;
+          } catch {
+            /* mantém a mensagem padrão */
+          }
+        }
+        console.error("Erro ao chamar admin-create-user:", message);
+        showError(message);
         setLoading(false);
         return;
       }
@@ -201,15 +211,15 @@ export default function NovoUsuarioEscolarModal({
               type="password"
               required
               disabled={loading}
-              minLength={6}
+              minLength={8}
               value={formData.senha}
               onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
               autoComplete="new-password"
               className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#6354c7]/20 focus:border-[#6354c7] transition-all font-medium disabled:opacity-50 disabled:bg-slate-50"
-              placeholder="Mínimo 6 caracteres"
+              placeholder="Mínimo 8 caracteres, com letras e números"
             />
             <p className="text-[10px] text-slate-400 font-medium ml-1">
-              Compartilhe essa senha com o(a) {cargoLabel.toLowerCase()}. Ele(a) poderá alterá-la depois.
+              Use pelo menos 8 caracteres, com letras e números. Compartilhe essa senha com o(a) {cargoLabel.toLowerCase()}. Ele(a) poderá alterá-la depois.
             </p>
           </div>
 

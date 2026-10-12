@@ -552,8 +552,11 @@ Deno.serve(async (req: Request) => {
       }
     } else {
       console.error("Erro ao criar usuário:", createError);
+      const upstream = typeof createError?.message === "string" ? createError.message.slice(0, 300) : "";
       return new Response(
-        JSON.stringify({ error: "Não foi possível criar a conta. Tente novamente em instantes." }),
+        JSON.stringify({
+          error: upstream || "Não foi possível criar a conta. Tente novamente em instantes.",
+        }),
         { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
