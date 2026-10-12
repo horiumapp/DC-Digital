@@ -26,15 +26,19 @@ export default function AtestadoMedicoModal({ aluno, onClose }: AtestadoMedicoMo
   const [observacao, setObservacao] = useState('');
   const [lista, setLista] = useState<AtestadoMedico[]>([]);
   const [salvando, setSalvando] = useState(false);
+  const [falhaCarga, setFalhaCarga] = useState(false);
+  const alunoId = aluno?.id ?? null;
 
   useEffect(() => {
-    if (!aluno) return;
+    if (!alunoId) return;
     let ativo = true;
-    listarAtestadosDoAluno(aluno.id)
+    setFalhaCarga(false);
+    setLista([]);
+    listarAtestadosDoAluno(alunoId)
       .then(registros => { if (ativo) setLista(registros); })
-      .catch(() => { if (ativo) showError('Não foi possível carregar os atestados deste aluno.'); });
+      .catch(() => { if (ativo) setFalhaCarga(true); });
     return () => { ativo = false; };
-  }, [aluno, showError]);
+  }, [alunoId]);
 
   if (!aluno) return null;
 
@@ -95,6 +99,11 @@ export default function AtestadoMedicoModal({ aluno, onClose }: AtestadoMedicoMo
         <p className="mb-4 text-sm text-slate-600">
           O atestado justifica a falta e prevalece sobre a chamada do professor. Ele não abona a frequência.
         </p>
+        {falhaCarga && (
+          <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800" role="status">
+            Os atestados ainda não puderam ser carregados. Feche esta janela e aplique a atualização do banco antes de registrar.
+          </p>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <label className="text-xs font-bold text-slate-500">
             Início
