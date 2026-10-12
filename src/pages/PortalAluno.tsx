@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { BookOpen, CalendarCheck, BarChart3, Loader2, LogOut, User, ChevronRight, Calendar, Shield } from 'lucide-react';
+import { BookOpen, CalendarCheck, BarChart3, Loader2, LogOut, User, ChevronRight, ChevronDown, Calendar, Shield } from 'lucide-react';
 import PrivacyLinksFooter from '../components/PrivacyLinksFooter';
 import { APP_CONFIG } from '../config/appConfig';
 import { formatMatriculaCpf } from '../utils/formatters';
@@ -56,6 +56,16 @@ export default function PortalAluno() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'notas' | 'frequencia' | 'boletim'>('notas');
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+  const [expandedDisciplinas, setExpandedDisciplinas] = useState<Set<string>>(new Set());
+
+  const toggleDisciplina = (disciplina: string) => {
+    setExpandedDisciplinas(atual => {
+      const proximo = new Set(atual);
+      if (proximo.has(disciplina)) proximo.delete(disciplina);
+      else proximo.add(disciplina);
+      return proximo;
+    });
+  };
 
   const toggleMonth = (monthKey: string) => {
     const newExpanded = new Set(expandedMonths);
@@ -476,13 +486,24 @@ export default function PortalAluno() {
             {activeTab === 'notas' && (
               <div className="space-y-4">
                 {Object.keys(notasPorDisciplina).length > 0 ? (
-                  Object.entries(notasPorDisciplina).map(([disciplina, notasDisc]: [string, NotaItem[]]) => (
+                  Object.entries(notasPorDisciplina).map(([disciplina, notasDisc]: [string, NotaItem[]]) => {
+                    const aberta = expandedDisciplinas.has(disciplina);
+                    return (
                     <div key={disciplina} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                      <div className="px-5 py-4 bg-gradient-to-r from-blue-50/50 to-white border-b border-slate-100 flex items-center gap-3">
-                        <BookOpen className="w-5 h-5 text-[#6354c7]" />
-                        <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">{disciplina}</h3>
-                      </div>
-                      <div className="p-4">
+                      <button
+                        type="button"
+                        onClick={() => toggleDisciplina(disciplina)}
+                        aria-expanded={aberta}
+                        className={`w-full px-5 py-4 bg-gradient-to-r from-blue-50/50 to-white flex items-center justify-between gap-3 cursor-pointer text-left ${aberta ? 'border-b border-slate-100' : ''}`}
+                      >
+                        <span className="flex items-center gap-3 min-w-0">
+                          <BookOpen className="w-5 h-5 text-[#6354c7] shrink-0" />
+                          <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">{disciplina}</h3>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{notasDisc.length} {notasDisc.length === 1 ? 'nota' : 'notas'}</span>
+                        </span>
+                        <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${aberta ? 'rotate-180' : ''}`} aria-hidden="true" />
+                      </button>
+                      {aberta && <div className="p-4">
                         <table className="w-full">
                           <thead>
                             <tr>
@@ -519,9 +540,10 @@ export default function PortalAluno() {
                             })}
                           </tbody>
                         </table>
-                      </div>
+                      </div>}
                     </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <div className="bg-white rounded-2xl border border-slate-200 p-12 shadow-sm text-center">
                     <BarChart3 className="w-12 h-12 text-slate-200 mx-auto mb-3" />
