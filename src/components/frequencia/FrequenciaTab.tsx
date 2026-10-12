@@ -88,8 +88,8 @@ export default function FrequenciaTab({
   const toggleFreq = (id: string) => {
     setStudentData(prev => prev.map(s => {
       if (s.id === id) {
-        // Ciclo ergonômico: P -> F -> FJ -> '' -> P
-        const nextFreq = s.freq === 'P' ? 'F' : s.freq === 'F' ? 'FJ' : s.freq === 'FJ' ? '' : 'P';
+        if (s.atestado) return s;
+        const nextFreq = s.freq === 'P' ? 'F' : s.freq === 'F' ? '' : 'P';
         return { 
           ...s, 
           freq: nextFreq,
@@ -100,9 +100,10 @@ export default function FrequenciaTab({
     }));
   };
 
-  const setDirectFreq = (id: string, freq: 'P' | 'F' | 'FJ' | '') => {
+  const setDirectFreq = (id: string, freq: 'P' | 'F' | '') => {
     setStudentData(prev => prev.map(s => {
       if (s.id === id) {
+        if (s.atestado) return s;
         return { 
           ...s, 
           freq, 
@@ -118,11 +119,13 @@ export default function FrequenciaTab({
   };
 
   const markAllPresent = () => {
-    setStudentData(prev => prev.map(student => ({ 
-      ...student, 
-      freq: 'P', 
-      part: student.part || 'Presencial' 
-    })));
+    setStudentData(prev => prev.map(student => (
+      student.atestado ? student : {
+        ...student,
+        freq: 'P',
+        part: student.part || 'Presencial',
+      }
+    )));
   };
 
   const visibleStudents = studentData.filter(student => 
@@ -335,9 +338,8 @@ export default function FrequenciaTab({
               </span>
               <span className="inline-flex items-center gap-1">
                 <span className="w-4 h-4 rounded-full bg-amber-500 text-white font-bold text-[9px] flex items-center justify-center">FJ</span>
-                Falta Justificada
+                Falta justificada pelo atestado da secretaria
               </span>
-              <span className="text-slate-500">Justificativa não abona a falta. Situação especial depende de registro e validação da escola.</span>
               <span className="inline-flex items-center gap-1">
                 <span className="w-4 h-4 rounded-full bg-slate-300 dark:bg-slate-600" />
                 Sem lançamento
@@ -393,8 +395,14 @@ export default function FrequenciaTab({
                     <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                       Frequência ({tempoAula})
                     </label>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Toque para selecionar</span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{aluno.atestado ? 'Atestado da secretaria' : 'Toque para selecionar'}</span>
                   </div>
+                  {aluno.atestado ? (
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-500 text-[11px] font-black text-white" aria-label={`Falta justificada de ${aluno.nome}`}>FJ</span>
+                      <p className="text-xs font-bold text-amber-800">Falta justificada pelo atestado médico. Esta marcação não pode ser alterada.</p>
+                    </div>
+                  ) : (
                   <div className="flex items-center gap-4 justify-start">
                     <button
                       type="button"
@@ -425,22 +433,8 @@ export default function FrequenciaTab({
                     >
                       F
                     </button>
-
-                    <button
-                      type="button"
-                      disabled={disabled}
-                      onClick={() => !disabled && setDirectFreq(aluno.id, aluno.freq === 'FJ' ? '' : 'FJ')}
-                      aria-label={`Falta justificada de ${aluno.nome}`}
-                      aria-pressed={aluno.freq === 'FJ'}
-                      className={`w-11 h-11 rounded-full flex items-center justify-center text-[11px] font-black transition-all active:scale-90 cursor-pointer disabled:cursor-not-allowed ${
-                        aluno.freq === 'FJ'
-                          ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-300/50 dark:ring-amber-700/50'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-2 border-slate-200 dark:border-slate-700 hover:border-amber-400 hover:text-amber-600'
-                      }`}
-                    >
-                      FJ
-                    </button>
                   </div>
+                  )}
                 </div>
 
                 {/* Participation Selector: Full-Width 50%/50% Segmented Pill */}
@@ -520,9 +514,9 @@ export default function FrequenciaTab({
                         {/* Main Touch Toggle Button */}
                         <button
                           type="button"
-                          onClick={() => !disabled && toggleFreq(aluno.id)}
-                          disabled={disabled}
-                          title="Clique para alternar P → F → FJ"
+                          onClick={() => !disabled && !aluno.atestado && toggleFreq(aluno.id)}
+                          disabled={disabled || aluno.atestado}
+                          title={aluno.atestado ? 'Falta justificada pelo atestado da secretaria' : 'Clique para alternar presença e falta'}
                           aria-label={`Status de frequência de ${aluno.nome}: ${aluno.freq || 'não lançado'}`}
                           className={`w-8 h-8 rounded-full text-white font-black text-xs flex items-center justify-center transition-all transform active:scale-90 shadow-sm cursor-pointer disabled:cursor-not-allowed ${
                             aluno.freq === 'P'
@@ -542,7 +536,7 @@ export default function FrequenciaTab({
                           <button
                             type="button"
                             onClick={() => !disabled && setDirectFreq(aluno.id, 'P')}
-                            disabled={disabled}
+                            disabled={disabled || aluno.atestado}
                             title="Presença"
                             className={`w-6 h-6 rounded text-[11px] font-bold transition-all cursor-pointer ${aluno.freq === 'P' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 hover:text-emerald-700 hover:bg-emerald-50'}`}
                           >
@@ -551,20 +545,11 @@ export default function FrequenciaTab({
                           <button
                             type="button"
                             onClick={() => !disabled && setDirectFreq(aluno.id, 'F')}
-                            disabled={disabled}
+                            disabled={disabled || aluno.atestado}
                             title="Falta"
                             className={`w-6 h-6 rounded text-[11px] font-bold transition-all cursor-pointer ${aluno.freq === 'F' ? 'bg-rose-600 text-white shadow-xs' : 'text-slate-500 hover:text-rose-700 hover:bg-rose-50'}`}
                           >
                             F
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => !disabled && setDirectFreq(aluno.id, 'FJ')}
-                            disabled={disabled}
-                            title="Falta Justificada"
-                            className={`w-6 h-6 rounded text-[11px] font-bold transition-all cursor-pointer ${aluno.freq === 'FJ' ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-500 hover:text-amber-700 hover:bg-amber-50'}`}
-                          >
-                            FJ
                           </button>
                         </div>
                       </div>

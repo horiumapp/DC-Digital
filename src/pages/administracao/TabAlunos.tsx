@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Search, Edit2, Trash2, Building2, Users, GraduationCap, ChevronRight, ArrowLeft, ArrowRightLeft, KeyRound, Download, Upload, Printer } from 'lucide-react';
+import { Search, Edit2, Trash2, Building2, Users, GraduationCap, ChevronRight, ArrowLeft, ArrowRightLeft, KeyRound, Download, Upload, Printer, FileHeart } from 'lucide-react';
+import AtestadoMedicoModal from '../../components/AtestadoMedicoModal';
 import RemanejarAlunoModal from '../../components/RemanejarAlunoModal';
 import NovoAlunoModal from '../../components/NovoAlunoModal';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
@@ -62,6 +63,8 @@ export default function TabAlunos() {
   const [alunoParaEditar, setAlunoParaEditar] = useState<AlunoRow | null>(null);
   const [alunoParaExcluir, setAlunoParaExcluir] = useState<AlunoRow | null>(null);
   const [alunoParaRemanejar, setAlunoParaRemanejar] = useState<AlunoRow | null>(null);
+  const [alunoParaAtestado, setAlunoParaAtestado] = useState<AlunoRow | null>(null);
+  const podeLancarAtestado = user?.role === 'ADMIN' || user?.role === 'GESTOR' || user?.role === 'SECRETARIO';
   const [alunos, setAlunos] = useState<AlunoRow[]>([]);
   const [escolas, setEscolas] = useState<EscolaItem[]>([]);
   const [selectedEscola, setSelectedEscola] = useState<EscolaItem | null>(null);
@@ -934,6 +937,15 @@ export default function TabAlunos() {
                                           </td>
                                           <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-1">
+                                              {podeLancarAtestado && (
+                                                <button
+                                                  onClick={() => setAlunoParaAtestado(aluno)}
+                                                  className="p-2 text-slate-400 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors"
+                                                  title="Lançar atestado médico"
+                                                >
+                                                  <FileHeart className="w-4 h-4" />
+                                                </button>
+                                              )}
                                               <button 
                                                 onClick={() => navigate(`/relatorio-boletins?turmaId=${aluno.turma_id}&alunoId=${aluno.id}`)}
                                                 className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
@@ -1090,7 +1102,11 @@ export default function TabAlunos() {
         fixedEscolaId={selectedEscola?.id}
       />
 
-      <RemanejarAlunoModal aluno={alunoParaRemanejar} onClose={() => setAlunoParaRemanejar(null)} onSuccess={() => { fetchAlunos(); fetchEscolas(); }} />      
+      <RemanejarAlunoModal aluno={alunoParaRemanejar} onClose={() => setAlunoParaRemanejar(null)} onSuccess={() => { fetchAlunos(); fetchEscolas(); }} />
+      <AtestadoMedicoModal
+        aluno={alunoParaAtestado && selectedEscola ? { id: alunoParaAtestado.id, nome: alunoParaAtestado.nome, escolaId: alunoParaAtestado.escola_id || selectedEscola.id } : null}
+        onClose={() => setAlunoParaAtestado(null)}
+      />      
       
       <ConfirmActionModal
         isOpen={!!alunoParaExcluir}

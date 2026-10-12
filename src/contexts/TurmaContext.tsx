@@ -6,6 +6,8 @@ import * as OfflineTurmaService from '../services/turmaServiceOffline';
 import { OfflineNoCacheError } from '../services/turmaServiceOffline';
 import { useToast } from '../components/common/Toast';
 import { useAuth } from './AuthContext';
+import { alunosComAtestadoNaData } from '../services/atestadoService';
+import { aplicarAtestadoNaChamada } from '../utils/atestadoFrequencia';
 
 export interface TurmaMetricas {
   frequencia: number;
@@ -49,6 +51,8 @@ export interface Aluno {
   freq: string;
   part: string;
   notas?: Record<string, string>; // ID da avaliação -> valor da nota
+  /** Falta justificada travada pelo atestado da secretaria. O professor não remove. */
+  atestado?: boolean;
 }
 
 export interface ObjetoAvaliacao {
@@ -440,7 +444,10 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     }
     const rawId = getTid(turmaAtiva.id);
     try {
-      await OfflineTurmaService.salvarFrequencia(rawId, turmaAtiva.componente, data, tempo, alunosFreq);
+      const chamada = alunosFreq.map(aluno => (
+        aluno.atestado ? { ...aluno, freq: 'FJ' } : aluno
+      ));
+      await OfflineTurmaService.salvarFrequencia(rawId, turmaAtiva.componente, data, tempo, chamada);
       
       registrarLancamento({
         turmaId: rawId,
@@ -482,16 +489,23 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     if (!turmaAtiva) return;
     const rawId = getTid(turmaAtiva.id);
     const freqData = await OfflineTurmaService.buscarFrequencia(rawId, turmaAtiva.componente, data, tempo);
+    const dataIso = formatarDataParaISO(data);
+    const comAtestado = await alunosComAtestadoNaData(rawId, dataIso);
 
     if (freqData.length > 0) {
       setAlunos(prev => prev.map(aluno => {
         const f = freqData.find(fd => String(fd.aluno_id) === String(aluno.id));
-        if (f) return { ...aluno, freq: f.status, part: f.participacao || 'Presencial' };
-        return aluno;
+        const base = f
+          ? { ...aluno, freq: f.status, part: f.participacao || 'Presencial' }
+          : aluno;
+        return aplicarAtestadoNaChamada(base, comAtestado);
       }));
       registrarLancamento({ turmaId: rawId, data, tipo: 'frequencia', tempo });
     } else {
-      setAlunos(prev => prev.map(aluno => ({ ...aluno, freq: 'P', part: 'Presencial' })));
+      setAlunos(prev => prev.map(aluno => aplicarAtestadoNaChamada(
+        { ...aluno, freq: 'P', part: 'Presencial' },
+        comAtestado
+      )));
     }
   }, [turmaAtiva, registrarLancamento]);
 
