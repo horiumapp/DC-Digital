@@ -67,7 +67,7 @@ export default function MinhaPrivacidade() {
 
         const { data: alunos } = await supabase
           .from('alunos')
-          .select('nome, cpf, data_nascimento, sexo, nome_responsavel, telefone, endereco, matricula, escolas(nome), turmas(nome)')
+          .select('nome, cpf, data_nascimento, sexo, nome_responsavel, telefone, endereco, escolas(nome), turmas(nome)')
           .or(`cpf.eq.${cpfFormatado},cpf.eq.${cpfDigits}`)
           .limit(1);
 
@@ -84,7 +84,6 @@ export default function MinhaPrivacidade() {
               nome_responsavel: a.nome_responsavel || '---',
               telefone: a.telefone || '---',
               endereco: a.endereco || '---',
-              matricula: a.matricula || '---',
               escola: (Array.isArray(a.escolas) ? a.escolas[0]?.nome : (a.escolas as unknown as RelationWithName | null)?.nome) || '---',
               turma: (Array.isArray(a.turmas) ? a.turmas[0]?.nome : (a.turmas as unknown as RelationWithName | null)?.nome) || '---',
             },

@@ -4,11 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { BookOpen, CalendarCheck, BarChart3, Loader2, LogOut, User, ChevronRight, Calendar, Shield, Key, Lock, X, Eye, EyeOff } from 'lucide-react';
+import { BookOpen, CalendarCheck, BarChart3, Loader2, LogOut, User, ChevronRight, Calendar, Shield } from 'lucide-react';
 import PrivacyLinksFooter from '../components/PrivacyLinksFooter';
 import { APP_CONFIG } from '../config/appConfig';
 import { formatMatriculaCpf } from '../utils/formatters';
-import { useToast } from '../components/common/Toast';
 
 import BoletimTab from '../components/portal/BoletimTab';
 
@@ -56,23 +55,6 @@ export default function PortalAluno() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'notas' | 'frequencia' | 'boletim'>('notas');
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
-
-  // Modal de troca de senha do próprio aluno
-  const { showSuccess, showError, showWarning } = useToast();
-  const [isSenhaModalOpen, setIsSenhaModalOpen] = useState(false);
-  const [novaSenha, setNovaSenha] = useState('');
-  const [confirmarSenha, setConfirmarSenha] = useState('');
-  const [showNovaSenha, setShowNovaSenha] = useState(false);
-  const [showConfirmarSenha, setShowConfirmarSenha] = useState(false);
-  const [isSavingSenha, setIsSavingSenha] = useState(false);
-
-  const closeSenhaModal = () => {
-    setIsSenhaModalOpen(false);
-    setNovaSenha('');
-    setConfirmarSenha('');
-    setShowNovaSenha(false);
-    setShowConfirmarSenha(false);
-  };
 
   const toggleMonth = (monthKey: string) => {
     const newExpanded = new Set(expandedMonths);
@@ -430,17 +412,6 @@ export default function PortalAluno() {
               <Shield className="w-5 h-5" />
             </Link>
             <button
-              onClick={() => {
-                setNovaSenha('');
-                setConfirmarSenha('');
-                setIsSenhaModalOpen(true);
-              }}
-              className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/10 cursor-pointer text-white flex items-center justify-center"
-              title="Alterar Minha Senha"
-            >
-              <Key className="w-5 h-5" />
-            </button>
-            <button
               onClick={logout}
               className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/10 cursor-pointer"
               title="Sair"
@@ -697,136 +668,6 @@ export default function PortalAluno() {
       </main>
 
       <PrivacyLinksFooter className="py-6" />
-
-      {/* Modal de Alteração de Senha do Aluno */}
-      {isSenhaModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-5 border border-slate-100 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#6354c7] flex items-center justify-center">
-                  <Lock className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-800">Alterar Minha Senha</h3>
-                  <p className="text-xs text-slate-500">Cadastre uma senha pessoal para acesso</p>
-                </div>
-              </div>
-              <button
-                onClick={closeSenhaModal}
-                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                aria-label="Fechar"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                if (novaSenha.length < 8) {
-                  showWarning('A senha deve ter no mínimo 8 caracteres.');
-                  return;
-                }
-                if (!/[a-zA-Z]/.test(novaSenha) || !/\d/.test(novaSenha)) {
-                  showWarning('A senha deve conter pelo menos uma letra e um número.');
-                  return;
-                }
-                if (novaSenha !== confirmarSenha) {
-                  showError('As senhas não coincidem. Digite novamente.');
-                  return;
-                }
-
-                setIsSavingSenha(true);
-                try {
-                  const { error: pwdErr } = await supabase.auth.updateUser({ password: novaSenha });
-                  if (pwdErr) throw pwdErr;
-                  showSuccess('Sua senha foi alterada com sucesso!');
-                  closeSenhaModal();
-                } catch (err: unknown) {
-                  const msg = err instanceof Error ? err.message : 'Não foi possível alterar a senha.';
-                  showError(msg);
-                } finally {
-                  setIsSavingSenha(false);
-                }
-              }}
-              className="space-y-4"
-            >
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Nova Senha (mínimo 8 caracteres)
-                </label>
-                <div className="relative">
-                  <input
-                    type={showNovaSenha ? 'text' : 'password'}
-                    value={novaSenha}
-                    onChange={(e) => setNovaSenha(e.target.value)}
-                    placeholder="Nova senha secreta"
-                    required
-                    minLength={8}
-                    disabled={isSavingSenha}
-                    className="w-full px-3.5 py-2.5 pr-11 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] transition"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNovaSenha((prev) => !prev)}
-                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#6354c7] transition-colors cursor-pointer"
-                    aria-label={showNovaSenha ? 'Ocultar senha' : 'Mostrar senha'}
-                    title={showNovaSenha ? 'Ocultar senha' : 'Mostrar senha'}
-                  >
-                    {showNovaSenha ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Confirmar Nova Senha
-                </label>
-                <div className="relative">
-                  <input
-                    type={showConfirmarSenha ? 'text' : 'password'}
-                    value={confirmarSenha}
-                    onChange={(e) => setConfirmarSenha(e.target.value)}
-                    placeholder="Repita a nova senha"
-                    required
-                    minLength={8}
-                    disabled={isSavingSenha}
-                    className="w-full px-3.5 py-2.5 pr-11 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#6354c7]/10 focus:border-[#6354c7] transition"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmarSenha((prev) => !prev)}
-                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#6354c7] transition-colors cursor-pointer"
-                    aria-label={showConfirmarSenha ? 'Ocultar senha' : 'Mostrar senha'}
-                    title={showConfirmarSenha ? 'Ocultar senha' : 'Mostrar senha'}
-                  >
-                    {showConfirmarSenha ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={closeSenhaModal}
-                  disabled={isSavingSenha}
-                  className="flex-1 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingSenha}
-                  className="flex-1 py-2.5 bg-[#6354c7] hover:bg-[#5142ad] text-white rounded-xl text-sm font-bold shadow-md shadow-[#6354c7]/20 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {isSavingSenha ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar Senha'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
