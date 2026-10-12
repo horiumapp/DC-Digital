@@ -8,6 +8,7 @@ import { BookOpen, CalendarCheck, BarChart3, Loader2, LogOut, User, ChevronRight
 import PrivacyLinksFooter from '../components/PrivacyLinksFooter';
 import { APP_CONFIG } from '../config/appConfig';
 import { formatMatriculaCpf } from '../utils/formatters';
+import { retratoPorSexo } from '../utils/retratoAluno';
 
 import BoletimTab from '../components/portal/BoletimTab';
 
@@ -394,6 +395,8 @@ export default function PortalAluno() {
   // Ordenar meses decrescente
   const mesesOrdenados = Object.keys(frequenciasPorMes).sort((a, b) => b.localeCompare(a));
 
+  const retrato = retratoPorSexo(alunoData?.sexo);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -421,7 +424,7 @@ export default function PortalAluno() {
 
       <main className="portal-page portal-student-page">
         <PageHeading eyebrow="SUA JORNADA DE APRENDIZAGEM" title={'Você está construindo o futuro, '+(alunoData?.nome||user?.name||'estudante').split(' ')[0]+'.'} description="Cada presença, cada descoberta e cada conquista têm seu lugar aqui."/>
-        {alunoData&&<><section className="portal-student-identity"><div><span className="portal-eyebrow">SEU ESPAÇO ACADÊMICO</span><h2>{alunoData.nome}</h2><p>{alunoData.escola_nome}</p></div><span className="portal-student-class">{alunoData.turma_nome}<small>ANO LETIVO {APP_CONFIG.YEAR}</small></span><span className="portal-student-flower" aria-hidden="true">✳</span></section><div className="portal-metrics"><Metric label="Sua presença" value={percentual+'%'} detail={presencas+' de '+totalAulas+' aulas'} tone="mint"/><Metric label="Componentes" value={Object.keys(notasPorDisciplina).length} detail="Com avaliações registradas" tone="violet"/><Metric label="Minha turma" value={alunoData.turma_nome} detail={'Matrícula: '+(alunoData.matricula||'—')} tone="apricot"/></div></>}
+        {alunoData&&<><section className="portal-student-identity"><div><span className="portal-eyebrow">SEU ESPAÇO ACADÊMICO</span><h2>{alunoData.nome}</h2><p>{alunoData.escola_nome}</p></div>{retrato ? <img className="portal-student-portrait" src={retrato} alt="" /> : <span className="portal-student-flower" aria-hidden="true">✳</span>}</section><div className="portal-metrics"><Metric label="Sua presença" value={percentual+'%'} detail={presencas+' de '+totalAulas+' aulas'} tone="mint"/><Metric label="Componentes" value={Object.keys(notasPorDisciplina).length} detail="Com avaliações registradas" tone="violet"/><Metric label="Minha turma" value={alunoData.turma_nome} detail={'Matrícula: '+(alunoData.matricula||'—')} tone="apricot"/></div></>}
         {!alunoData && (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 shadow-sm text-center">
             <User className="w-16 h-16 text-slate-200 mx-auto mb-4" />
