@@ -11,6 +11,7 @@ import { db, now, hashOperation, OPERATIONAL_TABLE_NAMES, getOperationalTable, t
 import { supabase } from '../lib/supabase';
 import { encryptFields, decryptFields, getOrCreateKey } from '../lib/crypto';
 import { getTid } from '../utils/turmaUtils';
+import { historicoAposAlteracao } from '../utils/regraFrequenciaLdb';
 import type {
   LocalFrequencia,
   LocalConteudo,
@@ -205,6 +206,7 @@ export async function saveFrequenciaLocal(data: Omit<LocalFrequencia, 'localId' 
     if (existing && existing.localId) {
       await db.frequencias.update(existing.localId, {
         ...normalizedData,
+        historico: historicoAposAlteracao(existing, normalizedData, timestamp),
         syncStatus: 'pending',
         updatedAt: timestamp,
         version: (existing.version || 0) + 1,
@@ -214,6 +216,7 @@ export async function saveFrequenciaLocal(data: Omit<LocalFrequencia, 'localId' 
 
     return await db.frequencias.add({
       ...normalizedData,
+      historico: historicoAposAlteracao(undefined, normalizedData, timestamp),
       syncStatus: 'pending',
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -262,6 +265,7 @@ export async function saveFrequenciasBulk(
         if (existing && existing.localId) {
           await db.frequencias.update(existing.localId, {
             ...data,
+            historico: historicoAposAlteracao(existing, data, timestamp),
             syncStatus: 'pending',
             updatedAt: timestamp,
             version: (existing.version || 0) + 1,
@@ -269,6 +273,7 @@ export async function saveFrequenciasBulk(
         } else {
           await db.frequencias.add({
             ...data,
+            historico: historicoAposAlteracao(undefined, data, timestamp),
             syncStatus: 'pending',
             createdAt: timestamp,
             updatedAt: timestamp,
@@ -389,6 +394,7 @@ export async function cacheFrequencias(turmaId: string, records: Omit<LocalFrequ
         if ((await db.frequencias.get(existing.localId))?.syncStatus === 'synced') {
           await db.frequencias.update(existing.localId, {
             ...data,
+            historico: historicoAposAlteracao(existing, data, timestamp),
             syncStatus: 'synced',
             updatedAt: timestamp,
             version: (existing.version || 0),
@@ -398,6 +404,7 @@ export async function cacheFrequencias(turmaId: string, records: Omit<LocalFrequ
         await db.frequencias.add({
           ...data,
           turma_id: tid,
+          historico: historicoAposAlteracao(undefined, data, timestamp),
           syncStatus: 'synced',
           createdAt: timestamp,
           updatedAt: timestamp,

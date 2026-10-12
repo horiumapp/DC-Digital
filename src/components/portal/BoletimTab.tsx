@@ -87,7 +87,7 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
       const limite = numeroBimestre <= 2 ? 20 : 30;
       if (nota !== null && nota > limite) nota = limite;
       const faltas = frequenciasDisciplina.filter(frequencia =>
-        (frequencia.status === 'F' || frequencia.status === 'Ausente') && getBimestrePorData(frequencia.data).startsWith(bimestre[0])
+        (frequencia.status === 'F' || frequencia.status === 'Ausente' || frequencia.status === 'FJ') && getBimestrePorData(frequencia.data).startsWith(bimestre[0])
       ).length;
       return { bimestre, nota, faltas };
     });
@@ -129,7 +129,7 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
           <div><p className="text-xs font-bold uppercase text-slate-400">Escola</p><p className="mt-1 font-bold text-slate-700">{alunoData.escola_nome}</p></div>
           <div><p className="text-xs font-bold uppercase text-slate-400">Matrícula</p><p className="mt-1 font-bold text-slate-700">{alunoData.matricula}</p></div>
           <div><p className="text-xs font-bold uppercase text-slate-400">Ano letivo</p><p className="mt-1 font-bold text-slate-700">{alunoData.turma_ano}</p></div>
-          <div><p className="text-xs font-bold uppercase text-slate-400">Total de faltas</p><p className="mt-1 text-lg font-black text-slate-800">{frequencias.filter(f => f.status === 'F' || f.status === 'Ausente').length}</p></div>
+          <div><p className="text-xs font-bold uppercase text-slate-400">Total de faltas</p><p className="mt-1 text-lg font-black text-slate-800">{frequencias.filter(f => f.status === 'F' || f.status === 'Ausente' || f.status === 'FJ').length}</p></div>
         </div>
         <div className="space-y-3">
           <h3 className="px-1 text-base font-black text-slate-800">Notas e frequência</h3>

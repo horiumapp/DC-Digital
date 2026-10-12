@@ -54,6 +54,13 @@ export interface LocalFrequencia {
   status: string;
   participacao: string;
   disciplina: string;
+  historico?: {
+    em: string;
+    statusAnterior: string | null;
+    statusNovo: string | null;
+    participacaoAnterior: string | null;
+    participacaoNova: string | null;
+  }[];
   syncStatus: SyncStatus;
   createdAt: string;
   updatedAt: string;

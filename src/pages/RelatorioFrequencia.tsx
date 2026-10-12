@@ -8,6 +8,15 @@ import { supabase } from '../lib/supabase';
 import { formatarDataParaISO, formatarDiaMes } from '../utils/dateUtils';
 import { APP_CONFIG } from '../config/appConfig';
 import { labelBimestreAtual, mesAtualRelatorio, escolherTurmaRelatorio } from '../utils/relatorioFiltro';
+import {
+  calcularFrequenciaLdb,
+  classificarEtapaFrequencia,
+  hojeLocalIso,
+  momentoDoAnoLetivo,
+  type AvaliacaoFrequencia,
+  type MomentoFrequencia,
+} from '../utils/regraFrequenciaLdb';
+import { registrarDecisoesFechamento } from '../services/decisaoFrequencia';
 import { useTurma } from '../contexts/TurmaContext';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
 import * as OfflineStorage from '../services/offlineStorage';
@@ -33,7 +42,7 @@ interface AlunoFrequencia {
   matricula: string;
   frequencias: Record<string, string>; // "DD/MM-T" -> "P"|"F"|"FJ"
   totalFaltas: number;
-  porcentagemFrequencia: number;
+  avaliacao: AvaliacaoFrequencia;
 }
 
 const obterLogoEscola = (nomeEscola: string) => {
@@ -53,7 +62,9 @@ const obterLogoEscola = (nomeEscola: string) => {
 export default function RelatorioFrequencia() {
   const { user } = useAuth();
   const { turmaAtiva } = useTurma();
-  const { showError, showWarning } = useToast();
+  const { showError, showWarning, showSuccess } = useToast();
+  const [momentoRelatorio, setMomentoRelatorio] = useState<MomentoFrequencia>('acompanhamento');
+  const [registrandoDecisao, setRegistrandoDecisao] = useState(false);
   const [turmas, setTurmas] = useState<TurmaRelatorio[]>([]);
   const [selectedTurmaId, setSelectedTurmaId] = useState('');
   const [dataLoading, setDataLoading] = useState(false);
@@ -118,10 +129,18 @@ export default function RelatorioFrequencia() {
       const componente = (rawComp || turmaObj?.componente || '').trim();
       let dateStart = '';
       let dateEnd = '';
-      const hojeISO = new Date().toISOString().split('T')[0];
+      const hojeISO = hojeLocalIso();
+
+      const fimAnoLetivo = APP_CONFIG.PERIODOS.find(p => p.id === 'ÚNICO')?.dataFim || hojeISO;
+      const momento: MomentoFrequencia = periodoSelecionado === 'ANO LETIVO'
+        ? momentoDoAnoLetivo(hojeISO, fimAnoLetivo)
+        : 'acompanhamento';
+      setMomentoRelatorio(momento);
 
       if (opcaoFiltro === 'Período') {
-        const period = APP_CONFIG.PERIODOS.find(p => p.label === periodoSelecionado);
+        const period = periodoSelecionado === 'ANO LETIVO'
+          ? APP_CONFIG.PERIODOS.find(p => p.id === 'ÚNICO')
+          : APP_CONFIG.PERIODOS.find(p => p.label === periodoSelecionado);
         if (period) {
           dateStart = period.dataInicio;
           dateEnd = period.dataFim > hojeISO ? hojeISO : period.dataFim;
@@ -210,20 +229,20 @@ export default function RelatorioFrequencia() {
       setColunasDatas(colunasSorted);
 
       // 4. Mapear Alunos e Frequências
+      const etapa = classificarEtapaFrequencia(turmaObj?.ensino, turmaObj?.fase, turmaObj?.nome);
       const mappedAlunos: AlunoFrequencia[] = alunosList.map(a => {
         const freqsAlun: Record<string, string> = {};
-        let faltas = 0;
-        const totalTempos = colunasSorted.length;
 
         colunasSorted.forEach(colKey => {
           const [data, tempo] = colKey.split('|');
           const f = finalFreqs.find(fr => fr.aluno_id.toString() === a.id && fr.data === data && fr.tempo === tempo);
-          if (f) {
-            freqsAlun[colKey] = f.status;
-            if (f.status === 'F') faltas++;
-          } else {
-            freqsAlun[colKey] = 'P'; // Default Presença se houver aula mas não houver registro específico (assumindo que o dia teve aula)
-          }
+          if (f) freqsAlun[colKey] = f.status;
+        });
+
+        const avaliacao = calcularFrequenciaLdb({
+          etapa,
+          momento,
+          registros: Object.values(freqsAlun).map(status => ({ cargaHoraria: 1, status })),
         });
 
         return {
@@ -231,8 +250,8 @@ export default function RelatorioFrequencia() {
           nome: a.nome,
           matricula: a.matricula,
           frequencias: freqsAlun,
-          totalFaltas: faltas,
-          porcentagemFrequencia: totalTempos > 0 ? (faltas / totalTempos) * 100 : 0
+          totalFaltas: avaliacao.cargaFaltas,
+          avaliacao,
         };
       });
 
@@ -258,6 +277,29 @@ export default function RelatorioFrequencia() {
   };
 
   const selectedTurmaObj = turmas.find(t => `${t.id}|${t.componente}` === selectedTurmaId) || turmas.find(t => t.id === selectedTurmaId);
+  const podeRegistrarFechamento = momentoRelatorio === 'fechamento'
+    && !!user
+    && ['ADMIN', 'GESTOR', 'GESTOR_SEMEC', 'SECRETARIO'].includes(user.role);
+
+  const registrarFechamento = async () => {
+    if (!selectedTurmaObj || alunosRelatorio.length === 0) return;
+    setRegistrandoDecisao(true);
+    try {
+      await registrarDecisoesFechamento(alunosRelatorio.map(aluno => ({
+        turmaId: selectedTurmaObj.id,
+        alunoId: aluno.id,
+        disciplina: selectedTurmaObj.componente || 'GERAL',
+        periodo: 'ANO LETIVO',
+        avaliacao: aluno.avaliacao,
+      })));
+      showSuccess('Decisão de frequência registrada no histórico do fechamento.');
+    } catch (err) {
+      console.error(err);
+      showError('Não foi possível registrar a decisão de frequência.');
+    } finally {
+      setRegistrandoDecisao(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 relative pb-10">
@@ -326,7 +368,10 @@ export default function RelatorioFrequencia() {
                       className="w-full sm:flex-1 min-w-0 py-2.5 px-3.5 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-blue-500/10 outline-none font-bold text-[#6354c7]"
                     >
                       {opcaoFiltro === 'Período' ? (
-                        APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE')).map(p => <option key={p.label} value={p.label}>{p.label}</option>)
+                        <>
+                          <option value="ANO LETIVO">Ano letivo</option>
+                          {APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE')).map(p => <option key={p.label} value={p.label}>{p.label}</option>)}
+                        </>
                       ) : (
                         ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'].map(m => <option key={m} value={m}>{m}</option>)
                       )}
@@ -376,6 +421,28 @@ export default function RelatorioFrequencia() {
                 </div>
               </div>
 
+              {alunosRelatorio.length > 0 && (
+                <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  <p className="font-bold text-slate-700">
+                    {momentoRelatorio === 'fechamento' ? 'Fechamento do período letivo' : 'Acompanhamento da carga horária já realizada'}
+                  </p>
+                  <p className="mt-1">
+                    {alunosRelatorio[0].avaliacao.observacao}
+                    {' '}Cada tempo de aula entra na carga horária. Falta justificada não é abonada automaticamente.
+                  </p>
+                  {podeRegistrarFechamento && (
+                    <button
+                      type="button"
+                      onClick={registrarFechamento}
+                      disabled={registrandoDecisao}
+                      className="mt-3 bg-[#6354c7] text-white px-4 py-2 rounded-lg text-sm font-bold disabled:opacity-60"
+                    >
+                      {registrandoDecisao ? 'Registrando...' : 'Registrar decisão de fechamento'}
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div className="relative mb-4 sm:mb-6">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
@@ -409,7 +476,9 @@ export default function RelatorioFrequencia() {
                         );
                       })}
                       <th className="px-3 sm:px-4 py-3 font-bold text-[11px] text-center w-20 sm:w-24 border-r border-slate-200 bg-blue-50">FALTAS</th>
-                      <th className="px-3 sm:px-4 py-3 font-bold text-[11px] text-center w-20 sm:w-24 bg-blue-50">%</th>
+                      <th className="px-3 sm:px-4 py-3 font-bold text-[11px] text-center w-20 sm:w-24 border-r border-slate-200 bg-blue-50">FREQ.</th>
+                      <th className="px-3 sm:px-4 py-3 font-bold text-[11px] text-center w-20 sm:w-24 border-r border-slate-200 bg-blue-50">AUSÊNCIA</th>
+                      <th className="px-3 sm:px-4 py-3 font-bold text-[11px] text-center min-w-[140px] bg-blue-50">SITUAÇÃO</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -434,10 +503,12 @@ export default function RelatorioFrequencia() {
                           <span className="bg-[#eef2ff] px-2 py-0.5 rounded-full border border-blue-100 text-xs">{aluno.totalFaltas}</span>
                         </td>
                         <td className="px-3 sm:px-4 py-3 text-center font-black text-white bg-[#eef2ff]/30">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] ${aluno.porcentagemFrequencia > 25 ? 'bg-red-500' : 'bg-blue-600'}`}>
-                            {aluno.porcentagemFrequencia.toFixed(1).replace('.', ',')}%
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] ${aluno.avaliacao.alerta ? 'bg-red-500' : 'bg-blue-600'}`}>
+                            {aluno.avaliacao.frequenciaExibicao}
                           </span>
                         </td>
+                        <td className="px-3 sm:px-4 py-3 text-center text-xs font-bold text-slate-600">{aluno.avaliacao.ausenciaExibicao}</td>
+                        <td className="px-3 sm:px-4 py-3 text-center text-[11px] font-bold text-slate-700" title={aluno.avaliacao.alerta || aluno.avaliacao.observacao}>{aluno.avaliacao.rotulo}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -580,8 +651,10 @@ export default function RelatorioFrequencia() {
                     </th>
                   );
                 })}
-                <th style={{ width: '6%' }}>FALTAS</th>
-                <th style={{ width: '6%' }}>FREQ. %</th>
+                <th style={{ width: '5%' }}>FALTAS</th>
+                <th style={{ width: '6%' }}>FREQ.</th>
+                <th style={{ width: '6%' }}>AUSÊNCIA</th>
+                <th style={{ width: '10%' }}>SITUAÇÃO</th>
               </tr>
             </thead>
             <tbody>
@@ -597,7 +670,9 @@ export default function RelatorioFrequencia() {
                     </td>
                   ))}
                   <td className="font-bold">{aluno.totalFaltas}</td>
-                  <td className="font-bold">{(100 - aluno.porcentagemFrequencia).toFixed(1)}%</td>
+                  <td className="font-bold">{aluno.avaliacao.frequenciaExibicao}</td>
+                  <td className="font-bold">{aluno.avaliacao.ausenciaExibicao}</td>
+                  <td className="font-bold">{aluno.avaliacao.rotulo}</td>
                 </tr>
               ))}
             </tbody>

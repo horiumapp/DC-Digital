@@ -9,6 +9,7 @@ import PrivacyLinksFooter from '../components/PrivacyLinksFooter';
 import { APP_CONFIG } from '../config/appConfig';
 import { formatMatriculaCpf } from '../utils/formatters';
 import { retratoPorSexo } from '../utils/retratoAluno';
+import { calcularFrequenciaLdb, classificarEtapaFrequencia } from '../utils/regraFrequenciaLdb';
 
 import BoletimTab from '../components/portal/BoletimTab';
 
@@ -294,12 +295,17 @@ export default function PortalAluno() {
     setLoading(false);
   }
 
-  // Calcular estatísticas de frequência
-  const totalAulas = frequencias.length;
-  const presencas = frequencias.filter(f => f.status === 'P').length;
-  const faltas = frequencias.filter(f => f.status === 'F').length;
-  const faltasJustificadas = frequencias.filter(f => f.status === 'FJ').length;
-  const percentual = totalAulas > 0 ? Math.round((presencas / totalAulas) * 100) : 0;
+  // Cada registro é um tempo de aula. O percentual acompanha a carga já realizada e não declara reprovação.
+  const avaliacaoFrequencia = calcularFrequenciaLdb({
+    etapa: classificarEtapaFrequencia(alunoData?.ensino_modalidade, alunoData?.turma_nome),
+    momento: 'acompanhamento',
+    registros: frequencias.map(f => ({ cargaHoraria: 1, status: f.status })),
+  });
+  const totalAulas = avaliacaoFrequencia.cargaLetivaTotal;
+  const presencas = avaliacaoFrequencia.cargaFrequentada - avaliacaoFrequencia.cargaAbonadaPelaEscola;
+  const faltas = avaliacaoFrequencia.cargaFaltas - avaliacaoFrequencia.cargaJustificadaNaoAbonada;
+  const faltasJustificadas = avaliacaoFrequencia.cargaJustificadaNaoAbonada;
+  const frequenciaEmAlerta = Boolean(avaliacaoFrequencia.alerta);
 
   // Agrupar notas por disciplina
   const notasPorDisciplina = notas.reduce((acc, nota) => {
@@ -434,7 +440,7 @@ export default function PortalAluno() {
 
       <main className="portal-page portal-student-page">
         <PageHeading eyebrow="SUA JORNADA DE APRENDIZAGEM" title={'Você está construindo o futuro, '+(alunoData?.nome||user?.name||'estudante').split(' ')[0]+'.'} description="Cada presença, cada descoberta e cada conquista têm seu lugar aqui."/>
-        {alunoData&&<><section className="portal-student-identity"><div><span className="portal-eyebrow">SEU ESPAÇO ACADÊMICO</span><h2>{alunoData.nome}</h2><p>{alunoData.escola_nome}</p></div>{retrato ? <img className="portal-student-portrait" src={retrato} alt="" /> : <span className="portal-student-flower" aria-hidden="true">✳</span>}</section><div className="portal-metrics"><Metric label="Sua presença" value={percentual+'%'} detail={presencas+' de '+totalAulas+' aulas'} tone="mint"/><Metric label="Componentes" value={Object.keys(notasPorDisciplina).length} detail="Com avaliações registradas" tone="violet"/><Metric label="Minha turma" value={alunoData.turma_nome} detail={'Matrícula: '+(alunoData.matricula||'—')} tone="apricot"/></div></>}
+        {alunoData&&<><section className="portal-student-identity"><div><span className="portal-eyebrow">SEU ESPAÇO ACADÊMICO</span><h2>{alunoData.nome}</h2><p>{alunoData.escola_nome}</p></div>{retrato ? <img className="portal-student-portrait" src={retrato} alt="" /> : <span className="portal-student-flower" aria-hidden="true">✳</span>}</section><div className="portal-metrics"><Metric label="Sua presença" value={avaliacaoFrequencia.frequenciaExibicao} detail={avaliacaoFrequencia.calculada ? presencas+' de '+totalAulas+' tempos de aula' : 'Frequência não calculada'} tone="mint"/><Metric label="Componentes" value={Object.keys(notasPorDisciplina).length} detail="Com avaliações registradas" tone="violet"/><Metric label="Minha turma" value={alunoData.turma_nome} detail={'Matrícula: '+(alunoData.matricula||'—')} tone="apricot"/></div></>}
         {!alunoData && (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 shadow-sm text-center">
             <User className="w-16 h-16 text-slate-200 mx-auto mb-4" />
@@ -574,9 +580,11 @@ export default function PortalAluno() {
                     <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Justificadas</span>
                     <p className="text-2xl font-black text-amber-600 mt-1">{faltasJustificadas}</p>
                   </div>
-                  <div className={`rounded-2xl border p-4 text-center ${percentual >= 75 ? 'bg-blue-50 border-blue-100' : 'bg-orange-50 border-orange-100'}`}>
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${percentual >= 75 ? 'text-blue-500' : 'text-orange-500'}`}>Frequência</span>
-                    <p className={`text-2xl font-black mt-1 ${percentual >= 75 ? 'text-blue-600' : 'text-orange-600'}`}>{percentual}%</p>
+                  <div className={`rounded-2xl border p-4 text-center ${!avaliacaoFrequencia.calculada ? 'bg-slate-50 border-slate-200' : frequenciaEmAlerta ? 'bg-orange-50 border-orange-100' : 'bg-blue-50 border-blue-100'}`}>
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${!avaliacaoFrequencia.calculada ? 'text-slate-400' : frequenciaEmAlerta ? 'text-orange-500' : 'text-blue-500'}`}>Frequência</span>
+                    <p className={`text-2xl font-black mt-1 ${!avaliacaoFrequencia.calculada ? 'text-slate-500 text-sm' : frequenciaEmAlerta ? 'text-orange-600' : 'text-blue-600'}`}>{avaliacaoFrequencia.frequenciaExibicao}</p>
+                    {avaliacaoFrequencia.alerta && <p className="mt-2 text-[10px] font-bold leading-snug text-orange-700">{avaliacaoFrequencia.alerta}</p>}
+                    {avaliacaoFrequencia.calculada && <p className="mt-2 text-[10px] font-bold text-slate-400">Ausência {avaliacaoFrequencia.ausenciaExibicao}</p>}
                   </div>
                 </div>
 

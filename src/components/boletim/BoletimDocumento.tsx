@@ -1,6 +1,14 @@
 import React from 'react';
 import { getBimestrePorData } from '../../utils/dateUtils';
 import { isNomeValido } from '../../utils/escolaUtils';
+import { APP_CONFIG } from '../../config/appConfig';
+import {
+  calcularFrequenciaLdb,
+  classificarEtapaFrequencia,
+  definirSituacaoPeriodo,
+  hojeLocalIso,
+  momentoDoAnoLetivo,
+} from '../../utils/regraFrequenciaLdb';
 
 export interface AlunoBoletimData {
   id: string;
@@ -56,6 +64,10 @@ export default function BoletimDocumento({
   className = '',
 }: BoletimDocumentoProps) {
   const bimestres = ['1º', '2º', '3º', '4º'];
+  const etapaFrequencia = classificarEtapaFrequencia(alunoData.ensino_modalidade, alunoData.turma_nome);
+  const fimAnoLetivo = APP_CONFIG.PERIODOS.find(periodo => periodo.id === 'ÚNICO')?.dataFim || '';
+  const momentoFrequencia = momentoDoAnoLetivo(hojeLocalIso(), fimAnoLetivo);
+  const faltaNaCarga = (status: string) => status === 'F' || status === 'Ausente' || status === 'FJ';
 
   const diretorExibicao = isNomeValido(alunoData.escola_diretor) ? (alunoData.escola_diretor || '').trim() : '';
   const secretarioExibicao = isNomeValido(alunoData.escola_secretario) ? (alunoData.escola_secretario || '').trim() : '';
@@ -231,8 +243,8 @@ export default function BoletimDocumento({
                       bimestresComNota++;
                     }
 
-                    const faltasBim = freqDisc.filter(f => 
-                      (f.status === 'F' || f.status === 'Ausente') && 
+                    const faltasBim = freqDisc.filter(f =>
+                      faltaNaCarga(f.status) &&
                       getBimestrePorData(f.data).startsWith(bim[0])
                     ).length;
 
@@ -252,7 +264,15 @@ export default function BoletimDocumento({
                     {!isEmpty && bimestresComNota > 0 ? somaMedias.toFixed(1) : ''}
                   </td>
                   <td className="px-1 py-0.5 text-center text-[8px] font-bold">
-                    {!isEmpty && bimestresComNota >= 4 ? (somaMedias >= 50 ? 'APROVADO' : 'EXAME') : ''}
+                    {!isEmpty ? definirSituacaoPeriodo({
+                      etapa: etapaFrequencia,
+                      avaliacao: calcularFrequenciaLdb({
+                        etapa: etapaFrequencia,
+                        momento: momentoFrequencia,
+                        registros: freqDisc.map(f => ({ cargaHoraria: 1, status: f.status })),
+                      }),
+                      notasSuficientes: bimestresComNota >= 4 ? somaMedias >= 50 : null,
+                    }) : ''}
                   </td>
                 </tr>
               );
@@ -266,7 +286,7 @@ export default function BoletimDocumento({
           <div className="border-l border-black p-1.5 w-44 bg-white">
             <p className="text-[7px] font-bold uppercase leading-none mb-1 text-slate-500">Total de Faltas</p>
             <p className="text-[11px] font-black leading-none text-right pr-2">
-              {frequencias.filter(f => f.status === 'F' || f.status === 'Ausente').length}
+              {frequencias.filter(f => faltaNaCarga(f.status)).length}
             </p>
           </div>
         </div>

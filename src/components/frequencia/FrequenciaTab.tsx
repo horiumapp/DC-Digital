@@ -337,6 +337,7 @@ export default function FrequenciaTab({
                 <span className="w-4 h-4 rounded-full bg-amber-500 text-white font-bold text-[9px] flex items-center justify-center">FJ</span>
                 Falta Justificada
               </span>
+              <span className="text-slate-500">Justificativa não abona a falta. Situação especial depende de registro e validação da escola.</span>
               <span className="inline-flex items-center gap-1">
                 <span className="w-4 h-4 rounded-full bg-slate-300 dark:bg-slate-600" />
                 Sem lançamento
