@@ -18,11 +18,11 @@ export default function CampoSenha({ className = '', disabled, ...props }: Campo
         type="button"
         disabled={disabled}
         onClick={() => setVisivel((atual) => !atual)}
-        className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-[#6354c7] disabled:opacity-40 transition-colors"
+        className="absolute inset-y-0 right-0 z-10 flex w-11 items-center justify-center text-slate-500 hover:text-[#6354c7] disabled:opacity-40 transition-colors"
         aria-label={visivel ? 'Ocultar senha' : 'Mostrar senha'}
         title={visivel ? 'Ocultar senha' : 'Mostrar senha'}
       >
-        {visivel ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        {visivel ? <EyeOff className="w-5 h-5" strokeWidth={2} /> : <Eye className="w-5 h-5" strokeWidth={2} />}
       </button>
     </div>
   );
