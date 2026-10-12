@@ -328,7 +328,16 @@ const ScheduleModal = React.memo(function ScheduleModal({ isOpen, onClose, profe
       await fetchData(targetProfId, targetEscolaId);
     } catch (err) {
       console.error('Erro ao salvar horários:', err);
-      showError('Erro ao salvar horários.');
+      const message = err && typeof err === 'object' && 'message' in err && typeof err.message === 'string'
+        ? err.message
+        : '';
+      if (message.includes('componente inválido') || message.includes('Dia, tempo')) {
+        showError('Escolha a disciplina de cada aula antes de salvar.');
+      } else if (message.includes('duplicate key') || message.includes('conflito')) {
+        showError('Esse tempo já está ocupado na grade deste professor nesta escola.');
+      } else {
+        showError('Erro ao salvar horários.');
+      }
     } finally {
       setSaving(false);
     }
