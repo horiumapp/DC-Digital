@@ -122,7 +122,7 @@ export default function TabUsuarios() {
     <div className="flex flex-col h-full bg-slate-50/50 overflow-hidden">
       {/* Header */}
       <div className="p-6 flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 gap-4 bg-white shrink-0">
-        <div>
+        <div className="shrink-0">
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             <Users className="w-5 h-5 text-[#6354c7]" />
             Usuários de Acesso
@@ -131,21 +131,21 @@ export default function TabUsuarios() {
             Gerencie e visualize as contas de acesso ao sistema agrupadas por perfil.
           </p>
         </div>
-          <div className="flex flex-col sm:flex-row items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-3 min-w-0 flex-1">
             <button
               type="button"
               onClick={() => setCadastroAberto(true)}
-              className="flex items-center gap-2 bg-[#6354c7] hover:bg-[#5142ad] text-white px-3 py-2 rounded-lg text-xs font-bold"
+              className="flex shrink-0 items-center gap-2 bg-[#6354c7] hover:bg-[#5142ad] text-white px-3 py-2 rounded-lg text-xs font-bold"
             >
               <Plus className="w-4 h-4" />
               Gestor SEMEC
             </button>
-          <div className="flex bg-slate-100 p-1 rounded-lg">
+          <div className="flex flex-wrap bg-slate-100 p-1 rounded-lg gap-1">
             {CARGOS.map(cargo => (
               <button
                 key={cargo}
                 onClick={() => setFiltroCargo(cargo)}
-                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${
                   filtroCargo === cargo 
                     ? 'bg-white text-[#6354c7] shadow-sm' 
                     : 'text-slate-500 hover:text-slate-700'
@@ -155,7 +155,7 @@ export default function TabUsuarios() {
               </button>
             ))}
           </div>
-          <div className="relative w-full sm:w-64">
+          <div className="relative w-full sm:w-64 shrink-0">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-slate-400" />
             </div>
