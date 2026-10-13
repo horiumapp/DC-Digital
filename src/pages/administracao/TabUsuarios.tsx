@@ -132,14 +132,6 @@ export default function TabUsuarios() {
           </p>
         </div>
           <div className="flex flex-wrap items-center justify-end gap-3 min-w-0 flex-1">
-            <button
-              type="button"
-              onClick={() => setCadastroAberto(true)}
-              className="flex shrink-0 items-center gap-2 bg-[#6354c7] hover:bg-[#5142ad] text-white px-3 py-2 rounded-lg text-xs font-bold"
-            >
-              <Plus className="w-4 h-4" />
-              Gestor SEMEC
-            </button>
           <div className="flex flex-wrap bg-slate-100 p-1 rounded-lg gap-1">
             {CARGOS.map(cargo => (
               <button
@@ -171,13 +163,25 @@ export default function TabUsuarios() {
       </div>
 
       {/* Tabela */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-6 flex flex-col gap-4">
+        {filtroCargo === 'GESTOR_SEMEC' && (
+          <div className="flex justify-end shrink-0">
+            <button
+              type="button"
+              onClick={() => setCadastroAberto(true)}
+              className="flex items-center gap-2 bg-[#6354c7] hover:bg-[#5142ad] text-white px-3 py-2 rounded-lg text-xs font-bold"
+            >
+              <Plus className="w-4 h-4" />
+              Gestor SEMEC
+            </button>
+          </div>
+        )}
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6354c7]"></div>
           </div>
         ) : usuariosFiltrados.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
+          <div className="flex flex-col items-center justify-center flex-1 text-slate-400 gap-3">
             <Users className="w-12 h-12 text-slate-200" />
             <p className="font-medium">Nenhum usuário encontrado com este filtro.</p>
           </div>
