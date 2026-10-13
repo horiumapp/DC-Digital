@@ -55,6 +55,7 @@ CREATE POLICY "auth_select_conteudos" ON public.conteudos
   USING (public.p_acesso_por_turma(conteudos.turma_id));
 
 DROP POLICY IF EXISTS "Qualquer autenticado pode ver fechamentos" ON public.fechamentos_bimestres;
+DROP POLICY IF EXISTS "auth_select_fechamentos" ON public.fechamentos_bimestres;
 CREATE POLICY "auth_select_fechamentos" ON public.fechamentos_bimestres
   FOR SELECT
   TO authenticated
