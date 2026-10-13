@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 const db = new PGlite();
 await db.exec(`
  CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS;
+ CREATE ROLE supabase_auth_admin;
  CREATE SCHEMA auth; CREATE SCHEMA extensions;
  CREATE TABLE auth.users(id uuid PRIMARY KEY, email text,raw_app_meta_data jsonb DEFAULT '{}',raw_user_meta_data jsonb DEFAULT '{}');
  CREATE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$ SELECT coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb $$;
@@ -60,7 +61,9 @@ const payload={turma_id:ids.class,data:'2026-05-01',tempo:'1',disciplina:'MAT',o
 const op='50000000-0000-0000-0000-000000000001';
 const invoke=async(body,operationId=op)=> (await db.query('SELECT apply_academic_mutation($1,$2,$3,$4) AS result',['conteudos','UPSERT',JSON.stringify(body),operationId])).rows[0].result;
 const first=await invoke(payload); const replay=await invoke(payload); assert.deepEqual(first,replay);
-await assert.rejects(()=>invoke({...payload,descricao:'stale'},'50000000-0000-0000-0000-000000000002'),/CONFLICT/);
+const stale = await invoke({...payload,descricao:'stale'},'50000000-0000-0000-0000-000000000002');
+assert.equal(stale.status, 'partial');
+assert.ok(Array.isArray(stale.conflicts) && stale.conflicts.length >= 1);
 const next=await invoke({...payload,descricao:'v2',_expected_revision:first[0].sync_revision},'50000000-0000-0000-0000-000000000003'); assert.ok(Number(next[0].sync_revision)>Number(first[0].sync_revision));
 await asUser(ids.admin,'service_role');
 await assert.rejects(()=>db.query('SELECT finalize_provisioned_user($1,$2,$3,$4,$5,$6)',[ids.secretary,ids.student,'12345678901@aluno.dcdigital.local','Student','ALUNO',ids.school]),/outra escola/);
@@ -80,11 +83,13 @@ await asUser(ids.teacher);
 // Deletion requires the exact snapshot, and recreating a natural key never reuses its revision.
 const naturalKey=JSON.stringify([ids.class,payload.data,payload.tempo,payload.disciplina]).replaceAll(',',', ');
 const erase=async(expected,operationId)=>db.query('SELECT apply_academic_mutation($1,$2,$3,$4)', ['conteudos','DELETE',JSON.stringify({...payload,_expected:{[naturalKey]:expected}}),operationId]);
-await assert.rejects(()=>erase(first[0].sync_revision,'50000000-0000-0000-0000-000000000004'),/CONFLICT/);
+const staleErase = (await erase(first[0].sync_revision,'50000000-0000-0000-0000-000000000004')).rows[0].apply_academic_mutation;
+assert.equal(staleErase.status, 'partial');
 await erase(next[0].sync_revision,'50000000-0000-0000-0000-000000000005');
 const recreated=await invoke(payload,'50000000-0000-0000-0000-000000000006');
 assert.ok(Number(recreated[0].sync_revision)>Number(next[0].sync_revision));
-await assert.rejects(()=>invoke({...payload,_expected_revision:first[0].sync_revision},'50000000-0000-0000-0000-000000000007'),/CONFLICT/);
+const staleAgain = await invoke({...payload,_expected_revision:first[0].sync_revision},'50000000-0000-0000-0000-000000000007');
+assert.equal(staleAgain.status, 'partial');
 // Evaluation deletion (including cascade) and changes to grades obey period closure.
 const av=(await db.query("INSERT INTO avaliacoes(turma_id,tipo,data,instrumento,bimestre,valor_maximo,disciplina) VALUES($1,'AV01','2026-03-01','Prova','1. BIMESTRE',10,'MAT') RETURNING id",[ids.class])).rows[0].id;
 await rejected(`INSERT INTO notas(avaliacao_id,aluno_id,valor) VALUES(${av},'${ids.a}',11)`,/valor|Nota|nota/);
@@ -254,10 +259,12 @@ await db.query('SELECT delete_curriculo_unidade(p_unidade_id := $1)', [unitToUpd
 assert.equal((await db.query('SELECT count(*) as c FROM curriculo_unidades WHERE id=$1', [unitToUpdate])).rows[0].c, 0);
 assert.equal((await db.query('SELECT count(*) as c FROM curriculo_objetos WHERE unidade_id=$1', [unitToUpdate])).rows[0].c, 0);
 
-// Teste Reauditoria 7: security_logs fecha INSERT anônimo mas permite RPC log_login_failure
+// Falha de login não é mais gravada por anônimo. Só sessão autenticada chama a RPC.
 await db.exec('RESET ROLE');
 await db.exec('SET ROLE anon');
 await rejected(`INSERT INTO security_logs(action,user_agent,entity) VALUES('LOGIN','bot','auth')`, /permission denied/);
+await rejected(`SELECT log_login_failure('s1:testfailurehash', 'Mozilla/5.0 Test')`, /permission denied/);
+await asUser(ids.teacher);
 await db.query('SELECT log_login_failure($1, $2)', ['s1:testfailurehash', 'Mozilla/5.0 Test']);
 await db.exec('RESET ROLE');
 const failureLog = (await db.query("SELECT * FROM security_logs WHERE action='LOGIN_FAILED' AND user_email='s1:testfailurehash'")).rows[0];
@@ -281,7 +288,7 @@ const contPayload = {
   descricao: 'Aula de Geometria',
   _expected_revision: 0
 };
-await db.query('SELECT apply_academic_mutation($1, $2, $3, $4)', ['conteudos', 'UPSERT', JSON.stringify(contPayload), opTestId]);
+const firstIdem = (await db.query('SELECT apply_academic_mutation($1, $2, $3, $4) AS res', ['conteudos', 'UPSERT', JSON.stringify(contPayload), opTestId])).rows[0].res;
 
 const idempRow = (await db.query('SELECT * FROM sync_idempotency_keys WHERE operation_id=$1', [opTestId])).rows[0];
 assert.ok(idempRow);
@@ -294,7 +301,8 @@ await db.query('DELETE FROM sync_receipts WHERE operation_id=$1', [opTestId]);
 // Reenviar a mesma operação: chave de idempotência permanente impede duplicação
 await asUser(ids.teacher);
 const replayRes = (await db.query('SELECT apply_academic_mutation($1, $2, $3, $4) as res', ['conteudos', 'UPSERT', JSON.stringify(contPayload), opTestId])).rows[0].res;
-assert.equal(replayRes.status, 'already_processed');
+assert.deepEqual(replayRes, firstIdem);
+assert.equal((await db.query("SELECT count(*)::int AS c FROM conteudos WHERE data='2026-06-01' AND turma_id=$1", [ids.class])).rows[0].c, 1);
 
 // Teste Reauditoria 9: Ordenação determinística de múltiplos locks de turma
 const sortedLocks = (await db.query(`
@@ -316,6 +324,63 @@ assert.deepEqual(sortedLocks, [
   '20000000-0000-0000-0000-000000000002',
   '20000000-0000-0000-0000-000000000003'
 ]);
+
+// Auditoria 2026-10-13: gestor, aluno e professor não atravessam escola nem turma.
+const gestor = '00000000-0000-0000-0000-000000000006';
+const profOutraEscola = '30000000-0000-0000-0000-000000000002';
+const turmaMesmaEscola = '20000000-0000-0000-0000-000000000003';
+await db.exec('RESET ROLE');
+await db.query("SELECT set_config('request.jwt.claims',$1,false)", [JSON.stringify({ sub: ids.admin, role: 'authenticated', email: 'admin@test.local' })]);
+await db.exec(`
+ INSERT INTO auth.users(id,email) VALUES ('${gestor}','gestor@test.local');
+ INSERT INTO public.usuarios(id,email,nome_completo,cargo,escola_id) VALUES
+  ('${gestor}','gestor@test.local','Gestor A','GESTOR','${ids.school}')
+  ON CONFLICT (id) DO UPDATE SET cargo='GESTOR', escola_id=EXCLUDED.escola_id, nome_completo=EXCLUDED.nome_completo, email=EXCLUDED.email;
+ INSERT INTO public.professores(id,nome,email,cpf,telefone) VALUES
+  ('${profOutraEscola}','Docente B','outraprof@test.local','99999999999','85999990000');
+ INSERT INTO public.professor_alocacoes(professor_id,escola_id,turno) VALUES
+  ('${profOutraEscola}','${ids.otherSchool}','Manhã'),
+  ('${ids.p}','${ids.school}','Manhã');
+ INSERT INTO public.professor_horarios(professor_id,turma_id,escola_id,dia_semana,tempo_ordem,componente)
+  VALUES ('${profOutraEscola}','${ids.otherClass}','${ids.otherSchool}',2,1,'PORT');
+ INSERT INTO public.turmas(id,nome,turno,escola_id,ano_letivo) VALUES
+  ('${turmaMesmaEscola}','2º Ano A','Matutino','${ids.school}','2026');
+ INSERT INTO public.avaliacoes(turma_id,tipo,data,disciplina) VALUES
+  ('${turmaMesmaEscola}','Prova','2026-04-01','HIST'),
+  ('${ids.class}','Prova','2026-04-01','MAT');
+ INSERT INTO public.conteudos(turma_id,data,tempo,disciplina,descricao) VALUES
+  ('${turmaMesmaEscola}','2026-04-02','1','HIST','conteudo de outra turma');
+ INSERT INTO public.fechamentos_bimestres(turma_id,disciplina,bimestre,status) VALUES
+  ('${turmaMesmaEscola}','HIST','1. BIMESTRE','ABERTO');
+`);
+
+await asUser(gestor);
+assert.equal((await db.query('SELECT cpf FROM professores WHERE id=$1', [profOutraEscola])).rows.length, 0);
+assert.equal((await db.query('SELECT id FROM professores WHERE id=$1', [ids.p])).rows.length, 1);
+assert.equal((await db.query('SELECT id FROM professor_alocacoes WHERE escola_id=$1', [ids.otherSchool])).rows.length, 0);
+assert.equal((await db.query('SELECT id FROM professor_horarios WHERE escola_id=$1', [ids.otherSchool])).rows.length, 0);
+assert.ok((await db.query('SELECT id FROM professor_alocacoes WHERE escola_id=$1', [ids.school])).rows.length >= 1);
+
+await asUser(ids.student);
+assert.equal((await db.query('SELECT id, cpf, email, telefone FROM professores')).rows.length, 0);
+assert.equal((await db.query('SELECT id FROM professor_alocacoes')).rows.length, 0);
+assert.equal((await db.query('SELECT id FROM professor_horarios')).rows.length, 0);
+
+await asUser(ids.teacher);
+assert.equal((await db.query('SELECT id FROM professores WHERE id=$1', [ids.p])).rows.length, 1);
+assert.equal((await db.query('SELECT cpf FROM professores WHERE id=$1', [profOutraEscola])).rows.length, 0);
+assert.equal((await db.query('SELECT id FROM avaliacoes WHERE turma_id=$1', [turmaMesmaEscola])).rows.length, 0);
+assert.equal((await db.query('SELECT id FROM conteudos WHERE turma_id=$1', [turmaMesmaEscola])).rows.length, 0);
+assert.equal((await db.query('SELECT id FROM fechamentos_bimestres WHERE turma_id=$1', [turmaMesmaEscola])).rows.length, 0);
+assert.ok((await db.query('SELECT id FROM avaliacoes WHERE turma_id=$1', [ids.class])).rows.length >= 1);
+
+await asUser(ids.secretary);
+await rejected(`INSERT INTO professores(nome,email,cpf) VALUES ('Invasor','invasor@test.local','12312312312')`);
+assert.equal((await db.query('SELECT id FROM professores WHERE id=$1', [ids.p])).rows.length, 1);
+assert.equal((await db.query('SELECT cpf FROM professores WHERE id=$1', [profOutraEscola])).rows.length, 0);
+
+await asUser(ids.admin);
+assert.equal((await db.query('SELECT cpf FROM professores WHERE id=$1', [profOutraEscola])).rows.length, 1);
 
 console.log('RLS isolation, closed periods, membership, idempotency, revision conflicts and cross-school provisioning: passed.');
 console.log('Audit P1/P2 fixes: teacher atomic deallocation, lgpd direct insert revocation, student uniqueness, and authorization hardening passed.');
