@@ -100,17 +100,22 @@ export default function MinhaPrivacidade() {
         // check if has matching record in professores
         const { data: professores } = await supabase
           .from('professores')
-          .select('nome, cpf, telefone, vinculo, departamento, disciplinas')
+          .select('id, nome, telefone, vinculo, departamento, disciplinas')
           .eq('email', user.email)
           .limit(1);
 
         const u = usuarios && usuarios.length > 0 ? usuarios[0] : null;
         const p = professores && professores.length > 0 ? professores[0] : null;
+        let documento = '---';
+        if (p?.id) {
+          const { data: cpfs } = await supabase.rpc('cpfs_de_professores', { p_ids: [p.id] });
+          documento = cpfs?.[0]?.cpf || '---';
+        }
 
         setProfile({
           nome: u?.nome_completo || p?.nome || user.name,
           email: user.email,
-          documento: p?.cpf || '---',
+          documento,
           perfil: user.role,
           outrosDados: {
             escola: (Array.isArray(u?.escolas) ? u?.escolas[0]?.nome : (u?.escolas as unknown as RelationWithName | null)?.nome) || '---',

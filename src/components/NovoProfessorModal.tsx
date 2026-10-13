@@ -31,6 +31,7 @@ interface NovoProfessorModalProps {
   onClose: () => void;
   onSave: (professor: NovoProfessorFormData) => void;
   professorParaEditar?: ProfessorEditTarget | null;
+  editarCpf?: boolean;
 }
 
 const DEPARTAMENTOS = ['Geral', 'BIOLÓGICAS', 'HUMANAS', 'EXATAS', 'LINGUAGENS'];
@@ -39,7 +40,7 @@ const DISCIPLINAS = [
   'Artes', 'Educação Física', 'Inglês', 'Ensino Religioso'
 ];
 
-const NovoProfessorModal = React.memo(function NovoProfessorModal({ isOpen, onClose, onSave, professorParaEditar }: NovoProfessorModalProps) {
+const NovoProfessorModal = React.memo(function NovoProfessorModal({ isOpen, onClose, onSave, professorParaEditar, editarCpf = true }: NovoProfessorModalProps) {
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
@@ -183,7 +184,7 @@ const NovoProfessorModal = React.memo(function NovoProfessorModal({ isOpen, onCl
                 />
               </div>
 
-              {/* CPF */}
+              {editarCpf && (
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
                   <CreditCard className="w-4 h-4 text-slate-400" />
@@ -199,6 +200,7 @@ const NovoProfessorModal = React.memo(function NovoProfessorModal({ isOpen, onCl
                   placeholder="000.000.000-00"
                 />
               </div>
+              )}
 
               {/* Telefone */}
               <div className="space-y-2">

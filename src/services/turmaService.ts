@@ -480,15 +480,16 @@ export const TurmaService = {
 
   fetchDisciplinasDaTurma: async (turmaId: string | number): Promise<string[]> => {
     const tid = getTid(turmaId);
-    const [horariosRes, avsRes, fechamentosRes] = await Promise.all([
-      readAllRows(supabase.from('professor_horarios').select('componente').eq('turma_id', tid).order('id')),
+    const [componentesRes, avsRes, fechamentosRes] = await Promise.all([
+      supabase.rpc('disciplinas_da_turma', { p_turma_id: tid }),
       readAllRows(supabase.from('avaliacoes').select('disciplina').eq('turma_id', tid).order('id')),
       readAllRows(supabase.from('fechamentos_bimestres').select('disciplina').eq('turma_id', tid).order('id'))
     ]);
 
     const set = new Set<string>();
-    (horariosRes.data || []).forEach(h => {
-      const c = (h.componente || '').trim();
+    const componentes = Array.isArray(componentesRes.data) ? componentesRes.data : [];
+    componentes.forEach((componente: string) => {
+      const c = (componente || '').trim();
       if (c && c.toUpperCase() !== 'GERAL') set.add(c);
     });
     (avsRes.data || []).forEach(a => {

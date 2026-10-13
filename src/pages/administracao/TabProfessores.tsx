@@ -133,12 +133,20 @@ export default function TabProfessores() {
     try {
       const query = supabase
         .from('professores')
-        .select('id, nome, email, cpf, status, departamento, disciplinas, vinculo, telefone, usuario_id, professor_alocacoes(id, escola_id, turno, escolas(nome)), professor_horarios(id, escola_id)')
+        .select('id, nome, email, status, departamento, disciplinas, vinculo, telefone, usuario_id, professor_alocacoes(id, escola_id, turno, escolas(nome)), professor_horarios(id, escola_id)')
         .order('nome');
         
       const { data } = await readAllRows<ProfessorRow>(query.order('id'));
       if (data) {
-        setProfessores(data);
+        let lista = data;
+        if (user?.role === 'ADMIN' && lista.length > 0) {
+          const { data: cpfs } = await supabase.rpc('cpfs_de_professores', {
+            p_ids: lista.map((professor) => professor.id),
+          });
+          const porId = new Map((cpfs || []).map((row: { id: string; cpf: string | null }) => [row.id, row.cpf || undefined]));
+          lista = lista.map((professor) => ({ ...professor, cpf: porId.get(professor.id) }));
+        }
+        setProfessores(lista);
       }
     } catch (error) {
       console.error("Erro ao carregar professores e alocações:", error);
@@ -152,7 +160,6 @@ export default function TabProfessores() {
     const professorData = {
       nome: novoProfessor.nome,
       email: novoProfessor.email,
-      cpf: novoProfessor.cpf,
       telefone: novoProfessor.telefone,
       vinculo: novoProfessor.vinculo,
       status: novoProfessor.status,
@@ -173,6 +180,16 @@ export default function TabProfessores() {
       } else if (!updatedData || updatedData.length === 0) {
         showWarning("Nenhum registro foi atualizado. Verifique suas permissões.");
       } else {
+        if (user?.role === 'ADMIN') {
+          const { error: cpfError } = await supabase.rpc('definir_cpf_professor', {
+            p_id: professorParaEditar.id,
+            p_cpf: novoProfessor.cpf || null,
+          });
+          if (cpfError) {
+            showError("Erro ao atualizar o CPF: " + cpfError.message);
+            return;
+          }
+        }
         const targetEscolaId = selectedEscola?.id || professorParaEditar.professor_alocacoes?.[0]?.escola_id || user?.escola_id;
         if (novoProfessor.email && !professorParaEditar.usuario_id && targetEscolaId) {
           const senhaDeAcesso = novoProfessor.senha?.trim() || gerarSenhaTemporaria();
@@ -210,7 +227,6 @@ export default function TabProfessores() {
     } else {
       // Limpa chaves vazias para não conflitar com constraints UNIQUE (tipo cpf vazio)
       const dataToInsert: Record<string, string | null | string[] | undefined> = { ...professorData };
-      if (!dataToInsert.cpf) dataToInsert.cpf = null;
       if (!dataToInsert.email) dataToInsert.email = null;
 
       const { data: newProfData, error: rpcError } = await supabase.rpc('criar_professor_com_alocacao', {
@@ -221,7 +237,7 @@ export default function TabProfessores() {
         p_disciplinas: dataToInsert.disciplinas || [],
         p_escola_id: selectedEscola?.id || null,
         p_turno: 'Manhã',
-        p_cpf: dataToInsert.cpf || null,
+        p_cpf: novoProfessor.cpf || null,
         p_vinculo: (dataToInsert.vinculo as string) || 'Efetivo',
         p_status: (dataToInsert.status as string) || 'Ativo',
       });
@@ -1058,6 +1074,7 @@ export default function TabProfessores() {
         }}
         onSave={handleSaveProfessor}
         professorParaEditar={professorParaEditar}
+        editarCpf={!professorParaEditar || user?.role === 'ADMIN'}
       />
 
       <GerenciarAlocacoesModal

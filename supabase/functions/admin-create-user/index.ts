@@ -44,17 +44,6 @@ function hasNetworkScope(role: string | undefined): boolean {
   return role === "ADMIN" || role === "GESTOR_SEMEC";
 }
 
-// FIX #3: Rate limiting em memória por usuário (reseta em cold start, mas protege contra abuso)
-const RATE_LIMIT_WINDOW_MS = 60_000; // 60 segundos
-const RATE_LIMIT_MAX_REQUESTS = 10;   // Máximo 10 criações por janela
-
-interface RateLimitEntry {
-  count: number;
-  windowStart: number;
-}
-
-const rateLimitMap = new Map<string, RateLimitEntry>();
-
 async function withMustChangePassword(
   admin: ReturnType<typeof createClient>,
   userId: string,
@@ -70,32 +59,16 @@ async function withMustChangePassword(
   return admin.auth.admin.updateUserById(userId, { ...patch, app_metadata });
 }
 
-function checkRateLimit(userId: string): boolean {
-  const now = Date.now();
-
-  // Limpar entradas expiradas sob demanda (evita timers de fundo que causam 503 no runtime serverless)
-  if (rateLimitMap.size > 50) {
-    for (const [key, entry] of rateLimitMap.entries()) {
-      if ((now - entry.windowStart) > RATE_LIMIT_WINDOW_MS * 2) {
-        rateLimitMap.delete(key);
-      }
-    }
+async function checkRateLimit(
+  admin: ReturnType<typeof createClient>,
+  userId: string,
+): Promise<boolean> {
+  const { data, error } = await admin.rpc("reservar_criacao_de_conta", { p_user_id: userId });
+  if (error) {
+    console.error("Falha ao reservar criação de conta:", error.message);
+    return false;
   }
-
-  const entry = rateLimitMap.get(userId);
-
-  if (!entry || (now - entry.windowStart) > RATE_LIMIT_WINDOW_MS) {
-    // Nova janela
-    rateLimitMap.set(userId, { count: 1, windowStart: now });
-    return true;
-  }
-
-  if (entry.count >= RATE_LIMIT_MAX_REQUESTS) {
-    return false; // Limite excedido
-  }
-
-  entry.count++;
-  return true;
+  return data === true;
 }
 
 Deno.serve(async (req: Request) => {
@@ -170,7 +143,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // FIX #3: Verificar rate limit antes de processar a requisição
-    if (!checkRateLimit(callerUser.id)) {
+    if (!(await checkRateLimit(supabaseAdmin, callerUser.id))) {
       return new Response(
         JSON.stringify({ error: "Limite de requisições excedido. Aguarde 60 segundos antes de criar mais contas." }),
         { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" } }

@@ -341,8 +341,12 @@ await db.exec(`
  INSERT INTO public.professor_alocacoes(professor_id,escola_id,turno) VALUES
   ('${profOutraEscola}','${ids.otherSchool}','Manhã'),
   ('${ids.p}','${ids.school}','Manhã');
+ UPDATE public.professores SET cpf='11111111111' WHERE id='${ids.p}';
+ INSERT INTO public.professores(id,nome,email) VALUES
+  ('30000000-0000-0000-0000-000000000003','Colega','colega@test.local');
  INSERT INTO public.professor_horarios(professor_id,turma_id,escola_id,dia_semana,tempo_ordem,componente)
-  VALUES ('${profOutraEscola}','${ids.otherClass}','${ids.otherSchool}',2,1,'PORT');
+  VALUES ('${profOutraEscola}','${ids.otherClass}','${ids.otherSchool}',2,1,'PORT'),
+         ('30000000-0000-0000-0000-000000000003','${ids.class}','${ids.school}',3,1,'CIEN');
  INSERT INTO public.turmas(id,nome,turno,escola_id,ano_letivo) VALUES
   ('${turmaMesmaEscola}','2º Ano A','Matutino','${ids.school}','2026');
  INSERT INTO public.avaliacoes(turma_id,tipo,data,disciplina) VALUES
@@ -355,20 +359,27 @@ await db.exec(`
 `);
 
 await asUser(gestor);
-assert.equal((await db.query('SELECT cpf FROM professores WHERE id=$1', [profOutraEscola])).rows.length, 0);
+assert.equal((await db.query('SELECT id FROM professores WHERE id=$1', [profOutraEscola])).rows.length, 0);
+await rejected(`SELECT cpf FROM professores WHERE id='${ids.p}'`);
+assert.equal((await db.query(`SELECT cpf FROM public.cpfs_de_professores(ARRAY['${ids.p}']::uuid[])`)).rows.length, 0);
 assert.equal((await db.query('SELECT id FROM professores WHERE id=$1', [ids.p])).rows.length, 1);
 assert.equal((await db.query('SELECT id FROM professor_alocacoes WHERE escola_id=$1', [ids.otherSchool])).rows.length, 0);
 assert.equal((await db.query('SELECT id FROM professor_horarios WHERE escola_id=$1', [ids.otherSchool])).rows.length, 0);
 assert.ok((await db.query('SELECT id FROM professor_alocacoes WHERE escola_id=$1', [ids.school])).rows.length >= 1);
 
 await asUser(ids.student);
-assert.equal((await db.query('SELECT id, cpf, email, telefone FROM professores')).rows.length, 0);
+assert.equal((await db.query('SELECT id, email, telefone FROM professores')).rows.length, 0);
+await rejected('SELECT cpf FROM professores');
 assert.equal((await db.query('SELECT id FROM professor_alocacoes')).rows.length, 0);
 assert.equal((await db.query('SELECT id FROM professor_horarios')).rows.length, 0);
 
 await asUser(ids.teacher);
 assert.equal((await db.query('SELECT id FROM professores WHERE id=$1', [ids.p])).rows.length, 1);
-assert.equal((await db.query('SELECT cpf FROM professores WHERE id=$1', [profOutraEscola])).rows.length, 0);
+assert.equal((await db.query('SELECT id FROM professores WHERE id=$1', [profOutraEscola])).rows.length, 0);
+await rejected(`SELECT cpf FROM professores WHERE id='${ids.p}'`);
+assert.equal((await db.query(`SELECT cpf FROM public.cpfs_de_professores(ARRAY['${ids.p}']::uuid[])`)).rows[0].cpf, '11111111111');
+const componentes = (await db.query(`SELECT public.disciplinas_da_turma('${ids.class}') AS nomes`)).rows[0].nomes;
+assert.ok(componentes.includes('CIEN'));
 assert.equal((await db.query('SELECT id FROM avaliacoes WHERE turma_id=$1', [turmaMesmaEscola])).rows.length, 0);
 assert.equal((await db.query('SELECT id FROM conteudos WHERE turma_id=$1', [turmaMesmaEscola])).rows.length, 0);
 assert.equal((await db.query('SELECT id FROM fechamentos_bimestres WHERE turma_id=$1', [turmaMesmaEscola])).rows.length, 0);
@@ -377,10 +388,24 @@ assert.ok((await db.query('SELECT id FROM avaliacoes WHERE turma_id=$1', [ids.cl
 await asUser(ids.secretary);
 await rejected(`INSERT INTO professores(nome,email,cpf) VALUES ('Invasor','invasor@test.local','12312312312')`);
 assert.equal((await db.query('SELECT id FROM professores WHERE id=$1', [ids.p])).rows.length, 1);
-assert.equal((await db.query('SELECT cpf FROM professores WHERE id=$1', [profOutraEscola])).rows.length, 0);
+assert.equal((await db.query('SELECT id FROM professores WHERE id=$1', [profOutraEscola])).rows.length, 0);
+await rejected(`SELECT public.definir_cpf_professor('${ids.p}','22222222222')`);
 
 await asUser(ids.admin);
-assert.equal((await db.query('SELECT cpf FROM professores WHERE id=$1', [profOutraEscola])).rows.length, 1);
+await rejected(`SELECT cpf FROM professores WHERE id='${profOutraEscola}'`);
+assert.equal((await db.query(`SELECT cpf FROM public.cpfs_de_professores(ARRAY['${profOutraEscola}']::uuid[])`)).rows[0].cpf, '99999999999');
+await db.query(`SELECT public.definir_cpf_professor('${profOutraEscola}','88888888888')`);
+assert.equal((await db.query(`SELECT cpf FROM public.cpfs_de_professores(ARRAY['${profOutraEscola}']::uuid[])`)).rows[0].cpf, '88888888888');
+
+await db.exec('RESET ROLE');
+for (let i = 0; i < 10; i++) {
+  assert.equal((await db.query(`SELECT public.reservar_criacao_de_conta('${ids.admin}') AS ok`)).rows[0].ok, true);
+}
+assert.equal((await db.query(`SELECT public.reservar_criacao_de_conta('${ids.admin}') AS ok`)).rows[0].ok, false);
+await asUser(ids.teacher);
+await rejected(`SELECT public.reservar_criacao_de_conta('${ids.teacher}')`);
+await db.exec('RESET ROLE');
+await rejected(`INSERT INTO auth.users(id,email,raw_user_meta_data) VALUES ('00000000-0000-0000-0000-000000000099','publico@test.local','{"role":"ADMIN"}')`);
 
 console.log('RLS isolation, closed periods, membership, idempotency, revision conflicts and cross-school provisioning: passed.');
 console.log('Audit P1/P2 fixes: teacher atomic deallocation, lgpd direct insert revocation, student uniqueness, and authorization hardening passed.');
