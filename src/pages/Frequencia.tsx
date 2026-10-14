@@ -1,6 +1,4 @@
-import { PageHeading } from '../components/common/PortalUI';
 import React, { useState } from 'react';
-import { ArrowLeft, Calendar as CalendarIcon } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTurma } from '../contexts/TurmaContext';
 import { APP_CONFIG } from '../config/appConfig';
@@ -10,7 +8,7 @@ import FrequenciaTab from '../components/frequencia/FrequenciaTab';
 import ObjetoConhecimentoTab from '../components/frequencia/ObjetoConhecimentoTab';
 import AnotacoesTab from '../components/frequencia/AnotacoesTab';
 import AvaliacoesTab from '../components/frequencia/AvaliacoesTab';
-import { getBimestrePorData, formatarDataParaExibicao } from '../utils/dateUtils';
+import { formatarDataParaExibicao } from '../utils/dateUtils';
 import { carregarFeriados, nomeFeriado } from '../services/feriados';
 
 export default function Frequencia() {
@@ -102,7 +100,7 @@ export default function Frequencia() {
 
   const registeredTimes=(tipo:'frequencia'|'conteudo')=>new Set(lancamentos.filter(l=>l.data===selectedDate&&l.tipo===tipo&&String(l.turmaId).split('||')[0]===String(turmaAtiva.id).split('||')[0]&&temposValidosDoDia.includes(l.tempo)).map(l=>l.tempo)).size;
   const steps = [{id:'frequencia',title:'Frequência',hint:'Quem esteve com você'},{id:'objeto',title:'Conteúdo',hint:'O que foi ensinado'},{id:'anotacoes',title:'Anotações',hint:'O que vale lembrar'},{id:'avaliacoes',title:'Avaliações',hint:'Como a turma avançou'}];
-  return <div className="portal-page portal-lesson"><PageHeading eyebrow="SEU DIÁRIO EM AÇÃO" title="Registro da aula" actions={<Link className="portal-button secondary" to={'/diario?date='+selectedDate}><ArrowLeft size={16}/>Voltar ao diário</Link>}/>
+  return <div className="portal-page portal-lesson">
         {feriadoNome && (
           <div className="bg-amber-50 text-amber-950 border-b border-amber-200 px-4 py-2.5 sm:px-8 text-xs sm:text-sm">
             <strong className="font-bold">Feriado:</strong> {feriadoNome}. Não há aula neste dia. O que já foi lançado continua visível, sem edição.
@@ -122,12 +120,12 @@ export default function Frequencia() {
 
         {veioDaChamadaRapida && (
           <div role="status" className="bg-sky-50 text-sky-950 border-b border-sky-200 px-4 py-2.5 sm:px-8 text-xs sm:text-sm">
-            Chamada rápida abriu a última aula do {periodoDaChamada || 'bimestre aberto'}: {formatarDataParaExibicao(selectedDate)}. Esse é o bimestre ainda aberto com dia de aula previsto. Troque a data ao lado para lançar outro dia.
+            Chamada rápida abriu a última aula do {periodoDaChamada || 'bimestre aberto'}: {formatarDataParaExibicao(selectedDate)}. Esse é o bimestre ainda aberto com dia de aula previsto.
           </div>
         )}
 
 
-    <div className="portal-lesson-workspace"><div className="portal-lesson-toolbar"><div className="portal-lesson-date"><CalendarIcon size={20}/><label htmlFor="lesson-date">DATA DA AULA</label><input id="lesson-date" aria-label="Data da aula" type="date" value={selectedDate} onChange={e=>setSelectedDate(e.target.value)}/><span>{getBimestrePorData(selectedDate)||'Período letivo'}</span></div><p className="portal-lesson-rail-note">Confira a turma, a data e o tempo antes de gravar cada etapa.</p></div><nav className="portal-lesson-steps" aria-label="Etapas do registro">{steps.map((step,index)=><button key={step.id} aria-pressed={activeTab===step.id} onClick={()=>handleTabChange(step.id)}><span>{String(index+1).padStart(2,'0')}</span><div><strong>{step.title}</strong><small>{step.id==='frequencia'||step.id==='objeto'?`${registeredTimes(step.id==='frequencia'?'frequencia':'conteudo')} de ${temposValidosDoDia.length} tempos registrados`:step.hint}</small></div></button>)}</nav><section className="portal-lesson-content"><header><span className="portal-eyebrow">REGISTRO DA AULA · {formatarDataParaExibicao(selectedDate)}</span><h2>{steps.find(s=>s.id===activeTab)?.title}</h2><p>{steps.find(s=>s.id===activeTab)?.hint}.</p></header><details className="portal-step-help"><summary>Como usar esta etapa</summary><p>{activeTab==='frequencia'?'Abra o lançamento, confira as presenças de cada estudante e confirme a gravação. As marcações só são salvas após confirmar.':activeTab==='objeto'?'Selecione o tempo da aula e registre os objetos de conhecimento e as habilidades trabalhadas.':activeTab==='anotacoes'?'Registre as observações pedagógicas relacionadas à aula e confirme a gravação.':'Cadastre as avaliações e confira as notas de cada estudante nos controles desta etapa.'}</p></details><div className="portal-lesson-form">              {activeTab === 'frequencia' && (
+    <div className="portal-lesson-workspace"><nav className="portal-lesson-steps" aria-label="Etapas do registro">{steps.map((step,index)=><button key={step.id} aria-pressed={activeTab===step.id} onClick={()=>handleTabChange(step.id)}><span>{String(index+1).padStart(2,'0')}</span><div><strong>{step.title}</strong><small>{step.id==='frequencia'||step.id==='objeto'?`${registeredTimes(step.id==='frequencia'?'frequencia':'conteudo')} de ${temposValidosDoDia.length} tempos registrados`:step.hint}</small></div></button>)}</nav><section className="portal-lesson-content"><header><span className="portal-eyebrow">REGISTRO DA AULA · {formatarDataParaExibicao(selectedDate)}</span><h2>{steps.find(s=>s.id===activeTab)?.title}</h2></header><details className="portal-step-help"><summary>Como usar esta etapa</summary><p>{activeTab==='frequencia'?'Abra o lançamento, confira as presenças de cada estudante e confirme a gravação. As marcações só são salvas após confirmar.':activeTab==='objeto'?'Selecione o tempo da aula e registre os objetos de conhecimento e as habilidades trabalhadas.':activeTab==='anotacoes'?'Registre as observações pedagógicas relacionadas à aula e confirme a gravação.':'Cadastre as avaliações e confira as notas de cada estudante nos controles desta etapa.'}</p></details><div className="portal-lesson-form">              {activeTab === 'frequencia' && (
                 <FrequenciaTab
                   selectedDate={selectedDate}
                   tempoAula={tempoAula}
