@@ -9,6 +9,7 @@ import * as Queue from '../services/offlineQueue';
 vi.mock('../lib/supabase', () => ({
   supabase: {
     from: vi.fn(),
+    rpc: vi.fn(),
   },
 }));
 
@@ -106,14 +107,8 @@ describe('Reabertura de Aparata / Fechamento de Bimestre (Granular e Total)', ()
     });
 
     it('fetchDisciplinasDaTurma deve consolidar componentes de horarios, avaliacoes e fechamentos', async () => {
+      (supabase.rpc as any).mockResolvedValue({ data: ['Matemática', 'Português'], error: null });
       (supabase.from as any).mockImplementation((table: string) => {
-        if (table === 'professor_horarios') {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(), range: vi.fn().mockResolvedValue({ data: [{ componente: 'Matemática' }, { componente: 'Português' }] })
-            })
-          };
-        }
         if (table === 'avaliacoes') {
           return {
             select: vi.fn().mockReturnValue({
