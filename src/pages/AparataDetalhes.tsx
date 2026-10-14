@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase';
 import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
 import { APP_CONFIG, getBimestreAtual } from '../config/appConfig';
 import { getBimestreNumero } from '../utils/dateUtils';
-import { classeElipseNota, limitePontosBimestre } from '../utils/corNota';
+import { classeElipseNota, corNota, limitePontosBimestre } from '../utils/corNota';
 import { getEscolaLogo, LOGO_PADRAO_SEMED } from '../utils/escolaUtils';
 
 export default function AparataDetalhes() {
@@ -645,7 +645,17 @@ export default function AparataDetalhes() {
           #printable-aparata .alunos .num { width: 28px; text-align: center; }
           #printable-aparata .alunos .mat { width: 28%; }
           #printable-aparata .alunos .soma, #printable-aparata .alunos .faltas { width: 72px; text-align: center; }
-          #printable-aparata .rodape { margin-top: 4px; font-size: 8px; text-align: right; }
+          #printable-aparata .nota-pill, #printable-aparata .falta-pill {
+            display: inline-block; min-width: 36px; padding: 1px 6px; border-radius: 999px;
+            font-weight: 700; text-align: center; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+          }
+          #printable-aparata .nota-pill { color: #fff; }
+          #printable-aparata .legenda { margin-top: 4px; font-size: 8px; display: flex; gap: 12px; }
+          #printable-aparata .legenda i {
+            display: inline-block; width: 8px; height: 8px; border-radius: 999px; margin-right: 4px;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+          }
+          #printable-aparata .rodape { margin-top: 2px; font-size: 8px; text-align: right; }
         `}} />
         <div className="sheet">
           <div className="doc-head">
@@ -734,17 +744,36 @@ export default function AparataDetalhes() {
               </tr>
             </thead>
             <tbody>
-              {alunosDetalhados.map((aluno) => (
-                <tr key={aluno.id}>
-                  <td className="num">{String(aluno.n).padStart(2, '0')}</td>
-                  <td>{aluno.nome}</td>
-                  <td className="mat">{aluno.matricula}</td>
-                  <td className="soma">{aluno.somaParcial}</td>
-                  <td className="faltas">{aluno.faltas}</td>
-                </tr>
-              ))}
+              {alunosDetalhados.map((aluno) => {
+                const pontos = parseFloat(aluno.somaParcial.replace(',', '.'));
+                const corSoma = corNota(pontos, limitePontosBimestre(targetBimestreNum));
+                return (
+                  <tr key={aluno.id}>
+                    <td className="num">{String(aluno.n).padStart(2, '0')}</td>
+                    <td>{aluno.nome}</td>
+                    <td className="mat">{aluno.matricula}</td>
+                    <td className="soma">
+                      <span className="nota-pill" style={{ backgroundColor: corSoma }}>{aluno.somaParcial}</span>
+                    </td>
+                    <td className="faltas">
+                      <span
+                        className="falta-pill"
+                        style={aluno.faltas > 0
+                          ? { backgroundColor: '#fef2f2', color: '#dc2626' }
+                          : { backgroundColor: '#eef2ff', color: '#6354c7' }}
+                      >
+                        {aluno.faltas}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+          <div className="legenda">
+            <span><i style={{ backgroundColor: '#4361ee' }} />Soma na média ou acima</span>
+            <span><i style={{ backgroundColor: '#c2463e' }} />Soma abaixo da média</span>
+          </div>
           <div className="rodape">{alunosDetalhados.length} aluno(s)</div>
         </div>
       </div>
