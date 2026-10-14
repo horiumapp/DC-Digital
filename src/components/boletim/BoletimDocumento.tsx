@@ -261,8 +261,8 @@ export default function BoletimDocumento({
                     );
                   })}
                   <td className="border-r border-black px-1 py-0.5 text-center"></td>
-                  <td className="border-r border-black px-1 py-0.5 text-center font-black" style={!isEmpty && bimestresComNota > 0 ? { color: corNota(somaMedias, 100) } : undefined}>
-                    {!isEmpty && bimestresComNota > 0 ? somaMedias.toFixed(1) : ''}
+                  <td className="border-r border-black px-1 py-0.5 text-center font-black" style={!isEmpty && bimestresComNota >= 4 ? { color: corNota(somaMedias, 100) } : undefined}>
+                    {!isEmpty && bimestresComNota >= 4 ? somaMedias.toFixed(1) : ''}
                   </td>
                   <td className="px-1 py-0.5 text-center text-[8px] font-bold">
                     {!isEmpty ? definirSituacaoPeriodo({

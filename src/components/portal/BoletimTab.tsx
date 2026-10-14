@@ -92,7 +92,10 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
       ).length;
       return { bimestre, nota, faltas };
     });
-    const total = resultadosBimestres.reduce((soma, item) => soma + (item.nota ?? 0), 0);
+    const bimestresComNota = resultadosBimestres.filter(item => item.nota !== null).length;
+    const total = bimestresComNota >= 4
+      ? resultadosBimestres.reduce((soma, item) => soma + (item.nota ?? 0), 0)
+      : null;
     const faltas = resultadosBimestres.reduce((soma, item) => soma + item.faltas, 0);
     return { disciplina, resultadosBimestres, total, faltas };
   });
@@ -138,7 +141,7 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
             <article key={resumo.disciplina} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="flex items-start justify-between gap-3 bg-slate-50 px-4 py-3">
                 <h4 className="text-sm font-black uppercase text-slate-800">{resumo.disciplina}</h4>
-                <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-black ${resumo.total > 0 ? `text-white ${classeElipseNota(resumo.total, 100)}` : 'bg-slate-200 text-slate-500'}`}>Total {resumo.total > 0 ? resumo.total.toFixed(1) : '—'}</span>
+                <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-black ${resumo.total !== null ? `text-white ${classeElipseNota(resumo.total, 100)}` : 'bg-slate-200 text-slate-500'}`}>Total {resumo.total !== null ? resumo.total.toFixed(1) : '—'}</span>
               </div>
               <div className="grid grid-cols-2 gap-px bg-slate-200">
                 {resumo.resultadosBimestres.map(resultado => (
