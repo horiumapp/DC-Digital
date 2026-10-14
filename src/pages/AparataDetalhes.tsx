@@ -645,9 +645,9 @@ export default function AparataDetalhes() {
           #printable-aparata .alunos .num { width: 28px; text-align: center; }
           #printable-aparata .alunos .mat { width: 28%; }
           #printable-aparata .alunos .soma, #printable-aparata .alunos .faltas { width: 72px; text-align: center; }
-          #printable-aparata .nota-cor, #printable-aparata .falta-cor {
-            font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact;
-          }
+          #printable-aparata .nota-cor, #printable-aparata .falta-cor { font-weight: 700; }
+          #printable-aparata .nota-cor { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          #printable-aparata .falta-cor { color: #111; }
           #printable-aparata .legenda { margin-top: 4px; font-size: 8px; display: flex; gap: 12px; }
           #printable-aparata .legenda b { font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           #printable-aparata .rodape { margin-top: 2px; font-size: 8px; text-align: right; }
@@ -751,9 +751,7 @@ export default function AparataDetalhes() {
                       <span className="nota-cor" style={{ color: corSoma }}>{aluno.somaParcial}</span>
                     </td>
                     <td className="faltas">
-                      <span className="falta-cor" style={{ color: aluno.faltas > 0 ? '#c2463e' : '#4361ee' }}>
-                        {aluno.faltas}
-                      </span>
+                      <span className="falta-cor">{aluno.faltas}</span>
                     </td>
                   </tr>
                 );
