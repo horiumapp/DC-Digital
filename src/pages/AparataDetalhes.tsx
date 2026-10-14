@@ -257,7 +257,7 @@ export default function AparataDetalhes() {
 
   return (
     <div className="min-h-screen bg-slate-50 relative">
-      <div className="relative z-10 p-8 max-w-7xl mx-auto space-y-6">
+      <div className="relative z-10 p-8 max-w-7xl mx-auto space-y-6 no-print">
         <div className="max-w-[1400px] mx-auto p-4 space-y-4">
 
           {/* Header */}
@@ -580,6 +580,130 @@ export default function AparataDetalhes() {
           </div>
         </div>
       )}
+
+      <div id="printable-aparata" className="hidden print:block">
+        <style dangerouslySetInnerHTML={{ __html: `
+          @media print {
+            @page { size: A4 portrait; margin: 8mm; }
+            html, body { background: white !important; margin: 0 !important; }
+            .portal-sidebar, .portal-school-topbar, .portal-page-location,
+            .portal-drawer-backdrop, .no-print { display: none !important; }
+            #printable-aparata {
+              display: block !important;
+              position: static !important;
+              width: 100% !important;
+              background: white !important;
+            }
+            #printable-aparata .sheet { break-inside: avoid; page-break-inside: avoid; }
+          }
+          #printable-aparata { font-family: Arial, sans-serif; color: #111; }
+          #printable-aparata .doc-title {
+            text-align: center; font-size: 13px; font-weight: 700; letter-spacing: 0.4px;
+            text-transform: uppercase; border: 1px solid #111; border-bottom: none; padding: 5px 8px;
+          }
+          #printable-aparata .meta { width: 100%; border-collapse: collapse; table-layout: fixed; }
+          #printable-aparata .meta td { border: 1px solid #111; padding: 3px 6px; vertical-align: top; }
+          #printable-aparata .label { display: block; font-size: 7px; text-transform: uppercase; color: #444; font-weight: 600; line-height: 1.2; }
+          #printable-aparata .value { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; line-height: 1.25; }
+          #printable-aparata .alunos { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 6px; }
+          #printable-aparata .alunos th, #printable-aparata .alunos td { border: 1px solid #111; padding: 2px 5px; font-size: 9px; line-height: 1.2; }
+          #printable-aparata .alunos th { background: #f2f2f2; text-align: left; font-size: 8px; text-transform: uppercase; }
+          #printable-aparata .alunos .num { width: 28px; text-align: center; }
+          #printable-aparata .alunos .mat { width: 28%; }
+          #printable-aparata .alunos .soma, #printable-aparata .alunos .faltas { width: 72px; text-align: center; }
+          #printable-aparata .rodape { margin-top: 4px; font-size: 8px; text-align: right; }
+        `}} />
+        <div className="sheet">
+          <div className="doc-title">Aparata — {periodo}</div>
+          <table className="meta">
+            <tbody>
+              <tr>
+                <td colSpan={3}>
+                  <span className="label">Escola</span>
+                  <span className="value">{turmaAtiva.escola}</span>
+                </td>
+                <td>
+                  <span className="label">Ano letivo</span>
+                  <span className="value">{APP_CONFIG.YEAR}</span>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <span className="label">Professor</span>
+                  <span className="value">{turmaAtiva.professor}</span>
+                </td>
+                <td>
+                  <span className="label">Componente</span>
+                  <span className="value">{componenteAtivo}</span>
+                </td>
+                <td>
+                  <span className="label">Turno</span>
+                  <span className="value">{turmaAtiva.turno}</span>
+                </td>
+                <td>
+                  <span className="label">Fase / Turma</span>
+                  <span className="value">{turmaAtiva.fase}</span>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <span className="label">Ensino</span>
+                  <span className="value">{turmaAtiva.ensino}</span>
+                </td>
+                <td>
+                  <span className="label">Mês(es)</span>
+                  <span className="value">{meses}</span>
+                </td>
+                <td>
+                  <span className="label">Data</span>
+                  <span className="value">{dataHoje}</span>
+                </td>
+                <td>
+                  <span className="label">Operação</span>
+                  <span className="value">{isAparataFechada ? 'FECHADA' : 'ABERTURA'}</span>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <span className="label">Aulas dadas</span>
+                  <span className="value">{aulasDadas}</span>
+                </td>
+                <td>
+                  <span className="label">Avaliações feitas</span>
+                  <span className="value">{avsFeitas}</span>
+                </td>
+                <td colSpan={2}>
+                  <span className="label">Alunos</span>
+                  <span className="value">{alunosDetalhados.length}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <table className="alunos">
+            <thead>
+              <tr>
+                <th className="num">Nº</th>
+                <th>Nome</th>
+                <th className="mat">Matrícula</th>
+                <th className="soma">Soma parcial</th>
+                <th className="faltas">Faltas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {alunosDetalhados.map((aluno) => (
+                <tr key={aluno.id}>
+                  <td className="num">{String(aluno.n).padStart(2, '0')}</td>
+                  <td>{aluno.nome}</td>
+                  <td className="mat">{aluno.matricula}</td>
+                  <td className="soma">{aluno.somaParcial}</td>
+                  <td className="faltas">{aluno.faltas}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="rodape">{alunosDetalhados.length} aluno(s)</div>
+        </div>
+      </div>
     </div>
   );
 }
