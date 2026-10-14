@@ -174,9 +174,6 @@ export default function ObjetoConhecimentoTab({
     return mapa;
   }, [conteudos, selectedDate]);
 
-  const conteudosPendentes = todosConteudos.filter(item => !lancadosNoBimestre.has(normalizarAssunto(item.descricao)));
-  const conteudosLancados = todosConteudos.filter(item => lancadosNoBimestre.has(normalizarAssunto(item.descricao)));
-
   const [objetoConhecimento, setObjetoConhecimento] = useState('');
   const [listaConteudosAberta, setListaConteudosAberta] = useState(false);
   const listaConteudosRef = useRef<HTMLDivElement>(null);
@@ -443,47 +440,30 @@ export default function ObjetoConhecimentoTab({
                     <ChevronDown className={`w-4 h-4 shrink-0 text-slate-400 transition ${listaConteudosAberta ? 'rotate-180' : ''}`} />
                   </button>
                   {listaConteudosAberta && (
-                    <div role="listbox" aria-label="Conteúdos do bimestre" className="absolute z-30 mt-1 w-full max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
-                      {conteudosPendentes.length > 0 && (
-                        <div className="py-1">
-                          {conteudosLancados.length > 0 && (
-                            <p className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Ainda não lançados</p>
-                          )}
-                          {conteudosPendentes.map(item => (
-                            <button
-                              key={item.descricao}
-                              type="button"
-                              role="option"
-                              aria-selected={objetoConhecimento === item.descricao}
-                              onClick={() => escolherConteudo(item.descricao)}
-                              className="w-full px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
-                            >
-                              {item.descricao}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      {conteudosLancados.length > 0 && (
-                        <div className="border-t border-emerald-100 bg-emerald-50/70 py-1">
-                          <p className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-emerald-700">Já lançados neste bimestre</p>
-                          {conteudosLancados.map(item => {
-                            const data = lancadosNoBimestre.get(normalizarAssunto(item.descricao));
-                            return (
-                              <button
-                                key={item.descricao}
-                                type="button"
-                                role="option"
-                                aria-selected={objetoConhecimento === item.descricao}
-                                onClick={() => escolherConteudo(item.descricao)}
-                                className="w-full px-3 py-2 text-left text-sm text-emerald-900 hover:bg-emerald-100/80"
-                              >
-                                <span className="block">{item.descricao}</span>
-                                <span className="block text-[11px] font-semibold text-emerald-700">Já lançado em {formatarDataParaExibicao(data || '')}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
+                    <div role="listbox" aria-label="Conteúdos do bimestre" className="absolute z-30 mt-1 w-full max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg py-1">
+                      {todosConteudos.map(item => {
+                        const dataLancamento = lancadosNoBimestre.get(normalizarAssunto(item.descricao));
+                        const selecionado = objetoConhecimento === item.descricao;
+                        return (
+                          <button
+                            key={item.descricao}
+                            type="button"
+                            role="option"
+                            aria-selected={selecionado}
+                            onClick={() => escolherConteudo(item.descricao)}
+                            className={`w-full px-3 py-2 text-left text-sm hover:bg-slate-50 ${
+                              selecionado ? 'bg-slate-50' : ''
+                            } ${dataLancamento ? 'text-emerald-800' : 'text-slate-800'}`}
+                          >
+                            <span className="block">{item.descricao}</span>
+                            {dataLancamento && (
+                              <span className="block text-[11px] font-semibold text-emerald-600">
+                                Já lançado em {formatarDataParaExibicao(dataLancamento)}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
                       <button
                         type="button"
                         onClick={() => {
