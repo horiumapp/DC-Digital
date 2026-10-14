@@ -184,6 +184,19 @@ const NovoProfessorModal = React.memo(function NovoProfessorModal({ isOpen, onCl
                 />
               </div>
 
+              {!editarCpf && professorParaEditar?.cpf && (
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-slate-400" />
+                  CPF
+                </label>
+                <p className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 font-medium">
+                  {`***.***.***-${professorParaEditar.cpf.replace(/\D/g, '').slice(-3)}`}
+                </p>
+                <p className="text-xs text-slate-500">A correção do número completo fica com o administrador.</p>
+              </div>
+              )}
+
               {editarCpf && (
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700 flex items-center gap-2">

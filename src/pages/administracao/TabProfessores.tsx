@@ -139,7 +139,8 @@ export default function TabProfessores() {
       const { data } = await readAllRows<ProfessorRow>(query.order('id'));
       if (data) {
         let lista = data;
-        if (user?.role === 'ADMIN' && lista.length > 0) {
+        const podeVerCpf = user?.role === 'ADMIN' || user?.role === 'GESTOR' || user?.role === 'SECRETARIO' || user?.role === 'GESTOR_SEMEC';
+        if (podeVerCpf && lista.length > 0) {
           const { data: cpfs } = await supabase.rpc('cpfs_de_professores', {
             p_ids: lista.map((professor) => professor.id),
           });
@@ -538,7 +539,7 @@ export default function TabProfessores() {
       if (p.email) existingByEmail.set(p.email.trim().toLowerCase(), p);
       if (p.cpf) {
         const limpo = p.cpf.replace(/\D/g, '');
-        if (limpo) existingByCpf.set(limpo, p);
+        if (limpo.length === 11) existingByCpf.set(limpo, p);
       }
     });
 
@@ -969,6 +970,13 @@ export default function TabProfessores() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-black text-slate-800 text-base uppercase tracking-tight truncate leading-tight">{professor.nome}</h4>
+                      {professor.cpf && (
+                        <p className="text-[11px] font-mono text-slate-500 mt-1">
+                          {professor.cpf.replace(/\D/g, '').length === 11
+                            ? professor.cpf
+                            : `CPF ***.***.***-${professor.cpf.replace(/\D/g, '').slice(-3)}`}
+                        </p>
+                      )}
                       <div className="flex items-center gap-2 mt-1">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{professor.departamento || 'GERAL'}</p>
                         <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase ${

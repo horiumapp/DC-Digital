@@ -33,6 +33,13 @@ function mascararDocumento(valor?: string): string {
   return `${'*'.repeat(Math.max(valor.length - 2, 3))}${valor.slice(-2)}`;
 }
 
+function mascararTelefone(valor?: string): string {
+  if (!valor || valor === '---') return '---';
+  const digitos = valor.replace(/\D/g, '');
+  if (digitos.length < 4) return '****';
+  return `(**) *****-${digitos.slice(-4)}`;
+}
+
 export default function MinhaPrivacidade() {
   const { user } = useAuth();
 
@@ -376,7 +383,7 @@ export default function MinhaPrivacidade() {
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                         {key.replace('_', ' ')}
                       </span>
-                      <p className="font-semibold text-slate-800 dark:text-slate-200">{key === 'telefone' ? mascararDocumento(String(val)) : String(val)}</p>
+                      <p className="font-semibold text-slate-800 dark:text-slate-200">{key === 'telefone' ? mascararTelefone(String(val)) : String(val)}</p>
                     </div>
                   );
                 })}
