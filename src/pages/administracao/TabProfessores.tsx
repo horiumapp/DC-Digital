@@ -739,7 +739,7 @@ export default function TabProfessores() {
                 <div>
                   <div className="flex items-center gap-3">
                     <User className="w-6 h-6 text-white/80" />
-                    <h1 className="text-2xl font-black text-white tracking-widest uppercase">PROFESSORES</h1>
+                    <h1 className="text-2xl font-black text-white tracking-tight">Professores</h1>
                   </div>
                   <p className="text-blue-100/80 text-sm mt-1 font-bold italic">
                     Cadastre o corpo docente e suas especialidades.
@@ -749,7 +749,7 @@ export default function TabProfessores() {
 
               <div className="flex items-center gap-6">
                 <div className="bg-white/10 border border-white/20 backdrop-blur-sm rounded-xl p-2.5 flex flex-col items-center justify-center min-w-[70px]">
-                  <span className="text-[7px] font-black text-blue-100 uppercase tracking-tighter">PROFESSORES</span>
+                  <span className="text-[7px] font-black text-blue-100 uppercase tracking-tighter">Total</span>
                   <span className="text-xl font-black text-white leading-none mt-1">
                     {professoresDaEscola.length.toString().padStart(2, '0')}
                   </span>
@@ -778,7 +778,7 @@ export default function TabProfessores() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 {/* Nome */}
                 <div className="space-y-2 lg:col-span-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">NOME DO PROFESSOR</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome</label>
                   <input
                     type="text"
                     value={inlineFormData.nome}
@@ -816,7 +816,7 @@ export default function TabProfessores() {
 
               {/* Disciplinas */}
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">DISCIPLINAS QUE ESTE PROFESSOR MINISTRA</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Disciplinas</label>
                 <div className="flex flex-wrap gap-2 items-center">
                   {Array.from(new Set([...DISCIPLINAS, ...inlineFormData.disciplinas])).map(disc => {
                     const isSelected = inlineFormData.disciplinas.includes(disc);
@@ -874,7 +874,7 @@ export default function TabProfessores() {
                   onClick={handleInlineSubmit}
                   className="flex-1 w-full sm:w-auto bg-[#6354c7] hover:bg-[#5142ad] text-white py-3.5 px-6 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-[#6354c7]/20 active:scale-[0.98] min-h-[46px]"
                 >
-                  Cadastrar Professor
+                  Cadastrar
                 </button>
                 <button
                   onClick={handleExportProfessores}
@@ -935,7 +935,7 @@ export default function TabProfessores() {
                   <h3 className="font-bold text-slate-800 text-lg leading-snug mb-2 group-hover:text-[#6354c7] transition-colors pr-10">{escola.nome}</h3>
                   <div className="mt-auto flex items-center justify-between">
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total de Professores</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total</span>
                       <span className="text-2xl font-black text-slate-700 tabular-nums">{count.toString().padStart(2, '0')}</span>
                     </div>
                     <div className="p-2 bg-slate-50 text-slate-400 rounded-lg group-hover:bg-[#eef2ff] group-hover:text-[#6354c7] transition-colors">

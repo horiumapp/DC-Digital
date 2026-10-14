@@ -676,7 +676,7 @@ export default function TabAlunos() {
                 <div>
                   <div className="flex items-center gap-3">
                     <GraduationCap className="w-6 h-6 text-white/80" />
-                    <h1 className="text-2xl font-black text-white tracking-widest uppercase">ALUNOS</h1>
+                    <h1 className="text-2xl font-black text-white tracking-tight">Alunos</h1>
                   </div>
                   <p className="text-blue-100/80 text-sm mt-1 font-bold italic">
                     Gerencie matrículas e informações dos estudantes.
@@ -686,7 +686,7 @@ export default function TabAlunos() {
 
               <div className="flex items-center gap-6">
                 <div className="bg-white/10 border border-white/20 backdrop-blur-sm rounded-xl p-2.5 flex flex-col items-center justify-center min-w-[70px] shadow-lg">
-                  <span className="text-[7px] font-black text-blue-100 uppercase tracking-tighter">ALUNOS</span>
+                  <span className="text-[7px] font-black text-blue-100 uppercase tracking-tighter">Total</span>
                   <span className="text-xl font-black text-white leading-none mt-1">
                     {alunosDaEscola.length.toString().padStart(2, '0')}
                   </span>
@@ -713,7 +713,7 @@ export default function TabAlunos() {
             <div className="bg-white p-5 rounded-2xl shadow-xl shadow-blue-900/5 border border-slate-100 flex flex-col sm:flex-row items-end gap-4">
               <div className="flex-1 space-y-1.5 w-full">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                  BUSCAR ALUNO POR NOME, CPF OU RESPONSÁVEL
+                  Buscar por nome, CPF ou responsável
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -756,7 +756,7 @@ export default function TabAlunos() {
                     }}
                     className="bg-[#6354c7] hover:bg-[#5142ad] text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-[#6354c7]/20 active:scale-95 whitespace-nowrap h-[54px] w-full sm:w-auto"
                   >
-                    Novo Aluno
+                    Adicionar
                   </button>
                 )}
               </div>
@@ -804,7 +804,7 @@ export default function TabAlunos() {
                 
                 <div className="mt-auto flex items-center justify-between">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total de Alunos</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total</span>
                     <span className="text-2xl font-black text-slate-700 tabular-nums">
                       {(escola.alunosCount || 0).toString().padStart(2, '0')}
                     </span>
@@ -855,7 +855,7 @@ export default function TabAlunos() {
                               <div className="text-left">
                                 <h4 className="font-black text-[#6354c7] text-sm uppercase tracking-wider">{turma.nome}</h4>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                                  {turno} • {alunosDaTurma.length.toString().padStart(2, '0')} Alunos
+                                  {turno} • {alunosDaTurma.length.toString().padStart(2, '0')}
                                 </p>
                               </div>
                             </div>
@@ -870,7 +870,7 @@ export default function TabAlunos() {
                                 title="Emitir e imprimir boletins desta turma"
                               >
                                 <Printer className="w-3.5 h-3.5 text-blue-600" />
-                                <span className="hidden sm:inline">Boletins da Turma</span>
+                                <span className="hidden sm:inline">Boletins</span>
                               </button>
                               <div className={`p-2 rounded-lg transition-transform duration-300 ${isExpanded ? 'rotate-180 bg-blue-50 text-blue-600' : 'text-slate-300'}`}>
                                 <ChevronRight className="w-5 h-5" />
@@ -886,7 +886,7 @@ export default function TabAlunos() {
                                   <thead>
                                     <tr className="border-b border-slate-100 bg-slate-50/50">
                                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-16">Nº</th>
-                                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome do Aluno</th>
+                                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome</th>
                                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Responsável</th>
                                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Telefone</th>
                                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
@@ -1000,7 +1000,7 @@ export default function TabAlunos() {
               <div className="space-y-6 mt-12">
                 <div className="flex items-center gap-4 px-2">
                   <h3 className="text-[10px] font-black text-red-500 uppercase tracking-[0.2em] bg-red-50 px-3 py-1.5 rounded-lg border border-red-100/50">
-                    PENDENTES: ALUNOS SEM TURMA
+                    Pendentes: sem vínculo
                   </h3>
                   <div className="flex-1 h-px bg-red-100" />
                 </div>
@@ -1010,7 +1010,7 @@ export default function TabAlunos() {
                       <thead>
                         <tr className="border-b border-red-50 bg-red-50/30">
                           <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-16">Nº</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome do Aluno</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome</th>
                           <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Responsável</th>
                           <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Telefone</th>
                           <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
