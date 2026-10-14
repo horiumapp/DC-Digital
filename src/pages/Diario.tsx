@@ -40,25 +40,13 @@ export default function Diario() {
     const hoje = new Date();
     hoje.setHours(23, 59, 59, 999);
 
-    const resultado = [];
-    for (let i = 0; i < periodosLetivos.length; i++) {
-      const p = periodosLetivos[i];
+    const iniciados = periodosLetivos.filter((p) => {
       const [ano, mes, dia] = p.dataInicio.split('-').map(Number);
-      const dataInicio = new Date(ano, mes - 1, dia);
+      return new Date(ano, mes - 1, dia) <= hoje;
+    });
 
-      if (dataInicio > hoje) break;
-
-      if (i > 0) {
-        const bimestreAnterior = periodosLetivos[i - 1];
-        const isAnteriorFechado = checarFechado(bimestreAnterior.id);
-        if (!isAnteriorFechado) break;
-      }
-
-      resultado.push(p);
-    }
-
-    return resultado.length > 0 ? resultado : [periodosLetivos[0]];
-  }, [periodosLetivos, checarFechado]);
+    return iniciados.length > 0 ? iniciados : [periodosLetivos[0]];
+  }, [periodosLetivos]);
 
   const obterPeriodoAberto = useCallback((visiveis: typeof periodosLetivos) => {
     if (!visiveis || visiveis.length === 0) return periodosLetivos[0];
@@ -166,17 +154,20 @@ export default function Diario() {
   useEffect(() => {
     if (usuarioAlterouManualmente || !turmaAtiva) return;
 
-    // 1. Data explícita na URL (dateParam)
-    // 2. Última data com lançamento (frequência ou conteúdo) da turma
+    const periodoHoje = obterPeriodoAberto(periodosVisiveis);
+    const ultimoNoPeriodoHoje = ultimaDataLancada && periodoHoje && obterPeriodoPorData(ultimaDataLancada, [periodoHoje])
+      ? ultimaDataLancada
+      : null;
     const targetDate = (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam))
       ? dateParam
-      : ultimaDataLancada;
+      : ultimoNoPeriodoHoje;
 
     if (!targetDate) {
-      const periodoAberto = obterPeriodoAberto(periodosVisiveis);
-      if (periodoAberto && periodoAberto.id !== periodoSelecionadoId) {
-        setPeriodoSelecionadoId(periodoAberto.id);
-        setCurrentMonth(obterMesValido(periodoAberto));
+      if (periodoHoje && (periodoHoje.id !== periodoSelecionadoId || currentMonth !== obterMesValido(periodoHoje))) {
+        setPeriodoSelecionadoId(periodoHoje.id);
+        setCurrentMonth(obterMesValido(periodoHoje));
+        setSelectedDay(null);
+        setSelectedDayDetails(null);
       }
       return;
     }
@@ -201,6 +192,7 @@ export default function Diario() {
     usuarioAlterouManualmente,
     periodosVisiveis,
     periodoSelecionadoId,
+    currentMonth,
     obterPeriodoPorData,
     obterPeriodoAberto,
     obterMesValido

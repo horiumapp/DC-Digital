@@ -78,13 +78,16 @@ const turmaMock = {
 describe('Diario - Seleção Automática do Período Letivo Aberto', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 13, 12, 0, 0));
   });
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
-  it('seleciona automaticamente o 3º Bimestre quando o 1º e o 2º estiverem fechados', () => {
+  it('abre o bimestre de hoje mesmo quando o anterior ainda está aberto', () => {
     const fechamentos = {
       '1. BIMESTRE': true,
       '2. BIMESTRE': true,
@@ -104,15 +107,15 @@ describe('Diario - Seleção Automática do Período Letivo Aberto', () => {
     render(<Diario />);
 
     const select = screen.getByRole('combobox') as HTMLSelectElement;
-    expect(select.value).toBe('3. BIMESTRE');
+    expect(select.value).toBe('4. BIMESTRE');
+    expect(Array.from(select.options).map((option) => option.value)).toContain('3. BIMESTRE');
 
-    // Como o 3º bimestre está aberto, a mensagem "Aparata Fechada" não deve estar visível
     expect(screen.queryByText('Aparata Fechada')).toBeNull();
     // E o widget do calendário deve estar renderizado
     expect(screen.getByTestId('calendar-widget')).toBeDefined();
   });
 
-  it('mantém o 1º Bimestre se nenhum período estiver fechado (início do ano)', () => {
+  it('abre o bimestre da data de hoje se nenhum período estiver fechado', () => {
     const fechamentos = {};
 
     mockUseTurma.mockReturnValue({
@@ -128,7 +131,7 @@ describe('Diario - Seleção Automática do Período Letivo Aberto', () => {
     render(<Diario />);
 
     const select = screen.getByRole('combobox') as HTMLSelectElement;
-    expect(select.value).toBe('1. BIMESTRE');
+    expect(select.value).toBe('4. BIMESTRE');
   });
 
   it('permite que o professor selecione manualmente um bimestre anterior fechado para consulta', () => {
@@ -151,7 +154,7 @@ describe('Diario - Seleção Automática do Período Letivo Aberto', () => {
     const { rerender } = render(<Diario />);
 
     const select = screen.getByRole('combobox') as HTMLSelectElement;
-    expect(select.value).toBe('3. BIMESTRE');
+    expect(select.value).toBe('4. BIMESTRE');
 
     // Professor muda manualmente para o 1º Bimestre para consultar
     fireEvent.change(select, { target: { value: '1. BIMESTRE' } });
@@ -185,7 +188,7 @@ describe('Diario - Seleção Automática do Período Letivo Aberto', () => {
     const { rerender } = render(<Diario />);
 
     const select = screen.getByRole('combobox') as HTMLSelectElement;
-    expect(select.value).toBe('3. BIMESTRE');
+    expect(select.value).toBe('4. BIMESTRE');
 
     // Professor seleciona manualmente 1º Bimestre na Turma 1
     fireEvent.change(select, { target: { value: '1. BIMESTRE' } });
@@ -210,8 +213,7 @@ describe('Diario - Seleção Automática do Período Letivo Aberto', () => {
 
     rerender(<Diario />);
 
-    // Na nova turma, a escolha manual anterior deve ser redefinida e posicionar no período aberto da Turma 2 (2º Bimestre)
-    expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('2. BIMESTRE');
+    expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('4. BIMESTRE');
   });
 
   it('posiciona automaticamente no mês e dia especificados em ?date=YYYY-MM-DD da URL', () => {
@@ -237,12 +239,12 @@ describe('Diario - Seleção Automática do Período Letivo Aberto', () => {
     mockSearchParams = new URLSearchParams();
   });
 
-  it('posiciona automaticamente no mês e dia do último preenchimento da turma quando não há date na URL', () => {
+  it('posiciona no último preenchimento quando ele está no bimestre de hoje', () => {
     mockSearchParams = new URLSearchParams();
 
     const lancamentosMock = [
-      { turmaId: 'turma-1', data: '2026-02-10', tipo: 'frequencia', tempo: '1º TEMPO' },
-      { turmaId: 'turma-1', data: '2026-03-18', tipo: 'conteudo', tempo: '3º TEMPO' },
+      { turmaId: 'turma-1', data: '2026-09-28', tipo: 'frequencia', tempo: '1º TEMPO' },
+      { turmaId: 'turma-1', data: '2026-10-02', tipo: 'conteudo', tempo: '3º TEMPO' },
     ];
 
     mockUseTurma.mockReturnValue({
@@ -258,8 +260,30 @@ describe('Diario - Seleção Automática do Período Letivo Aberto', () => {
     render(<Diario />);
 
     const widget = screen.getByTestId('calendar-widget');
-    // Último preenchimento é 2026-03-18 -> mês índice 2 (Março), dia 18
-    expect(widget.getAttribute('data-current-month')).toBe('2');
-    expect(widget.getAttribute('data-selected-day')).toBe('18');
+    expect(widget.getAttribute('data-current-month')).toBe('9');
+    expect(widget.getAttribute('data-selected-day')).toBe('2');
+  });
+
+  it('abre o mês de hoje quando o último preenchimento ficou em um bimestre anterior', () => {
+    mockSearchParams = new URLSearchParams();
+
+    mockUseTurma.mockReturnValue({
+      turmaAtiva: turmaMock,
+      lancamentos: [
+        { turmaId: 'turma-1', data: '2026-03-18', tipo: 'conteudo', tempo: '3º TEMPO' },
+      ],
+      avaliacoes: [],
+      alunos: [],
+      horarioTurma: [],
+      fechamentos: {},
+      verificarPeriodoFechado: () => false,
+    });
+
+    render(<Diario />);
+
+    const select = screen.getByRole('combobox') as HTMLSelectElement;
+    const widget = screen.getByTestId('calendar-widget');
+    expect(select.value).toBe('4. BIMESTRE');
+    expect(widget.getAttribute('data-current-month')).toBe('9');
   });
 });
