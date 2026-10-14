@@ -102,7 +102,7 @@ export default function Frequencia() {
 
   const registeredTimes=(tipo:'frequencia'|'conteudo')=>new Set(lancamentos.filter(l=>l.data===selectedDate&&l.tipo===tipo&&String(l.turmaId).split('||')[0]===String(turmaAtiva.id).split('||')[0]&&temposValidosDoDia.includes(l.tempo)).map(l=>l.tempo)).size;
   const steps = [{id:'frequencia',title:'Frequência',hint:'Quem esteve com você'},{id:'objeto',title:'Conteúdo',hint:'O que foi ensinado'},{id:'anotacoes',title:'Anotações',hint:'O que vale lembrar'},{id:'avaliacoes',title:'Avaliações',hint:'Como a turma avançou'}];
-  return <div className="portal-page portal-lesson"><PageHeading eyebrow="SEU DIÁRIO EM AÇÃO" title="Registro da aula" description={turmaAtiva.fase+' · '+turmaAtiva.componente} actions={<Link className="portal-button secondary" to={'/diario?date='+selectedDate}><ArrowLeft size={16}/>Voltar ao diário</Link>}/>
+  return <div className="portal-page portal-lesson"><PageHeading eyebrow="SEU DIÁRIO EM AÇÃO" title="Registro da aula" actions={<Link className="portal-button secondary" to={'/diario?date='+selectedDate}><ArrowLeft size={16}/>Voltar ao diário</Link>}/>
         {feriadoNome && (
           <div className="bg-amber-50 text-amber-950 border-b border-amber-200 px-4 py-2.5 sm:px-8 text-xs sm:text-sm">
             <strong className="font-bold">Feriado:</strong> {feriadoNome}. Não há aula neste dia. O que já foi lançado continua visível, sem edição.
