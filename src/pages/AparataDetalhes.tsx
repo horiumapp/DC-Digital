@@ -9,6 +9,7 @@ import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
 import { APP_CONFIG, getBimestreAtual } from '../config/appConfig';
 import { getBimestreNumero } from '../utils/dateUtils';
 import { classeElipseNota, limitePontosBimestre } from '../utils/corNota';
+import { getEscolaLogo, LOGO_PADRAO_SEMED } from '../utils/escolaUtils';
 
 export default function AparataDetalhes() {
   const { turmaAtiva, alunos, avaliacoes, lancamentos, fechamentos, salvarFechamento } = useTurma();
@@ -33,6 +34,26 @@ export default function AparataDetalhes() {
   const [isFecharModalOpen, setIsFecharModalOpen] = useState(false);
   const [fechando, setFechando] = useState(false);
   const [avaliacoesComponente, setAvaliacoesComponente] = useState<Avaliacao[]>(avaliacoes);
+  const [logoEscola, setLogoEscola] = useState(() => getEscolaLogo({ nome: turmaAtiva?.escola }));
+
+  useEffect(() => {
+    const nome = turmaAtiva?.escola;
+    const local = getEscolaLogo({ nome });
+    setLogoEscola(local);
+    if (!turmaAtiva?.escola_id) return;
+    let ativo = true;
+    supabase
+      .from('escolas')
+      .select('logo_url, nome')
+      .eq('id', turmaAtiva.escola_id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!ativo || !data) return;
+        setLogoEscola(getEscolaLogo({ logo_url: data.logo_url, nome: data.nome || nome }));
+      })
+      .catch(() => { /* mantém o logo local pelo nome da escola */ });
+    return () => { ativo = false; };
+  }, [turmaAtiva?.escola, turmaAtiva?.escola_id]);
 
   useEffect(() => {
     setAvaliacoesComponente(avaliacoes);
@@ -439,7 +460,7 @@ export default function AparataDetalhes() {
 
       {/* Modal de Confirmação de Fechamento */}
       {isFecharModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in no-print">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
@@ -482,7 +503,7 @@ export default function AparataDetalhes() {
 
       {/* Modal de Confirmação de Reabertura Granular */}
       {isReabrirModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in no-print">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
@@ -581,13 +602,21 @@ export default function AparataDetalhes() {
         </div>
       )}
 
-      <div id="printable-aparata" className="hidden print:block">
+      <div id="printable-aparata" aria-hidden="true" style={{ display: 'none' }}>
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
             @page { size: A4 portrait; margin: 8mm; }
             html, body { background: white !important; margin: 0 !important; }
-            .portal-sidebar, .portal-school-topbar, .portal-page-location,
-            .portal-drawer-backdrop, .no-print { display: none !important; }
+            html body .portal-sidebar,
+            html body .portal-school-topbar,
+            html body .portal-page-location,
+            html body .portal-class-trail,
+            html body .portal-system-alert,
+            html body .portal-bottom-nav,
+            html body .portal-workspace-footer,
+            html body .portal-drawer-backdrop,
+            html body .dd-skip-link,
+            html body .no-print { display: none !important; }
             #printable-aparata {
               display: block !important;
               position: static !important;
@@ -597,9 +626,14 @@ export default function AparataDetalhes() {
             #printable-aparata .sheet { break-inside: avoid; page-break-inside: avoid; }
           }
           #printable-aparata { font-family: Arial, sans-serif; color: #111; }
+          #printable-aparata .doc-head {
+            display: flex; align-items: center; gap: 10px;
+            border: 1px solid #111; border-bottom: none; padding: 4px 8px;
+          }
+          #printable-aparata .escola-logo { width: 52px; height: 52px; object-fit: contain; flex: none; }
           #printable-aparata .doc-title {
-            text-align: center; font-size: 13px; font-weight: 700; letter-spacing: 0.4px;
-            text-transform: uppercase; border: 1px solid #111; border-bottom: none; padding: 5px 8px;
+            flex: 1; text-align: center; font-size: 13px; font-weight: 700; letter-spacing: 0.4px;
+            text-transform: uppercase; padding: 2px 8px;
           }
           #printable-aparata .meta { width: 100%; border-collapse: collapse; table-layout: fixed; }
           #printable-aparata .meta td { border: 1px solid #111; padding: 3px 6px; vertical-align: top; }
@@ -614,7 +648,17 @@ export default function AparataDetalhes() {
           #printable-aparata .rodape { margin-top: 4px; font-size: 8px; text-align: right; }
         `}} />
         <div className="sheet">
-          <div className="doc-title">Aparata — {periodo}</div>
+          <div className="doc-head">
+            <img
+              className="escola-logo"
+              src={logoEscola}
+              alt={`Logo da ${turmaAtiva.escola}`}
+              onError={() => {
+                if (logoEscola !== LOGO_PADRAO_SEMED) setLogoEscola(LOGO_PADRAO_SEMED);
+              }}
+            />
+            <div className="doc-title">Aparata — {periodo}</div>
+          </div>
           <table className="meta">
             <tbody>
               <tr>

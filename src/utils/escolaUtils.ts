@@ -7,7 +7,7 @@ const MAPA_LOGOS_NOMES: Array<{ pattern: RegExp; file: string }> = [
   { pattern: /DANILO/i, file: '/Danilo.png' },
   { pattern: /PENHA\s+SAID/i, file: '/Penha Said.png' },
   { pattern: /MARIA\s+MADALENA/i, file: '/Maria Madalena.png' },
-  { pattern: /FRANCISCA\s+MENDES/i, file: '/Francisca Mendes.png' },
+  { pattern: /FRANCISCA(?:\s+\S+){0,3}\s+MENDES/i, file: '/Francisca Mendes.png' },
   { pattern: /JOS[EÉ]\s+MAIA/i, file: '/José Maia.png' },
   { pattern: /PASTOR\s+JOS[EÉ]\s+REIS|PASTOR\s+REIS/i, file: '/Pastor José Reis.png' },
   { pattern: /PRESIDENTE\s+VARGAS/i, file: '/Presidente Vargas.png' },

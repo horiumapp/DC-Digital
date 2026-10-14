@@ -84,7 +84,7 @@ describe('AparataDetalhes', () => {
       expect(OfflineTurmaService.fetchAllFrequencias).toHaveBeenCalledWith('turma-1', 'Matemática');
     });
 
-    const row = screen.getByText('Aluno Pendente').closest('tr');
+    const row = screen.getByText('Aluno Pendente', { selector: 'td.cursor-pointer' }).closest('tr');
     expect(row?.textContent).toContain('1');
   });
 
@@ -120,7 +120,7 @@ describe('AparataDetalhes', () => {
     render(<AparataDetalhes />);
 
     // AV1 considerou 2ª CH = 8.5, AV2 = 7.0 => Soma = 15.50
-    const row = screen.getByText('Bruna Teste').closest('tr');
+    const row = screen.getByText('Bruna Teste', { selector: 'td.cursor-pointer' }).closest('tr');
     expect(row?.textContent).toContain('15,50');
   });
 
