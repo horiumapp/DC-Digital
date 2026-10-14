@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Save, Loader2 } from 'lucide-react';
 import Captcha from '../../common/Captcha';
+import { classeTextoNota, maximoDaAvaliacao } from '../../../utils/corNota';
 
 interface AvaliacaoItem {
   id?: string | number;
@@ -151,7 +152,7 @@ const SegundaChamadaEditor = React.memo(function SegundaChamadaEditor({
                       handleRowChange(aluno.id, 'grade', val);
                     }}
                     placeholder="0,00"
-                    className="w-24 text-center py-2 bg-slate-50 border-2 border-slate-100 rounded-xl text-slate-700 font-black focus:border-[#6354c7]/20 focus:bg-white transition-all outline-none disabled:opacity-50"
+                    className={`w-24 text-center py-2 bg-slate-50 border-2 border-slate-100 rounded-xl font-black focus:border-[#6354c7]/20 focus:bg-white transition-all outline-none disabled:opacity-50 ${classeTextoNota(parseFloat(String(secondCallRows[aluno.id]?.grade || '').replace(',', '.')), maximoDaAvaliacao(selectedAvaliacao))}`}
                   />
                 </td>
               </tr>

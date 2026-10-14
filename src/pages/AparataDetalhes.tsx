@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase';
 import TurmaHeaderInfo from '../components/common/TurmaHeaderInfo';
 import { APP_CONFIG, getBimestreAtual } from '../config/appConfig';
 import { getBimestreNumero } from '../utils/dateUtils';
+import { classeElipseNota, limitePontosBimestre } from '../utils/corNota';
 
 export default function AparataDetalhes() {
   const { turmaAtiva, alunos, avaliacoes, lancamentos, fechamentos, salvarFechamento } = useTurma();
@@ -392,7 +393,7 @@ export default function AparataDetalhes() {
                         <td className="px-4 py-2.5 text-[#6354c7] font-bold text-sm hover:underline cursor-pointer">{aluno.nome}</td>
                         <td className="px-4 py-2.5 text-slate-700 text-sm font-mono uppercase">{aluno.matricula}</td>
                         <td className="px-4 py-2.5">
-                          <span className={`inline-block text-white text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[42px] text-center ${parseFloat(aluno.somaParcial.replace(',', '.')) >= 6 ? 'bg-emerald-500' : 'bg-red-500'}`}>
+                          <span className={`inline-block text-white text-xs font-bold px-2.5 py-0.5 rounded-full min-w-[42px] text-center ${classeElipseNota(parseFloat(aluno.somaParcial.replace(',', '.')), limitePontosBimestre(targetBimestreNum))}`}>
                             {aluno.somaParcial}
                           </span>
                         </td>

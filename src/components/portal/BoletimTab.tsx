@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Download, Printer } from 'lucide-react';
 import { getBimestrePorData } from '../../utils/dateUtils';
+import { classeElipseNota, classeTextoNota, limitePontosBimestre } from '../../utils/corNota';
 import BoletimDocumento, { AlunoBoletimData, NotaBoletimItem, FrequenciaBoletimItem } from '../boletim/BoletimDocumento';
 
 export type AlunoData = AlunoBoletimData;
@@ -137,13 +138,13 @@ export default function BoletimTab({ alunoData, notas, frequencias }: BoletimTab
             <article key={resumo.disciplina} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="flex items-start justify-between gap-3 bg-slate-50 px-4 py-3">
                 <h4 className="text-sm font-black uppercase text-slate-800">{resumo.disciplina}</h4>
-                <span className="shrink-0 rounded-full bg-blue-50 px-2 py-1 text-xs font-black text-[#6354c7]">Total {resumo.total > 0 ? resumo.total.toFixed(1) : '—'}</span>
+                <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-black ${resumo.total > 0 ? `text-white ${classeElipseNota(resumo.total, 100)}` : 'bg-slate-200 text-slate-500'}`}>Total {resumo.total > 0 ? resumo.total.toFixed(1) : '—'}</span>
               </div>
               <div className="grid grid-cols-2 gap-px bg-slate-200">
                 {resumo.resultadosBimestres.map(resultado => (
                   <div key={resultado.bimestre} className="bg-white px-3 py-3">
                     <p className="text-xs font-black uppercase text-slate-400">{resultado.bimestre} bimestre</p>
-                    <div className="mt-2 flex items-end justify-between gap-2"><span><span className="block text-[11px] font-bold uppercase text-slate-400">Nota</span><strong className="text-lg text-slate-800">{resultado.nota !== null ? resultado.nota.toFixed(1) : '—'}</strong></span><span className="text-right"><span className="block text-[11px] font-bold uppercase text-slate-400">Faltas</span><strong className="text-lg text-slate-800">{resultado.faltas || '—'}</strong></span></div>
+                    <div className="mt-2 flex items-end justify-between gap-2"><span><span className="block text-[11px] font-bold uppercase text-slate-400">Nota</span><strong className={`text-lg ${resultado.nota !== null ? classeTextoNota(resultado.nota, limitePontosBimestre(resultado.bimestre)) : 'text-slate-800'}`}>{resultado.nota !== null ? resultado.nota.toFixed(1) : '—'}</strong></span><span className="text-right"><span className="block text-[11px] font-bold uppercase text-slate-400">Faltas</span><strong className="text-lg text-slate-800">{resultado.faltas || '—'}</strong></span></div>
                   </div>
                 ))}
               </div>

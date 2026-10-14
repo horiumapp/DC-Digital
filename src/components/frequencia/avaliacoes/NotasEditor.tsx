@@ -3,6 +3,7 @@ import { List, Check, AlertCircle } from 'lucide-react';
 import Captcha from '../../common/Captcha';
 
 import { formatarDataParaISO, formatarDataParaExibicao } from '../../../utils/dateUtils';
+import { classeTextoNota, maximoDaAvaliacao } from '../../../utils/corNota';
 
 interface AvaliacaoSelect {
   id?: string | number;
@@ -118,7 +119,7 @@ const NotasEditor = React.memo(function NotasEditor({
                           value={localNotas[aluno.id] || ''} 
                           onChange={(e) => onNotaChange(aluno.id, e.target.value)} 
                           disabled={disabled}
-                          className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-center text-lg font-bold text-[#6354c7] focus:ring-2 focus:ring-[#6354c7]/20 transition-all group-hover:bg-white placeholder:text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed" 
+                          className={`w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-center text-lg font-bold focus:ring-2 focus:ring-[#6354c7]/20 transition-all group-hover:bg-white placeholder:text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed ${classeTextoNota(parseFloat(String(localNotas[aluno.id] || '').replace(',', '.')), maximoDaAvaliacao(selectedAvaliacao))}`} 
                         />
                       )}
                     </div>

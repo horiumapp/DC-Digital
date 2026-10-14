@@ -9,6 +9,7 @@ import type { NotaRecord } from '../services/turmaService';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
 
 import { useToast } from '../components/common/Toast';
+import { classeElipseNota, corNota, maximoDaAvaliacao, limitePontosBimestre } from '../utils/corNota';
 
 function formatDiaMes(dateStr: string) {
   if (!dateStr) return '';
@@ -152,8 +153,7 @@ export default function RelatorioNotas() {
       soma += Math.max(numAv, numCh, numRp);
     });
     
-    const bimNumber = parseInt(periodo[0]);
-    const maxLimit = (bimNumber === 1 || bimNumber === 2) ? 20 : 30;
+    const maxLimit = limitePontosBimestre(periodo);
     
     return Math.min(soma, maxLimit);
   };
@@ -387,8 +387,7 @@ export default function RelatorioNotas() {
                         const somaVal = calcularSomaBimestre(aluno.id);
                         const numStr = (index + 1).toString().padStart(2, '0');
                         
-                        const bimNumber = parseInt(periodo[0]);
-                        const minPass = (bimNumber === 1 || bimNumber === 2) ? 10 : 15;
+                        const minPass = limitePontosBimestre(periodo) / 2;
                         
                         return (
                           <tr key={aluno.id} className="hover:bg-slate-50 transition even:bg-[#fafbff]">
@@ -405,7 +404,7 @@ export default function RelatorioNotas() {
                                 <React.Fragment key={av.id}>
                                   <td className="px-2 py-4 border-l border-slate-100 text-center">
                                     {vAv !== null ? (
-                                      <span className="inline-flex min-w-[50px] justify-center bg-[#6354c7] text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm shadow-blue-200/50 tracking-wide">
+                                      <span className={`inline-flex min-w-[50px] justify-center text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm tracking-wide ${classeElipseNota(Number(vAv), maximoDaAvaliacao(av))}`}>
                                         {Number(vAv).toFixed(2).replace('.', ',')}
                                       </span>
                                     ) : (
@@ -415,7 +414,7 @@ export default function RelatorioNotas() {
                                   {hasAnySecondCall && (
                                     <td className="px-2 py-4 text-center border-l border-slate-100">
                                       {ch && vCh !== null ? (
-                                        <span className="inline-flex min-w-[50px] justify-center bg-[#6354c7] text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm shadow-blue-200/50 tracking-wide">
+                                        <span className={`inline-flex min-w-[50px] justify-center text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm tracking-wide ${classeElipseNota(Number(vCh), maximoDaAvaliacao(ch.valorMaximo ? ch : av))}`}>
                                           {Number(vCh).toFixed(2).replace('.', ',')}
                                         </span>
                                       ) : (
@@ -427,7 +426,7 @@ export default function RelatorioNotas() {
                                   )}
                                   <td className="px-2 py-4 text-center border-l border-slate-100">
                                     {rp && vRp !== null ? (
-                                      <span className="inline-flex min-w-[50px] justify-center bg-[#6354c7] text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm shadow-blue-200/50 tracking-wide">
+                                      <span className={`inline-flex min-w-[50px] justify-center text-white px-3 py-1 rounded-full text-[13px] font-bold shadow-sm tracking-wide ${classeElipseNota(Number(vRp), maximoDaAvaliacao(rp.valorMaximo ? rp : av))}`}>
                                         {Number(vRp).toFixed(2).replace('.', ',')}
                                       </span>
                                     ) : (
@@ -440,11 +439,7 @@ export default function RelatorioNotas() {
                             
                             <td className="px-4 py-4 border-l border-slate-100 text-center">
                               {somaVal !== null ? (
-                                <span className={`inline-flex min-w-[50px] justify-center px-3 py-1 rounded-full text-[13px] font-bold shadow-sm text-white transition-colors duration-200 ${
-                                  somaVal >= minPass 
-                                    ? 'bg-[#6354c7] shadow-blue-200/50' 
-                                    : 'bg-[#c2463e] shadow-red-200/50'
-                                }`}>
+                                <span className={`inline-flex min-w-[50px] justify-center px-3 py-1 rounded-full text-[13px] font-bold shadow-sm text-white tracking-wide ${classeElipseNota(somaVal, minPass * 2)}`}>
                                   {Number(somaVal).toFixed(2).replace('.', ',')}
                                 </span>
                               ) : (
@@ -467,7 +462,7 @@ export default function RelatorioNotas() {
                         <button className="px-4 py-2 bg-white border border-slate-200 rounded-l-md hover:bg-slate-50 transition text-slate-400 flex items-center gap-1 font-medium">
                           &larr; Anterior
                         </button>
-                        <button className="px-4 py-2 bg-[#4361ee] text-white font-bold shadow-sm border border-[#4361ee]">1</button>
+                        <button className="px-4 py-2 bg-[#6354c7] text-white font-bold shadow-sm border border-[#6354c7]">1</button>
                         <button className="px-4 py-2 bg-white border border-slate-200 rounded-r-md hover:bg-slate-50 transition text-slate-600 flex items-center gap-1 font-medium">
                           Seguinte &rarr;
                         </button>
@@ -632,21 +627,21 @@ export default function RelatorioNotas() {
                         const vRp = rp ? getNota(aluno.id, rp.id) : null;
                         return (
                           <React.Fragment key={av.id}>
-                            <td style={{ textAlign: 'center' }}>
+                            <td style={{ textAlign: 'center', color: vAv !== null ? corNota(Number(vAv), maximoDaAvaliacao(av)) : undefined }}>
                               {vAv !== null ? Number(vAv).toFixed(1).replace('.', ',') : '-'}
                             </td>
                             {hasAnySecondCall && (
-                              <td style={{ textAlign: 'center' }}>
+                              <td style={{ textAlign: 'center', color: ch && vCh !== null ? corNota(Number(vCh), maximoDaAvaliacao(ch.valorMaximo ? ch : av)) : undefined }}>
                                 {ch && vCh !== null ? Number(vCh).toFixed(1).replace('.', ',') : '-'}
                               </td>
                             )}
-                            <td style={{ textAlign: 'center' }}>
+                            <td style={{ textAlign: 'center', color: rp && vRp !== null ? corNota(Number(vRp), maximoDaAvaliacao(rp.valorMaximo ? rp : av)) : undefined }}>
                               {rp && vRp !== null ? Number(vRp).toFixed(1).replace('.', ',') : '-'}
                             </td>
                           </React.Fragment>
                         );
                       })}
-                      <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
+                      <td style={{ textAlign: 'center', fontWeight: 'bold', color: somaVal !== null ? corNota(somaVal, limitePontosBimestre(periodo)) : undefined }}>
                         {somaVal !== null ? Number(somaVal).toFixed(1).replace('.', ',') : '-'}
                       </td>
                       <td style={{ textAlign: 'center' }}>ATIVA</td>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { getBimestrePorData } from '../../utils/dateUtils';
+import { corNota, limitePontosBimestre } from '../../utils/corNota';
 import { isNomeValido } from '../../utils/escolaUtils';
 import { APP_CONFIG } from '../../config/appConfig';
 import {
@@ -250,7 +251,7 @@ export default function BoletimDocumento({
 
                     return (
                       <React.Fragment key={`${disc}-${bim}`}>
-                        <td className="border-r border-black px-1 py-0.5 text-center font-medium">
+                        <td className="border-r border-black px-1 py-0.5 text-center font-medium" style={!isEmpty && somaBim !== null ? { color: corNota(somaBim, limitePontosBimestre(bim)) } : undefined}>
                           {!isEmpty && somaBim !== null ? somaBim.toFixed(1) : ''}
                         </td>
                         <td className="border-r border-black px-1 py-0.5 text-center text-slate-500">
@@ -260,7 +261,7 @@ export default function BoletimDocumento({
                     );
                   })}
                   <td className="border-r border-black px-1 py-0.5 text-center"></td>
-                  <td className="border-r border-black px-1 py-0.5 text-center font-black">
+                  <td className="border-r border-black px-1 py-0.5 text-center font-black" style={!isEmpty && bimestresComNota > 0 ? { color: corNota(somaMedias, 100) } : undefined}>
                     {!isEmpty && bimestresComNota > 0 ? somaMedias.toFixed(1) : ''}
                   </td>
                   <td className="px-1 py-0.5 text-center text-[8px] font-bold">

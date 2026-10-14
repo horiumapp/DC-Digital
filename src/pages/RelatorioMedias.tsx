@@ -8,6 +8,7 @@ import * as OfflineTurmaService from '../services/turmaServiceOffline';
 import { Aluno, Avaliacao, useTurma } from '../contexts/TurmaContext';
 import { escolherTurmaRelatorio } from '../utils/relatorioFiltro';
 import { useToast } from '../components/common/Toast';
+import { classeElipseNota, corNota, limitePontosBimestre } from '../utils/corNota';
 
 const obterLogoEscola = (nomeEscola: string) => {
   if (!nomeEscola) return '/logo.png';
@@ -278,15 +279,10 @@ export default function RelatorioMedias() {
                       const validMedias = [m1, m2, m3, m4].filter(m => m !== null) as number[];
                       const somaFinal = validMedias.length > 0 ? validMedias.reduce((a, b) => a + b, 0) : null;
                       
-                      const renderMediaPill = (val: number | null, isFinal = false) => {
+                      const renderMediaPill = (val: number | null, maximo: number) => {
                         if (val === null) return <span className="inline-flex min-w-[48px] justify-center text-slate-300 px-2 py-1 text-[13px] font-bold">-</span>;
-                        const isLow = isFinal ? val < 50 : false;
                         return (
-                          <span className={`inline-flex min-w-[52px] justify-center px-2.5 py-1.5 rounded-lg text-[13px] font-black transition-all shadow-sm ${
-                            isLow 
-                              ? 'bg-red-50 text-red-600 border border-red-100' 
-                              : isFinal ? 'bg-[#6354c7] text-white shadow-[#6354c7]/20' : 'bg-blue-50 text-[#6354c7] border border-blue-100'
-                          }`}>
+                          <span className={`inline-flex min-w-[52px] justify-center px-2.5 py-1.5 rounded-full text-[13px] font-black text-white shadow-sm ${classeElipseNota(val, maximo)}`}>
                             {val.toFixed(1).replace('.', ',')}
                           </span>
                         );
@@ -308,13 +304,13 @@ export default function RelatorioMedias() {
                           <td className="px-4 py-4 border-l border-slate-50 text-center">
                             <span className="text-[11px] text-slate-300 font-bold">-</span>
                           </td>
-                          <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m1)}</td>
-                          <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m2)}</td>
-                          <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m3)}</td>
-                          <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m4)}</td>
-                          <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(null)}</td>
+                          <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m1, limitePontosBimestre(1))}</td>
+                          <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m2, limitePontosBimestre(2))}</td>
+                          <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m3, limitePontosBimestre(3))}</td>
+                          <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(m4, limitePontosBimestre(4))}</td>
+                          <td className="px-2 py-4 border-l border-slate-50 text-center">{renderMediaPill(null, 0)}</td>
                           <td className="px-4 py-4 border-l border-slate-100 text-center bg-slate-50/50 font-black">
-                            {renderMediaPill(somaFinal, true)}
+                            {renderMediaPill(somaFinal, 100)}
                           </td>
                         </tr>
                       );
@@ -476,12 +472,12 @@ export default function RelatorioMedias() {
                       <td style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{aluno.nome}</td>
                       <td style={{ textAlign: 'center' }}>-</td>
                       <td style={{ textAlign: 'center' }}>-</td>
-                      <td style={{ textAlign: 'center' }}>{m1 !== null ? m1.toFixed(1).replace('.', ',') : '-'}</td>
-                      <td style={{ textAlign: 'center' }}>{m2 !== null ? m2.toFixed(1).replace('.', ',') : '-'}</td>
-                      <td style={{ textAlign: 'center' }}>{m3 !== null ? m3.toFixed(1).replace('.', ',') : '-'}</td>
-                      <td style={{ textAlign: 'center' }}>{m4 !== null ? m4.toFixed(1).replace('.', ',') : '-'}</td>
+                      <td style={{ textAlign: 'center', color: m1 !== null ? corNota(m1, limitePontosBimestre(1)) : undefined }}>{m1 !== null ? m1.toFixed(1).replace('.', ',') : '-'}</td>
+                      <td style={{ textAlign: 'center', color: m2 !== null ? corNota(m2, limitePontosBimestre(2)) : undefined }}>{m2 !== null ? m2.toFixed(1).replace('.', ',') : '-'}</td>
+                      <td style={{ textAlign: 'center', color: m3 !== null ? corNota(m3, limitePontosBimestre(3)) : undefined }}>{m3 !== null ? m3.toFixed(1).replace('.', ',') : '-'}</td>
+                      <td style={{ textAlign: 'center', color: m4 !== null ? corNota(m4, limitePontosBimestre(4)) : undefined }}>{m4 !== null ? m4.toFixed(1).replace('.', ',') : '-'}</td>
                       <td style={{ textAlign: 'center' }}>-</td>
-                      <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
+                      <td style={{ textAlign: 'center', fontWeight: 'bold', color: somaFinal !== null ? corNota(somaFinal, 100) : undefined }}>
                         {somaFinal !== null ? somaFinal.toFixed(1).replace('.', ',') : '-'}
                       </td>
                     </tr>

@@ -10,6 +10,7 @@ import { APP_CONFIG } from '../config/appConfig';
 import { formatMatriculaCpf } from '../utils/formatters';
 import { retratoPorSexo } from '../utils/retratoAluno';
 import { calcularFrequenciaLdb, classificarEtapaFrequencia } from '../utils/regraFrequenciaLdb';
+import { classeElipseNota } from '../utils/corNota';
 
 import BoletimTab from '../components/portal/BoletimTab';
 
@@ -521,7 +522,6 @@ export default function PortalAluno() {
                           <tbody className="divide-y divide-slate-100">
                             {notasDisc.map((nota, i) => {
                               const estilo = getBimestreEstilo(nota.bimestre);
-                              const isAprovado = nota.valor >= (nota.valor_maximo * 0.5);
 
                               return (
                                 <tr key={i} className={`group transition-colors ${estilo.rowBg}`}>
@@ -532,11 +532,7 @@ export default function PortalAluno() {
                                     </span>
                                   </td>
                                   <td className="py-2.5 px-3 text-right last:rounded-r-lg">
-                                    <span className={`text-sm font-black ${
-                                      isAprovado
-                                        ? 'text-blue-600'
-                                        : 'text-red-500'
-                                    }`}>
+                                    <span className={`inline-flex min-w-[44px] justify-center text-white text-sm font-black px-2.5 py-0.5 rounded-full ${classeElipseNota(nota.valor, nota.valor_maximo)}`}>
                                       {nota.valor.toFixed(1)}
                                     </span>
                                     <span className="text-[10px] text-slate-400 font-medium"> / {nota.valor_maximo}</span>
