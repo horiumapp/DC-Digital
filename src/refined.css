@@ -61,3 +61,4 @@
 @media(max-width:1250px){.portal-login-footer{gap:5%}}
 @media(max-width:1023px){.portal-login-footer{grid-template-columns:1fr 1fr;gap:30px}}
 @media(max-width:767px){.portal-login-footer{display:flex;flex-direction:column;align-items:center;max-width:440px;gap:10px;text-align:center}.portal-login-footer>footer{grid-column:auto;width:100%}}
+.portal-calendar-cell.is-future{color:var(--portal-muted);opacity:.55}

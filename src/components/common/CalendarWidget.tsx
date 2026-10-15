@@ -45,6 +45,7 @@ export interface DayDetails {
   temRecuperacao: boolean;
   recuperacoesLancadas: boolean;
   isWithinSelectedPeriod: boolean;
+  isPastOrToday: boolean;
   isToday: boolean;
   feriadoNome: string | null;
 }
@@ -128,6 +129,7 @@ export default function CalendarWidget({
 
   const handleDayClick = (e: React.MouseEvent, day: number, details: DayDetails) => {
     e.preventDefault();
+    if (!details.isPastOrToday && !details.feriadoNome) return;
     onDaySelect(day, details);
 
     // Abre o diário diretamente no primeiro clique se for dia de aula
@@ -274,6 +276,7 @@ export default function CalendarWidget({
       temRecuperacao,
       recuperacoesLancadas,
       isWithinSelectedPeriod,
+      isPastOrToday,
       isToday,
       feriadoNome,
     };
@@ -283,6 +286,7 @@ export default function CalendarWidget({
 
   // Keyboard nav for grid and agenda
   const handleKeyDown = (e: React.KeyboardEvent, day: number, details: DayDetails) => {
+    if (!details.isPastOrToday && !details.feriadoNome) return;
     if (e.key === 'Enter') {
       e.preventDefault();
       onDaySelect(day, details);
@@ -304,6 +308,11 @@ export default function CalendarWidget({
         onDaySelect(null, null);
       } else {
         const details = getDayDetails(selectedDay, currentMonth);
+        if (!details.isPastOrToday && !details.feriadoNome) {
+          lastEmittedRef.current = null;
+          onDaySelect(null, null);
+          return;
+        }
         const signature = `${year}-${currentMonth}-${selectedDay}-${details.status}-${details.isFrequenciaFull}-${details.isConteudoFull}-${details.avaliacoesLancadas}`;
         if (lastEmittedRef.current !== signature) {
           lastEmittedRef.current = signature;
@@ -316,7 +325,7 @@ export default function CalendarWidget({
   }, [selectedDay, currentMonth, year, getDayDetails, onDaySelect]);
 
   const statusLabel = (details: DayDetails) => details.status === 'full' ? 'Concluído' : details.status === 'partial' ? 'Em andamento' : details.isDiaDeAula ? 'A registrar' : 'Programado';
-  const scheduledDays = Array.from({length:daysInMonth},(_,i)=>({day:i+1,...getDayDetails(i+1)})).filter(d=>d.isWithinSelectedPeriod && (d.temposValidos.length>0 || d.feriadoNome));
+  const scheduledDays = Array.from({length:daysInMonth},(_,i)=>({day:i+1,...getDayDetails(i+1)})).filter(d=>d.isWithinSelectedPeriod && (d.feriadoNome || (d.isPastOrToday && d.temposValidos.length>0)));
   const matchesFilter = (d:DayDetails) => filter==='all' || (filter==='pending' && d.isDiaDeAula && d.status!=='full') || (filter==='full' && d.status==='full') || (filter==='evaluation' && (d.temAvaliacao || d.temRecuperacao));
   const monthPending=scheduledDays.filter(d=>d.isDiaDeAula&&d.status!=='full').length;
   const monthCompleted=scheduledDays.filter(d=>d.status==='full').length;
@@ -335,9 +344,9 @@ export default function CalendarWidget({
     {viewMode==='grid' ? <div className="portal-calendar-month"><div className="portal-weekdays">{WEEK_DAYS.map(d=><span key={d}>{d}</span>)}</div><div className="portal-calendar-grid">
       {calendarDays.map((day,index)=>{
         if(day===null) return <div className="portal-calendar-blank" key={'blank-'+index}/>;
-        const details=getDayDetails(day);const hasEvent=details.isWithinSelectedPeriod && (details.temposValidos.length>0 || details.feriadoNome); const visible=matchesFilter(details);
+        const details=getDayDetails(day);const hasEvent=details.isWithinSelectedPeriod && (!!details.feriadoNome || (details.isPastOrToday && details.temposValidos.length>0)); const visible=matchesFilter(details);
         const content=<><span className="portal-day-number">{day}{details.isToday&&<small>hoje</small>}</span>{hasEvent&&visible&&eventPills(details)}</>;
-        const cls='portal-calendar-cell '+(details.isToday?'is-today ':'')+(selectedDay===day?'is-selected ':'')+(!details.isWithinSelectedPeriod?'is-outside ':'')+(!visible?'is-filtered':'');
+        const cls='portal-calendar-cell '+(details.isToday?'is-today ':'')+(selectedDay===day && (details.isPastOrToday || details.feriadoNome)?'is-selected ':'')+(!details.isPastOrToday && !details.feriadoNome?'is-future ':'')+(!details.isWithinSelectedPeriod?'is-outside ':'')+(!visible?'is-filtered':'');
         if(hasEvent) return <div key={day} role="button" tabIndex={0} className={cls} onClick={e=>handleDayClick(e,day,details)} onKeyDown={e=>handleKeyDown(e,day,details)} title={details.isDiaDeAula?'Clique para abrir Frequência e notas':details.feriadoNome||'Aula programada'} aria-label={details.feriadoNome?`${day} de ${MONTH_NAMES[currentMonth]}, feriado: ${details.feriadoNome}`:`${day} de ${MONTH_NAMES[currentMonth]}, ${WEEK_DAYS_FULL[details.dayOfWeek]}, ${statusLabel(details)}`}>{content}</div>;
         return <div key={day} className={cls+' is-rest'}>{content}</div>;
       })}
