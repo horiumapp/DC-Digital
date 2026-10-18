@@ -14,11 +14,7 @@ export interface AtestadoMedico {
 const cachePorTurma = new Map<string, AtestadoMedico[]>();
 
 export async function listarAtestadosDoAluno(alunoId: string): Promise<AtestadoMedico[]> {
-  const { data, error } = await supabase
-    .from('atestados_medicos')
-    .select('id, aluno_id, escola_id, data_inicio, data_fim, observacao, criado_em')
-    .eq('aluno_id', alunoId)
-    .order('data_inicio', { ascending: false });
+  const { data, error } = await supabase.rpc('listar_atestados_do_aluno', { p_aluno_id: alunoId });
   if (error) throw error;
   return (data || []) as AtestadoMedico[];
 }
@@ -60,7 +56,7 @@ export async function alunosComAtestadoNaData(turmaId: string, dataIso: string):
     if (typeof navigator === 'undefined' || navigator.onLine) {
       const { data, error } = await supabase
         .from('atestados_medicos')
-        .select('id, aluno_id, escola_id, data_inicio, data_fim, observacao, criado_em, alunos!inner(turma_id)')
+        .select('id, aluno_id, escola_id, data_inicio, data_fim, criado_em, alunos!inner(turma_id)')
         .eq('alunos.turma_id', turmaId);
       if (error) throw error;
       const registros = (data || []) as AtestadoMedico[];

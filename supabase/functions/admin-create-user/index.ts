@@ -142,14 +142,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // FIX #3: Verificar rate limit antes de processar a requisição
-    if (!(await checkRateLimit(supabaseAdmin, callerUser.id))) {
-      return new Response(
-        JSON.stringify({ error: "Limite de requisições excedido. Aguarde 60 segundos antes de criar mais contas." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" } }
-      );
-    }
-
     // 2. Ler e validar tipos do body da requisição
     let body: unknown;
     try {
@@ -465,6 +457,13 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    if (!(await checkRateLimit(supabaseAdmin, callerUser.id))) {
+      return new Response(
+        JSON.stringify({ error: "Limite de requisições excedido. Aguarde 60 segundos antes de criar mais contas." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" } }
+      );
+    }
+
     // 7. Criar ou recuperar o usuário usando service_role
     let targetUserId = "";
     let isNewlyCreated = false;
@@ -505,7 +504,7 @@ Deno.serve(async (req: Request) => {
         // Se o usuário não tem perfil na tabela usuarios ou seu cargo está PENDENTE, completar o cadastro
         const isOrphanOrPending = !existingProfile;
 
-        if (isOrphanOrPending) {
+        if (isOrphanOrPending && hasNetworkScope(effectiveRole)) {
           targetUserId = existingAuth.id;
           await withMustChangePassword(supabaseAdmin, targetUserId, {
             password: senha,
@@ -534,8 +533,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 8. Provisionamento institucional:
-    // Tenta primeiro via RPC transacional finalize_provisioned_user se ela existir no banco
+    // 8. Provisionamento institucional. Sem a RPC, não há gravação direta.
     const { error: provisionError } = await supabaseAdmin.rpc("finalize_provisioned_user", {
       p_actor: callerUser.id,
       p_user: targetUserId,
@@ -552,58 +550,14 @@ Deno.serve(async (req: Request) => {
         provisionError.message?.includes("não encontrada");
 
       if (isMissingRpc) {
-        // Fallback gracioso quando a migração da RPC ainda não foi aplicada ao banco remoto
-        console.warn("[admin-create-user] RPC finalize_provisioned_user ausente no banco. Executando provisionamento direto institucional.");
-
-        const { error: upsertError } = await supabaseAdmin
-          .from("usuarios")
-          .upsert(
-            {
-              id: targetUserId,
-              email: emailTrimmed,
-              nome_completo: nomeTrimmed,
-              cargo: cargoTrimmed,
-              escola_id: escolaIdForWrite,
-            },
-            { onConflict: "id" }
-          );
-
-        if (upsertError) {
-          console.error("Erro ao fazer upsert em usuarios:", upsertError);
-          if (isNewlyCreated) {
-            await supabaseAdmin.auth.admin.deleteUser(targetUserId);
-          }
-          return new Response(
-            JSON.stringify({ error: "Erro ao criar perfil de usuário institucional." }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+        if (isNewlyCreated) {
+          await supabaseAdmin.auth.admin.deleteUser(targetUserId);
         }
-
-        // Promover role no app_metadata do Auth
-        await withMustChangePassword(supabaseAdmin, targetUserId, {
-          app_metadata: { role: cargoTrimmed },
-        }, true);
-
-        // Vincular ao professor ou aluno
-        if (cargoTrimmed === "PROFESSOR") {
-          const { error: linkProfError } = await supabaseAdmin
-            .from("professores")
-            .update({ usuario_id: targetUserId })
-            .ilike("email", emailTrimmed);
-          if (linkProfError) {
-            console.warn("[admin-create-user] Aviso ao vincular usuario_id em professores:", linkProfError.message);
-          }
-        } else if (cargoTrimmed === "ALUNO" && emailTrimmed.endsWith("@aluno.dcdigital.local")) {
-          const cpfDigits = emailTrimmed.split("@")[0];
-          const cpfFormatted = cpfDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-          const { error: linkAlunoError } = await supabaseAdmin
-            .from("alunos")
-            .update({ usuario_id: targetUserId })
-            .or(`cpf.eq.${cpfDigits},cpf.eq.${cpfFormatted}`);
-          if (linkAlunoError) {
-            console.warn("[admin-create-user] Aviso ao vincular usuario_id em alunos:", linkAlunoError.message);
-          }
-        }
+        console.error("[admin-create-user] RPC finalize_provisioned_user ausente no banco.");
+        return new Response(
+          JSON.stringify({ error: "O provisionamento institucional não está disponível neste banco. Aplique as migrações antes de criar contas." }),
+          { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       } else {
         // Erro legítimo de validação da RPC (ex: 42501 falta de autorização, aluno de outra escola, etc.)
         if (isNewlyCreated) {

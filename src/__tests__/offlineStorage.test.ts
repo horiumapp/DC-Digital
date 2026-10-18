@@ -24,6 +24,7 @@ const {
     horarios: [],
     fechamentos: [],
     curriculos: [],
+    anotacoes: [],
     userSalts: [],
     syncLogs: [],
     syncQueue: [],
@@ -186,6 +187,11 @@ const {
       filter: (fn: (item: MockRecord) => boolean) => ({
         first: async () => mockStore[tableName].filter(fn)[0],
         toArray: async () => mockStore[tableName].filter(fn),
+        delete: async () => {
+          const before = mockStore[tableName].length;
+          mockStore[tableName] = mockStore[tableName].filter(item => !fn(item));
+          return before - mockStore[tableName].length;
+        },
       }),
     };
   };
@@ -200,6 +206,7 @@ const {
     horarios: createTableMock('horarios'),
     fechamentos: createTableMock('fechamentos'),
     curriculos: createTableMock('curriculos'),
+    anotacoes: createTableMock('anotacoes'),
     userSalts: createTableMock('userSalts'),
     syncLogs: createTableMock('syncLogs'),
     syncQueue: createTableMock('syncQueue'),
@@ -224,6 +231,7 @@ const {
         horarios: [],
         fechamentos: [],
         curriculos: [],
+        anotacoes: [],
         userSalts: [],
         syncLogs: [],
         syncQueue: [],
@@ -488,6 +496,24 @@ describe('offlineStorage Service', () => {
     expect(store.turmas).toHaveLength(0);
     expect(store.curriculos).toHaveLength(0);
     expect(store.alunos).toHaveLength(0);
+  });
+
+  it('no logout apaga anotações locais e a fila do usuário, inclusive itens sem dono', async () => {
+    const store = getMockStore();
+    localStorage.setItem('dc_last_user_id', 'user-saindo');
+    store.anotacoes.push({ localId: 1, texto: 'aluno com dificuldade' });
+    store.syncQueue.push(
+      { id: 1, ownerUserId: 'user-saindo', payload: '{"aluno":"ana"}', status: 'pending' },
+      { id: 2, payload: '{"aluno":"sem-dono"}', status: 'pending' },
+      { id: 3, ownerUserId: 'outro-usuario', payload: '{"aluno":"bruno"}', status: 'pending' },
+    );
+
+    await clearAllLocalData(true, false);
+
+    expect(store.anotacoes).toHaveLength(0);
+    expect(store.syncQueue).toEqual([
+      expect.objectContaining({ id: 3, ownerUserId: 'outro-usuario' }),
+    ]);
   });
 
   it('purga operações pendentes de UPSERT na fila ao deletar frequência local', async () => {

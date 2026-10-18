@@ -1228,6 +1228,7 @@ export async function clearAllLocalData(clearQueue = false, clearCrypto = false)
     db.horarios.clear(),
     db.fechamentos.clear(),
     db.curriculos.clear(),
+    db.anotacoes.clear(),
     db.syncLogs.clear(),
     db.cachedUsers.clear(),
     db.files.clear(),
@@ -1239,7 +1240,9 @@ export async function clearAllLocalData(clearQueue = false, clearCrypto = false)
     promises.push(db.userSalts.clear());
   }
   if (clearQueue) {
-    promises.push(db.syncQueue.filter(i => i.ownerUserId === localStorage.getItem('dc_last_user_id')).delete().then(() => {}));
+    const owner = localStorage.getItem('dc_last_user_id');
+    // Itens sem dono ficam legíveis para a próxima sessão no mesmo navegador.
+    promises.push(db.syncQueue.filter(i => !i.ownerUserId || i.ownerUserId === owner).delete().then(() => {}));
   }
   // FIX: Usar allSettled para garantir que todas as tabelas sejam tentadas
   // mesmo se alguma falhar (ex: IndexedDB corrompido parcialmente)
