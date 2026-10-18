@@ -1150,7 +1150,12 @@ export async function getLocalPendingCount(): Promise<number> {
     db.notas.where('syncStatus').equals('pending').count(),
     db.fechamentos.where('syncStatus').equals('pending').count(),
   ]);
-  const queued = await db.syncQueue.filter(i => !i.ownerUserId || i.ownerUserId === offlineOwner()).count();
+  const owner = (() => {
+    try { return offlineOwner(); } catch { return null; }
+  })();
+  const queued = owner
+    ? await db.syncQueue.filter(i => i.ownerUserId === owner).count()
+    : 0;
   return Math.max(freq + cont + anots + aval + notas + fech, queued);
 }
 

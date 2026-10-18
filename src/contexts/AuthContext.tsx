@@ -181,12 +181,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name = cacheResult.name;
       }
       const cached = cacheResult;
-      if (userDataResult.data?.cargo) role = userDataResult.data.cargo as UserRole;
-
-      // P2 FIX: Usar o resultado da busca paralela apenas se online e sem erro.
-      // Se offline, o resultado é { data: null, error: null } (silenciado pelo .catch).
-      if (isReallyOnline && userDataResult && !userDataResult.error && userDataResult.data?.escola_id) {
-        escolaId = userDataResult.data.escola_id;
+      // Online, o cargo vem da tabela usuarios. Claim antigo do JWT não sustenta sessão sem esse registro.
+      if (isReallyOnline && userDataResult && !userDataResult.error) {
+        const cargoInstitucional = userDataResult.data?.cargo;
+        if (!cargoInstitucional) {
+          role = undefined as unknown as UserRole;
+        } else {
+          role = cargoInstitucional as UserRole;
+        }
+        if (userDataResult.data?.escola_id) {
+          escolaId = userDataResult.data.escola_id;
+        }
+      } else if (userDataResult.data?.cargo) {
+        role = userDataResult.data.cargo as UserRole;
       }
 
       await loadAcademicCalendar(escolaId);
@@ -240,7 +247,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const isolate = async () => {
         const previous = localStorage.getItem('dc_last_user_id');
         if (previous && previous !== authUser.id) {
-          await clearAllLocalData(false, false);
+          await clearAllLocalData(true, false);
           clearKeyCache();
         }
         if (isCancelled()) return;

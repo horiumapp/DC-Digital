@@ -41,6 +41,14 @@ describe('Revisão defensiva — cargo e atestado', () => {
     expect(createUser).toContain('if (isOrphanOrPending && hasNetworkScope(effectiveRole))');
     expect(createUser).toContain('status: 503');
     expect(createUser).not.toContain('.upsert(');
+    expect(createUser).toContain('Seu perfil institucional não foi encontrado');
+    expect(createUser).not.toContain('role ausente no JWT');
+    expect(createUser).not.toContain('origin || "*"');
+    const autor = readFileSync(
+      resolve(process.cwd(), 'supabase/migrations/20261017000001_autor_fechamento.sql'),
+      'utf8',
+    );
+    expect(autor).toContain('NEW.usuario_fechamento_id := auth.uid()');
   });
 });
 

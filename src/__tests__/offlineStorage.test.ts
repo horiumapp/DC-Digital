@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { webcrypto } from 'crypto';
+import { setOfflineOwner } from '../services/offlineIdentity';
 
 // Garantir que a API Web Crypto global está disponível no Node.js
 if (!globalThis.crypto) {
@@ -192,6 +193,7 @@ const {
           mockStore[tableName] = mockStore[tableName].filter(item => !fn(item));
           return before - mockStore[tableName].length;
         },
+        count: async () => mockStore[tableName].filter(fn).length,
       }),
     };
   };
@@ -287,6 +289,7 @@ import {
   deleteNotasLocal,
   clearOldSyncedData,
   clearAllLocalData,
+  getLocalPendingCount,
 } from '../services/offlineStorage';
 import { db } from '../lib/db';
 
@@ -513,6 +516,25 @@ describe('offlineStorage Service', () => {
     expect(store.syncQueue).toEqual([
       expect.objectContaining({ id: 3, ownerUserId: 'outro-usuario' }),
     ]);
+  });
+
+  it('não conta fila de outro usuário nem item sem dono como pendência', async () => {
+    const memory = new Map<string, string>([['dc_last_user_id', 'user-a']]);
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => memory.get(key) ?? null,
+      setItem: (key: string, value: string) => { memory.set(key, value); },
+      removeItem: (key: string) => { memory.delete(key); },
+    });
+    setOfflineOwner('user-a');
+    const store = getMockStore();
+    store.syncQueue.push(
+      { ownerUserId: 'user-a', status: 'pending' },
+      { ownerUserId: 'user-b', status: 'pending' },
+      { status: 'pending' },
+    );
+
+    await expect(getLocalPendingCount()).resolves.toBe(1);
+    vi.unstubAllGlobals();
   });
 
   it('purga operações pendentes de UPSERT na fila ao deletar frequência local', async () => {

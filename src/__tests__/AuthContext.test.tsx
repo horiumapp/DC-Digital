@@ -15,7 +15,8 @@ const {
   mockSignOut,
   mockMaybeSingle,
   mockFrom,
-  setSessionVal
+  setSessionVal,
+  getSessionVal
 } = vi.hoisted(() => {
   let sessionVal: unknown = null;
   let authStateCallback: ((event: string, session: unknown) => void) | null = null;
@@ -54,7 +55,8 @@ const {
     mockSignOut: signOut,
     mockMaybeSingle: maybeSingle,
     mockFrom: from,
-    setSessionVal: (val: unknown) => { sessionVal = val; }
+    setSessionVal: (val: unknown) => { sessionVal = val; },
+    getSessionVal: () => sessionVal,
   };
 });
 
@@ -141,7 +143,15 @@ describe('AuthContext', () => {
     setSessionVal(null);
     mockGetCachedUser.mockReset();
     mockMaybeSingle.mockReset();
-    mockMaybeSingle.mockImplementation(async () => ({ data: { escola_id: 'escola-123' }, error: null }));
+    localStorage.removeItem('dc_last_user_id');
+    mockMaybeSingle.mockImplementation(async () => {
+      const session = getSessionVal() as { user?: { app_metadata?: { role?: string } } } | null;
+      const cargo = session?.user?.app_metadata?.role;
+      return {
+        data: cargo ? { escola_id: 'escola-123', cargo } : null,
+        error: null,
+      };
+    });
     mockGetCachedUser.mockImplementation(async () => null);
     vi.stubGlobal('fetch', vi.fn(async () => ({ status: 200, ok: true })));
   });
@@ -367,6 +377,77 @@ describe('AuthContext', () => {
 
     expect(mockSignOut).toHaveBeenCalledWith({ scope: 'local' });
     expect(screen.getByText('Não autenticado')).toBeDefined();
+  });
+
+  it('online, o cargo da tabela usuarios prevalece sobre o claim do JWT', async () => {
+    setSessionVal({
+      user: {
+        id: 'user-123',
+        email: 'professor@escola.com',
+        user_metadata: { full_name: 'Professor Teste' },
+        app_metadata: { role: 'ADMIN' },
+      },
+    });
+    mockMaybeSingle.mockImplementation(async () => ({
+      data: { escola_id: 'escola-123', cargo: 'PROFESSOR' },
+      error: null,
+    }));
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('user-role').textContent).toBe('PROFESSOR');
+    });
+  });
+
+  it('online, sessão sem registro em usuarios é encerrada', async () => {
+    setSessionVal({
+      user: {
+        id: 'user-revogado',
+        email: 'revogado@escola.com',
+        user_metadata: { full_name: 'Revogado' },
+        app_metadata: { role: 'ADMIN' },
+      },
+    });
+    mockMaybeSingle.mockImplementation(async () => ({ data: null, error: null }));
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Não autenticado')).toBeDefined();
+    });
+    expect(mockSignOut).toHaveBeenCalled();
+  });
+
+  it('troca de usuário apaga a fila local do usuário anterior', async () => {
+    localStorage.setItem('dc_last_user_id', 'usuario-anterior');
+    setSessionVal({
+      user: {
+        id: 'user-123',
+        email: 'professor@escola.com',
+        user_metadata: { full_name: 'Professor Teste' },
+        app_metadata: { role: 'PROFESSOR' },
+      },
+    });
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('user-role').textContent).toBe('PROFESSOR');
+    });
+    expect(mockClearAllLocalData).toHaveBeenCalledWith(true, false);
   });
 });
 

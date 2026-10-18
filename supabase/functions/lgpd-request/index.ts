@@ -26,14 +26,14 @@ const ALLOWED_VERCEL_REGEX = /^https:\/\/(dc-digital|ddigital-lbr)(-[a-z0-9-]+)?
 function getCorsHeaders(req: Request): Record<string, string> | null {
   const origin = req.headers.get("Origin") || "";
   const isAllowed =
-    ALLOWED_ORIGINS.includes(origin) ||
-    ALLOWED_VERCEL_REGEX.test(origin);
+    Boolean(origin) &&
+    (ALLOWED_ORIGINS.includes(origin) || ALLOWED_VERCEL_REGEX.test(origin));
 
-  if (!isAllowed && origin) {
+  if (!isAllowed) {
     return null;
   }
   return {
-    "Access-Control-Allow-Origin": origin || "*",
+    "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Headers":
       "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
