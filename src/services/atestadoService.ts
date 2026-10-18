@@ -15,8 +15,18 @@ const cachePorTurma = new Map<string, AtestadoMedico[]>();
 
 export async function listarAtestadosDoAluno(alunoId: string): Promise<AtestadoMedico[]> {
   const { data, error } = await supabase.rpc('listar_atestados_do_aluno', { p_aluno_id: alunoId });
-  if (error) throw error;
-  return (data || []) as AtestadoMedico[];
+  const funcaoAusente = error?.code === 'PGRST202'
+    || /could not find the function/i.test(error?.message || '');
+  if (!error) return (data || []) as AtestadoMedico[];
+  if (!funcaoAusente) throw error;
+
+  const legado = await supabase
+    .from('atestados_medicos')
+    .select('id, aluno_id, escola_id, data_inicio, data_fim, observacao, criado_em')
+    .eq('aluno_id', alunoId)
+    .order('data_inicio', { ascending: false });
+  if (legado.error) throw legado.error;
+  return (legado.data || []) as AtestadoMedico[];
 }
 
 export async function lancarAtestadoMedico(entrada: {

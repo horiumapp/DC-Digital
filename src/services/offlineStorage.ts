@@ -1216,8 +1216,21 @@ export async function clearOldSyncedData(maxAgeDays: number = 60): Promise<numbe
   return deletedCount;
 }
 
+function ultimoUsuarioLocal(): string | null {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    return localStorage.getItem('dc_last_user_id');
+  } catch {
+    return null;
+  }
+}
+
 /** Limpa TODOS os dados locais (para logout) */
-export async function clearAllLocalData(clearQueue = false, clearCrypto = false): Promise<void> {
+export async function clearAllLocalData(
+  clearQueue = false,
+  clearCrypto = false,
+  ownerUserId: string | null = ultimoUsuarioLocal(),
+): Promise<void> {
   const promises: Promise<void>[] = [
     db.turmas.clear(),
     db.alunos.clear(),
@@ -1240,7 +1253,7 @@ export async function clearAllLocalData(clearQueue = false, clearCrypto = false)
     promises.push(db.userSalts.clear());
   }
   if (clearQueue) {
-    const owner = localStorage.getItem('dc_last_user_id');
+    const owner = ownerUserId;
     // Itens sem dono ficam legíveis para a próxima sessão no mesmo navegador.
     promises.push(db.syncQueue.filter(i => !i.ownerUserId || i.ownerUserId === owner).delete().then(() => {}));
   }

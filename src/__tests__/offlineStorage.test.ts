@@ -500,7 +500,6 @@ describe('offlineStorage Service', () => {
 
   it('no logout apaga anotações locais e a fila do usuário, inclusive itens sem dono', async () => {
     const store = getMockStore();
-    localStorage.setItem('dc_last_user_id', 'user-saindo');
     store.anotacoes.push({ localId: 1, texto: 'aluno com dificuldade' });
     store.syncQueue.push(
       { id: 1, ownerUserId: 'user-saindo', payload: '{"aluno":"ana"}', status: 'pending' },
@@ -508,7 +507,7 @@ describe('offlineStorage Service', () => {
       { id: 3, ownerUserId: 'outro-usuario', payload: '{"aluno":"bruno"}', status: 'pending' },
     );
 
-    await clearAllLocalData(true, false);
+    await clearAllLocalData(true, false, 'user-saindo');
 
     expect(store.anotacoes).toHaveLength(0);
     expect(store.syncQueue).toEqual([
