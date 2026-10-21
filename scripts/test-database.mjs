@@ -271,6 +271,19 @@ const failureLog = (await db.query("SELECT * FROM security_logs WHERE action='LO
 assert.ok(failureLog);
 assert.equal(failureLog.action, 'LOGIN_FAILED');
 
+// Hardening security_logs: autenticado só pode gravar evento com o PRÓPRIO user_id.
+// Policy atual: WITH CHECK (user_id IS NOT NULL AND user_id = auth.uid()).
+await asUser(ids.teacher);
+// (a) Próprio user_id: permitido
+await db.exec(`INSERT INTO security_logs(action,user_id,user_agent) VALUES('LOGIN','${ids.teacher}','own-agent')`);
+// (b) user_id de terceiro (spoofing): bloqueado por RLS
+await rejected(`INSERT INTO security_logs(action,user_id,user_agent) VALUES('LOGIN','${ids.secretary}','spoof-agent')`, /row-level security/);
+// (c) user_id nulo: bloqueado (policy exige NOT NULL)
+await rejected(`INSERT INTO security_logs(action,user_id,user_agent) VALUES('LOGIN',NULL,'null-agent')`, /row-level security/);
+await db.exec('RESET ROLE');
+assert.equal((await db.query(`SELECT count(*)::int AS c FROM security_logs WHERE user_agent='own-agent' AND user_id='${ids.teacher}'`)).rows[0].c, 1);
+assert.equal((await db.query("SELECT count(*)::int AS c FROM security_logs WHERE user_agent IN ('spoof-agent','null-agent')")).rows[0].c, 0);
+
 // Teste Reauditoria 8: Idempotência permanente via sync_idempotency_keys mesmo após expiração de sync_receipts
 await db.exec('RESET ROLE');
 await db.exec(`UPDATE public.usuarios SET cargo='PROFESSOR' WHERE id='${ids.teacher}'`);
