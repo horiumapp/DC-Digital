@@ -458,10 +458,41 @@ assert.equal((await db.query('SELECT 1 FROM usuarios WHERE id=$1', [ids.secretar
 await asUser(ids.teacher);
 assert.equal((await db.query('SELECT 1 FROM usuarios WHERE id=$1', [otherSec])).rows.length, 0);
 assert.equal((await db.query('SELECT 1 FROM usuarios WHERE id=$1', [ids.teacher])).rows.length, 1);
+
+// Seed de frequências nas duas escolas (service_role; disciplinas sem bimestre fechado).
+await asUser(ids.admin, 'service_role');
+await db.query("INSERT INTO frequencias(turma_id,aluno_id,data,tempo,disciplina,status,participacao) VALUES($1,$2,'2026-03-01','1','CIEN','P','Presencial')", [ids.class, ids.a]);
+await db.query("INSERT INTO frequencias(turma_id,aluno_id,data,tempo,disciplina,status,participacao) VALUES($1,$2,'2026-03-01','1','PORT','P','Presencial')", [ids.otherClass, ids.otherA]);
+
+// frequencias: GESTOR vê a própria escola, nunca a outra.
+await asUser(gestor);
+assert.ok((await db.query('SELECT 1 FROM frequencias WHERE aluno_id=$1', [ids.a])).rows.length >= 1);
+assert.equal((await db.query('SELECT 1 FROM frequencias WHERE aluno_id=$1', [ids.otherA])).rows.length, 0);
+
+// frequencias: PROFESSOR com acesso à turma vê a própria escola, nunca a outra.
+await asUser(ids.teacher);
+assert.ok((await db.query('SELECT 1 FROM frequencias WHERE aluno_id=$1', [ids.a])).rows.length >= 1);
+assert.equal((await db.query('SELECT 1 FROM frequencias WHERE aluno_id=$1', [ids.otherA])).rows.length, 0);
+
+// frequencias: ALUNO vê só as próprias faltas, nunca as de outra escola.
+await asUser(ids.student);
+assert.ok((await db.query('SELECT 1 FROM frequencias WHERE aluno_id=$1', [ids.otherA])).rows.length >= 1);
+assert.equal((await db.query('SELECT 1 FROM frequencias WHERE aluno_id=$1', [ids.a])).rows.length, 0);
+
+// alunos (PII: CPF/endereço/responsável): isolamento por escola/turma/propriedade.
+await asUser(gestor);
+assert.ok((await db.query('SELECT 1 FROM alunos WHERE id=$1', [ids.a])).rows.length >= 1);
+assert.equal((await db.query('SELECT 1 FROM alunos WHERE id=$1', [ids.otherA])).rows.length, 0);
+await asUser(ids.teacher);
+assert.ok((await db.query('SELECT 1 FROM alunos WHERE id=$1', [ids.a])).rows.length >= 1);
+assert.equal((await db.query('SELECT 1 FROM alunos WHERE id=$1', [ids.otherA])).rows.length, 0);
+await asUser(ids.student);
+assert.ok((await db.query('SELECT 1 FROM alunos WHERE id=$1', [ids.otherA])).rows.length >= 1);
+assert.equal((await db.query('SELECT 1 FROM alunos WHERE id=$1', [ids.a])).rows.length, 0);
 await db.exec('RESET ROLE');
 
 console.log('RLS isolation, closed periods, membership, idempotency, revision conflicts and cross-school provisioning: passed.');
-console.log('Cross-school read isolation (notas, usuarios PII): passed.');
+console.log('Cross-school read isolation (notas, frequencias, alunos PII, usuarios PII): passed.');
 console.log('Audit P1/P2 fixes: teacher atomic deallocation, lgpd direct insert revocation, student uniqueness, and authorization hardening passed.');
 console.log('Audit Etapa 2/3: atomic curriculum upsert, atomic professor creation, sync retention, and granular locks passed.');
 console.log('Reaudit final fixes: fail-closed transfer RPCs, named param curriculum contract, login failure logging, permanent idempotency, and deterministic locks passed.');
