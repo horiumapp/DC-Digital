@@ -469,6 +469,8 @@ assert.equal(await visUser(ids.teacher), 1);
 await asUser(ids.admin, 'service_role');
 await db.query("INSERT INTO frequencias(turma_id,aluno_id,data,tempo,disciplina,status,participacao) VALUES($1,$2,'2026-03-01','1','CIEN','P','Presencial')", [ids.class, ids.a]);
 await db.query("INSERT INTO frequencias(turma_id,aluno_id,data,tempo,disciplina,status,participacao) VALUES($1,$2,'2026-03-01','1','PORT','P','Presencial')", [ids.otherClass, ids.otherA]);
+await db.exec('RESET ROLE');
+console.log('DEBUG2 freq rows:', (await db.query('SELECT aluno_id::text a, turma_id::text t, disciplina d FROM frequencias ORDER BY 1')).rows);
 
 // Conta linhas visíveis sob a RLS do papel atual (count(*) evita um quirk do
 // PGlite com `SELECT 1 ... WHERE $1` sob RLS; o número é a fonte da verdade).
