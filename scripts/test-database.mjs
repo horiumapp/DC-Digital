@@ -483,10 +483,170 @@ assert.equal(await vis('usuarios', 'id', ids.secretary), 1);
 await asUser(ids.teacher);
 assert.equal(await vis('usuarios', 'id', otherSec), 0);
 assert.equal(await vis('usuarios', 'id', ids.teacher), 1);
+
+// ----------------------------------------------------------------
+// atestados_medicos (PII de saúde / LGPD):
+// - Coluna observacao revogada no SELECT direto para authenticated.
+// - RPC listar_atestados_do_aluno exibe observacao apenas para staff da
+//   própria escola, escopo_rede/ADMIN ou o próprio aluno; professor vê NULL.
+// - Isolamento cross-escola para leitura, inserção e exclusão.
+// ----------------------------------------------------------------
+await asUser(ids.secretary);
+await db.query(
+  "INSERT INTO atestados_medicos(aluno_id, escola_id, data_inicio, data_fim, observacao, usuario_id) VALUES ($1, $2, '2026-05-10', '2026-05-12', 'CID J00 - repouso', $3)",
+  [ids.a, ids.school, ids.secretary]
+);
+// Secretário da escola A não pode lançar atestado para aluno da escola B
+await rejected(
+  `INSERT INTO atestados_medicos(aluno_id, escola_id, data_inicio, data_fim, observacao, usuario_id) VALUES ('${ids.otherA}', '${ids.otherSchool}', '2026-05-10', '2026-05-12', 'Invasao', '${ids.secretary}')`,
+  /row-level security/
+);
+// nem forjar escola_id A em aluno da escola B
+await rejected(
+  `INSERT INTO atestados_medicos(aluno_id, escola_id, data_inicio, data_fim, observacao, usuario_id) VALUES ('${ids.otherA}', '${ids.school}', '2026-05-10', '2026-05-12', 'Invasao', '${ids.secretary}')`,
+  /row-level security/
+);
+
+await asUser(otherSec);
+await db.query(
+  "INSERT INTO atestados_medicos(aluno_id, escola_id, data_inicio, data_fim, observacao, usuario_id) VALUES ($1, $2, '2026-05-10', '2026-05-12', 'CID B - confidencial', $3)",
+  [ids.otherA, ids.otherSchool, otherSec]
+);
+
+// Coluna observacao não pode ser lida diretamente via SELECT na tabela
+await asUser(ids.secretary);
+await rejected('SELECT observacao FROM atestados_medicos', /permission denied/);
+assert.equal(await vis('atestados_medicos', 'aluno_id', ids.a), 1);
+assert.equal(await vis('atestados_medicos', 'aluno_id', ids.otherA), 0);
+
+// RPC listar_atestados_do_aluno: gestor/secretário da escola A vê observacao; escola B retorna 0 linhas
+const atestadoSec = (await db.query('SELECT * FROM public.listar_atestados_do_aluno($1)', [ids.a])).rows;
+assert.equal(atestadoSec.length, 1);
+assert.equal(atestadoSec[0].observacao, 'CID J00 - repouso');
+assert.equal((await db.query('SELECT * FROM public.listar_atestados_do_aluno($1)', [ids.otherA])).rows.length, 0);
+
+// Professor da turma vê a vigência do atestado, mas observacao vem mascarada (NULL)
+await asUser(ids.teacher);
+await rejected('SELECT observacao FROM atestados_medicos', /permission denied/);
+const atestadoProf = (await db.query('SELECT * FROM public.listar_atestados_do_aluno($1)', [ids.a])).rows;
+assert.equal(atestadoProf.length, 1);
+assert.equal(atestadoProf[0].observacao, null);
+assert.equal((await db.query('SELECT * FROM public.listar_atestados_do_aluno($1)', [ids.otherA])).rows.length, 0);
+
+// Aluno (otherA) vê o próprio atestado com observacao, mas 0 do aluno da escola A
+await asUser(ids.student);
+const atestadoAlunoProprio = (await db.query('SELECT * FROM public.listar_atestados_do_aluno($1)', [ids.otherA])).rows;
+assert.equal(atestadoAlunoProprio.length, 1);
+assert.equal(atestadoAlunoProprio[0].observacao, 'CID B - confidencial');
+assert.equal((await db.query('SELECT * FROM public.listar_atestados_do_aluno($1)', [ids.a])).rows.length, 0);
+
+// ----------------------------------------------------------------
+// anotacoes_pedagogicas: isolamento por escola/disciplina e bloqueio de aluno
+// ----------------------------------------------------------------
+await asUser(ids.teacher);
+await db.query(
+  "INSERT INTO anotacoes_pedagogicas(turma_id, data, tempo, disciplina, texto) VALUES ($1, '2026-05-02', '1', 'MAT', 'Anotação MAT escola A')",
+  [ids.class]
+);
+// Professor de MAT não insere anotação em CIEN nem em outra escola
+await rejected(
+  `INSERT INTO anotacoes_pedagogicas(turma_id, data, tempo, disciplina, texto) VALUES ('${ids.class}', '2026-05-02', '1', 'CIEN', 'Fora da disciplina')`,
+  /row-level security/
+);
+await rejected(
+  `INSERT INTO anotacoes_pedagogicas(turma_id, data, tempo, disciplina, texto) VALUES ('${ids.otherClass}', '2026-05-02', '1', 'MAT', 'Outra escola')`,
+  /row-level security/
+);
+
+await asUser(otherSec);
+await db.query(
+  "INSERT INTO anotacoes_pedagogicas(turma_id, data, tempo, disciplina, texto) VALUES ($1, '2026-05-02', '1', 'PORT', 'Anotação escola B')",
+  [ids.otherClass]
+);
+
+await asUser(gestor);
+assert.equal(await vis('anotacoes_pedagogicas', 'turma_id', ids.class), 1);
+assert.equal(await vis('anotacoes_pedagogicas', 'turma_id', ids.otherClass), 0);
+
+await asUser(ids.teacher);
+assert.equal(await vis('anotacoes_pedagogicas', 'turma_id', ids.class), 1);
+assert.equal(await vis('anotacoes_pedagogicas', 'turma_id', ids.otherClass), 0);
+
+// Aluno não lê nem insere anotações pedagógicas do diário docente
+await asUser(ids.student);
+assert.equal(await vis('anotacoes_pedagogicas', 'turma_id', ids.class), 0);
+assert.equal(await vis('anotacoes_pedagogicas', 'turma_id', ids.otherClass), 0);
+await rejected(
+  `INSERT INTO anotacoes_pedagogicas(turma_id, data, tempo, disciplina, texto) VALUES ('${ids.otherClass}', '2026-05-03', '1', 'PORT', 'Tentativa aluno')`,
+  /row-level security/
+);
+
+// ----------------------------------------------------------------
+// escolas: isolamento de leitura/escrita por tenant
+// ----------------------------------------------------------------
+await asUser(gestor);
+assert.equal(await vis('escolas', 'id', ids.school), 1);
+assert.equal(await vis('escolas', 'id', ids.otherSchool), 0);
+await rejected(`INSERT INTO escolas(nome) VALUES ('Escola Pirata')`, /row-level security/);
+// DELETE em RLS é filtrado pelo USING (0 linhas afetadas); escola permanece intacta
+await db.exec(`DELETE FROM escolas WHERE id='${ids.school}'`);
+assert.equal(await vis('escolas', 'id', ids.school), 1);
+
+await asUser(ids.teacher);
+assert.equal(await vis('escolas', 'id', ids.school), 1);
+assert.equal(await vis('escolas', 'id', ids.otherSchool), 0);
+// UPDATE por professor é filtrado pelo USING (0 linhas afetadas); nome permanece 'A'
+await db.exec(`UPDATE escolas SET nome='Hack' WHERE id='${ids.school}'`);
+assert.equal((await db.query('SELECT nome FROM escolas WHERE id=$1', [ids.school])).rows[0].nome, 'A');
+
+// ----------------------------------------------------------------
+// Tabelas internas de auditoria e sincronização:
+// audit_log, admin_whitelist, sync_receipts, sync_idempotency_keys, aluno_transferencias
+// ----------------------------------------------------------------
+// audit_log e admin_whitelist: somente ADMIN lê; ninguém insere manualmente em audit_log
+await asUser(gestor);
+assert.equal((await db.query('SELECT count(*)::int c FROM audit_log')).rows[0].c, 0);
+assert.equal((await db.query('SELECT count(*)::int c FROM admin_whitelist')).rows[0].c, 0);
+await rejected(`INSERT INTO audit_log(action, table_name) VALUES ('FAKE', 'escolas')`, /row-level security/);
+await rejected(`INSERT INTO admin_whitelist(email) VALUES ('hacker@test.local')`, /row-level security/);
+
+await asUser(ids.admin);
+await rejected(`INSERT INTO audit_log(action, table_name) VALUES ('FAKE', 'escolas')`, /row-level security/);
+
+// sync_receipts e sync_idempotency_keys: cada usuário só enxerga os próprios registros
+await asUser(ids.teacher);
+assert.ok(await vis('sync_idempotency_keys', 'user_id', ids.teacher) >= 1);
+await rejected(
+  `INSERT INTO sync_idempotency_keys(user_id, operation_id, entity) VALUES ('${ids.teacher}', '60000000-0000-0000-0000-000000000099', 'conteudos')`,
+  /permission denied/
+);
+
+await asUser(ids.secretary);
+assert.equal(await vis('sync_idempotency_keys', 'user_id', ids.teacher), 0);
+assert.equal(await vis('sync_receipts', 'user_id', ids.teacher), 0);
+
+// aluno_transferencias: escrita direta bloqueada; leitura restrita à escola de origem/destino
+await asUser(ids.secretary);
+await rejected(
+  `INSERT INTO aluno_transferencias(aluno_id, escola_origem_id, turma_origem_id, liberado_por) VALUES ('${ids.a}', '${ids.school}', '${ids.class}', '${ids.secretary}')`,
+  /row-level security/
+);
+const trfProtocolo = (await db.query("SELECT protocolo FROM public.liberar_transferencia_aluno($1, 'Mudança')", [ids.a])).rows[0].protocolo;
+assert.ok(trfProtocolo);
+assert.equal(await vis('aluno_transferencias', 'aluno_id', ids.a), 1);
+
+// Professor e Aluno não leem histórico de transferências administrativas
+await asUser(ids.teacher);
+assert.equal(await vis('aluno_transferencias', 'aluno_id', ids.a), 0);
+await asUser(ids.student);
+assert.equal(await vis('aluno_transferencias', 'aluno_id', ids.a), 0);
+// Secretário de outra escola (sem ser origem nem destino) não lê a transferência
+await asUser(otherSec);
+assert.equal(await vis('aluno_transferencias', 'aluno_id', ids.a), 0);
 await db.exec('RESET ROLE');
 
 console.log('RLS isolation, closed periods, membership, idempotency, revision conflicts and cross-school provisioning: passed.');
-console.log('Cross-school read isolation (notas, frequencias, alunos PII, usuarios PII): passed.');
+console.log('Cross-school read isolation (notas, frequencias, alunos PII, usuarios PII, atestados_medicos, anotacoes_pedagogicas, escolas, audit/sync/transferencias): passed.');
 console.log('Audit P1/P2 fixes: teacher atomic deallocation, lgpd direct insert revocation, student uniqueness, and authorization hardening passed.');
 console.log('Audit Etapa 2/3: atomic curriculum upsert, atomic professor creation, sync retention, and granular locks passed.');
 console.log('Reaudit final fixes: fail-closed transfer RPCs, named param curriculum contract, login failure logging, permanent idempotency, and deterministic locks passed.');
