@@ -434,66 +434,72 @@ await asUser(ids.admin, 'service_role');
 const avB = (await db.query("INSERT INTO avaliacoes(turma_id,tipo,data,instrumento,bimestre,valor_maximo,disciplina) VALUES($1,'AV01','2026-03-01','Prova','1. BIMESTRE',10,'PORT') RETURNING id", [ids.otherClass])).rows[0].id;
 await db.query('INSERT INTO notas(avaliacao_id,aluno_id,valor) VALUES($1,$2,8)', [avB, ids.otherA]);
 
+// Conta linhas visíveis sob a RLS do papel atual. Usamos count(*) em vez de
+// `SELECT 1 ... WHERE $1`, que expõe um quirk do PGlite sob RLS; o número é a
+// fonte da verdade sobre o que o papel realmente enxerga.
+const visNota = async (alunoId) => (await db.query('SELECT count(*)::int c FROM notas WHERE aluno_id=$1', [alunoId])).rows[0].c;
+const visUser = async (userId) => (await db.query('SELECT count(*)::int c FROM usuarios WHERE id=$1', [userId])).rows[0].c;
+
 // notas: GESTOR da escola A vê nota da própria escola, nunca a da escola B.
 await asUser(gestor);
-assert.ok((await db.query('SELECT 1 FROM notas WHERE aluno_id=$1', [ids.a])).rows.length >= 1);
-assert.equal((await db.query('SELECT 1 FROM notas WHERE aluno_id=$1', [ids.otherA])).rows.length, 0);
+assert.ok(await visNota(ids.a) >= 1);
+assert.equal(await visNota(ids.otherA), 0);
 
 // notas: PROFESSOR com acesso à turma da escola A não enxerga a escola B.
 await asUser(ids.teacher);
-assert.ok((await db.query('SELECT 1 FROM notas WHERE aluno_id=$1', [ids.a])).rows.length >= 1);
-assert.equal((await db.query('SELECT 1 FROM notas WHERE aluno_id=$1', [ids.otherA])).rows.length, 0);
+assert.ok(await visNota(ids.a) >= 1);
+assert.equal(await visNota(ids.otherA), 0);
 
 // notas: ALUNO vê só as próprias; nunca as de um aluno de outra escola.
 await asUser(ids.student);
-assert.ok((await db.query('SELECT 1 FROM notas WHERE aluno_id=$1', [ids.otherA])).rows.length >= 1);
-assert.equal((await db.query('SELECT 1 FROM notas WHERE aluno_id=$1', [ids.a])).rows.length, 0);
+assert.ok(await visNota(ids.otherA) >= 1);
+assert.equal(await visNota(ids.a), 0);
 
 // usuarios (PII): SECRETARIO da escola A não lê staff da escola B; lê o próprio registro.
 await asUser(ids.secretary);
-assert.equal((await db.query('SELECT 1 FROM usuarios WHERE id=$1', [otherSec])).rows.length, 0);
-assert.equal((await db.query('SELECT 1 FROM usuarios WHERE id=$1', [ids.secretary])).rows.length, 1);
+assert.equal(await visUser(otherSec), 0);
+assert.equal(await visUser(ids.secretary), 1);
 
 // usuarios (PII): PROFESSOR não lê staff de outra escola; lê o próprio registro.
 await asUser(ids.teacher);
-assert.equal((await db.query('SELECT 1 FROM usuarios WHERE id=$1', [otherSec])).rows.length, 0);
-assert.equal((await db.query('SELECT 1 FROM usuarios WHERE id=$1', [ids.teacher])).rows.length, 1);
+assert.equal(await visUser(otherSec), 0);
+assert.equal(await visUser(ids.teacher), 1);
 
 // Seed de frequências nas duas escolas (service_role; disciplinas sem bimestre fechado).
 await asUser(ids.admin, 'service_role');
 await db.query("INSERT INTO frequencias(turma_id,aluno_id,data,tempo,disciplina,status,participacao) VALUES($1,$2,'2026-03-01','1','CIEN','P','Presencial')", [ids.class, ids.a]);
 await db.query("INSERT INTO frequencias(turma_id,aluno_id,data,tempo,disciplina,status,participacao) VALUES($1,$2,'2026-03-01','1','PORT','P','Presencial')", [ids.otherClass, ids.otherA]);
-await asUser(gestor);
-console.log('DEBUG gestor role/escola:', (await db.query('SELECT public.get_user_role() r, public.get_user_escola_id() e')).rows[0]);
-console.log('DEBUG gestor sees freq count:', (await db.query('SELECT count(*)::int c FROM frequencias')).rows[0]);
-console.log('DEBUG turma escola:', (await db.query('SELECT id, escola_id FROM turmas WHERE id=$1', [ids.class])).rows);
-await db.exec('RESET ROLE');
+
+// Conta linhas visíveis sob a RLS do papel atual (count(*) evita um quirk do
+// PGlite com `SELECT 1 ... WHERE $1` sob RLS; o número é a fonte da verdade).
+const visFreq = async (alunoId) => (await db.query('SELECT count(*)::int c FROM frequencias WHERE aluno_id=$1', [alunoId])).rows[0].c;
+const visAluno = async (alunoId) => (await db.query('SELECT count(*)::int c FROM alunos WHERE id=$1', [alunoId])).rows[0].c;
 
 // frequencias: GESTOR vê a própria escola, nunca a outra.
 await asUser(gestor);
-assert.ok((await db.query('SELECT 1 FROM frequencias WHERE aluno_id=$1', [ids.a])).rows.length >= 1);
-assert.equal((await db.query('SELECT 1 FROM frequencias WHERE aluno_id=$1', [ids.otherA])).rows.length, 0);
+assert.ok(await visFreq(ids.a) >= 1);
+assert.equal(await visFreq(ids.otherA), 0);
 
 // frequencias: PROFESSOR com acesso à turma vê a própria escola, nunca a outra.
 await asUser(ids.teacher);
-assert.ok((await db.query('SELECT 1 FROM frequencias WHERE aluno_id=$1', [ids.a])).rows.length >= 1);
-assert.equal((await db.query('SELECT 1 FROM frequencias WHERE aluno_id=$1', [ids.otherA])).rows.length, 0);
+assert.ok(await visFreq(ids.a) >= 1);
+assert.equal(await visFreq(ids.otherA), 0);
 
 // frequencias: ALUNO vê só as próprias faltas, nunca as de outra escola.
 await asUser(ids.student);
-assert.ok((await db.query('SELECT 1 FROM frequencias WHERE aluno_id=$1', [ids.otherA])).rows.length >= 1);
-assert.equal((await db.query('SELECT 1 FROM frequencias WHERE aluno_id=$1', [ids.a])).rows.length, 0);
+assert.ok(await visFreq(ids.otherA) >= 1);
+assert.equal(await visFreq(ids.a), 0);
 
 // alunos (PII: CPF/endereço/responsável): isolamento por escola/turma/propriedade.
 await asUser(gestor);
-assert.ok((await db.query('SELECT 1 FROM alunos WHERE id=$1', [ids.a])).rows.length >= 1);
-assert.equal((await db.query('SELECT 1 FROM alunos WHERE id=$1', [ids.otherA])).rows.length, 0);
+assert.ok(await visAluno(ids.a) >= 1);
+assert.equal(await visAluno(ids.otherA), 0);
 await asUser(ids.teacher);
-assert.ok((await db.query('SELECT 1 FROM alunos WHERE id=$1', [ids.a])).rows.length >= 1);
-assert.equal((await db.query('SELECT 1 FROM alunos WHERE id=$1', [ids.otherA])).rows.length, 0);
+assert.ok(await visAluno(ids.a) >= 1);
+assert.equal(await visAluno(ids.otherA), 0);
 await asUser(ids.student);
-assert.ok((await db.query('SELECT 1 FROM alunos WHERE id=$1', [ids.otherA])).rows.length >= 1);
-assert.equal((await db.query('SELECT 1 FROM alunos WHERE id=$1', [ids.a])).rows.length, 0);
+assert.ok(await visAluno(ids.otherA) >= 1);
+assert.equal(await visAluno(ids.a), 0);
 await db.exec('RESET ROLE');
 
 console.log('RLS isolation, closed periods, membership, idempotency, revision conflicts and cross-school provisioning: passed.');
