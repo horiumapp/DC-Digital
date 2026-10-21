@@ -434,56 +434,55 @@ await rejected(`INSERT INTO auth.users(id,email,raw_user_meta_data) VALUES ('000
 await asUser(ids.admin, 'service_role');
 const avB = (await db.query("INSERT INTO avaliacoes(turma_id,tipo,data,instrumento,bimestre,valor_maximo,disciplina) VALUES($1,'AV01','2026-03-01','Prova','1. BIMESTRE',10,'PORT') RETURNING id", [ids.otherClass])).rows[0].id;
 await db.query('INSERT INTO notas(avaliacao_id,aluno_id,valor) VALUES($1,$2,8)', [avB, ids.otherA]);
-await db.query("INSERT INTO frequencias(turma_id,aluno_id,data,tempo,disciplina,status,participacao) VALUES($1,$2,'2026-03-01','1','CIEN','P','Presencial')", [ids.class, ids.a]);
+// Escola A em MAT (disciplina do professor) e 2º bimestre (sem fechamento), para
+// que a asserção do PROFESSOR reflita a policy por-disciplina de frequencias.
+await db.query("INSERT INTO frequencias(turma_id,aluno_id,data,tempo,disciplina,status,participacao) VALUES($1,$2,'2026-05-01','1','MAT','P','Presencial')", [ids.class, ids.a]);
 await db.query("INSERT INTO frequencias(turma_id,aluno_id,data,tempo,disciplina,status,participacao) VALUES($1,$2,'2026-03-01','1','PORT','P','Presencial')", [ids.otherClass, ids.otherA]);
 
-// Conjunto de IDs visíveis sob a RLS do papel atual. Fazemos um SELECT sem
-// parâmetros e checamos pertinência em JS — isso evita um quirk do PGlite com
-// `WHERE coluna=$1` sob RLS após múltiplas trocas de papel, mantendo a asserção
-// fiel ao que o papel realmente enxerga.
-const visibleIds = async (sql) => new Set((await db.query(sql)).rows.map((r) => Object.values(r)[0]));
-let s;
+// Conta linhas visíveis sob a RLS do papel atual. Usamos count(*) com filtro
+// parametrizado — o número é a fonte da verdade sobre o que o papel enxerga.
+const vis = async (table, col, id) => (await db.query(`SELECT count(*)::int c FROM ${table} WHERE ${col}=$1`, [id])).rows[0].c;
 
 // notas: cada papel vê só o que lhe pertence; nunca atravessa a escola.
 await asUser(gestor);
-s = await visibleIds('SELECT aluno_id::text FROM notas');
-assert.ok(s.has(ids.a) && !s.has(ids.otherA));
+assert.ok(await vis('notas', 'aluno_id', ids.a) >= 1);
+assert.equal(await vis('notas', 'aluno_id', ids.otherA), 0);
 await asUser(ids.teacher);
-s = await visibleIds('SELECT aluno_id::text FROM notas');
-assert.ok(s.has(ids.a) && !s.has(ids.otherA));
+assert.ok(await vis('notas', 'aluno_id', ids.a) >= 1);
+assert.equal(await vis('notas', 'aluno_id', ids.otherA), 0);
 await asUser(ids.student);
-s = await visibleIds('SELECT aluno_id::text FROM notas');
-assert.ok(s.has(ids.otherA) && !s.has(ids.a));
+assert.ok(await vis('notas', 'aluno_id', ids.otherA) >= 1);
+assert.equal(await vis('notas', 'aluno_id', ids.a), 0);
 
 // frequencias: idem — isolamento por escola/turma/propriedade.
 await asUser(gestor);
-s = await visibleIds('SELECT aluno_id::text FROM frequencias');
-assert.ok(s.has(ids.a) && !s.has(ids.otherA));
+assert.ok(await vis('frequencias', 'aluno_id', ids.a) >= 1);
+assert.equal(await vis('frequencias', 'aluno_id', ids.otherA), 0);
 await asUser(ids.teacher);
-s = await visibleIds('SELECT aluno_id::text FROM frequencias');
-assert.ok(s.has(ids.a) && !s.has(ids.otherA));
+assert.ok(await vis('frequencias', 'aluno_id', ids.a) >= 1);
+assert.equal(await vis('frequencias', 'aluno_id', ids.otherA), 0);
 await asUser(ids.student);
-s = await visibleIds('SELECT aluno_id::text FROM frequencias');
-assert.ok(s.has(ids.otherA) && !s.has(ids.a));
+assert.ok(await vis('frequencias', 'aluno_id', ids.otherA) >= 1);
+assert.equal(await vis('frequencias', 'aluno_id', ids.a), 0);
 
 // alunos (PII: CPF/endereço/responsável): isolamento por escola/turma/propriedade.
 await asUser(gestor);
-s = await visibleIds('SELECT id::text FROM alunos');
-assert.ok(s.has(ids.a) && !s.has(ids.otherA));
+assert.ok(await vis('alunos', 'id', ids.a) >= 1);
+assert.equal(await vis('alunos', 'id', ids.otherA), 0);
 await asUser(ids.teacher);
-s = await visibleIds('SELECT id::text FROM alunos');
-assert.ok(s.has(ids.a) && !s.has(ids.otherA));
+assert.ok(await vis('alunos', 'id', ids.a) >= 1);
+assert.equal(await vis('alunos', 'id', ids.otherA), 0);
 await asUser(ids.student);
-s = await visibleIds('SELECT id::text FROM alunos');
-assert.ok(s.has(ids.otherA) && !s.has(ids.a));
+assert.ok(await vis('alunos', 'id', ids.otherA) >= 1);
+assert.equal(await vis('alunos', 'id', ids.a), 0);
 
 // usuarios (PII): staff não é lido entre escolas; cada um lê o próprio registro.
 await asUser(ids.secretary);
-s = await visibleIds('SELECT id::text FROM usuarios');
-assert.ok(s.has(ids.secretary) && !s.has(otherSec));
+assert.equal(await vis('usuarios', 'id', otherSec), 0);
+assert.equal(await vis('usuarios', 'id', ids.secretary), 1);
 await asUser(ids.teacher);
-s = await visibleIds('SELECT id::text FROM usuarios');
-assert.ok(s.has(ids.teacher) && !s.has(otherSec));
+assert.equal(await vis('usuarios', 'id', otherSec), 0);
+assert.equal(await vis('usuarios', 'id', ids.teacher), 1);
 await db.exec('RESET ROLE');
 
 console.log('RLS isolation, closed periods, membership, idempotency, revision conflicts and cross-school provisioning: passed.');
