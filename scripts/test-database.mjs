@@ -423,7 +423,45 @@ await rejected(`SELECT public.reservar_criacao_de_conta('${ids.teacher}')`);
 await db.exec('RESET ROLE');
 await rejected(`INSERT INTO auth.users(id,email,raw_user_meta_data) VALUES ('00000000-0000-0000-0000-000000000099','publico@test.local','{"role":"ADMIN"}')`);
 
+// ----------------------------------------------------------------
+// Auditoria 2026-10-20: isolamento de LEITURA cross-escola.
+// Complementa os testes de escrita já existentes com garantias de SELECT
+// para notas (dados acadêmicos) e usuarios (PII). get_user_role() usa o
+// cargo institucional (tabela usuarios), não o claim do JWT.
+// ----------------------------------------------------------------
+// Seed de uma nota na escola B via service_role (ignora RLS, respeita triggers).
+await asUser(ids.admin, 'service_role');
+const avB = (await db.query("INSERT INTO avaliacoes(turma_id,tipo,data,instrumento,bimestre,valor_maximo,disciplina) VALUES($1,'AV01','2026-03-01','Prova','1. BIMESTRE',10,'PORT') RETURNING id", [ids.otherClass])).rows[0].id;
+await db.query('INSERT INTO notas(avaliacao_id,aluno_id,valor) VALUES($1,$2,8)', [avB, ids.otherA]);
+
+// notas: GESTOR da escola A vê nota da própria escola, nunca a da escola B.
+await asUser(gestor);
+assert.ok((await db.query('SELECT 1 FROM notas WHERE aluno_id=$1', [ids.a])).rows.length >= 1);
+assert.equal((await db.query('SELECT 1 FROM notas WHERE aluno_id=$1', [ids.otherA])).rows.length, 0);
+
+// notas: PROFESSOR com acesso à turma da escola A não enxerga a escola B.
+await asUser(ids.teacher);
+assert.ok((await db.query('SELECT 1 FROM notas WHERE aluno_id=$1', [ids.a])).rows.length >= 1);
+assert.equal((await db.query('SELECT 1 FROM notas WHERE aluno_id=$1', [ids.otherA])).rows.length, 0);
+
+// notas: ALUNO vê só as próprias; nunca as de um aluno de outra escola.
+await asUser(ids.student);
+assert.ok((await db.query('SELECT 1 FROM notas WHERE aluno_id=$1', [ids.otherA])).rows.length >= 1);
+assert.equal((await db.query('SELECT 1 FROM notas WHERE aluno_id=$1', [ids.a])).rows.length, 0);
+
+// usuarios (PII): SECRETARIO da escola A não lê staff da escola B; lê o próprio registro.
+await asUser(ids.secretary);
+assert.equal((await db.query('SELECT 1 FROM usuarios WHERE id=$1', [otherSec])).rows.length, 0);
+assert.equal((await db.query('SELECT 1 FROM usuarios WHERE id=$1', [ids.secretary])).rows.length, 1);
+
+// usuarios (PII): PROFESSOR não lê staff de outra escola; lê o próprio registro.
+await asUser(ids.teacher);
+assert.equal((await db.query('SELECT 1 FROM usuarios WHERE id=$1', [otherSec])).rows.length, 0);
+assert.equal((await db.query('SELECT 1 FROM usuarios WHERE id=$1', [ids.teacher])).rows.length, 1);
+await db.exec('RESET ROLE');
+
 console.log('RLS isolation, closed periods, membership, idempotency, revision conflicts and cross-school provisioning: passed.');
+console.log('Cross-school read isolation (notas, usuarios PII): passed.');
 console.log('Audit P1/P2 fixes: teacher atomic deallocation, lgpd direct insert revocation, student uniqueness, and authorization hardening passed.');
 console.log('Audit Etapa 2/3: atomic curriculum upsert, atomic professor creation, sync retention, and granular locks passed.');
 console.log('Reaudit final fixes: fail-closed transfer RPCs, named param curriculum contract, login failure logging, permanent idempotency, and deterministic locks passed.');
