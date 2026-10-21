@@ -463,9 +463,11 @@ assert.equal((await db.query('SELECT 1 FROM usuarios WHERE id=$1', [ids.teacher]
 await asUser(ids.admin, 'service_role');
 await db.query("INSERT INTO frequencias(turma_id,aluno_id,data,tempo,disciplina,status,participacao) VALUES($1,$2,'2026-03-01','1','CIEN','P','Presencial')", [ids.class, ids.a]);
 await db.query("INSERT INTO frequencias(turma_id,aluno_id,data,tempo,disciplina,status,participacao) VALUES($1,$2,'2026-03-01','1','PORT','P','Presencial')", [ids.otherClass, ids.otherA]);
+await asUser(gestor);
+console.log('DEBUG gestor role/escola:', (await db.query('SELECT public.get_user_role() r, public.get_user_escola_id() e')).rows[0]);
+console.log('DEBUG gestor sees freq count:', (await db.query('SELECT count(*)::int c FROM frequencias')).rows[0]);
+console.log('DEBUG turma escola:', (await db.query('SELECT id, escola_id FROM turmas WHERE id=$1', [ids.class])).rows);
 await db.exec('RESET ROLE');
-console.log('DEBUG freq total:', (await db.query('SELECT count(*)::int c, string_agg(aluno_id::text||\':\'||turma_id::text,\',\') agg FROM frequencias')).rows[0]);
-console.log('DEBUG gestor escola:', (await db.query('SELECT escola_id, cargo, escopo_rede FROM usuarios WHERE id=$1', [gestor])).rows[0]);
 
 // frequencias: GESTOR vê a própria escola, nunca a outra.
 await asUser(gestor);
