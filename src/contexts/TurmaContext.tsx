@@ -117,7 +117,8 @@ interface TurmaContextType {
   faltasPorData: Record<string, Set<string>>;
   atestadosPorData: Record<string, Set<string>>;
   fechamentos: Record<string, boolean>;
-  salvarFechamento: (bimestre: string, status: 'ABERTO' | 'FECHADO', disciplinaOverride?: string) => Promise<void>;
+  /** Retorna `false` quando o fechamento/reabertura não pôde ser gravado. */
+  salvarFechamento: (bimestre: string, status: 'ABERTO' | 'FECHADO', disciplinaOverride?: string) => Promise<boolean>;
   verificarPeriodoFechado: (dateOrBimestreId: string) => boolean;
 }
 
@@ -315,17 +316,19 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     ));
   }, []);
 
-  const salvarFechamento = useCallback(async (bimestre: string, status: 'ABERTO' | 'FECHADO', disciplinaOverride?: string) => {
-    if (!turmaAtiva || !user) return;
+  const salvarFechamento = useCallback(async (bimestre: string, status: 'ABERTO' | 'FECHADO', disciplinaOverride?: string): Promise<boolean> => {
+    if (!turmaAtiva || !user) return false;
     const rawId = getTid(turmaAtiva.id);
     const disc = disciplinaOverride || turmaAtiva.componente;
     try {
       await OfflineTurmaService.salvarFechamento(rawId, disc, bimestre, status, user.id);
       setFechamentos(prev => ({ ...prev, [bimestre]: status === 'FECHADO' }));
       showSuccessRef.current(`Aparata ${status === 'FECHADO' ? 'fechada' : 'reaberta'} com sucesso!`);
+      return true;
     } catch (err) {
       console.error('Erro ao salvar fechamento:', err);
       showErrorRef.current(`Não foi possível ${status === 'FECHADO' ? 'fechar' : 'reabrir'} a aparata.`);
+      return false;
     }
   }, [turmaAtiva, user]);
 
