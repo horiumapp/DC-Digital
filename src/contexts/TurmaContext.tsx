@@ -106,9 +106,11 @@ interface TurmaContextType {
   loading: boolean;
   salvarAvaliacao: (av: Avaliacao) => Promise<string>;
   removerAvaliacao: (id: string) => Promise<void>;
-  salvarNotas: (avaliacaoId: string, notas: { alunoId: string, valor: string }[], alunoIdsRemovidos?: string[]) => Promise<void>;
+  /** Retorna `false` quando as notas não puderam ser gravadas. */
+  salvarNotas: (avaliacaoId: string, notas: { alunoId: string, valor: string }[], alunoIdsRemovidos?: string[]) => Promise<boolean>;
   salvarFrequencia: (data: string, tempo: string, alunosFreq: Aluno[]) => Promise<boolean>;
-  salvarConteudo: (cont: Conteudo) => Promise<void>;
+  /** Retorna `false` quando o conteúdo não pôde ser gravado. */
+  salvarConteudo: (cont: Conteudo) => Promise<boolean>;
   buscarFrequencia: (data: string, tempo: string) => Promise<void>;
   buscarConteudo: (data: string, tempo: string) => Promise<Conteudo | null>;
   removerFrequencia: (data: string, tempo: string) => Promise<boolean>;
@@ -386,12 +388,12 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     }
   }, [avaliacoes, verificarPeriodoFechado]);
 
-  const salvarNotas = useCallback(async (avaliacaoId: string, notas: { alunoId: string, valor: string }[], alunoIdsRemovidos?: string[]) => {
-    if (!turmaAtiva) return;
+  const salvarNotas = useCallback(async (avaliacaoId: string, notas: { alunoId: string, valor: string }[], alunoIdsRemovidos?: string[]): Promise<boolean> => {
+    if (!turmaAtiva) return false;
     const av = avaliacoes.find(a => String(a.id) === String(avaliacaoId));
     if (av && verificarPeriodoFechado(av.bimestre || av.data)) {
       showErrorRef.current('Operação bloqueada: O período correspondente a esta avaliação está fechado.');
-      return;
+      return false;
     }
     const rawId = getTid(turmaAtiva.id);
     try {
@@ -429,9 +431,11 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
 
       await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunosRef.current);
       showSuccessRef.current('Notas salvas com sucesso!');
+      return true;
     } catch (err) {
       console.error('Erro ao salvar notas:', err);
       showErrorRef.current('Ocorreu um erro ao salvar as notas.');
+      return false;
     }
   }, [turmaAtiva, avaliacoes, verificarPeriodoFechado, fetchAvaliacoesInterno]);
 
@@ -480,11 +484,11 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
     }
   }, [turmaAtiva, verificarPeriodoFechado, registrarLancamento, carregarFaltasDaData]);
 
-  const salvarConteudo = useCallback(async (cont: Conteudo) => {
-    if (!turmaAtiva) return;
+  const salvarConteudo = useCallback(async (cont: Conteudo): Promise<boolean> => {
+    if (!turmaAtiva) return false;
     if (verificarPeriodoFechado(cont.data)) {
       showErrorRef.current('Operação bloqueada: O período correspondente a esta data está fechado.');
-      return;
+      return false;
     }
     const rawId = getTid(turmaAtiva.id);
     try {
@@ -493,9 +497,11 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
       const conts = await OfflineTurmaService.fetchConteudosPeriodo(rawId, turmaAtiva.componente);
       setConteudos(conts);
       showSuccessRef.current('Conteúdo ministrado gravado com sucesso!');
+      return true;
     } catch (err) {
       console.error('Erro ao salvar conteúdo:', err);
       showErrorRef.current('Erro ao salvar o conteúdo ministrado.');
+      return false;
     }
   }, [turmaAtiva, verificarPeriodoFechado, registrarLancamento]);
 

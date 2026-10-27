@@ -269,7 +269,7 @@ export default function ObjetoConhecimentoTab({
 
     setIsSaving(true);
     try {
-      await salvarConteudo({
+      const gravado = await salvarConteudo({
         turmaId: String(turmaAtiva?.id || ''),
         data: selectedDate,
         tempo: tempoAula,
@@ -277,6 +277,9 @@ export default function ObjetoConhecimentoTab({
         habilidades: [],
         descricao: objetoObservacao
       });
+      // O contexto já exibiu o motivo (período fechado ou falha de gravação).
+      // Sair sem limpar o formulário evita que o professor perca o texto digitado.
+      if (!gravado) return;
 
       setObjetoData({ descricao: objParaSalvar, observacao: objetoObservacao, status: objetoStatus });
       setObjetoSalvo(true);

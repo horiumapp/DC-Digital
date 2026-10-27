@@ -80,7 +80,7 @@ describe('ObjetoConhecimentoTab - Fluxo de tempos e navegação ao salvar', () =
   beforeEach(() => {
     vi.clearAllMocks();
     mockLancamentos = [];
-    mockSalvarConteudo.mockResolvedValue(undefined);
+    mockSalvarConteudo.mockResolvedValue(true);
     mockBuscarConteudo.mockResolvedValue(null);
   });
 

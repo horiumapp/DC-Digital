@@ -306,10 +306,18 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
       .map(aluno => aluno.id);
     if (removidos.length === 0) return;
     removidos.forEach(id => notasRetiradasRef.current.add(`${selectedAvaliacao.id}:${id}`));
-    void salvarNotas(selectedAvaliacao.id, [], removidos).catch(() => {
-      removidos.forEach(id => notasRetiradasRef.current.delete(`${selectedAvaliacao.id}:${id}`));
-      showError('Não foi possível retirar a nota de quem está com atestado ou falta nesta data.');
-    });
+    // `salvarNotas` resolve `false` (não rejeita) quando a gravação falha, por isso
+    // a marca de "já retirada" precisa ser desfeita nesse caso para permitir nova tentativa.
+    void Promise.resolve(salvarNotas(selectedAvaliacao.id, [], removidos))
+      .then(salvo => {
+        if (salvo) return;
+        removidos.forEach(id => notasRetiradasRef.current.delete(`${selectedAvaliacao.id}:${id}`));
+        showError('Não foi possível retirar a nota de quem está com atestado ou falta nesta data.');
+      })
+      .catch(() => {
+        removidos.forEach(id => notasRetiradasRef.current.delete(`${selectedAvaliacao.id}:${id}`));
+        showError('Não foi possível retirar a nota de quem está com atestado ou falta nesta data.');
+      });
   }, [avaliacaoViewMode, selectedAvaliacao, faltasPorData, alunos, salvarNotas, showError]);
    
 
@@ -436,7 +444,10 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
 
     try {
       setIsSaving(true);
-      await salvarAvaliacao(payload);
+      const criada = await salvarAvaliacao(payload);
+      // `salvarAvaliacao` devolve '' quando o período está fechado ou a gravação
+      // falhou; manter o formulário aberto evita perda silenciosa do lançamento.
+      if (!criada) return;
       setAvaliacaoViewMode('list');
       resetForm();
     } catch (err) {
@@ -482,7 +493,8 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
     }
 
     try {
-      await salvarNotas(selectedAvaliacao.id, notasToSave, removidos);
+      const salvo = await salvarNotas(selectedAvaliacao.id, notasToSave, removidos);
+      if (!salvo) return;
       setAvaliacaoViewMode('list');
       resetForm();
     } catch (err) {
@@ -524,12 +536,16 @@ export default function AvaliacoesTab({ selectedDate: dataContexto = '', disable
         };
 
         const createdId = await salvarAvaliacao(payload);
+        // Sem ID significa que a avaliação não foi gravada; abortar aqui evita
+        // que o formulário seja limpo e o usuário acredite no sucesso.
+        if (!createdId) return;
         const notasParaData = selectedAlunIds
           .filter(id => secondCallRows[id].date === d && secondCallRows[id].grade && secondCallRows[id].grade.trim() !== '')
           .map(id => ({ alunoId: id, valor: secondCallRows[id].grade }));
         
-        if (notasParaData.length > 0 && createdId) {
-          await salvarNotas(createdId, notasParaData);
+        if (notasParaData.length > 0) {
+          const notasSalvas = await salvarNotas(createdId, notasParaData);
+          if (!notasSalvas) return;
         }
       }
 

@@ -122,7 +122,8 @@ export default function Aparata() {
     setReabrindo(true);
     try {
       const escopo = tipoReabertura === 'TODAS' ? 'TODAS' : disciplinaEscolhida;
-      await salvarFechamento(periodoSelecionado, 'ABERTO', escopo);
+      const gravado = await salvarFechamento(periodoSelecionado, 'ABERTO', escopo);
+      if (!gravado) return;
       showSuccess(
         tipoReabertura === 'TODAS'
           ? `Todas as disciplinas do ${periodoSelecionado} foram reabertas com sucesso!`

@@ -250,9 +250,13 @@ export default function AparataDetalhes() {
   const handleConfirmarFechamento = async () => {
     setFechando(true);
     try {
-      await salvarFechamento(bimestreInfo.id, 'FECHADO', componenteAtivo);
-      setIsFecharModalOpen(false);
-      navigate(-1);
+      // Só fecha o modal e sai da tela quando a gravação realmente aconteceu;
+      // antes a navegação ocorria mesmo em erro e o usuário perdia o aviso.
+      const gravado = await salvarFechamento(bimestreInfo.id, 'FECHADO', componenteAtivo);
+      if (gravado) {
+        setIsFecharModalOpen(false);
+        navigate(-1);
+      }
     } catch (err) {
       console.error('Erro ao fechar aparata:', err);
     } finally {
@@ -267,11 +271,10 @@ export default function AparataDetalhes() {
   const handleConfirmarReabertura = async () => {
     setReabrindo(true);
     try {
-      if (escopoReabertura === 'TODAS') {
-        await salvarFechamento(bimestreInfo.id, 'ABERTO', 'TODAS');
-      } else {
-        await salvarFechamento(bimestreInfo.id, 'ABERTO', disciplinaEscolhidaReabrir || componenteAtivo);
-      }
+      const gravado = escopoReabertura === 'TODAS'
+        ? await salvarFechamento(bimestreInfo.id, 'ABERTO', 'TODAS')
+        : await salvarFechamento(bimestreInfo.id, 'ABERTO', disciplinaEscolhidaReabrir || componenteAtivo);
+      if (!gravado) return;
       setIsReabrirModalOpen(false);
       navigate(-1);
     } catch (err) {
