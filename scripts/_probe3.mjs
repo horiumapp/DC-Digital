@@ -21,38 +21,26 @@ for (const f of (await readdir('supabase/migrations')).filter(x => x.endsWith('.
 const S = '10000000-0000-0000-0000-000000000001';
 const B = '10000000-0000-0000-0000-000000000002';
 const sec = '00000000-0000-0000-0000-000000000003';
-const prof = '30000000-0000-0000-0000-000000000077';
 const profUser = '00000000-0000-0000-0000-000000000077';
+const email = 'alheio@test.local';
 
 await db.exec(`INSERT INTO auth.users(id,email,raw_app_meta_data) VALUES
- ('${profUser}','alheio@test.local','{"role":"PROFESSOR"}'),
+ ('${profUser}','${email}','{"role":"PROFESSOR"}'),
  ('${sec}','secretary@test.local','{"role":"SECRETARIO"}');
  INSERT INTO public.escolas(id,nome) VALUES('${S}','A'),('${B}','B');
- UPDATE public.usuarios SET cargo='SECRETARIO', escola_id='${S}', nome_completo='Sec' WHERE id='${sec}';
- INSERT INTO public.professores(id,nome,email,usuario_id,disciplinas) VALUES('${prof}','Alheio','alheio@test.local','${profUser}',ARRAY['MAT'])
-   ON CONFLICT (email) DO UPDATE SET id=EXCLUDED.id, usuario_id=EXCLUDED.usuario_id, disciplinas=EXCLUDED.disciplinas;
- INSERT INTO public.professor_alocacoes(professor_id,escola_id,turno) VALUES('${prof}','${B}','Matutino') ON CONFLICT DO NOTHING;`);
+ UPDATE public.usuarios SET cargo='SECRETARIO', escola_id='${S}' WHERE id='${sec}';`);
+const prof = (await db.query('SELECT id FROM professores WHERE email=$1', [email])).rows[0].id;
+await db.query("INSERT INTO public.professor_alocacoes(professor_id,escola_id,turno) VALUES($1,$2,'Matutino')", [prof, B]);
 
 await db.query("SELECT set_config('request.jwt.claims',$1,false)", [JSON.stringify({ sub: sec, role: 'authenticated', email: 'secretary@test.local' })]);
 await db.exec('SET ROLE authenticated');
-// Passo 1 do ataque: criar a própria alocação no registro do professor alheio.
-try {
-  await db.exec(`INSERT INTO professor_alocacoes(professor_id,escola_id,turno) VALUES ('${prof}','${S}','Noturno')`);
-  console.log('alocacao criada pelo secretario: OK (esperado)');
-} catch (e) { console.log('alocacao rejeitada:', e.message); }
-
-// Passo 2: trocar a identidade de acesso.
+console.log('role/uid:', (await db.query('SELECT public.get_user_role() r, public.get_user_escola_id() e, auth.uid() u')).rows);
+await db.exec(`INSERT INTO professor_alocacoes(professor_id,escola_id,turno) VALUES ('${prof}','${S}','Noturno') ON CONFLICT DO NOTHING`);
+console.log('aloc own school:', (await db.query(`SELECT count(*)::int c FROM professor_alocacoes WHERE escola_id='${S}'`)).rows[0].c);
 try {
   const r = await db.query(`UPDATE professores SET usuario_id='${sec}' WHERE id='${prof}'`);
-  console.log('usuario_id UPDATE rows:', r.affectedRows);
-} catch (e) { console.log('usuario_id rejected:', e.message); }
-try {
-  const r = await db.query(`UPDATE professores SET email='secretary@test.local' WHERE id='${prof}'`);
-  console.log('email UPDATE rows:', r.affectedRows);
-} catch (e) { console.log('email rejected:', e.message); }
-
+  console.log('update rows:', r.affectedRows);
+} catch (e) { console.log('update erro:', e.message); }
 await db.exec('RESET ROLE');
-console.log('alocacoes secretaria:', (await db.query(`SELECT count(*)::int c FROM professor_alocacoes WHERE professor_id='${prof}' AND escola_id='${S}'`)).rows[0].c);
-console.log('usuario_id atual:', (await db.query(`SELECT usuario_id FROM professores WHERE id='${prof}'`)).rows[0].usuario_id);
-console.log('email atual:', (await db.query(`SELECT email FROM professores WHERE id='${prof}'`)).rows[0].email);
+console.log('final:', (await db.query(`SELECT id,email,usuario_id FROM professores WHERE id='${prof}'`)).rows);
 await db.close();

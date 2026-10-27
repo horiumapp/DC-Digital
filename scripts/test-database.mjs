@@ -657,23 +657,18 @@ assert.equal(await vis('aluno_transferencias', 'aluno_id', ids.a), 0);
 // professor de outra escola e então trocar usuario_id/email — assumindo
 // a conta e, com ela, notas e frequências daquela escola.
 // ----------------------------------------------------------------
-await asUser(ids.secretary);
-const profAlheio = '30000000-0000-0000-0000-000000000077';
+const profAlheioEmail = 'alheio@test.local';
 const profAlheioUser = '00000000-0000-0000-0000-000000000077';
-// Seed via service_role: o secretário não tem privilégio em auth.users.
-// Seed sem SET ROLE (privilégio de superusuário do ambiente de teste);
-// o secretário não tem acesso a auth.users. As claims são limpas para que o
-// gatilho veja uma operação interna (sem auth.uid()).
+// Seed fora de qualquer papel (sem claims): o provisionamento interno em
+// auth.users cria o professor via handle_new_user.
 await db.exec("RESET ROLE");
 await db.query("SELECT set_config('request.jwt.claims','',false)");
 await db.query(
-  "INSERT INTO auth.users(id,email,raw_app_meta_data) VALUES ($1,'alheio@test.local','{\"role\":\"PROFESSOR\"}') ON CONFLICT DO NOTHING",
-  [profAlheioUser]
+  "INSERT INTO auth.users(id,email,raw_app_meta_data) VALUES ($1,$2,'{\"role\":\"PROFESSOR\"}') ON CONFLICT DO NOTHING",
+  [profAlheioUser, profAlheioEmail]
 );
-await db.query(
-  'INSERT INTO public.professores(id,nome,email,usuario_id,disciplinas) VALUES($1,$2,$3,$4,ARRAY[\'MAT\']) ON CONFLICT (email) DO UPDATE SET id=EXCLUDED.id, usuario_id=EXCLUDED.usuario_id',
-  [profAlheio, 'Alheio', 'alheio@test.local', profAlheioUser]
-);
+const profAlheio = (await db.query('SELECT id FROM professores WHERE email=$1', [profAlheioEmail])).rows[0].id;
+assert.ok(profAlheio, 'professor do cenário precisa existir');
 await db.query(
   "INSERT INTO public.professor_alocacoes(professor_id,escola_id,turno) VALUES($1,$2,'Matutino') ON CONFLICT DO NOTHING",
   [profAlheio, ids.otherSchool]
@@ -683,7 +678,7 @@ await db.query(
 await asUser(ids.secretary);
 await db.exec(`INSERT INTO professor_alocacoes(professor_id,escola_id,turno) VALUES ('${profAlheio}','${ids.school}','Noturno') ON CONFLICT DO NOTHING;`);
 
-// Mas trocar a identidade de acesso não é.
+// Mas trocar a identidade de acesso não é: o gatilho rejeita a operação.
 await rejected(
   `UPDATE professores SET usuario_id='${ids.secretary}' WHERE id='${profAlheio}'`,
   /administrador/
@@ -701,13 +696,21 @@ assert.equal(
   profAlheioUser
 );
 
-// user_consents: o ramo anônimo da política órfã não pode mais gravar.
-await db.exec('RESET ROLE');
+// user_consents: a política órfã de 20260708 não pode mais existir e o papel
+// anônimo não grava consentimentos sem titular identificado.
+await db.exec("RESET ROLE");
+assert.equal(
+  (await db.query(
+    "SELECT count(*)::int c FROM pg_policies WHERE schemaname='public' AND tablename='user_consents' AND policyname='Allow insert for user_consents'"
+  )).rows[0].c,
+  0
+);
+await db.query("SELECT set_config('request.jwt.claims','',false)");
+await db.exec('SET ROLE anon');
 await assert.rejects(
   () => db.query("INSERT INTO user_consents(user_id, finalidade, status, versao_politica) VALUES (NULL,'cookies','aceito','1.0')"),
   /permission denied|row-level security/
 );
-
 await db.exec('RESET ROLE');
 
 console.log('RLS isolation, closed periods, membership, idempotency, revision conflicts and cross-school provisioning: passed.');
