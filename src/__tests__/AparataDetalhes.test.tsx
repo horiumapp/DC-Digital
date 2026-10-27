@@ -130,8 +130,15 @@ describe('AparataDetalhes', () => {
       expect(OfflineTurmaService.fetchAllFrequencias).toHaveBeenCalledWith('turma-1', 'Matemática');
     });
 
-    const row = await waitFor(() => screen.getByText('Aluno Pendente', { selector: 'td.cursor-pointer' }).closest('tr'));
-    expect(row?.textContent).toContain('2');
+    const row = await waitFor(() => {
+      const found = screen.getByText('Aluno Pendente', { selector: 'td.cursor-pointer' }).closest('tr');
+      if (!found) throw new Error('linha do aluno não renderizada');
+      return found;
+    });
+    // A coluna "Faltas" é a última célula da linha; a matrícula também contém
+    // dígitos, então a asserção precisa olhar a célula exata.
+    const celulas = row.querySelectorAll('td');
+    expect(celulas[celulas.length - 1]?.textContent).toBe('2');
   });
 
   it('calcula corretamente somaParcial considerando nota de 2ª Chamada (2CH)', async () => {
