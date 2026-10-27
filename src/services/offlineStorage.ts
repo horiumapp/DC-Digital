@@ -32,15 +32,25 @@ import type {
 
 // FIX #16: Helper para tratamento de QuotaExceededError no IndexedDB.
 // Quando o armazenamento ficar cheio, faz limpeza emergencial e retenta.
+//
+// A checagem não pode usar `instanceof DOMException`: o Dexie embrulha erros de
+// escrita em `DexieError` e a cota original fica em `inner`/`cause`. Com a
+// comparação por instância a limpeza nunca era executada e a gravação falhava.
+function isQuotaExceededError(err: unknown): boolean {
+  let atual: unknown = err;
+  for (let nivel = 0; nivel < 5 && atual; nivel += 1) {
+    const candidato = atual as { name?: string; code?: number; inner?: unknown; cause?: unknown };
+    if (candidato.name === 'QuotaExceededError' || candidato.code === 22) return true;
+    atual = candidato.inner ?? candidato.cause;
+  }
+  return false;
+}
+
 async function withQuotaRecovery<T>(operation: () => Promise<T>): Promise<T> {
   try {
     return await operation();
   } catch (err: unknown) {
-    const isQuotaError = err instanceof DOMException && (
-      err.name === 'QuotaExceededError' ||
-      err.code === 22  // Safari
-    );
-    if (isQuotaError) {
+    if (isQuotaExceededError(err)) {
       console.warn('[offlineStorage] QuotaExceeded — executando limpeza emergencial...');
       try {
         const deleted = await clearOldSyncedData(30); // Limpa registros >30 dias
@@ -315,10 +325,12 @@ export async function deleteFrequenciasLocal(turmaId: string, disciplina: string
       await db.frequencias.bulkDelete(ids);
     }
 
-    // Purgar operações pendentes de UPSERT na fila para evitar ressuscitar frequência deletada offline
+    // Purgar operações pendentes de UPSERT na fila para evitar ressuscitar frequência deletada offline.
+    // Inclui itens em 'error' que ainda não foram enviados: se ficassem, o botão
+    // "Tentar novamente" recriaria a chamada apagada no servidor.
     const pendingQueueItems = await db.syncQueue
       .where('table').equals('frequencias')
-      .filter(item => item.status === 'pending' && !item.attempted && item.operation !== 'DELETE')
+      .filter(item => (item.status === 'pending' || item.status === 'error') && !item.attempted && item.operation !== 'DELETE')
       .toArray();
 
     for (const item of pendingQueueItems) {

@@ -299,6 +299,7 @@ async function _runSyncAll(ownerId: string): Promise<SyncResult> {
         // não são falhas do servidor: devolvem o item à fila sem gastar tentativa.
         if (isInterruption(errorMsg)) {
           await Queue.release(item.id);
+          result.failed++;
           result.errors.push(`${item.table}/${item.operation}: ${errorMsg}`);
           emit('itemFailed', { table: item.table, error: errorMsg, interrupted: true });
           break;

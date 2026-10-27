@@ -112,4 +112,14 @@ describe('offlineQueue com IndexedDB real',()=>{
   const kept = keepConflictRecords('frequencias', { records }, [records[1]]);
   expect(kept.records).toEqual([records[1]]);
  });
+ it('backoff de um item não bloqueia outro item pronto da mesma tabela', async () => {
+  const primeiro = await Queue.enqueue('frequencias', 'UPSERT', { records: [{ ...freq, data: '2026-03-01' }] });
+  const segundo = await Queue.enqueue('frequencias', 'UPSERT', { records: [{ ...freq, data: '2026-03-02' }] });
+
+  // Primeiro item entra em backoff (aguardando a janela de retry).
+  await db.syncQueue.update(primeiro, { retryAfter: new Date(Date.now() + 60_000).toISOString() });
+
+  const claimed = await Queue.claimNext(owner);
+  expect(claimed?.id).toBe(segundo);
+ });
 });

@@ -68,16 +68,21 @@ describe('syncEngine com fila e transações reais',()=>{
   await db.syncQueue.update(id,{retryAfter:undefined});await syncAll();
   expect(mock.rpc.mock.calls[1][1]).toEqual(first);
  });
- it('cancelamento aborta a rede e libera o mecanismo',async()=>{
-  await enqueue();
-  let ready!:()=>void;
-  const started=new Promise<void>(resolve=>{ready=resolve;});
-  mock.rpc.mockImplementation(()=>({abortSignal:(signal:AbortSignal)=>new Promise((_,reject)=>{
-    signal.addEventListener('abort',()=>reject(signal.reason));ready();
-  })}));
-  const promise=syncAll();await started;cancelSync();const result=await promise;
-  expect(result.failed).toBe(1);expect(getState()).not.toBe('SYNCING');expect(await db.syncQueue.count()).toBe(1);
- });
+it('cancelamento aborta a rede e libera o mecanismo',async()=>{
+ await enqueue();
+ let ready!:()=>void;
+ const started=new Promise<void>(resolve=>{ready=resolve;});
+ mock.rpc.mockImplementation(()=>({abortSignal:(signal:AbortSignal)=>new Promise((_,reject)=>{
+   signal.addEventListener('abort',()=>reject(signal.reason));ready();
+ })}));
+ const promise=syncAll();await started;cancelSync();const result=await promise;
+ expect(result.failed).toBe(1);expect(getState()).not.toBe('SYNCING');expect(await db.syncQueue.count()).toBe(1);
+ // Interrupção do app não pode consumir tentativa: senão o item acaba em
+ // 'error' e some da contagem de pendências e da dead letter.
+ const item=(await db.syncQueue.toArray())[0];
+ expect(item.status).toBe('pending');
+ expect(item.retryCount).toBe(0);
+});
  it('não envia fila pertencente a outro usuário',async()=>{
   await enqueue();storage.set('dc_last_user_id',row.aluno_id);setOfflineOwner(row.aluno_id);
   mock.session.mockResolvedValue({data:{session:{user:{id:row.aluno_id}}},error:null});

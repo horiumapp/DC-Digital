@@ -381,10 +381,14 @@ export async function claimNext(ownerUserId: string): Promise<SyncQueueItem | un
 
       // Apenas um item pendente por tabela por rodada de claim
       if (seenPendingTables.has(i.table)) return false;
-      seenPendingTables.add(i.table);
 
-      // Respeitar backoff de retry
-      return !i.retryAfter || i.retryAfter <= timestamp;
+      // Respeitar backoff de retry ANTES de marcar a tabela como vista:
+      // marcar primeiro bloqueava a tabela inteira (até 30s de backoff) e
+      // impedia que outros itens prontos da mesma tabela fossem enviados.
+      if (i.retryAfter && i.retryAfter > timestamp) return false;
+
+      seenPendingTables.add(i.table);
+      return true;
     });
 
     if (!item?.id) return undefined;
