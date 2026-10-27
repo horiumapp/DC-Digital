@@ -545,7 +545,10 @@ export function parseAlunosCsv(
           turmaId = found.id;
           escolaId = found.escola_id;
         } else {
+          // A linha é descartada: importar sem turma gravaria o aluno fora da
+          // turma informada no arquivo, contrariando o que o usuário pediu.
           errors.push(`Linha ${i + 2}: Turma "${turmaStr}" não encontrada no sistema.`);
+          return;
         }
       }
     }

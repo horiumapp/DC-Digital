@@ -38,20 +38,23 @@ export default function AparataDetalhes() {
 
   useEffect(() => {
     const nome = turmaAtiva?.escola;
-    const local = getEscolaLogo({ nome });
-    setLogoEscola(local);
-    if (!turmaAtiva?.escola_id) return;
+    const escolaId = turmaAtiva?.escola_id;
+    setLogoEscola(getEscolaLogo({ nome }));
+    if (!escolaId) return;
     let ativo = true;
-    supabase
-      .from('escolas')
-      .select('logo_url, nome')
-      .eq('id', turmaAtiva.escola_id)
-      .maybeSingle()
-      .then(({ data }) => {
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from('escolas')
+          .select('logo_url, nome')
+          .eq('id', escolaId)
+          .maybeSingle();
         if (!ativo || !data) return;
         setLogoEscola(getEscolaLogo({ logo_url: data.logo_url, nome: data.nome || nome }));
-      })
-      .catch(() => { /* mantém o logo local pelo nome da escola */ });
+      } catch {
+        /* mantém o logo local pelo nome da escola */
+      }
+    })();
     return () => { ativo = false; };
   }, [turmaAtiva?.escola, turmaAtiva?.escola_id]);
 
@@ -97,18 +100,25 @@ export default function AparataDetalhes() {
         // Histórico permanece na turma de origem; para o aparata, consolidamos por aluno no período do bimestre.
         const { data: frequenciasHistoricas } = await supabase
           .from('frequencias')
-          .select('data, aluno_id, status, disciplina')
+          .select('data, aluno_id, tempo, status, disciplina')
           .in('aluno_id', [...alunosDaTurma])
           .eq('disciplina', componenteAtivo)
           .gte('data', bimestreInfo.dataInicio)
           .lte('data', bimestreInfo.dataFim)
           .in('status', ['F', 'FJ']);
-        const frequencias = frequenciasHistoricas || frequenciasAtuais;
+        // O retorno do servidor não contém lançamentos ainda pendentes na fila offline.
+        // Unir as duas fontes (deduplicando pelo registro) evita que faltas locais
+        // desapareçam da Aparata assim que o servidor responde.
+        const registrosPorChave = new Map<string, { data: string; aluno_id: string; status: string }>();
+        [...(frequenciasHistoricas || []), ...frequenciasAtuais].forEach(registro => {
+          const chave = `${registro.aluno_id}|${registro.data}|${registro.tempo ?? ''}|${registro.disciplina ?? ''}`;
+          registrosPorChave.set(chave, registro);
+        });
         const map: Record<string, number> = {};
         const pStart = new Date(bimestreInfo.dataInicio + 'T00:00:00');
         const pEnd = new Date(bimestreInfo.dataFim + 'T23:59:59');
 
-        frequencias.forEach(f => {
+        registrosPorChave.forEach(f => {
           // turma e disciplina são filtradas pelo serviço; os demais filtros são
           // aplicados aqui para manter o escopo da Aparata.
           if (!alunosDaTurma.has(String(f.aluno_id))) return;
