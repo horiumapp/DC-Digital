@@ -40,7 +40,7 @@ const {
     return {error:null};
   });
 
-  const maybeSingle = vi.fn(async () => ({ data: { escola_id: 'escola-123' }, error: null }));
+  const maybeSingle = vi.fn(async (): Promise<{ data: { escola_id: string; cargo?: string } | null; error: null }> => ({ data: { escola_id: 'escola-123' }, error: null }));
   const eq = vi.fn(() => ({ maybeSingle }));
   const select = vi.fn(() => ({ eq }));
   const from = vi.fn(() => ({ select }));

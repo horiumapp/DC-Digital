@@ -109,8 +109,24 @@ export default function AparataDetalhes() {
         // O retorno do servidor não contém lançamentos ainda pendentes na fila offline.
         // Unir as duas fontes (deduplicando pelo registro) evita que faltas locais
         // desapareçam da Aparata assim que o servidor responde.
-        const registrosPorChave = new Map<string, { data: string; aluno_id: string; status: string }>();
-        [...(frequenciasHistoricas || []), ...frequenciasAtuais].forEach(registro => {
+        const registrosPorChave = new Map<string, { data: string; aluno_id: string; tempo?: string; status: string; disciplina?: string }>();
+        const todosRegistros: { data: string; aluno_id: string; tempo?: string; status: string; disciplina?: string }[] = [
+          ...(frequenciasHistoricas || []).map(f => ({
+            data: f.data,
+            aluno_id: f.aluno_id,
+            tempo: f.tempo ?? undefined,
+            status: f.status,
+            disciplina: f.disciplina ?? undefined,
+          })),
+          ...frequenciasAtuais.map(f => ({
+            data: f.data,
+            aluno_id: f.aluno_id,
+            tempo: f.tempo ?? undefined,
+            status: f.status,
+            disciplina: f.disciplina ?? undefined,
+          })),
+        ];
+        todosRegistros.forEach(registro => {
           const chave = `${registro.aluno_id}|${registro.data}|${registro.tempo ?? ''}|${registro.disciplina ?? ''}`;
           registrosPorChave.set(chave, registro);
         });

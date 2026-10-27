@@ -5,7 +5,7 @@ describe('atestado na chamada', () => {
   it('trava o aluno em falta justificada e não deixa o professor remover', () => {
     const resultado = aplicarAtestadoNaChamada(
       { id: 'ana', freq: 'P' },
-      new Set(['ana'])
+      new Set<string>(['ana'])
     );
     expect(resultado).toEqual({ id: 'ana', freq: 'FJ', atestado: true });
   });
@@ -22,7 +22,7 @@ describe('atestado na chamada', () => {
   it('não mantém falta justificada lançada só pelo professor', () => {
     const resultado = aplicarAtestadoNaChamada(
       { id: 'clara', freq: 'FJ' },
-      new Set()
+      new Set<string>()
     );
     expect(resultado.freq).toBe('F');
     expect(resultado.atestado).toBe(false);
@@ -35,7 +35,7 @@ describe('atestado na chamada', () => {
         { aluno_id: 'bruno', status: 'P' },
         { aluno_id: 'clara', status: 'F' },
       ],
-      new Set(['daniel'])
+      new Set<string>(['daniel'])
     );
     expect([...ausentes].sort()).toEqual(['ana', 'clara', 'daniel']);
     expect([...atestados].sort()).toEqual(['ana', 'daniel']);

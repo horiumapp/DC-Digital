@@ -8,7 +8,7 @@ export interface ChamadaAluno {
 export function aplicarAtestadoNaChamada<T extends ChamadaAluno>(
   aluno: T,
   alunosComAtestado: ReadonlySet<string>
-): T {
+): T & { atestado: boolean } {
   if (alunosComAtestado.has(aluno.id)) {
     return { ...aluno, atestado: true, freq: 'FJ' };
   }

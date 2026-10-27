@@ -144,7 +144,9 @@ export default function TabProfessores() {
           const { data: cpfs } = await supabase.rpc('cpfs_de_professores', {
             p_ids: lista.map((professor) => professor.id),
           });
-          const porId = new Map((cpfs || []).map((row: { id: string; cpf: string | null }) => [row.id, row.cpf || undefined]));
+          const porId = new Map<string, string | undefined>(
+            (cpfs || []).map((row: { id: string; cpf: string | null }): [string, string | undefined] => [row.id, row.cpf || undefined]),
+          );
           lista = lista.map((professor) => ({ ...professor, cpf: porId.get(professor.id) }));
         }
         setProfessores(lista);
