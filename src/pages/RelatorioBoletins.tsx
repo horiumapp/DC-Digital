@@ -6,6 +6,7 @@ import { APP_CONFIG } from '../config/appConfig';
 import { supabase } from '../lib/supabase';
 import { db } from '../lib/db';
 import { readAllRows } from '../services/pagination';
+import { getCachedAlunos } from '../services/offlineStorage';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
 import BoletimDocumento, { AlunoBoletimData, NotaBoletimItem, FrequenciaBoletimItem } from '../components/boletim/BoletimDocumento';
 import { formatMatriculaCpf } from '../utils/formatters';
@@ -217,8 +218,16 @@ export default function RelatorioBoletins() {
       }
 
       if (alunosLista.length === 0) {
-        const localAlunos = await db.alunos.where('turma_id').equals(turmaId).sortBy('nome');
-        alunosLista = localAlunos;
+        // O cache local guarda nome/CPF/endereço criptografados (AES-GCM); ler a
+        // tabela direto imprimiria o texto cifrado no boletim oficial.
+        const { alunos: localAlunos } = await getCachedAlunos(turmaId);
+        alunosLista = localAlunos.map(a => ({
+          id: a.id,
+          nome: a.nome || 'Aluno Sem Nome',
+          cpf: a.cpf,
+          data_nascimento: '',
+          status: a.status,
+        }));
       }
 
       if (alunosLista.length === 0) {

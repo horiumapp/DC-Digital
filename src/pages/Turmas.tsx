@@ -54,7 +54,6 @@ export default function Turmas() {
   const [professorDisciplinas, setProfessorDisciplinas] = useState<string>('');
   const isMounted = React.useRef(true);
   const userRef = React.useRef(user);
-  userRef.current = user;
 
   React.useEffect(() => {
     isMounted.current = true;
@@ -63,10 +62,20 @@ export default function Turmas() {
     };
   }, []);
 
+  // Refs só podem ser escritas fora do render (regra react-hooks/refs).
+  // Este efeito é declarado antes do que consome `userRef` para garantir a ordem.
+  React.useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   const { showSuccess: _showSuccess, showError } = useToast();
 
+  // Extrair o campo antes do useCallback evita que o React Compiler descarte a
+  // memoização por divergência entre dependência inferida (turmaAtiva) e declarada.
+  const turmaAtivaEscolaId = turmaAtiva?.escola_id;
+
   const confirmarLotacao = React.useCallback((aloc: EscolaAlocacao, todas: EscolaAlocacao[]) => {
-    if (turmaAtiva?.escola_id && turmaAtiva.escola_id !== aloc.escola_id) {
+    if (turmaAtivaEscolaId && turmaAtivaEscolaId !== aloc.escola_id) {
       limparTurmaAtiva();
     }
     setAlocacaoAtiva(aloc);
@@ -77,7 +86,7 @@ export default function Turmas() {
     definirEscolaDeTrabalho(aloc, todas);
     setLotacaoObrigatoria(false);
     setIsLotacaoModalOpen(false);
-  }, [definirEscolaDeTrabalho, limparTurmaAtiva, turmaAtiva?.escola_id]);
+  }, [definirEscolaDeTrabalho, limparTurmaAtiva, turmaAtivaEscolaId]);
 
   const publicarLotacoes = React.useCallback((mappedAlocs: EscolaAlocacao[]) => {
     const escolha = resolverLotacaoInicial(
