@@ -107,19 +107,26 @@ describe('Reabertura de Aparata / Fechamento de Bimestre (Granular e Total)', ()
     });
 
     it('fetchDisciplinasDaTurma deve consolidar componentes de horarios, avaliacoes e fechamentos', async () => {
+      // Emula o contrato do PostgREST: `range` devolve só a fatia pedida.
+      const paginar = (rows: unknown[]) => (from: number, to: number) => ({
+        data: rows.slice(from, to + 1),
+        error: null,
+      });
       (supabase.rpc as any).mockResolvedValue({ data: ['Matemática', 'Português'], error: null });
       (supabase.from as any).mockImplementation((table: string) => {
         if (table === 'avaliacoes') {
           return {
             select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(), range: vi.fn().mockResolvedValue({ data: [{ disciplina: 'Ciências' }, { disciplina: 'GERAL' }] })
+              eq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(),
+              range: vi.fn(paginar([{ disciplina: 'Ciências' }, { disciplina: 'GERAL' }])),
             })
           };
         }
         if (table === 'fechamentos_bimestres') {
           return {
             select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(), range: vi.fn().mockResolvedValue({ data: [{ disciplina: 'História' }] })
+              eq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(),
+              range: vi.fn(paginar([{ disciplina: 'História' }])),
             })
           };
         }
@@ -135,17 +142,19 @@ describe('Reabertura de Aparata / Fechamento de Bimestre (Granular e Total)', ()
     });
 
     it('fetchFechamentos com TODAS deve indicar FECHADO se qualquer disciplina estiver fechada', async () => {
+      const linhas = [
+        { id: '1', bimestre: '1. BIMESTRE', status: 'FECHADO', disciplina: 'Matemática' },
+        { id: '2', bimestre: '1. BIMESTRE', status: 'ABERTO', disciplina: 'Português' },
+      ];
       const mockQuery: any = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
-        range: vi.fn().mockResolvedValue({
-          data: [
-            { id: '1', bimestre: '1. BIMESTRE', status: 'FECHADO', disciplina: 'Matemática' },
-            { id: '2', bimestre: '1. BIMESTRE', status: 'ABERTO', disciplina: 'Português' },
-          ],
-          error: null
-        })
+        // Emula o contrato do PostgREST: `range` devolve só a fatia pedida.
+        range: vi.fn((from: number, to: number) => ({
+          data: linhas.slice(from, to + 1),
+          error: null,
+        }))
       };
       (supabase.from as any).mockReturnValue(mockQuery);
 

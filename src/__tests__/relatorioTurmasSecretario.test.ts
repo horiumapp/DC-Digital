@@ -68,7 +68,7 @@ describe('Relatórios: fetchTurmasRelatorio e fetchAvaliacoes para SECRETARIO/GE
           select: vi.fn().mockReturnThis(),
           in: vi.fn().mockReturnThis(),
           order: vi.fn().mockReturnThis(),
-          range: vi.fn().mockResolvedValue({ data: mockHorarios, error: null }),
+          range: vi.fn(paginar(mockHorarios)),
         };
       }
       if (table === 'avaliacoes') {
@@ -76,7 +76,7 @@ describe('Relatórios: fetchTurmasRelatorio e fetchAvaliacoes para SECRETARIO/GE
           select: vi.fn().mockReturnThis(),
           in: vi.fn().mockReturnThis(),
           order: vi.fn().mockReturnThis(),
-          range: vi.fn().mockResolvedValue({ data: mockAvaliacoes, error: null }),
+          range: vi.fn(paginar(mockAvaliacoes)),
         };
       }
       return {
@@ -121,7 +121,7 @@ describe('Relatórios: fetchTurmasRelatorio e fetchAvaliacoes para SECRETARIO/GE
         return {
           select: vi.fn().mockReturnThis(),
           order: vi.fn().mockReturnThis(),
-          range: vi.fn().mockResolvedValue({data: typeof mockTurmas !== 'undefined' ? mockTurmas : [], error:null}),
+          range: vi.fn(paginar(mockTurmas)),
           eq: vi.fn().mockReturnThis(),
         };
       }
@@ -130,7 +130,7 @@ describe('Relatórios: fetchTurmasRelatorio e fetchAvaliacoes para SECRETARIO/GE
           select: vi.fn().mockReturnThis(),
           in: vi.fn().mockReturnThis(),
           order: vi.fn().mockReturnThis(),
-          range: vi.fn().mockResolvedValue({ data: [], error: null }),
+          range: vi.fn(paginar([])),
         };
       }
       if (table === 'avaliacoes') {
@@ -138,7 +138,7 @@ describe('Relatórios: fetchTurmasRelatorio e fetchAvaliacoes para SECRETARIO/GE
           select: vi.fn().mockReturnThis(),
           in: vi.fn().mockReturnThis(),
           order: vi.fn().mockReturnThis(),
-          range: vi.fn().mockResolvedValue({ data: [], error: null }),
+          range: vi.fn(paginar([])),
         };
       }
       return { select: vi.fn().mockReturnThis() };
@@ -163,7 +163,7 @@ describe('Relatórios: fetchTurmasRelatorio e fetchAvaliacoes para SECRETARIO/GE
             ilikeCalled = true;
             return Promise.resolve({ data: [], error: null });
           }),
-          range: vi.fn().mockResolvedValue({data:[],error:null}),
+          range: vi.fn(paginar([])),
           then: (resolve: any) => resolve({ data: [], error: null }),
         };
       }
