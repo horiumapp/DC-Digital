@@ -137,6 +137,22 @@ export async function markDone(id: number): Promise<void> {
 }
 
 /**
+ * Devolve o item à fila sem consumir tentativa.
+ * Usado quando o ciclo foi interrompido por troca de sessão/aba — nesse caso não
+ * houve falha do servidor, e penalizar o item o levaria a um estado de erro que
+ * nem o contador de pendências nem a dead letter exibem.
+ */
+export async function release(id: number): Promise<void> {
+  const item = await db.syncQueue.get(id);
+  if (!item || item.status !== 'processing') return;
+  await db.syncQueue.update(id, {
+    status: 'pending' as QueueStatus,
+    updatedAt: now(),
+    retryAfter: undefined,
+  });
+}
+
+/**
  * Incrementa contagem de retries. Se excede MAX_RETRIES, marca como erro.
  */
 export async function retry(id: number, error: string): Promise<boolean> {

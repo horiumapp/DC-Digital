@@ -294,9 +294,17 @@ async function _runSyncAll(ownerId: string): Promise<SyncResult> {
           });
           // Continua para o próximo item em vez de parar
         } else {
-          // Erro recuperável — retry com backoff
-          await Queue.retry(item.id, errorMsg);
-          await logSync(item.table, item.operation, 'error', errorMsg);
+        // Erro recuperável — retry com backoff
+        // Interrupções do próprio app (troca de sessão, aba fechada, timeout local)
+        // não são falhas do servidor: devolvem o item à fila sem gastar tentativa.
+        if (isInterruption(errorMsg)) {
+          await Queue.release(item.id);
+          result.errors.push(`${item.table}/${item.operation}: ${errorMsg}`);
+          emit('itemFailed', { table: item.table, error: errorMsg, interrupted: true });
+          break;
+        }
+        await Queue.retry(item.id, errorMsg);
+        await logSync(item.table, item.operation, 'error', errorMsg);
           result.failed++;
           // Se for erro de autenticação ou token JWT expirado,
           // tentar renovar a sessão do usuário e pausar o ciclo corrente
@@ -462,6 +470,20 @@ function isRecoverableAuthError(errorMsg: string, errorCode?: string): boolean {
 
 function isConflictError(errorMsg: string, errorCode?: string): boolean {
   return errorCode === '40001' || errorMsg.toLowerCase().includes('conflict');
+}
+
+/**
+ * O ciclo parou por causa do próprio cliente (sessão trocada, aba fechada,
+ * timeout local do item) e não por uma resposta do servidor. Reenviar depois é
+ * necessário, mas contabilizar tentativa aqui esgotaria o limite e esconderia o
+ * item da UI (itens em `error` não entram na contagem de pendências).
+ */
+function isInterruption(errorMsg: string): boolean {
+  const msg = errorMsg.toLowerCase();
+  return msg.includes('sincronização interrompida')
+    || msg.includes('sessão alterada')
+    || msg.includes('[timeout]')
+    || msg.includes('the operation was aborted');
 }
 
 function isNonRecoverableError(errorMsg: string, errorCode?: string): boolean {
@@ -805,12 +827,14 @@ async function updateTempAvaliacaoId(localId: number, serverId: string, original
   // Sem ele, notas enfileiradas com esse id nunca eram resolvidas.
   const clientTempId = localRecord?.clientTempId ? String(localRecord.clientTempId) : null;
 
+  // O localId é um contador do Dexie e pode coincidir numericamente com um id
+  // de servidor (BIGINT começa em 1). Tratá-lo como alias "nu" fazia as notas de
+  // outra avaliação serem reatribuídas a esta; só os prefixos são inequívocos.
   const possibleTempIds = new Set([
     String(original.id || ''),
     String(original.clientTempId || ''),
     `temp_${localId}`,
     `local_${localId}`,
-    String(localId),
   ]);
   if (tempIdFromRecord) possibleTempIds.add(tempIdFromRecord);
   if (serverIdFromRecord) possibleTempIds.add(serverIdFromRecord);
@@ -928,7 +952,8 @@ async function autoRepairDeadLetters(): Promise<void> {
         const realId = String(av.serverId || av.id);
         if (av.id) tempToRealMap.set(String(av.id), realId);
         if (av.localId) {
-          tempToRealMap.set(String(av.localId), realId);
+          // Só as formas prefixadas são seguras: o localId é um contador e pode
+          // coincidir com o id de servidor de OUTRA avaliação.
           tempToRealMap.set(`temp_${av.localId}`, realId);
           tempToRealMap.set(`local_${av.localId}`, realId);
         }
@@ -1159,7 +1184,7 @@ async function reconcileLocalRecords(): Promise<void> {
         if (av.serverId) tempToCanonicalAvMap.set(String(av.serverId), canonicalId);
         if (av.clientTempId) tempToCanonicalAvMap.set(String(av.clientTempId), canonicalId);
         if (av.localId) {
-          tempToCanonicalAvMap.set(String(av.localId), canonicalId);
+          // O localId puro não é alias: colide com ids de servidor de outras avaliações.
           tempToCanonicalAvMap.set(`temp_${av.localId}`, canonicalId);
           tempToCanonicalAvMap.set(`local_${av.localId}`, canonicalId);
         }
