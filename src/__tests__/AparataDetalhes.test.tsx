@@ -7,6 +7,7 @@ import * as OfflineTurmaService from '../services/turmaServiceOffline';
 
 const mockUseTurma = vi.fn();
 const mockUseAuth = vi.fn();
+const mockFrequenciasHistoricas = vi.fn();
 
 vi.mock('../contexts/TurmaContext', () => ({
   useTurma: () => mockUseTurma(),
@@ -15,6 +16,22 @@ vi.mock('../contexts/TurmaContext', () => ({
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
 }));
+
+// Cadeia fluente mínima: qualquer método devolve o próprio builder e o await
+// resolve com o resultado controlado por `mockFrequenciasHistoricas`.
+vi.mock('../lib/supabase', () => {
+  const builder: Record<string, unknown> = {};
+  const encadeavel = () => builder;
+  builder.select = encadeavel;
+  builder.in = encadeavel;
+  builder.eq = encadeavel;
+  builder.gte = encadeavel;
+  builder.lte = encadeavel;
+  builder.maybeSingle = encadeavel;
+  builder.then = (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
+    Promise.resolve(mockFrequenciasHistoricas()).then(resolve, reject);
+  return { supabase: { from: () => builder } };
+});
 
 vi.mock('../services/turmaServiceOffline', () => ({
   fetchAllFrequencias: vi.fn(),
@@ -49,6 +66,7 @@ const turmaAtiva = {
 describe('AparataDetalhes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFrequenciasHistoricas.mockReturnValue({ data: null, error: null });
     mockUseAuth.mockReturnValue({ user: { role: 'PROFESSOR' } });
     mockUseTurma.mockReturnValue({
       turmaAtiva,
@@ -86,6 +104,34 @@ describe('AparataDetalhes', () => {
 
     const row = screen.getByText('Aluno Pendente', { selector: 'td.cursor-pointer' }).closest('tr');
     expect(row?.textContent).toContain('1');
+  });
+
+  it('não descarta a falta pendente local quando o servidor responde com outro registro', async () => {
+    vi.mocked(OfflineTurmaService.fetchAllFrequencias).mockResolvedValue([
+      {
+        aluno_id: 'aluno-1',
+        status: 'F',
+        data: '2026-03-10',
+        tempo: '1',
+        disciplina: 'Matemática',
+        syncStatus: 'pending',
+      } as Awaited<ReturnType<typeof OfflineTurmaService.fetchAllFrequencias>>[number],
+    ]);
+    // O servidor já conhece apenas o registro de 11/03 — antes, a resposta do
+    // servidor substituía a lista local e a falta de 10/03 desaparecia do total.
+    mockFrequenciasHistoricas.mockReturnValue({
+      data: [{ aluno_id: 'aluno-1', status: 'F', data: '2026-03-11', tempo: '1', disciplina: 'Matemática' }],
+      error: null,
+    });
+
+    render(<AparataDetalhes />);
+
+    await waitFor(() => {
+      expect(OfflineTurmaService.fetchAllFrequencias).toHaveBeenCalledWith('turma-1', 'Matemática');
+    });
+
+    const row = await waitFor(() => screen.getByText('Aluno Pendente', { selector: 'td.cursor-pointer' }).closest('tr'));
+    expect(row?.textContent).toContain('2');
   });
 
   it('calcula corretamente somaParcial considerando nota de 2ª Chamada (2CH)', async () => {

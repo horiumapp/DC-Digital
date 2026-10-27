@@ -47,4 +47,18 @@ describe('parseAlunosCsv', () => {
 
     expect(result.errors.some(e => e.includes('duplicado no arquivo'))).toBe(true);
   });
+
+  it('descarta a linha cuja turma não existe em vez de importar o aluno sem turma', () => {
+    const csvContent = [
+      'Aluno;CPF;Nascimento;Turma',
+      'Maria Silva;11144477735;2015-01-01;Turma Inexistente',
+      'Joao Souza;52998224725;2015-01-01;1º Ano A',
+    ].join('\n');
+
+    const result = parseAlunosCsv(csvContent, turmasMock, 'escola-1');
+
+    expect(result.errors.some(e => e.includes('não encontrada'))).toBe(true);
+    expect(result.valid.map(a => a.nome)).toEqual(['Joao Souza']);
+    expect(result.valid[0].turma_id).toBe('turma-1');
+  });
 });
