@@ -12,7 +12,11 @@ export async function readAllRows<T>(query: {
 }): Promise<{data: T[]; error: null}> {
   const data: T[] = [];
   const size = 500;
-  for (let offset = 0; ; ) {
+  // Guarda contra fim de conjunto não sinalizado: sem isso, um `range` que
+  // ignorasse o deslocamento (mock, proxy ou endpoint mal comportado) faria o
+  // laço repetir a mesma página indefinidamente.
+  const MAX_PAGES = 10_000;
+  for (let offset = 0, pagina = 0; pagina < MAX_PAGES; pagina += 1) {
     const page = await query.range(offset, offset + size - 1);
     if (page.error) throw page.error;
     const rows = page.data || [];
@@ -20,6 +24,7 @@ export async function readAllRows<T>(query: {
     data.push(...rows);
     offset += rows.length;
   }
+  throw new Error('Leitura paginada excedeu o limite de páginas; resultados podem estar incompletos.');
 }
 
 /** Bound IN filters as well as response pages, keeping URLs below proxy limits. */

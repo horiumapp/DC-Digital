@@ -9,6 +9,13 @@ vi.mock('../lib/supabase', () => ({
 }));
 
 describe('Relatórios: fetchTurmasRelatorio e fetchAvaliacoes para SECRETARIO/GESTOR/ADMIN', () => {
+  // Emula o contrato do PostgREST: devolve apenas a fatia pedida por `range`,
+  // e uma página vazia quando o deslocamento passa do fim do conjunto.
+  const paginar = <T,>(rows: T[]) => (from: number, to: number) => ({
+    data: rows.slice(from, to + 1),
+    error: null,
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -48,7 +55,7 @@ describe('Relatórios: fetchTurmasRelatorio e fetchAvaliacoes para SECRETARIO/GE
         return {
           select: vi.fn().mockReturnThis(),
           order: vi.fn().mockReturnThis(),
-          range: vi.fn().mockResolvedValue({data: typeof mockTurmas !== 'undefined' ? mockTurmas : [], error:null}),
+          range: vi.fn(paginar(mockTurmas)),
           eq: vi.fn().mockImplementation(function (this: any, col: string, val: string) {
             expect(col).toBe('escola_id');
             expect(val).toBe('escola-uuid-1');
