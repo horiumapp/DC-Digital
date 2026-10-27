@@ -11,7 +11,7 @@ export interface AtestadoMedico {
   criado_em: string;
 }
 
-const cachePorTurma = new Map<string, AtestadoMedico[]>();
+const cachePorTurma = new Map<string, AtestadoDaTurma[]>();
 
 export async function listarAtestadosDoAluno(alunoId: string): Promise<AtestadoMedico[]> {
   const { data, error } = await supabase.rpc('listar_atestados_do_aluno', { p_aluno_id: alunoId });
@@ -53,7 +53,7 @@ export async function removerAtestadoMedico(id: string): Promise<void> {
   cachePorTurma.clear();
 }
 
-function idsCobertos(registros: AtestadoMedico[], dataIso: string): Set<string> {
+function idsCobertos(registros: AtestadoIntervalo[], dataIso: string): Set<string> {
   return new Set(
     registros
       .filter(item => dataCobertaPeloAtestado(dataIso, item.data_inicio, item.data_fim))
@@ -61,15 +61,23 @@ function idsCobertos(registros: AtestadoMedico[], dataIso: string): Set<string> 
   );
 }
 
+/** Campos necessários para saber se a data cai dentro de um atestado. */
+type AtestadoIntervalo = Pick<AtestadoMedico, 'aluno_id' | 'data_inicio' | 'data_fim'>;
+
+/** Registro vindo da consulta da chamada: não inclui `observacao`. */
+type AtestadoDaTurma = Omit<AtestadoMedico, 'observacao'>;
+
 export async function alunosComAtestadoNaData(turmaId: string, dataIso: string): Promise<Set<string>> {
   try {
     if (typeof navigator === 'undefined' || navigator.onLine) {
       const { data, error } = await supabase
         .from('atestados_medicos')
+        // `observacao` não é legível por este perfil (grant por coluna) e não é
+        // necessária aqui: o tipo declara exatamente o que a consulta devolve.
         .select('id, aluno_id, escola_id, data_inicio, data_fim, criado_em, alunos!inner(turma_id)')
         .eq('alunos.turma_id', turmaId);
       if (error) throw error;
-      const registros = (data || []) as AtestadoMedico[];
+      const registros = (data || []) as unknown as AtestadoDaTurma[];
       cachePorTurma.set(turmaId, registros);
       return idsCobertos(registros, dataIso);
     }
