@@ -10,6 +10,7 @@ import ConfirmActionModal from '../../components/ConfirmActionModal';
 import NovaEscolaModal from '../../components/NovaEscolaModal';
 import { useToast } from '../../components/common/Toast';
 import { getEscolaLogo } from '../../utils/escolaUtils';
+import { translateSupabaseError } from '../../utils/supabaseErrors';
 
 import { type EscolaRow, type EscolaFormData } from './TabEscolas';
 
@@ -99,7 +100,7 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
         .eq('id', usuarioParaExcluir.id);
 
       if (error) {
-        showError('Erro ao remover vínculo: ' + error.message);
+        showError(translateSupabaseError(error));
       } else {
         showSuccess(`${usuarioParaExcluir.nome_completo} foi desvinculado(a) desta escola.`);
         fetchUsuarios();
@@ -125,7 +126,7 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
       .eq('id', escola.id);
 
     if (error) {
-      showError('Erro ao atualizar escola: ' + error.message);
+      showError(translateSupabaseError(error));
     } else {
       showSuccess('Dados da escola atualizados!');
       onEscolaAtualizada();

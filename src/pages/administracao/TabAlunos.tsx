@@ -20,6 +20,7 @@ import { readAllRows } from '../../services/pagination';
 import { useToast } from '../../components/common/Toast';
 import { getEscolaLogo } from '../../utils/escolaUtils';
 import { gerarSenhaTemporaria } from '../../utils/senhaTemporaria';
+import { translateSupabaseError } from '../../utils/supabaseErrors';
 
 const ALUNO_EMAIL_DOMAIN = 'aluno.dcdigital.local';
 
@@ -207,7 +208,7 @@ export default function TabAlunos() {
         .eq('id', alunoParaEditar.id);
 
       if (error) {
-        showError("Erro ao editar aluno: " + error.message);
+        showError(translateSupabaseError(error));
       } else {
         // Ao incluir ou alterar CPF, cria a conta do portal se ela ainda não existia.
         if (novoAluno.cpf) {
@@ -334,7 +335,7 @@ export default function TabAlunos() {
         .eq('id', alunoParaExcluir.id);
 
       if (error) {
-        showError("Erro ao excluir aluno: " + error.message);
+        showError(translateSupabaseError(error));
       } else {
         let authRemoved = true;
         // Revogar conta Auth correspondente se o aluno tiver CPF

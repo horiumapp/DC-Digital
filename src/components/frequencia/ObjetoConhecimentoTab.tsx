@@ -8,6 +8,8 @@ import * as OfflineStorage from '../../services/offlineStorage';
 import { formatarDataParaExibicao, formatarDataParaISO, getBimestrePorData, getPeriodoInfoPorData } from '../../utils/dateUtils';
 import Captcha from '../common/Captcha';
 import { useCaptcha } from '../../hooks/useCaptcha';
+import { useUnsavedChangesWarning } from '../../hooks/useUnsavedChangesWarning';
+import { translateSupabaseError } from '../../utils/supabaseErrors';
 
 interface CurriculoObjeto {
   id?: string;
@@ -64,6 +66,7 @@ export default function ObjetoConhecimentoTab({
   const [objetoSalvo, setObjetoSalvo] = useState(false);
   const [objetoData, setObjetoData] = useState<{ descricao: string; observacao: string; status: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  useUnsavedChangesWarning(isAddingObjeto);
 
   const {
     generatedCaptcha,
@@ -251,6 +254,7 @@ export default function ObjetoConhecimentoTab({
   };
 
   const handleSave = async () => {
+    if (isSaving) return;
     // Validação: todos os campos obrigatórios devem estar preenchidos
     if (!objetoConhecimento || (typeof objetoConhecimento === 'string' && objetoConhecimento.trim() === '')) {
       showWarning('Por favor, preencha o Conteúdo Ministrado antes de salvar.');
@@ -310,7 +314,7 @@ export default function ObjetoConhecimentoTab({
       }
     } catch (err) {
       console.error('Erro ao salvar conteúdo ministrado:', err);
-      showError('Erro ao salvar conteúdo ministrado. Tente novamente.');
+      showError(translateSupabaseError(err));
     } finally {
       setIsSaving(false);
     }

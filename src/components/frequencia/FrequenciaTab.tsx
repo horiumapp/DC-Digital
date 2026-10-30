@@ -4,6 +4,7 @@ import { Search, Check, Trash2, Users, AlertTriangle, RefreshCw, ArrowLeft } fro
 import Captcha from '../common/Captcha';
 import { useTurma, Aluno } from '../../contexts/TurmaContext';
 import { useCaptcha } from '../../hooks/useCaptcha';
+import { useUnsavedChangesWarning } from '../../hooks/useUnsavedChangesWarning';
 import { useToast } from '../common/Toast';
 import { formatarDataParaExibicao } from '../../utils/dateUtils';
 import { proximoPassoAposFrequencia } from '../../utils/frequenciaFluxo';
@@ -42,6 +43,7 @@ export default function FrequenciaTab({
   const [searchTerm, setSearchTerm] = useState('');
   const [presenceFilter,setPresenceFilter]=useState<'all'|'P'|'F'|'FJ'|'unmarked'>('all');
   const [baseline, setBaseline] = useState('');
+  useUnsavedChangesWarning(isLaunching);
 
   const isLancado = lancamentos.some(l => 
     l.data === selectedDate && 
@@ -134,6 +136,7 @@ export default function FrequenciaTab({
   ).filter(student=>presenceFilter==='all'||(presenceFilter==='unmarked'?!student.freq:student.freq===presenceFilter));
 
   const handleConfirm = async () => {
+    if (isSaving) return;
     if (validateCaptcha()) {
       if (turmaAtiva) {
         setIsSaving(true);

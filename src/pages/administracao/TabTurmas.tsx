@@ -17,6 +17,7 @@ import {
 import { useToast } from '../../components/common/Toast';
 import { readAllRows } from '../../services/pagination';
 import { getEscolaLogo } from '../../utils/escolaUtils';
+import { translateSupabaseError } from '../../utils/supabaseErrors';
 
 export interface TurmaRow {
   id: string;
@@ -162,7 +163,7 @@ export default function TabTurmas() {
         .eq('id', turmaParaEditar.id);
 
       if (error) {
-        showError("Erro ao editar turma: " + error.message);
+        showError(translateSupabaseError(error));
       } else {
         fetchTurmas();
         setTurmaParaEditar(null);
@@ -179,7 +180,7 @@ export default function TabTurmas() {
         }]);
 
       if (error) {
-        showError("Erro ao criar turma: " + error.message);
+        showError(translateSupabaseError(error));
       } else {
         fetchTurmas();
         setTurmaParaEditar(null);
@@ -201,7 +202,7 @@ export default function TabTurmas() {
         .eq('id', turmaParaExcluir.id);
 
       if (error) {
-        showError("Erro ao deletar turma: " + error.message);
+        showError(translateSupabaseError(error));
       } else {
         fetchTurmas();
         setTurmaParaExcluir(null);
@@ -266,7 +267,7 @@ export default function TabTurmas() {
     const { error } = await supabase.from('turmas').insert(payload);
     if (error) {
       console.error('Erro ao importar turmas:', error);
-      throw new Error(error.message || 'Erro ao importar turmas.');
+      throw new Error(translateSupabaseError(error));
     }
     await Promise.all([fetchTurmas(), fetchEscolas()]);
   };
