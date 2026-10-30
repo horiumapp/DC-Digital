@@ -95,6 +95,8 @@ export function parseCurriculoText(rawText: string): string;
 export function exportCurriculoToCsv(unidadesJson: string): string;
 export function parseDelimitedText(text: string): string;
 export function sanitizeFormulaValue(value: string): string;
+export function countWeekDaysInRange(startIso: string, endIso: string, dayOfWeek: number): number;
+export function consolidarPendencias(entradaJson: string): string;
 `
 );
 

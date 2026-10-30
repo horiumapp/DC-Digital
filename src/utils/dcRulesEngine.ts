@@ -11,6 +11,7 @@
 import * as tsImpl from './regraFrequenciaLdb.tsImpl';
 import * as curriculoTs from './curriculoParser.tsImpl';
 import * as csvTs from './csvDelimited.tsImpl';
+import * as pendenciasTs from './pendenciasConsolidar.tsImpl';
 import type {
   AlteracaoFrequencia,
   AvaliacaoFrequencia,
@@ -22,6 +23,10 @@ import type {
   CurriculoExportSource,
   CurriculoParseResult,
 } from './curriculoParser.tsImpl';
+import type {
+  ConsolidarPendenciasInput,
+  PendenciaDocenteConsolidada,
+} from './pendenciasConsolidar.tsImpl';
 
 export type {
   AlteracaoFrequencia,
@@ -49,6 +54,8 @@ type WasmApi = {
   exportCurriculoToCsv: (unidadesJson: string) => string;
   parseDelimitedText: (text: string) => string;
   sanitizeFormulaValue: (value: string) => string;
+  countWeekDaysInRange: (startIso: string, endIso: string, dayOfWeek: number) => number;
+  consolidarPendencias: (entradaJson: string) => string;
   default?: (moduleOrPath?: unknown) => Promise<unknown>;
   initSync?: (module: unknown) => unknown;
 };
@@ -276,4 +283,61 @@ export function sanitizeFormulaValueString(value: string): string {
   const fromWasm = wasmApi.sanitizeFormulaValue(value);
   if (mode === 'dual') assertParity('sanitizeFormulaValue', fromTs, fromWasm);
   return mode === 'wasm' ? fromWasm : fromTs;
+}
+
+// --- Fase 3: consolidação de pendências ---
+
+export function countWeekDaysInRangeIso(
+  startIso: string,
+  endIso: string,
+  dayOfWeek: number
+): number {
+  const fromTs = pendenciasTs.countWeekDaysInRangeIso(startIso, endIso, dayOfWeek);
+  if (mode === 'ts' || !wasmApi) return fromTs;
+  const fromWasm = wasmApi.countWeekDaysInRange(startIso, endIso, dayOfWeek);
+  if (mode === 'dual') assertParity('countWeekDaysInRange', fromTs, fromWasm);
+  return mode === 'wasm' ? fromWasm : fromTs;
+}
+
+export function consolidarPendencias(
+  input: ConsolidarPendenciasInput
+): PendenciaDocenteConsolidada[] {
+  const fromTs = pendenciasTs.consolidarPendencias(input);
+  if (mode === 'ts' || !wasmApi) return fromTs;
+  const fromWasm = JSON.parse(
+    wasmApi.consolidarPendencias(JSON.stringify(input))
+  ) as PendenciaDocenteConsolidada[];
+  if (mode === 'dual') assertParity('consolidarPendencias', fromTs, fromWasm);
+  return mode === 'wasm' ? fromWasm : fromTs;
+}
+
+/**
+ * Opcional: consolida via API Rust (`dc_rules_api`) em vez do motor local.
+ * Requer `VITE_DC_RULES_API_URL`. A busca com RLS continua no cliente.
+ */
+export async function consolidarPendenciasViaApi(
+  input: ConsolidarPendenciasInput,
+  accessToken?: string | null
+): Promise<PendenciaDocenteConsolidada[]> {
+  const base = (typeof import.meta !== 'undefined'
+    && (import.meta as ImportMeta & { env?: Record<string, string> }).env?.VITE_DC_RULES_API_URL)
+    || (typeof process !== 'undefined' ? process.env?.VITE_DC_RULES_API_URL : undefined);
+
+  if (!base) {
+    return consolidarPendencias(input);
+  }
+
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+  const res = await fetch(`${base.replace(/\/$/, '')}/v1/pendencias/consolidar`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    throw new Error(`dc_rules_api ${res.status}: ${await res.text()}`);
+  }
+  const body = (await res.json()) as { data: PendenciaDocenteConsolidada[] };
+  return body.data;
 }

@@ -2,6 +2,12 @@ import { readAllRows } from './pagination';
 import { supabase } from '../lib/supabase';
 import { APP_CONFIG } from '../config/appConfig';
 import { feriadosNoDiaDaSemana } from './feriados';
+import {
+  consolidarPendencias,
+  consolidarPendenciasViaApi,
+  countWeekDaysInRangeIso,
+} from '../utils/dcRulesEngine';
+import type { ConsolidarPendenciasInput } from '../utils/pendenciasConsolidar.tsImpl';
 
 export interface PendenciaDocente {
   professor: string;
@@ -18,26 +24,11 @@ export interface PendenciaDocente {
   unidade?: string;
 }
 
-
-/**
- * Conta quantos dias de aula existem para um dia da semana (0-6) em um intervalo.
- * Algoritmo O(1) — sem loop diário.
- */
-function countWeekDaysInRange(start: Date, end: Date, dayOfWeek: number): number {
-  if (start > end) return 0;
-  // Total de dias no intervalo (inclusivo nos dois extremos)
-  const totalDays = Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1;
-  // Semanas completas garantem exatamente 1 ocorrência de cada dia
-  const fullWeeks = Math.floor(totalDays / 7);
-  // Dias restantes após as semanas completas
-  const remainder = totalDays % 7;
-  const startDay = start.getDay();
-  // Verificar se o dia da semana alvo aparece nos dias restantes
-  let extraDay = 0;
-  for (let i = 0; i < remainder; i++) {
-    if ((startDay + i) % 7 === dayOfWeek) { extraDay = 1; break; }
-  }
-  return fullWeeks + extraDay;
+function toLocalIso(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 export interface PaginatedPendencias {
@@ -258,7 +249,11 @@ export const fetchPendenciasPorEscola = async (
         const slotKey = `${h.dia_semana}|${h.tempo_ordem}`;
         if (!mapConsolidado[key].countedSlots.has(slotKey)) {
           mapConsolidado[key].countedSlots.add(slotKey);
-          const dias = countWeekDaysInRange(dateStart, dateEnd, h.dia_semana);
+          const dias = countWeekDaysInRangeIso(
+            toLocalIso(dateStart),
+            toLocalIso(dateEnd),
+            Number(h.dia_semana)
+          );
           const semAula = feriadosNoDiaDaSemana(dateStart, dateEnd, Number(h.dia_semana));
           mapConsolidado[key].totalAulasEsperadas += Math.max(0, dias - semAula);
         }
@@ -340,49 +335,13 @@ export const fetchPendenciasPorEscola = async (
         ? await fetchAllPaginated<NotaLote>(() => supabase.from('notas').select('avaliacao_id').in('avaliacao_id', avIds).order('id') as unknown as PostgrestQueryBuilder)
         : [];
 
-      // Helper: converte 'DD/MM/YYYY' ou 'YYYY-MM-DD' para Date para comparação
-      const parseDataField = (d: string): Date | null => {
-        if (!d) return null;
-        if (d.includes('/')) {
-          const [dia, mes, ano] = d.split('/').map(Number);
-          return new Date(ano, mes - 1, dia);
-        }
-        const [ano, mes, dia] = d.split('-').map(Number);
-        return new Date(ano, mes - 1, dia);
-      };
-
-      // FIX #7: Pré-indexar dados em Maps por turmaId+componente para evitar O(N²)
-      // Antes: cada grupo filtrava TODOS os registros. Agora: lookup O(1) por chave.
-      type FreqEntry = { data: string; tempo: string };
-      type ContEntry = { data: string; tempo: string };
-      
-      const freqIndex = new Map<string, FreqEntry[]>();
-      for (const f of (fData.data || [])) {
-        const key = `${f.turma_id}|${f.disciplina}`;
-        const arr = freqIndex.get(key);
-        if (arr) arr.push({ data: f.data, tempo: f.tempo });
-        else freqIndex.set(key, [{ data: f.data, tempo: f.tempo }]);
-      }
-
-      const contIndex = new Map<string, ContEntry[]>();
-      for (const c of (cData.data || [])) {
-        const key = `${c.turma_id}|${c.disciplina}`;
-        const arr = contIndex.get(key);
-        if (arr) arr.push({ data: c.data, tempo: c.tempo });
-        else contIndex.set(key, [{ data: c.data, tempo: c.tempo }]);
-      }
+      const dataLotacao = APP_CONFIG.PERIODOS[0]?.dataInicio
+        ? APP_CONFIG.PERIODOS[0].dataInicio.split('-').reverse().join('/')
+        : '01/01/' + APP_CONFIG.YEAR;
 
       const alunoCountByTurma = new Map<string, number>();
       for (const a of (aluData.data || [])) {
         alunoCountByTurma.set(a.turma_id, (alunoCountByTurma.get(a.turma_id) || 0) + 1);
-      }
-
-      const avIndex = new Map<string, AvaliacaoLote[]>();
-      for (const av of (avData.data || [])) {
-        const key = `${av.turma_id}|${av.disciplina}`;
-        const arr = avIndex.get(key);
-        if (arr) arr.push(av);
-        else avIndex.set(key, [av]);
       }
 
       const notasByAvId = new Map<string, number>();
@@ -390,81 +349,87 @@ export const fetchPendenciasPorEscola = async (
         notasByAvId.set(n.avaliacao_id, (notasByAvId.get(n.avaliacao_id) || 0) + 1);
       }
 
-      // Processar cada grupo do lote localmente (sem novas queries)
-      batchGroups.forEach(group => {
-        const temposSet = group.tempos;
-        const dateStart = group.dateStart;
-        const dateEnd = group.dateEnd;
-        const groupKey = `${group.turmaId}|${group.componente}`;
+      // Fase 3: consolidação pura (TS↔WASM / API opcional) — I/O acima permanece com RLS.
+      const consolidarInput: ConsolidarPendenciasInput = {
+        groups: batchGroups.map(group => {
+          const periodoConfig = APP_CONFIG.PERIODOS.find(
+            p => p.id === group.periodo || p.label === group.periodo
+          );
+          const periodoVariants = periodoConfig
+            ? [periodoConfig.id, periodoConfig.nome, periodoConfig.label]
+            : [group.periodo];
+          return {
+            professor: group.professor,
+            turmaId: group.turmaId,
+            turma: group.turma,
+            componente: group.componente,
+            periodo: group.periodo,
+            turno: group.turno,
+            ensino: group.ensino,
+            fase: group.fase,
+            tempos: [...group.tempos],
+            totalAulasEsperadas: group.totalAulasEsperadas,
+            dateStart: toLocalIso(group.dateStart),
+            dateEnd: toLocalIso(group.dateEnd),
+            periodoVariants,
+            dataLotacao,
+          };
+        }),
+        frequencias: (fData.data || []).map(f => ({
+          turmaId: f.turma_id,
+          disciplina: f.disciplina,
+          tempo: f.tempo,
+          data: f.data,
+        })),
+        conteudos: (cData.data || []).map(c => ({
+          turmaId: c.turma_id,
+          disciplina: c.disciplina,
+          tempo: c.tempo,
+          data: c.data,
+        })),
+        avaliacoes: (avData.data || []).map(av => ({
+          id: av.id,
+          turmaId: av.turma_id,
+          disciplina: av.disciplina,
+          bimestre: av.bimestre,
+        })),
+        alunoCounts: [...alunoCountByTurma.entries()].map(([key, total]) => ({ key, total })),
+        notasCounts: [...notasByAvId.entries()].map(([key, total]) => ({ key, total })),
+      };
 
-        // Contar Frequências usando índice pré-computado
-        const groupFreqs = freqIndex.get(groupKey) || [];
-        const freqCount = new Set(
-          groupFreqs.filter(f => {
-            if (!temposSet.has(f.tempo)) return false;
-            const fDate = parseDataField(f.data);
-            return fDate && fDate >= dateStart && fDate <= dateEnd;
-          }).map(f => `${f.data}|${f.tempo}`)
-        ).size;
-
-        // Contar Conteúdos usando índice pré-computado
-        const groupConts = contIndex.get(groupKey) || [];
-        const contCount = new Set(
-          groupConts.filter(c => {
-            if (!temposSet.has(c.tempo)) return false;
-            const cDate = parseDataField(c.data);
-            return cDate && cDate >= dateStart && cDate <= dateEnd;
-          }).map(c => `${c.data}|${c.tempo}`)
-        ).size;
-
-        // Contar Alunos usando índice pré-computado
-        const totalAlunos = alunoCountByTurma.get(group.turmaId) || 0;
-
-        // Calcular Pendência de Notas
-        let pNotas = 0;
-        
-        // Construir set com todas as variantes possíveis do nome do período para match flexível
-        const periodoConfig = APP_CONFIG.PERIODOS.find(p => p.id === group.periodo || p.label === group.periodo);
-        const periodoVariants = new Set<string>();
-        if (periodoConfig) {
-          periodoVariants.add(periodoConfig.id.toUpperCase());
-          periodoVariants.add(periodoConfig.nome.toUpperCase());
-          periodoVariants.add(periodoConfig.label.toUpperCase());
-        } else {
-          periodoVariants.add(group.periodo.toUpperCase());
+      const apiUrl = import.meta.env.VITE_DC_RULES_API_URL as string | undefined;
+      let consolidados;
+      if (apiUrl) {
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          consolidados = await consolidarPendenciasViaApi(
+            consolidarInput,
+            sessionData.session?.access_token
+          );
+        } catch (apiErr) {
+          console.warn('[pendenciasService] dc_rules_api indisponível, usando motor local:', apiErr);
+          consolidados = consolidarPendencias(consolidarInput);
         }
-        
-        const groupAvs = avIndex.get(groupKey) || [];
-        const avsDoGrupo = groupAvs.filter(av => 
-          periodoVariants.has((av.bimestre || '').toUpperCase())
-        );
+      } else {
+        consolidados = consolidarPendencias(consolidarInput);
+      }
 
-        if (avsDoGrupo.length > 0 && totalAlunos > 0) {
-          const groupAvIds = avsDoGrupo.map(av => av.id);
-          let notasNoLote = 0;
-          for (const avId of groupAvIds) {
-            notasNoLote += notasByAvId.get(avId) || 0;
-          }
-          const totalNotasEsperadas = groupAvIds.length * totalAlunos;
-          pNotas = Math.max(0, ((totalNotasEsperadas - notasNoLote) / totalNotasEsperadas) * 100);
-        }
-
+      for (const row of consolidados) {
         finalResult.push({
-          professor: group.professor,
-          dataLotacao: APP_CONFIG.PERIODOS[0]?.dataInicio
-            ? APP_CONFIG.PERIODOS[0].dataInicio.split('-').reverse().join('/')
-            : '01/01/' + APP_CONFIG.YEAR,
-          periodo: group.periodo,
-          turno: group.turno,
-          ensino: group.ensino,
-          fase: group.fase,
-          turma: group.turma,
-          componente: group.componente,
-          pendFreq: group.totalAulasEsperadas > 0 ? parseFloat(Math.max(0, ((group.totalAulasEsperadas - freqCount) / group.totalAulasEsperadas) * 100).toFixed(2)) : 0,
-          pendObjeto: group.totalAulasEsperadas > 0 ? parseFloat(Math.max(0, ((group.totalAulasEsperadas - contCount) / group.totalAulasEsperadas) * 100).toFixed(2)) : 0,
-          pendNotas: parseFloat(pNotas.toFixed(2))
+          professor: row.professor,
+          dataLotacao: row.dataLotacao,
+          periodo: row.periodo,
+          turno: row.turno,
+          ensino: row.ensino,
+          fase: row.fase,
+          turma: row.turma,
+          componente: row.componente,
+          pendFreq: row.pendFreq,
+          pendObjeto: row.pendObjeto,
+          pendNotas: row.pendNotas,
+          unidade: row.unidade,
         });
-      });
+      }
     }
 
     // Paginação aplicada sobre o resultado consolidado (correto)

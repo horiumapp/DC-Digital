@@ -13,8 +13,9 @@
     "lint": "eslint . && tsc --noEmit",
     "lint:fix": "eslint . --fix",
     "build:dc-rules": "node scripts/build-dc-rules.mjs",
+    "dev:dc-rules-api": "cargo run -p dc_rules_api",
     "test": "vitest run",
-    "test:dc-rules": "cargo test -p dc_rules && vitest run src/__tests__/regraFrequenciaLdb.test.ts src/__tests__/curriculoParser.test.ts src/__tests__/parseAlunosCsv.test.ts",
+    "test:dc-rules": "cargo test -p dc_rules && vitest run src/__tests__/regraFrequenciaLdb.test.ts src/__tests__/curriculoParser.test.ts src/__tests__/parseAlunosCsv.test.ts src/__tests__/pendenciasConsolidar.test.ts",
     "test:watch": "vitest",
     "test:db": "node scripts/test-database.mjs"
   },

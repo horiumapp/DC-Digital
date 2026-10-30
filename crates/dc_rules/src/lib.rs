@@ -6,10 +6,12 @@
 mod csv;
 mod curriculo;
 mod ldb;
+mod pendencias;
 
 pub use csv::*;
 pub use curriculo::*;
 pub use ldb::*;
+pub use pendencias::*;
 
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -118,4 +120,17 @@ pub fn wasm_parse_delimited_text(text: &str) -> Result<String, JsValue> {
 #[wasm_bindgen(js_name = sanitizeFormulaValue)]
 pub fn wasm_sanitize_formula_value(value: &str) -> String {
     sanitize_formula_value(value)
+}
+
+// --- Fase 3: consolidação de pendências ---
+
+#[wasm_bindgen(js_name = countWeekDaysInRange)]
+pub fn wasm_count_week_days_in_range(start_iso: &str, end_iso: &str, day_of_week: u32) -> u32 {
+    count_week_days_in_range(start_iso, end_iso, day_of_week)
+}
+
+#[wasm_bindgen(js_name = consolidarPendencias)]
+pub fn wasm_consolidar_pendencias(entrada_json: &str) -> Result<String, JsValue> {
+    let entrada: ConsolidarPendenciasInput = parse_json(entrada_json)?;
+    to_json(&consolidar_pendencias(entrada))
 }

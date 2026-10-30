@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/dc_rules"]
+members = ["crates/dc_rules", "crates/dc_rules_api"]
 
 [profile.release]
 lto = true

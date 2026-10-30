@@ -1,0 +1,22 @@
+[package]
+name = "dc_rules_api"
+version = "0.1.0"
+edition = "2021"
+description = "API opcional de consolidação de pendências (Fase 3) — sem acesso ao banco"
+license = "UNLICENSED"
+publish = false
+
+[[bin]]
+name = "dc_rules_api"
+path = "src/main.rs"
+
+[dependencies]
+axum = "0.8"
+dc_rules = { path = "../dc_rules" }
+jsonwebtoken = "9"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal"] }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
