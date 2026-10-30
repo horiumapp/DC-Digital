@@ -15,7 +15,7 @@
 | 6 | Internet lenta | Economia de dados + ping/batch adaptativos |
 | 7 | Sync offline | Wake visibility/pageshow; fila existente preservada |
 | 8 | Sem perda silenciosa | Aviso troca de usuário; beforeunload; anti duplo-clique |
-| 9 | Regressão | Vitest passando |
+| 9 | Regressão | Vitest **45 arquivos / 299 testes** OK |
 | 10 | Build | Vite build OK |
 | 11 | Documentado | `docs/modernizacao/FASE-*.md` |
 
