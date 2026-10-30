@@ -12,9 +12,11 @@ import {
   type RegistroCargaHoraria,
 } from '../utils/regraFrequenciaLdb';
 
+let wasmDisponivel = false;
+
 beforeAll(async () => {
-  const loaded = await ensureDcRulesWasm();
-  if (loaded) {
+  wasmDisponivel = await ensureDcRulesWasm();
+  if (wasmDisponivel) {
     setDcRulesEngine('dual');
   } else {
     setDcRulesEngine('ts');
@@ -23,6 +25,17 @@ beforeAll(async () => {
         'Rode `npm run build:dc-rules` para dual-run TS↔Rust.'
     );
   }
+});
+
+describe('motor híbrido dc_rules', () => {
+  it('carrega o WASM e ativa dual-run TS↔Rust quando o artefato existe', () => {
+    if (!wasmDisponivel) {
+      console.warn('Pulando asserção de WASM — artefato ausente.');
+      return;
+    }
+    expect(getDcRulesWasmStatus().loaded).toBe(true);
+    expect(getDcRulesEngine()).toBe('dual');
+  });
 });
 
 function tempos(presentes: number, faltas: number, justificadas = 0, abonadas = 0): RegistroCargaHoraria[] {
