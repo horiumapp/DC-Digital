@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { reportError } from '../../utils/errorReporting';
 
 interface Props {
   children: ReactNode;
@@ -26,7 +27,11 @@ export default class RouteErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('[RouteErrorBoundary] Erro capturado na rota:', error, errorInfo);
+    reportError({
+      error,
+      errorInfo: { componentStack: errorInfo.componentStack },
+      context: { boundary: 'route' },
+    });
   }
 
   private handleReset = () => {
