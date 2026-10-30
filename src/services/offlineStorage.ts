@@ -1,0 +1,1301 @@
+import { offlineOwner } from './offlineIdentity';
+import { keepTransactionAlive, hidePendingDeletes } from './syncProtocol';
+/**
+ * offlineStorage.ts — Camada CRUD sobre o IndexedDB (Dexie)
+ * 
+ * Todas as operações CRUD do app passam por aqui.
+ * Escreve localmente com syncStatus='pending' e enfileira para sincronização.
+ */
+import Dexie from 'dexie';
+import { db, now, hashOperation, OPERATIONAL_TABLE_NAMES, getOperationalTable, type SyncStatus } from '../lib/db';
+import { supabase } from '../lib/supabase';
+import { encryptFields, decryptFields, getOrCreateKey } from '../lib/crypto';
+import { getTid } from '../utils/turmaUtils';
+import { historicoAposAlteracao } from '../utils/regraFrequenciaLdb';
+import type {
+  LocalFrequencia,
+  LocalConteudo,
+  LocalAvaliacao,
+  LocalNota,
+  LocalFechamento,
+  LocalAluno,
+  LocalTurma,
+  LocalHorario,
+  CachedUser,
+  LocalFile,
+  LocalCurriculoUnidade,
+} from '../lib/db';
+
+// ============================================================
+// Tipos genéricos
+// ============================================================
+
+// FIX #16: Helper para tratamento de QuotaExceededError no IndexedDB.
+// Quando o armazenamento ficar cheio, faz limpeza emergencial e retenta.
+//
+// A checagem não pode usar `instanceof DOMException`: o Dexie embrulha erros de
+// escrita em `DexieError` e a cota original fica em `inner`/`cause`. Com a
+// comparação por instância a limpeza nunca era executada e a gravação falhava.
+function isQuotaExceededError(err: unknown): boolean {
+  let atual: unknown = err;
+  for (let nivel = 0; nivel < 5 && atual; nivel += 1) {
+    const candidato = atual as { name?: string; code?: number; inner?: unknown; cause?: unknown };
+    if (candidato.name === 'QuotaExceededError' || candidato.code === 22) return true;
+    atual = candidato.inner ?? candidato.cause;
+  }
+  return false;
+}
+
+async function withQuotaRecovery<T>(operation: () => Promise<T>): Promise<T> {
+  try {
+    return await operation();
+  } catch (err: unknown) {
+    if (isQuotaExceededError(err)) {
+      console.warn('[offlineStorage] QuotaExceeded — executando limpeza emergencial...');
+      try {
+        const deleted = await clearOldSyncedData(30); // Limpa registros >30 dias
+        console.log(`[offlineStorage] Limpeza emergencial: ${deleted} registros removidos`);
+        return await operation(); // Retenta após limpeza
+      } catch (cleanupErr) {
+        // D4 FIX: Registrar o erro da limpeza para diagnóstico antes de tentar
+        // a remoção de arquivos como segunda alternativa.
+        console.warn('[offlineStorage] Limpeza de dados antigos falhou:', cleanupErr);
+        try {
+          const oldFiles = await db.files.where('syncStatus').equals('synced').toArray();
+          if (oldFiles.length > 0) {
+            const fileIds = oldFiles.map(f => f.localId).filter((id): id is number => id !== undefined);
+            await db.files.bulkDelete(fileIds);
+            console.log(`[offlineStorage] Limpeza emergencial de arquivos: ${fileIds.length} blobs removidos`);
+          }
+          return await operation();
+        } catch (filesErr) {
+          console.error('[offlineStorage] Falha mesmo após limpeza emergencial de arquivos:', filesErr);
+          throw filesErr;
+        }
+      }
+    }
+    throw err;
+  }
+}
+
+
+
+// ============================================================
+// Turmas (cache somente leitura)
+// ============================================================
+
+export async function cacheTurmas(turmas: Omit<LocalTurma, 'syncStatus' | 'updatedAt'>[]): Promise<void> {
+  const records = turmas.map(t => ({
+    ...t,
+    syncStatus: 'synced' as SyncStatus,
+    updatedAt: now(),
+  }));
+  await db.turmas.bulkPut(records);
+}
+
+export async function getCachedTurmas(escolaId?: string): Promise<LocalTurma[]> {
+  if (escolaId) {
+    return db.turmas.where('escola_id').equals(escolaId).toArray();
+  }
+  return db.turmas.toArray();
+}
+
+// ============================================================
+// Currículo BNCC (cache somente leitura)
+// ============================================================
+
+export type CurriculoCacheKey = Pick<LocalCurriculoUnidade, 'modalidade' | 'ano' | 'bimestre' | 'disciplina'>;
+
+export async function cacheCurriculo(unidades: Omit<LocalCurriculoUnidade, 'updatedAt'>[]): Promise<void> {
+  await db.curriculos.bulkPut(unidades.map(unidade => ({
+    ...unidade,
+    updatedAt: now(),
+  })));
+}
+
+export async function getCachedCurriculo(chave: CurriculoCacheKey): Promise<LocalCurriculoUnidade[]> {
+  return db.curriculos
+    .where('[modalidade+ano+bimestre+disciplina]')
+    .equals([chave.modalidade, chave.ano, chave.bimestre, chave.disciplina])
+    .toArray();
+}
+
+// ============================================================
+// Alunos (cache somente leitura)
+// ============================================================
+
+async function getCryptoKey(): Promise<CryptoKey | null> {
+  try {
+    let userId: string | undefined;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      userId = session?.user?.id;
+    } catch {
+      // Ignora erro de rede/sessão
+    }
+
+    // FIX C5: Sem userId da sessão, NÃO buscar usuário arbitrário do cache.
+    // Em dispositivos compartilhados, getCachedUser() sem userId pode retornar
+    // o usuário errado, levando a uso da chave cripto incorreta.
+    if (!userId) return null;
+    return await getOrCreateKey(userId);
+  } catch (err) {
+    console.error('[offlineStorage] Failed to get encryption key:', err);
+    return null;
+  }
+}
+
+const SENSITIVE_ALUNO_FIELDS = ['nome', 'cpf', 'telefone', 'endereco', 'nome_responsavel'];
+
+export async function cacheAlunos(alunos: Omit<LocalAluno, 'syncStatus' | 'updatedAt'>[]): Promise<void> {
+  const key = await getCryptoKey();
+  if (!key) {
+    throw new Error('Chave de criptografia não disponível. Operação cancelada por segurança de dados (LGPD).');
+  }
+  const records = await Promise.all(alunos.map(async a => {
+    const record = {
+      ...a,
+      turma_id: getTid(a.turma_id),
+      // Q2 FIX: preservar escola_id no cache para permitir isolamento offline por escola
+      escola_id: a.escola_id,
+      syncStatus: 'synced' as SyncStatus,
+      updatedAt: now(),
+    };
+    // Cast seguro: encryptFields apenas lê/escreve campos por nome
+    const encrypted = await encryptFields(record as unknown as Record<string, unknown>, SENSITIVE_ALUNO_FIELDS, key);
+    return encrypted as unknown as LocalAluno;
+  }));
+  await db.alunos.bulkPut(records);
+}
+
+export async function getCachedAlunos(turmaId: string): Promise<{ alunos: LocalAluno[]; decryptionFailed: boolean }> {
+  const key = await getCryptoKey();
+  const tid = getTid(turmaId);
+  const local = await db.alunos.where('turma_id').equals(tid).toArray();
+  if (!key) return { alunos: local, decryptionFailed: false };
+  let anyDecryptionFailed = false;
+  const result = await Promise.all(local.map(async a => {
+    // FIX #3: decryptFields agora retorna { data, decryptionFailed }
+    const { data: decrypted, decryptionFailed } = await decryptFields(a as unknown as Record<string, unknown>, SENSITIVE_ALUNO_FIELDS, key);
+    if (decryptionFailed) anyDecryptionFailed = true;
+    return decrypted as unknown as LocalAluno;
+  }));
+  if (anyDecryptionFailed) {
+    console.warn('[offlineStorage] Descriptografia falhou para alguns alunos. Dados precisam ser re-cacheados do servidor.');
+    // FIX #1: Limpar o cache corrompido para forçar re-fetch do servidor no próximo acesso online.
+    // Manter dados cifrados irrecuperáveis no IndexedDB não tem utilidade.
+    try {
+      await db.alunos.where('turma_id').equals(tid).delete();
+      console.info('[offlineStorage] Cache de alunos da turma limpo — será re-sincronizado quando online.');
+    } catch (clearErr) {
+      console.error('[offlineStorage] Falha ao limpar cache de alunos com chave corrompida:', clearErr);
+    }
+  }
+  // FIX: Retorna flag decryptionFailed para que o chamador possa avisar o usuário
+  // em vez de exibir silenciosamente '[DADOS PROTEGIDOS - RECONECTE PARA ATUALIZAR]'.
+  return { alunos: result, decryptionFailed: anyDecryptionFailed };
+}
+
+// ============================================================
+// Frequências
+// ============================================================
+
+export async function saveFrequenciaLocal(data: Omit<LocalFrequencia, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>): Promise<number> {
+  return withQuotaRecovery(async () => {
+    const tid = getTid(data.turma_id);
+    const normalizedData = { ...data, turma_id: tid };
+    // Tenta encontrar registro existente pela chave composta
+    const existing = await db.frequencias
+      .where('[turma_id+aluno_id+data+tempo+disciplina]')
+      .equals([tid, normalizedData.aluno_id, normalizedData.data, normalizedData.tempo, normalizedData.disciplina])
+      .first();
+
+    const timestamp = now();
+
+    if (existing && existing.localId) {
+      await db.frequencias.update(existing.localId, {
+        ...normalizedData,
+        historico: historicoAposAlteracao(existing, normalizedData, timestamp),
+        syncStatus: 'pending',
+        updatedAt: timestamp,
+        version: (existing.version || 0) + 1,
+      });
+      return existing.localId;
+    }
+
+    return await db.frequencias.add({
+      ...normalizedData,
+      historico: historicoAposAlteracao(undefined, normalizedData, timestamp),
+      syncStatus: 'pending',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      version: 1,
+    }) as number;
+  });
+}
+
+export async function saveFrequenciasBulk(
+  records: Omit<LocalFrequencia, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]
+): Promise<void> {
+  if (records.length === 0) return;
+  // FIX M4: Envolver em withQuotaRecovery — esta é a operação que salva mais dados
+  // de uma vez, sendo a mais propensa a QuotaExceeded.
+  return withQuotaRecovery(async () => {
+    const timestamp = now();
+    const normalizedRecords = records.map(r => ({ ...r, turma_id: getTid(r.turma_id) }));
+
+    // FIX #6: Validar invariante do batch — todos os records devem ter mesma data/tempo/disciplina.
+    // Caso contrário, a otimização de busca abaixo retornaria resultados incorretos.
+    const first = normalizedRecords[0];
+    const invariantViolation = normalizedRecords.some(
+      r => r.data !== first.data || r.tempo !== first.tempo || r.disciplina !== first.disciplina
+    );
+    if (invariantViolation) {
+      console.error('[offlineStorage] saveFrequenciasBulk: batch contém records com data/tempo/disciplina distintos. Use saveFrequenciaLocal para registros individuais.');
+      throw new Error('saveFrequenciasBulk requer que todos os records tenham a mesma data, tempo e disciplina.');
+    }
+
+    await db.transaction('rw', db.frequencias, async () => {
+      const existingRecords = await db.frequencias
+        .where('turma_id')
+        .equals(first.turma_id)
+        .filter(f => f.data === first.data && f.tempo === first.tempo && f.disciplina === first.disciplina)
+        .toArray();
+
+      const existingMap = new Map<string, LocalFrequencia>();
+      for (const r of existingRecords) {
+        const key = `${r.aluno_id}`;
+        existingMap.set(key, r);
+      }
+
+      for (const data of normalizedRecords) {
+        const existing = existingMap.get(data.aluno_id);
+
+        if (existing && existing.localId) {
+          await db.frequencias.update(existing.localId, {
+            ...data,
+            historico: historicoAposAlteracao(existing, data, timestamp),
+            syncStatus: 'pending',
+            updatedAt: timestamp,
+            version: (existing.version || 0) + 1,
+          });
+        } else {
+          await db.frequencias.add({
+            ...data,
+            historico: historicoAposAlteracao(undefined, data, timestamp),
+            syncStatus: 'pending',
+            createdAt: timestamp,
+            updatedAt: timestamp,
+            version: 1,
+          });
+        }
+      }
+    });
+  });
+}
+
+export async function getFrequenciasLocal(turmaId: string, disciplina: string, data: string, tempo: string): Promise<LocalFrequencia[]> {
+  const tid = getTid(turmaId);
+  return db.frequencias
+    .where('turma_id').equals(tid)
+    .filter(f => f.disciplina === disciplina && f.data === data && f.tempo === tempo)
+    .toArray();
+}
+
+export async function getAllFrequenciasLocal(turmaId: string, disciplina?: string): Promise<LocalFrequencia[]> {
+  const tid = getTid(turmaId);
+  const query = db.frequencias.where('turma_id').equals(tid);
+  if (disciplina && !['TODAS','GERAL'].includes(disciplina.toUpperCase())) {
+    return query.filter(f => f.disciplina.toLowerCase() === disciplina.toLowerCase()).toArray();
+  }
+  return query.toArray();
+}
+
+export async function deleteFrequenciasLocal(turmaId: string, disciplina: string, data: string, tempo: string): Promise<void> {
+  const tid = getTid(turmaId);
+  await db.transaction('rw', [db.frequencias, db.syncQueue], async () => {
+    const records = await db.frequencias
+      .where('turma_id').equals(tid)
+      .filter(row => row.data === data && row.tempo === tempo && row.disciplina === disciplina)
+      .toArray();
+
+    const ids = records.map(r => r.localId).filter((id): id is number => id !== undefined);
+    if (ids.length > 0) {
+      await db.frequencias.bulkDelete(ids);
+    }
+
+    // Purgar operações pendentes de UPSERT na fila para evitar ressuscitar frequência deletada offline.
+    // Inclui itens em 'error' que ainda não foram enviados: se ficassem, o botão
+    // "Tentar novamente" recriaria a chamada apagada no servidor.
+    const pendingQueueItems = await db.syncQueue
+      .where('table').equals('frequencias')
+      .filter(item => (item.status === 'pending' || item.status === 'error') && !item.attempted && item.operation !== 'DELETE')
+      .toArray();
+
+    for (const item of pendingQueueItems) {
+      let payload: Record<string, unknown>;
+      try {
+        payload = JSON.parse(item.payload);
+      } catch {
+        continue;
+      }
+
+      if (Array.isArray(payload.records)) {
+        const remaining = payload.records.filter((r: Record<string, unknown>) => {
+          return !(
+            getTid(String(r.turma_id)) === tid &&
+            r.data === data &&
+            r.tempo === tempo &&
+            r.disciplina === disciplina
+          );
+        });
+
+        if (remaining.length === 0) {
+          if (item.id !== undefined) await db.syncQueue.delete(item.id);
+        } else if (remaining.length !== payload.records.length) {
+          payload.records = remaining;
+          if (item.id !== undefined) {
+            await db.syncQueue.update(item.id, {
+              payload: JSON.stringify(payload),
+              updatedAt: now(),
+            });
+          }
+        }
+      } else if (
+        getTid(String(payload.turma_id)) === tid &&
+        payload.data === data &&
+        payload.tempo === tempo &&
+        payload.disciplina === disciplina &&
+        item.operation === 'UPSERT'
+      ) {
+        if (item.id !== undefined) await db.syncQueue.delete(item.id);
+      }
+    }
+  });
+}
+
+/** Cache frequências vindas do servidor (marca como synced) */
+export async function cacheFrequencias(turmaId: string, records: Omit<LocalFrequencia, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
+  return db.transaction('rw', [db.frequencias, db.syncQueue], async () => {
+    records = await hidePendingDeletes('frequencias',records,r=>({...r}));
+  if (records.length === 0) return;
+  const tid = getTid(turmaId);
+  const timestamp = now();
+
+  // FIX #19: Buscar todos os registros existentes da turma de uma vez
+  // em vez de fazer N queries .where().first() dentro do loop (padrão N+1).
+  const existingRecords = await db.frequencias
+    .where('turma_id').equals(tid)
+    .toArray();
+
+  const existingMap = new Map<string, LocalFrequencia>();
+  for (const r of existingRecords) {
+    const key = `${r.aluno_id}|${r.data}|${r.tempo}|${r.disciplina}`;
+    existingMap.set(key, r);
+  }
+
+  await db.transaction('rw', db.frequencias, async () => {
+    for (const rawData of records) {
+      const data = { ...rawData, turma_id: tid };
+      const key = `${data.aluno_id}|${data.data}|${data.tempo}|${data.disciplina}`;
+      const existing = existingMap.get(key);
+
+      if (existing && existing.localId) {
+        // Só sobrescreve se não tem alteração local pendente
+        if ((await db.frequencias.get(existing.localId))?.syncStatus === 'synced') {
+          await db.frequencias.update(existing.localId, {
+            ...data,
+            historico: historicoAposAlteracao(existing, data, timestamp),
+            syncStatus: 'synced',
+            updatedAt: timestamp,
+            version: (existing.version || 0),
+          });
+        }
+      } else {
+        await db.frequencias.add({
+          ...data,
+          turma_id: tid,
+          historico: historicoAposAlteracao(undefined, data, timestamp),
+          syncStatus: 'synced',
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          version: 1,
+        });
+      }
+    }
+  });
+  });
+}
+
+// ============================================================
+// Conteúdos
+// ============================================================
+
+export async function saveConteudoLocal(data: Omit<LocalConteudo, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>): Promise<number> {
+  // FIX #9: Envolver em withQuotaRecovery para recuperação automática quando IndexedDB estiver cheio
+  return withQuotaRecovery(async () => {
+    const tid = getTid(data.turma_id);
+    const normalizedData = { ...data, turma_id: tid };
+    const existing = await db.conteudos
+      .where('[turma_id+data+tempo+disciplina]')
+      .equals([tid, normalizedData.data, normalizedData.tempo, normalizedData.disciplina])
+      .first();
+
+    const timestamp = now();
+
+    if (existing && existing.localId) {
+      await db.conteudos.update(existing.localId, {
+        ...normalizedData,
+        syncStatus: 'pending',
+        updatedAt: timestamp,
+        version: (existing.version || 0) + 1,
+      });
+      return existing.localId;
+    }
+
+    return await db.conteudos.add({
+      ...normalizedData,
+      syncStatus: 'pending',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      version: 1,
+    }) as number;
+  });
+}
+
+export async function getConteudoLocal(turmaId: string, disciplina: string, data: string, tempo: string): Promise<LocalConteudo | undefined> {
+  const tid = getTid(turmaId);
+  return db.conteudos
+    .where('[turma_id+data+tempo+disciplina]')
+    .equals([tid, data, tempo, disciplina])
+    .first();
+}
+
+export async function getAllConteudosLocal(turmaId: string, disciplina?: string): Promise<LocalConteudo[]> {
+  const tid = getTid(turmaId);
+  const query = db.conteudos.where('turma_id').equals(tid);
+  if (disciplina && !['TODAS','GERAL'].includes(disciplina.toUpperCase())) {
+    return query.filter(c => c.disciplina.toLowerCase() === disciplina.toLowerCase()).toArray();
+  }
+  return query.toArray();
+}
+
+export async function deleteConteudoLocal(turmaId: string, disciplina: string, data: string, tempo: string): Promise<void> {
+  const tid = getTid(turmaId);
+  await db.transaction('rw', [db.conteudos, db.syncQueue], async () => {
+    const record = await db.conteudos
+      .where('[turma_id+data+tempo+disciplina]')
+      .equals([tid, data, tempo, disciplina])
+      .first();
+    if (!record?.localId) return;
+
+    // Purgar qualquer operação pendente de UPSERT para este conteúdo na fila
+    const pendingQueueItems = await db.syncQueue
+      .where('table').equals('conteudos')
+      .filter(item => item.status === 'pending' && !item.attempted && item.operation !== 'DELETE')
+      .toArray();
+
+    for (const item of pendingQueueItems) {
+      try {
+        const payload = JSON.parse(item.payload);
+        if (
+          getTid(String(payload.turma_id)) === tid &&
+          payload.data === data &&
+          payload.tempo === tempo &&
+          payload.disciplina === disciplina &&
+          item.operation === 'UPSERT'
+        ) {
+          if (item.id !== undefined) await db.syncQueue.delete(item.id);
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    await db.conteudos.delete(record.localId);
+  });
+}
+
+export async function cacheConteudos(turmaId: string, records: Omit<LocalConteudo, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
+  return db.transaction('rw', [db.conteudos, db.syncQueue], async () => {
+    records = await hidePendingDeletes('conteudos',records,r=>({...r}));
+  if (records.length === 0) return;
+  const tid = getTid(turmaId);
+  const timestamp = now();
+
+  // FIX: Buscar todos os registros existentes da turma de uma vez
+  // em vez de N queries .where().first() dentro do loop (padrão N+1).
+  const existingRecords = await db.conteudos
+    .where('turma_id').equals(tid)
+    .toArray();
+
+  const existingMap = new Map<string, LocalConteudo>();
+  for (const r of existingRecords) {
+    const key = `${r.data}|${r.tempo}|${r.disciplina}`;
+    existingMap.set(key, r);
+  }
+
+  await db.transaction('rw', db.conteudos, async () => {
+    for (const rawData of records) {
+      const data = { ...rawData, turma_id: tid };
+      const key = `${data.data}|${data.tempo}|${data.disciplina}`;
+      const existing = existingMap.get(key);
+
+      if (existing && existing.localId) {
+        if ((await db.conteudos.get(existing.localId))?.syncStatus === 'synced') {
+          await db.conteudos.update(existing.localId, {
+            ...data,
+            syncStatus: 'synced',
+            updatedAt: timestamp,
+            version: existing.version || 1,
+          });
+        }
+      } else {
+        await db.conteudos.add({
+          ...data,
+          turma_id: tid,
+          syncStatus: 'synced',
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          version: 1,
+        });
+      }
+    }
+  });
+  });
+}
+
+// ============================================================
+// Avaliações
+// ============================================================
+
+export async function saveAvaliacaoLocal(data: Omit<LocalAvaliacao, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>): Promise<number> {
+  // FIX #9: Envolver em withQuotaRecovery para recuperação automática quando IndexedDB estiver cheio
+  return withQuotaRecovery(async () => {
+    const tid = getTid(data.turma_id);
+    const normalizedData = { ...data, turma_id: tid };
+    const timestamp = now();
+
+    // Se tem server ID, atualizar registro existente
+    if (normalizedData.id && !normalizedData.id.startsWith('temp_') && !normalizedData.id.startsWith('local_')) {
+      const existing = await db.avaliacoes.where('id').equals(normalizedData.id).first();
+      if (existing?.localId) {
+        await db.avaliacoes.update(existing.localId, {
+          ...normalizedData,
+          syncStatus: 'pending',
+          updatedAt: timestamp,
+          version: (existing.version || 0) + 1,
+        });
+        return existing.localId;
+      }
+    }
+
+    // FIX DATA-01: Se não tem server ID ou é ID temporário da UI, verificar por clientTempId / aliases
+    const tempIdToMatch = normalizedData.clientTempId
+      || (normalizedData.id && (normalizedData.id.startsWith('temp_') || normalizedData.id.startsWith('local_')) ? normalizedData.id : undefined);
+
+    if (tempIdToMatch) {
+      const existing = await db.avaliacoes
+        .filter(a => {
+          const lId = a.localId;
+          return a.clientTempId === tempIdToMatch
+            || a.id === tempIdToMatch
+            || (lId !== undefined && (`temp_${lId}` === tempIdToMatch || `local_${lId}` === tempIdToMatch || String(lId) === tempIdToMatch));
+        })
+        .first();
+
+      if (existing?.localId) {
+        await db.avaliacoes.update(existing.localId, {
+          ...normalizedData,
+          clientTempId: existing.clientTempId || tempIdToMatch,
+          syncStatus: 'pending',
+          updatedAt: timestamp,
+          version: (existing.version || 0) + 1,
+        });
+        return existing.localId;
+      }
+    }
+
+    return await db.avaliacoes.add({
+      ...normalizedData,
+      syncStatus: 'pending',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      version: 1,
+    }) as number;
+  });
+}
+
+export async function getAvaliacoesLocal(turmaId: string, disciplina?: string): Promise<LocalAvaliacao[]> {
+  const tid = getTid(turmaId);
+  const query = db.avaliacoes.where('turma_id').equals(tid);
+  if (disciplina && !['TODAS','GERAL'].includes(disciplina.toUpperCase())) {
+    return query.filter(a => a.disciplina.toLowerCase() === disciplina.toLowerCase()).toArray();
+  }
+  return query.toArray();
+}
+
+export async function deleteAvaliacaoLocal(id: string): Promise<void> {
+  const records = await db.avaliacoes
+    .filter(avaliacao => {
+      const localId = avaliacao.localId;
+      return avaliacao.id === id
+        || avaliacao.clientTempId === id
+        || avaliacao.serverId === id
+        || (localId !== undefined && (
+          String(localId) === id || `temp_${localId}` === id || `local_${localId}` === id
+        ));
+    })
+    .toArray();
+
+  if (records.length === 0) return;
+
+  const allLocalIds = records.map(r => r.localId).filter((localId): localId is number => localId !== undefined);
+  const localIdSet = new Set(allLocalIds);
+
+  const avaliacaoAliases = new Set(
+    [
+      id,
+      ...records.flatMap(r => [r.id, r.clientTempId, r.serverId, String(r.localId), `temp_${r.localId}`, `local_${r.localId}`])
+    ].filter((value): value is string => Boolean(value))
+  );
+
+  await db.transaction('rw', [db.avaliacoes, db.notas, db.syncQueue], async () => {
+    const notas = await db.notas
+      .filter(nota => avaliacaoAliases.has(String(nota.avaliacao_id)))
+      .toArray();
+    const notaIds = notas.map(nota => nota.localId).filter((localId): localId is number => localId !== undefined);
+    if (notaIds.length > 0) await db.notas.bulkDelete(notaIds);
+
+    // FIX C3: Filtrar por tabela em vez de carregar toda a fila (até 5000 itens).
+    // Apenas itens de 'avaliacoes' e 'notas' são relevantes para esta operação.
+    const queueItems = await db.syncQueue.where('table').anyOf(['avaliacoes', 'notas']).toArray();
+    for (const item of queueItems) {
+      if (item.status === 'processing' || item.attempted || item.operation === 'DELETE') continue;
+      let payload: Record<string, unknown>;
+      try {
+        payload = JSON.parse(item.payload) as Record<string, unknown>;
+      } catch {
+        payload = {};
+      }
+
+      const isAvaliacaoOperation = item.table === 'avaliacoes'
+        && ((item.localId && localIdSet.has(item.localId)) || avaliacaoAliases.has(String(payload.id)));
+      if (isAvaliacaoOperation) {
+        if (item.id !== undefined) await db.syncQueue.delete(item.id);
+        continue;
+      }
+
+      if (item.table !== 'notas') continue;
+
+      const records = Array.isArray(payload.records) ? payload.records : null;
+      if (records) {
+        const remainingRecords = records.filter(value => {
+          if (!value || typeof value !== 'object') return true;
+          return !avaliacaoAliases.has(String((value as Record<string, unknown>).avaliacao_id));
+        });
+        if (remainingRecords.length === records.length) continue;
+        if (remainingRecords.length === 0) {
+          if (item.id !== undefined) await db.syncQueue.delete(item.id);
+          continue;
+        }
+        payload.records = remainingRecords;
+      } else if (avaliacaoAliases.has(String(payload.avaliacao_id))) {
+        if (item.id !== undefined) await db.syncQueue.delete(item.id);
+        continue;
+      } else {
+        continue;
+      }
+
+      if (item.id !== undefined) {
+        await db.syncQueue.update(item.id, {
+          payload: JSON.stringify(payload),
+          hash: await keepTransactionAlive(hashOperation(item.table, item.operation, payload)),
+          updatedAt: now(),
+        });
+      }
+    }
+
+    for (const lid of allLocalIds) {
+      await db.avaliacoes.delete(lid);
+    }
+  });
+}
+
+export async function cacheAvaliacoes(records: Array<Omit<LocalAvaliacao, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'> & { id: string }>): Promise<void> {
+  return db.transaction('rw', [db.avaliacoes, db.syncQueue], async () => {
+    records = await hidePendingDeletes('avaliacoes',records,r=>({...r}));
+  if (records.length === 0) return;
+  const timestamp = now();
+
+  // FIX: Buscar todos os registros existentes de uma vez (evita N+1 queries no loop)
+  const ids = records.map(r => r.id);
+  const existingRecords = await db.avaliacoes.where('id').anyOf(ids).toArray();
+  const existingMap = new Map<string, LocalAvaliacao>();
+  for (const r of existingRecords) {
+    if (r.id) existingMap.set(r.id, r);
+  }
+
+  // Obter todos os registros locais para buscar por chave de negócio se não encontrado por server ID
+  const allLocal = await db.avaliacoes.toArray();
+
+  await db.transaction('rw', db.avaliacoes, async () => {
+    for (const data of records) {
+      let existing = existingMap.get(data.id);
+
+      if (!existing) {
+        // Metadata is not identity: two assessments may share date, subject and type.
+        existing = allLocal.find(l => l.id === data.id || l.serverId === data.id);
+      }
+
+      if (existing?.localId) {
+        if ((await db.avaliacoes.get(existing.localId))?.syncStatus === 'synced') {
+          await db.avaliacoes.update(existing.localId, {
+            ...data,
+            id: data.id,
+            serverId: data.id,
+            syncStatus: 'synced',
+            updatedAt: timestamp,
+            version: existing.version || 1,
+          });
+        } else {
+          // Se estava pending, atualizar ID oficial do servidor mantendo alterações locais
+          await db.avaliacoes.update(existing.localId, {
+            id: data.id,
+            serverId: data.id,
+            updatedAt: timestamp,
+          });
+        }
+      } else {
+        await db.avaliacoes.add({
+          ...data,
+          syncStatus: 'synced',
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          version: 1,
+        });
+      }
+    }
+  });
+  });
+}
+
+// ============================================================
+// Notas
+// ============================================================
+
+export async function saveNotasLocal(records: Omit<LocalNota, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
+  // FIX #9: Envolver em withQuotaRecovery para recuperação automática quando IndexedDB estiver cheio
+  return withQuotaRecovery(async () => {
+    const timestamp = now();
+    await db.transaction('rw', db.notas, async () => {
+      const avaliacaoIds = [...new Set(records.map(r => r.avaliacao_id))];
+      const existingRecords = await db.notas.where('avaliacao_id').anyOf(avaliacaoIds).toArray();
+      const existingMap = new Map<string, LocalNota>();
+      for (const r of existingRecords) {
+        const key = `${r.avaliacao_id}|${r.aluno_id}`;
+        existingMap.set(key, r);
+      }
+
+      for (const data of records) {
+        const key = `${data.avaliacao_id}|${data.aluno_id}`;
+        const existing = existingMap.get(key);
+
+        if (existing?.localId) {
+          await db.notas.update(existing.localId, {
+            ...data,
+            syncStatus: 'pending',
+            updatedAt: timestamp,
+            version: (existing.version || 0) + 1,
+          });
+        } else {
+          await db.notas.add({
+            ...data,
+            syncStatus: 'pending',
+            createdAt: timestamp,
+            updatedAt: timestamp,
+            version: 1,
+          });
+        }
+      }
+    });
+  });
+}
+
+export async function getNotasLocal(avaliacaoIds: string[]): Promise<LocalNota[]> {
+  if (avaliacaoIds.length === 0) return [];
+  return db.notas
+    .where('avaliacao_id')
+    .anyOf(avaliacaoIds)
+    .toArray();
+}
+
+export async function deleteNotasLocal(avaliacaoId: string, alunoIds: string[]): Promise<void> {
+  if (alunoIds.length === 0) return;
+  const alunoIdsSet = new Set(alunoIds.map(String));
+
+  // Buscar possíveis aliases da avaliação para encontrar notas e itens de fila
+  const avRecord = await db.avaliacoes
+    .filter(a => {
+      const lid = a.localId;
+      return a.id === avaliacaoId
+        || a.clientTempId === avaliacaoId
+        || a.serverId === avaliacaoId
+        || (lid !== undefined && (String(lid) === avaliacaoId || `temp_${lid}` === avaliacaoId || `local_${lid}` === avaliacaoId));
+    })
+    .first();
+
+  const avaliacaoAliases = new Set(
+    [
+      avaliacaoId,
+      avRecord?.id,
+      avRecord?.clientTempId,
+      avRecord?.serverId,
+      avRecord?.localId !== undefined ? String(avRecord.localId) : undefined,
+      avRecord?.localId !== undefined ? `temp_${avRecord.localId}` : undefined,
+      avRecord?.localId !== undefined ? `local_${avRecord.localId}` : undefined,
+    ].filter((v): v is string => Boolean(v))
+  );
+
+  await db.transaction('rw', [db.notas, db.syncQueue], async () => {
+    // 1. Remover do Dexie
+    const existing = await db.notas
+      .filter(n => avaliacaoAliases.has(String(n.avaliacao_id)))
+      .toArray();
+    const toDelete = existing.filter(n => alunoIdsSet.has(String(n.aluno_id)));
+    const ids = toDelete.map(n => n.localId).filter((id): id is number => id !== undefined);
+    if (ids.length > 0) {
+      await db.notas.bulkDelete(ids);
+    }
+
+    // 2. Limpar ou expurgar da syncQueue (evitar ressurreição após sync da avaliação)
+    const queueItems = await db.syncQueue
+      .where('table')
+      .equals('notas')
+      .filter(item => item.status === 'pending' && !item.attempted && item.operation !== 'DELETE')
+      .toArray();
+
+    for (const item of queueItems) {
+      if (item.status === 'processing' || item.attempted || item.operation === 'DELETE') continue;
+      let payload: Record<string, unknown>;
+      try {
+        payload = JSON.parse(item.payload) as Record<string, unknown>;
+      } catch {
+        continue;
+      }
+
+      if (Array.isArray(payload.records)) {
+        const records = payload.records as Array<Record<string, unknown>>;
+        const remainingRecords = records.filter(r => {
+          if (!r || typeof r !== 'object') return true;
+          const matchesAv = avaliacaoAliases.has(String(r.avaliacao_id));
+          const matchesAluno = alunoIdsSet.has(String(r.aluno_id));
+          return !(matchesAv && matchesAluno);
+        });
+
+        if (remainingRecords.length === records.length) continue;
+        if (remainingRecords.length === 0) {
+          if (item.id !== undefined) await db.syncQueue.delete(item.id);
+          continue;
+        }
+
+        payload.records = remainingRecords;
+        if (item.id !== undefined) {
+          await db.syncQueue.update(item.id, {
+            payload: JSON.stringify(payload),
+            hash: await keepTransactionAlive(hashOperation(item.table, item.operation, payload)),
+            updatedAt: now(),
+          });
+        }
+      } else if (payload.avaliacao_id && payload.aluno_id) {
+        if (avaliacaoAliases.has(String(payload.avaliacao_id)) && alunoIdsSet.has(String(payload.aluno_id))) {
+          if (item.id !== undefined) await db.syncQueue.delete(item.id);
+        }
+      }
+    }
+  });
+}
+
+export async function cacheNotas(records: Omit<LocalNota, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
+  return db.transaction('rw', [db.notas, db.syncQueue], async () => {
+    records = await hidePendingDeletes('notas',records,r=>({...r}));
+  if (records.length === 0) return;
+  const timestamp = now();
+
+  // FIX: Buscar todas as notas existentes das avaliações referenciadas de uma vez
+  const avaliacaoIds = [...new Set(records.map(r => r.avaliacao_id))];
+  const existingRecords = await db.notas.where('avaliacao_id').anyOf(avaliacaoIds).toArray();
+  const existingMap = new Map<string, LocalNota>();
+  for (const r of existingRecords) {
+    const key = `${r.avaliacao_id}|${r.aluno_id}`;
+    existingMap.set(key, r);
+  }
+
+  await db.transaction('rw', db.notas, async () => {
+    for (const data of records) {
+      const key = `${data.avaliacao_id}|${data.aluno_id}`;
+      const existing = existingMap.get(key);
+
+      if (existing?.localId) {
+        if ((await db.notas.get(existing.localId))?.syncStatus === 'synced') {
+          await db.notas.update(existing.localId, {
+            ...data,
+            syncStatus: 'synced',
+            updatedAt: timestamp,
+            version: existing.version || 1,
+          });
+        }
+      } else {
+        await db.notas.add({
+          ...data,
+          syncStatus: 'synced',
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          version: 1,
+        });
+      }
+    }
+  });
+  });
+}
+
+// ============================================================
+// Horários (cache somente leitura)
+// ============================================================
+
+export async function cacheHorarios(
+  turmaId: string,
+  records: Omit<LocalHorario, 'localId' | 'syncStatus' | 'updatedAt'>[],
+  disciplina?: string
+): Promise<void> {
+  const tid = getTid(turmaId);
+  // Limpa horários existentes da turma para a disciplina específica para evitar apagar de outras disciplinas
+  const comp = disciplina || (records.length > 0 ? records[0].componente : null);
+
+  await db.transaction('rw', db.horarios, async () => {
+    const existing = await db.horarios.where('turma_id').equals(tid).toArray();
+    const toDelete = comp 
+      ? existing.filter(h => (h.componente || '').trim().toLowerCase() === comp.trim().toLowerCase()) 
+      : existing;
+
+    const ids = toDelete.map(h => h.localId).filter((id): id is number => id !== undefined);
+    if (ids.length > 0) await db.horarios.bulkDelete(ids);
+
+    const timestamp = now();
+    const toAdd = records.map(h => ({
+      ...h,
+      turma_id: tid,
+      syncStatus: 'synced' as SyncStatus,
+      updatedAt: timestamp,
+    }));
+    if (toAdd.length > 0) {
+      await db.horarios.bulkAdd(toAdd);
+    }
+  });
+}
+
+export async function getHorariosLocal(turmaId: string): Promise<LocalHorario[]> {
+  const tid = getTid(turmaId);
+  return db.horarios.where('turma_id').equals(tid).toArray();
+}
+
+// ============================================================
+// Fechamentos
+// ============================================================
+
+export async function saveFechamentoLocal(data: Omit<LocalFechamento, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>): Promise<number> {
+  // FIX #9: Envolver em withQuotaRecovery para recuperação automática quando IndexedDB estiver cheio
+  return withQuotaRecovery(async () => {
+    const tid = getTid(data.turma_id);
+    const normalizedData = { ...data, turma_id: tid };
+    const existing = await db.fechamentos
+      .where('[turma_id+disciplina+bimestre]')
+      .equals([tid, normalizedData.disciplina, normalizedData.bimestre])
+      .first();
+
+    const timestamp = now();
+
+    if (existing?.localId) {
+      await db.fechamentos.update(existing.localId, {
+        ...normalizedData,
+        syncStatus: 'pending',
+        updatedAt: timestamp,
+        version: (existing.version || 0) + 1,
+      });
+      return existing.localId;
+    }
+
+    return await db.fechamentos.add({
+      ...normalizedData,
+      syncStatus: 'pending',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      version: 1,
+    }) as number;
+  });
+}
+
+export async function getFechamentosLocal(turmaId: string, disciplina?: string): Promise<LocalFechamento[]> {
+  const tid = getTid(turmaId);
+  if (!disciplina || disciplina.toUpperCase() === 'TODAS' || disciplina.toUpperCase() === 'GERAL') {
+    return db.fechamentos.where('turma_id').equals(tid).toArray();
+  }
+  return db.fechamentos
+    .where('[turma_id+disciplina+bimestre]')
+    .between(
+      [tid, disciplina, Dexie.minKey],
+      [tid, disciplina, Dexie.maxKey]
+    )
+    .toArray();
+}
+
+export async function cacheFechamentos(turmaId: string, disciplina: string, records: Omit<LocalFechamento, 'localId' | 'syncStatus' | 'createdAt' | 'updatedAt' | 'version'>[]): Promise<void> {
+  return db.transaction('rw', [db.fechamentos, db.syncQueue], async () => {
+    records = await hidePendingDeletes('fechamentos',records,r=>({...r}));
+  const tid = getTid(turmaId);
+  const timestamp = now();
+
+  const isAll = !disciplina || ['TODAS','GERAL'].includes(disciplina.toUpperCase());
+  const existingRecords = await db.fechamentos.where('turma_id').equals(tid)
+    .filter(r => isAll || r.disciplina === disciplina).toArray();
+  const existingMap = new Map(existingRecords.map(r => [r.disciplina+'|'+r.bimestre,r]));
+
+  await db.transaction('rw', db.fechamentos, async () => {
+    const remotePeriods = new Set(records.map(r => r.disciplina+'|'+r.bimestre));
+    await db.fechamentos.where('turma_id').equals(tid)
+      .filter(r => (isAll || r.disciplina === disciplina) && r.syncStatus === 'synced' && !remotePeriods.has(r.disciplina+'|'+r.bimestre)).delete();
+    for (const rawData of records) {
+      const data = { ...rawData, turma_id: tid };
+      const existing = existingMap.get(data.disciplina+'|'+data.bimestre);
+
+      if (existing?.localId) {
+        if ((await db.fechamentos.get(existing.localId))?.syncStatus === 'synced') {
+          await db.fechamentos.update(existing.localId, {
+            ...data,
+            syncStatus: 'synced',
+            updatedAt: timestamp,
+            version: existing.version || 1,
+          });
+        }
+      } else {
+        await db.fechamentos.add({
+          ...data,
+          syncStatus: 'synced',
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          version: 1,
+        });
+      }
+    }
+  });
+  });
+}
+
+// ============================================================
+// Usuário cacheado
+// ============================================================
+
+export async function cacheUser(user: CachedUser): Promise<void> {
+  await db.cachedUsers.put(user);
+}
+
+export async function getCachedUser(userId?: string): Promise<CachedUser | undefined> {
+  if (userId) {
+    return db.cachedUsers.get(userId);
+  }
+  // FIX A5: Sem userId explícito, retornamos o primeiro usuário do cache.
+  // Em dispositivos compartilhados (ex: computador de escola), pode haver múltiplos
+  // usuários cacheados. Se isso acontecer, lançamos um aviso para facilitar diagnóstico.
+  // A chave de criptografia é derivada do userId do cache — um usuário errado resultaria
+  // em falha de descriptografia e re-fetch do servidor (comportamento seguro, mas ruidoso).
+  const allCached = await db.cachedUsers.toArray();
+  if (allCached.length > 1) {
+    console.warn(
+      `[offlineStorage] getCachedUser() chamado sem userId em dispositivo com ${allCached.length} usuários em cache. ` +
+      `Retornando o primeiro. Para evitar isso, sempre passe o userId explicitamente.`
+    );
+  }
+  return allCached[0];
+}
+
+export async function clearCachedUser(): Promise<void> {
+  await db.cachedUsers.clear();
+}
+
+// ============================================================
+// Arquivos (ETAPA 6)
+// ============================================================
+
+export async function saveFileLocal(blob: Blob, filename: string, mimeType: string, relatedTable?: string, relatedId?: string): Promise<number> {
+  return await db.files.add({
+    blob,
+    filename,
+    mimeType,
+    sizeBytes: blob.size,
+    relatedTable,
+    relatedId,
+    syncStatus: 'pending',
+    createdAt: now(),
+  }) as number;
+}
+
+export async function getFileLocal(localId: number): Promise<LocalFile | undefined> {
+  return db.files.get(localId);
+}
+
+export async function getPendingFiles(): Promise<LocalFile[]> {
+  return db.files.where('syncStatus').equals('pending').toArray();
+}
+
+// ============================================================
+// Utilitários globais
+// ============================================================
+
+/** Retorna contagem de registros pendentes de sincronização em todas as tabelas locais */
+export async function getLocalPendingCount(): Promise<number> {
+  const [freq, cont, anots, aval, notas, fech] = await Promise.all([
+    db.frequencias.where('syncStatus').equals('pending').count(),
+    db.conteudos.where('syncStatus').equals('pending').count(),
+    db.anotacoes.where('syncStatus').equals('pending').count(),
+    db.avaliacoes.where('syncStatus').equals('pending').count(),
+    db.notas.where('syncStatus').equals('pending').count(),
+    db.fechamentos.where('syncStatus').equals('pending').count(),
+  ]);
+  const owner = (() => {
+    try { return offlineOwner(); } catch { return null; }
+  })();
+  const queued = owner
+    ? await db.syncQueue.filter(i => i.ownerUserId === owner).count()
+    : 0;
+  return Math.max(freq + cont + anots + aval + notas + fech, queued);
+}
+
+/**
+ * @deprecated Use getLocalPendingCount() para evitar confusão com offlineQueue.getPendingCount() (que conta itens na syncQueue).
+ */
+export const getPendingCount = getLocalPendingCount;
+
+/** Retorna contagem de itens na fila de sync */
+export async function getQueueCount(): Promise<number> {
+  return db.syncQueue.where('status').anyOf(['pending', 'processing']).filter(i => i.ownerUserId === offlineOwner()).count();
+}
+
+/** Limpa dados antigos já sincronizados (mais velhos que maxAgeDays) */
+export async function clearOldSyncedData(maxAgeDays: number = 60): Promise<number> {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - maxAgeDays);
+  const cutoffISO = cutoff.toISOString();
+
+  let deletedCount = 0;
+
+  // FIX: Usar índice composto [syncStatus+updatedAt] (schema v4) para range query eficiente
+  // em vez de .where('syncStatus').filter(JS) que fazia full scan + filter em memória
+  for (const tableName of OPERATIONAL_TABLE_NAMES) {
+    const table = getOperationalTable(tableName);
+    if (!table) continue;
+
+    await db.transaction('rw', table, async () => {
+    try {
+      const old = await table
+        .where('[syncStatus+updatedAt]')
+        .between(['synced', Dexie.minKey], ['synced', cutoffISO]) // FIX #8: Dexie.minKey em vez de '' como lower bound
+        .toArray();
+      
+      const ids = old.map((r: { localId?: number }) => r.localId).filter((id): id is number => id !== undefined);
+      if (ids.length > 0) {
+        await table.bulkDelete(ids);
+        deletedCount += ids.length;
+      }
+    } catch {
+      // Fallback para schema < v4 (sem índice composto)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const allRecords = await (table as any).where('syncStatus').equals('synced').toArray() as Array<{ localId?: number; updatedAt: string }>;
+      const old = allRecords.filter(r => r.updatedAt < cutoffISO);
+      
+      const ids = old.map(r => r.localId).filter((id): id is number => id !== undefined);
+      if (ids.length > 0) {
+        await table.bulkDelete(ids);
+        deletedCount += ids.length;
+      }
+    }
+    });
+  }
+
+  // Limpa logs antigos
+  const oldLogs = await db.syncLogs.where('timestamp').below(cutoffISO).toArray();
+  const logIds = oldLogs.map(l => l.id).filter((id): id is number => id !== undefined);
+  if (logIds.length > 0) {
+    await db.syncLogs.bulkDelete(logIds);
+    deletedCount += logIds.length;
+  }
+
+  return deletedCount;
+}
+
+function ultimoUsuarioLocal(): string | null {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    return localStorage.getItem('dc_last_user_id');
+  } catch {
+    return null;
+  }
+}
+
+/** Limpa TODOS os dados locais (para logout) */
+export async function clearAllLocalData(
+  clearQueue = false,
+  clearCrypto = false,
+  ownerUserId: string | null = ultimoUsuarioLocal(),
+): Promise<void> {
+  const promises: Promise<void>[] = [
+    db.turmas.clear(),
+    db.alunos.clear(),
+    db.frequencias.clear(),
+    db.conteudos.clear(),
+    db.avaliacoes.clear(),
+    db.notas.clear(),
+    db.horarios.clear(),
+    db.fechamentos.clear(),
+    db.curriculos.clear(),
+    db.anotacoes.clear(),
+    db.syncLogs.clear(),
+    db.cachedUsers.clear(),
+    db.files.clear(),
+  ];
+  // FIX #11: userSalts contém chaves CryptoKey não-exportáveis.
+  // Apagar no logout impediria descriptografar dados cacheados após re-login.
+  // Só apagar em exclusão total de dados (LGPD) ou reset completo.
+  if (clearCrypto) {
+    promises.push(db.userSalts.clear());
+  }
+  if (clearQueue) {
+    const owner = ownerUserId;
+    // Itens sem dono ficam legíveis para a próxima sessão no mesmo navegador.
+    promises.push(db.syncQueue.filter(i => !i.ownerUserId || i.ownerUserId === owner).delete().then(() => {}));
+  }
+  // FIX: Usar allSettled para garantir que todas as tabelas sejam tentadas
+  // mesmo se alguma falhar (ex: IndexedDB corrompido parcialmente)
+  const results = await Promise.allSettled(promises);
+  const failures = results.filter(r => r.status === 'rejected');
+  if (failures.length > 0) {
+    console.warn(`[offlineStorage] clearAllLocalData: ${failures.length} tabela(s) falharam:`,
+      failures.map(f => (f as PromiseRejectedResult).reason));
+  }
+}
+
+/** Verifica uso de armazenamento */
+export async function getStorageEstimate(): Promise<{ usage: number; quota: number; percentUsed: number }> {
+  if (navigator.storage && navigator.storage.estimate) {
+    const estimate = await navigator.storage.estimate();
+    const usage = estimate.usage || 0;
+    const quota = estimate.quota || 0;
+    return {
+      usage,
+      quota,
+      percentUsed: quota > 0 ? (usage / quota) * 100 : 0,
+    };
+  }
+  return { usage: 0, quota: 0, percentUsed: 0 };
+}
+

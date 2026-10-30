@@ -1,0 +1,754 @@
+import { readAllRows, readRowsInBatches } from './pagination';
+import { supabase } from '../lib/supabase';
+import { getBimestrePorData } from '../utils/dateUtils';
+import { Aluno, Avaliacao, Conteudo, Horario, Lancamento } from '../contexts/TurmaContext';
+import { isAlunoAtivo } from '../constants/authConstants';
+
+/** Registro de frequência retornado pelo banco */
+export interface FrequenciaRecord {
+  serverRevision?: number;
+  sync_revision?: number;
+  aluno_id: string;
+  status: string;
+  participacao?: string;
+  data?: string;
+  disciplina?: string;
+  tempo?: string;
+}
+
+/** Registro de nota retornado pelo banco */
+export interface NotaRecord {
+  serverRevision?: number;
+  sync_revision?: number;
+  avaliacao_id: string;
+  aluno_id: string;
+  valor: number;
+}
+
+/** Estrutura de turma e componente para relatórios */
+export interface TurmaRelatorioInfo {
+  id: string;
+  nome: string;
+  turno: string;
+  componente: string;
+  ensino: string;
+  fase: string;
+  numero: string;
+  escolaId: string;
+  escolaNome: string;
+}
+
+import { getTid, normalizarDataISO } from '../utils/turmaUtils';
+
+export const TurmaService = {
+  fetchHorario: async (turmaId: string | number, disciplina: string): Promise<Horario[]> => {
+    const tid = getTid(turmaId);
+    // Buscar todos os horários desta turma
+    const { data, error } = await readAllRows(supabase
+      .from('professor_horarios')
+      .select('dia_semana, tempo_ordem, componente')
+      .eq('turma_id', tid).order('id'));
+    if (error) throw error;
+    // Filtrar no cliente: incluir quando componente bate com a disciplina OU está vazio/null
+    const filtered = (data || []).filter(d => {
+      const comp = (d.componente || '').trim();
+      return comp === '' || comp.toLowerCase() === disciplina.toLowerCase();
+    });
+    return filtered.map(d => ({ dia_semana: d.dia_semana, tempo_ordem: d.tempo_ordem }));
+  },
+
+  fetchLancamentos: async (turmaId: string | number, disciplina: string): Promise<Lancamento[]> => {
+    const tid = getTid(turmaId);
+    const discTrimmed = (disciplina || '').trim();
+    const isGeral = !discTrimmed || discTrimmed.toUpperCase() === 'TODAS' || discTrimmed.toUpperCase() === 'GERAL';
+
+    // 1. Tentar obter pares únicos (data, tempo) via RPC no PostgreSQL para evitar download massivo
+    let freqDatas: Array<{ data: string; tempo: string }> = [];
+    try {
+      const { data: rpcData, error: rpcError } = await readAllRows<{data:string;tempo:string}>(supabase.rpc('get_lancamentos_datas_frequencias', {
+        p_turma_id: tid,
+        p_disciplina: isGeral ? null : discTrimmed
+      }).order('data').order('tempo'));
+      if (!rpcError && rpcData) {
+        freqDatas = rpcData;
+      } else {
+        throw rpcError || new Error('RPC fallback');
+      }
+    } catch {
+      // Fallback resiliente com query direta indexada
+      let freqQuery = supabase.from('frequencias')
+        .select('data, tempo')
+        .eq('turma_id', tid);
+      if (!isGeral) freqQuery = freqQuery.eq('disciplina', discTrimmed);
+      const { data: fbData } = await readAllRows(freqQuery.order('id'));
+      if (fbData) {
+        const uniqueFreqs = new Set(fbData.map(f => `${f.data}|${f.tempo}`));
+        uniqueFreqs.forEach(val => {
+          const [d, t] = val.split('|');
+          freqDatas.push({ data: d, tempo: t });
+        });
+      }
+    }
+
+    // 2. Buscar conteúdos já lançados
+    let contQuery = supabase.from('conteudos')
+      .select('data, tempo')
+      .eq('turma_id', tid);
+    if (!isGeral) contQuery = contQuery.eq('disciplina', discTrimmed);
+    const { data: contData } = await readAllRows(contQuery.order('id'));
+
+    const novosLancamentos: Lancamento[] = [];
+    freqDatas.forEach(f => {
+      novosLancamentos.push({ turmaId: tid, data: f.data, tempo: f.tempo, tipo: 'frequencia' });
+    });
+    (contData || []).forEach(c => {
+      novosLancamentos.push({ turmaId: tid, data: c.data, tempo: c.tempo, tipo: 'conteudo' });
+    });
+
+    return novosLancamentos;
+  },
+
+  fetchAlunos: async (turmaId: string | number): Promise<Aluno[]> => {
+    const { data, error } = await readAllRows(supabase
+      .from('alunos')
+      .select('id, nome, cpf, status, telefone, endereco, nome_responsavel, escola_id')
+      .eq('turma_id', turmaId.toString())
+      .order('nome').order('id'));
+      
+    if (error) throw error;
+    
+    // FIX #19: Usar constante centralizada para filtro de status
+    const alunosAtivos = (data || []).filter(a => isAlunoAtivo(a.status));
+    
+    return alunosAtivos.map(a => {
+      const cpfClean = a.cpf ? a.cpf.replace(/\D/g, '') : '';
+      const matriculaDisplay = cpfClean.length === 11
+        ? `${cpfClean.substring(0, 3)}.${cpfClean.substring(3, 6)}.${cpfClean.substring(6, 9)}-${cpfClean.substring(9, 11)}`
+        : 'CPF Pendente';
+      return {
+        id: a.id.toString(),
+        nome: a.nome,
+        cpf: a.cpf || undefined,
+        matricula: matriculaDisplay,
+        freq: 'P',
+        part: 'Presencial',
+        notas: {},
+        telefone: a.telefone || undefined,
+        endereco: a.endereco || undefined,
+        nome_responsavel: a.nome_responsavel || undefined,
+        escola_id: a.escola_id || undefined,
+      };
+    });
+  },
+
+  fetchAvaliacoes: async (turmaId: string | number, disciplina: string): Promise<{ avaliacoes: Avaliacao[], notasData: NotaRecord[] }> => {
+    const tid = getTid(turmaId);
+
+    let avQuery = supabase
+      .from('avaliacoes')
+      .select('id, turma_id, tipo, data, instrumento, objetos, bimestre, valor_maximo, parent_id, disciplina, sync_revision')
+      .eq('turma_id', tid)
+      .order('data', { ascending: true });
+    if (disciplina && disciplina.trim() !== '' && disciplina.trim().toUpperCase() !== 'GERAL' && disciplina.trim().toUpperCase() !== 'TODAS') {
+      avQuery = avQuery.eq('disciplina', disciplina.trim());
+    }
+
+    const { data: avData, error: avError } = await readAllRows(avQuery.order('id'));
+    
+    if (avError) throw avError;
+
+    if (!avData || avData.length === 0) return { avaliacoes: [], notasData: [] };
+
+    const avaliacoesFormatadas: Avaliacao[] = avData.map(av => ({
+      id: av.id.toString(),
+      serverRevision: av.sync_revision,
+      disciplina: av.disciplina,
+      turmaId: av.turma_id,
+      tipo: av.tipo,
+      data: av.data,
+      instrumento: av.instrumento,
+      objetos: av.objetos || [],
+      bimestre: av.bimestre || getBimestrePorData(av.data),
+      valorMaximo: av.valor_maximo,
+      parent_id: av.parent_id
+    }));
+
+    const avaliacaoIds = avaliacoesFormatadas.map(av => av.id);
+    const { data: notasData, error: notasError } = await readRowsInBatches(avaliacaoIds, batch => supabase
+      .from('notas')
+      .select('avaliacao_id, aluno_id, valor, sync_revision')
+      .in('avaliacao_id', batch).order('id'));
+
+    if (notasError) throw notasError;
+
+    return { avaliacoes: avaliacoesFormatadas, notasData: (notasData || []) as NotaRecord[] };
+  },
+
+  salvarAvaliacao: async (av: Avaliacao, turmaId: string | number, disciplina: string): Promise<string> => {
+    throw new Error('Gravação acadêmica direta desativada. Use o serviço offline para manter a revisão de sincronização.');
+    const tid = getTid(turmaId);
+    const payload = {
+      turma_id: tid,
+      tipo: av.tipo,
+      data: av.data,
+      instrumento: av.instrumento,
+      objetos: av.objetos,
+      bimestre: av.bimestre || getBimestrePorData(av.data),
+      valor_maximo: av.valorMaximo || 10,
+      disciplina: disciplina,
+      parent_id: av.parent_id
+    };
+
+    let createdId = av.id;
+    let error;
+    if (!av.id || av.id.startsWith('temp_')) {
+      const { data, error: insError } = await supabase.from('avaliacoes').insert([payload]).select().single();
+      error = insError;
+      if (data) createdId = data.id.toString();
+    } else {
+      const { error: updError } = await supabase.from('avaliacoes').update(payload).eq('id', av.id).select().single();
+      error = updError;
+    }
+
+    if (error) throw error;
+    return createdId;
+  },
+
+  removerAvaliacao: async (id: string): Promise<void> => {
+    const { error } = await supabase.from('avaliacoes').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  salvarNotas: async (avaliacaoId: string, notas: { alunoId: string, valor: string }[]): Promise<void> => {
+    throw new Error('Gravação acadêmica direta desativada. Use o serviço offline para manter a revisão de sincronização.');
+    const upserts = notas.map(n => ({
+      avaliacao_id: avaliacaoId,
+      aluno_id: n.alunoId,
+      valor: parseFloat(n.valor.replace(',', '.'))
+    }));
+    const { error } = await supabase.from('notas').upsert(upserts, { onConflict: 'avaliacao_id,aluno_id' });
+    if (error) throw error;
+  },
+
+  salvarFrequencia: async (turmaId: string | number, disciplina: string, data: string, tempo: string, alunosFreq: Aluno[]): Promise<void> => {
+    throw new Error('Gravação acadêmica direta desativada. Use o serviço offline para manter a revisão de sincronização.');
+    const tid = getTid(turmaId);
+    // Normalizar data para ISO (YYYY-MM-DD) antes de gravar
+    const dataISO = normalizarDataISO(data);
+    const upserts = alunosFreq.map(aluno => ({
+      turma_id: tid,
+      aluno_id: aluno.id,
+      data: dataISO,
+      tempo,
+      status: aluno.freq || 'P',
+      participacao: aluno.part || 'Presencial',
+      disciplina: disciplina
+    }));
+    const { error } = await supabase.from('frequencias').upsert(upserts, { onConflict: 'turma_id,aluno_id,data,tempo,disciplina' });
+    if (error) throw error;
+  },
+
+  salvarConteudo: async (turmaId: string | number, disciplina: string, cont: Conteudo): Promise<void> => {
+    throw new Error('Gravação acadêmica direta desativada. Use o serviço offline para manter a revisão de sincronização.');
+    const tid = getTid(turmaId);
+    // Normalizar data para ISO (YYYY-MM-DD) antes de gravar
+    const dataISO = normalizarDataISO(cont.data);
+    const payload = {
+      turma_id: tid,
+      data: dataISO,
+      tempo: cont.tempo,
+      objetos: cont.objetos,
+      habilidades: cont.habilidades,
+      descricao: cont.descricao,
+      disciplina: disciplina
+    };
+    const { error } = await supabase.from('conteudos').upsert(payload, { onConflict: 'turma_id,data,tempo,disciplina' });
+    if (error) throw error;
+  },
+
+  buscarFrequencia: async (turmaId: string | number, disciplina: string, data: string, tempo: string): Promise<FrequenciaRecord[]> => {
+    const tid = getTid(turmaId);
+    const dataISO = normalizarDataISO(data);
+    const { data: freqData, error } = await readAllRows(supabase
+      .from('frequencias')
+      .select('aluno_id, status, participacao, sync_revision')
+      .eq('turma_id', tid)
+      .eq('data', dataISO)
+      .eq('tempo', tempo)
+      .eq('disciplina', disciplina).order('id'));
+    if (error) throw error;
+    return (freqData || []) as FrequenciaRecord[];
+  },
+
+  fetchFaltasPeriodo: async (
+    turmaId: string | number,
+    disciplina: string,
+    dataInicio?: string,
+    dataFim?: string,
+    statusList: string[] = ['F']
+  ): Promise<FrequenciaRecord[]> => {
+    const tid = getTid(turmaId);
+
+    let query = supabase
+      .from('frequencias')
+      .select('data, tempo, aluno_id, status, participacao, disciplina, sync_revision')
+      .eq('turma_id', tid)
+      .in('status', statusList);
+
+    if (disciplina && disciplina.toUpperCase() !== 'TODAS' && disciplina.toUpperCase() !== 'GERAL') {
+      query = query.eq('disciplina', disciplina);
+    }
+    if (dataInicio) {
+      query = query.gte('data', normalizarDataISO(dataInicio));
+    }
+    if (dataFim) {
+      query = query.lte('data', normalizarDataISO(dataFim));
+    }
+
+    const { data: freqData, error } = await readAllRows(query.order('id'));
+    if (error) throw error;
+    return (freqData || []) as FrequenciaRecord[];
+  },
+
+  fetchAllFrequencias: async (turmaId: string | number, disciplina: string, apenasFaltas: boolean = true): Promise<FrequenciaRecord[]> => {
+    const tid = getTid(turmaId);
+
+    let query = supabase
+      .from('frequencias')
+      .select('data, tempo, aluno_id, status, participacao, disciplina, sync_revision')
+      .eq('turma_id', tid);
+
+    // Otimização Crítica C1: Filtro server-side de faltas por padrão
+    if (apenasFaltas) {
+      query = query.in('status', ['F', 'FJ']);
+    }
+
+    if (disciplina && disciplina.toUpperCase() !== 'TODAS' && disciplina.toUpperCase() !== 'GERAL') {
+      query = query.eq('disciplina', disciplina);
+    }
+
+    const { data: freqData, error } = await readAllRows(query.order('id'));
+    if (error) throw error;
+    return (freqData || []) as FrequenciaRecord[];
+  },
+
+  buscarFrequenciaPorDia: async (turmaId: string | number, disciplina: string, data: string): Promise<FrequenciaRecord[]> => {
+    const tid = getTid(turmaId);
+    const dataISO = normalizarDataISO(data);
+
+    let query = supabase
+      .from('frequencias')
+      .select('aluno_id, status, disciplina')
+      .eq('turma_id', tid)
+      .eq('data', dataISO);
+    if (disciplina) query = query.eq('disciplina', disciplina);
+
+    const { data: freqData, error } = await readAllRows(query.order('id'));
+    if (error) throw error;
+    return (freqData || []) as FrequenciaRecord[];
+  },
+
+  buscarConteudo: async (turmaId: string | number, disciplina: string, data: string, tempo: string): Promise<Conteudo | null> => {
+    const tid = getTid(turmaId);
+    const dataISO = normalizarDataISO(data);
+
+    let query = supabase
+      .from('conteudos')
+      .select('id, turma_id, data, tempo, objetos, habilidades, descricao, disciplina, sync_revision')
+      .eq('turma_id', tid)
+      .eq('data', dataISO)
+      .eq('tempo', tempo);
+    if (disciplina) query = query.eq('disciplina', disciplina);
+
+    const { data: contData, error } = await readAllRows(query.order('id'));
+
+    if (error) throw error;
+    
+    const matchedCont = contData && contData.length > 0 ? contData[0] : null;
+
+    if (matchedCont) {
+      return {
+        id: matchedCont.id.toString(),
+        serverRevision: matchedCont.sync_revision,
+        turmaId: matchedCont.turma_id,
+        data: matchedCont.data,
+        tempo: matchedCont.tempo,
+        objetos: matchedCont.objetos || [],
+        habilidades: matchedCont.habilidades || [],
+        descricao: matchedCont.descricao || ''
+      };
+    }
+    return null;
+  },
+
+  removerFrequencia: async (turmaId: string | number, disciplina: string, data: string, tempo: string): Promise<void> => {
+    const tid = getTid(turmaId);
+    // FIX: normalizar data para ISO antes de deletar (consistente com salvarFrequencia)
+    const dataISO = normalizarDataISO(data);
+    const { error } = await supabase
+      .from('frequencias')
+      .delete()
+      .eq('turma_id', tid)
+      .eq('data', dataISO)
+      .eq('tempo', tempo)
+      .eq('disciplina', disciplina);
+    if (error) throw error;
+  },
+
+  removerConteudo: async (turmaId: string | number, disciplina: string, data: string, tempo: string): Promise<void> => {
+    const tid = getTid(turmaId);
+    // FIX: normalizar data para ISO antes de deletar (consistente com salvarConteudo)
+    const dataISO = normalizarDataISO(data);
+    const { error } = await supabase
+    .from('conteudos')
+    .delete()
+    .eq('turma_id', tid)
+    .eq('data', dataISO)
+    .eq('tempo', tempo)
+    .eq('disciplina', disciplina);
+    if (error) throw error;
+  },
+
+  fetchConteudosPeriodo: async (
+    turmaId: string | number,
+    disciplina: string,
+    dataInicio?: string,
+    dataFim?: string
+  ): Promise<Conteudo[]> => {
+    const tid = getTid(turmaId);
+
+    let query = supabase
+      .from('conteudos')
+      .select('id, turma_id, data, tempo, objetos, habilidades, descricao, disciplina, sync_revision')
+      .eq('turma_id', tid)
+      .order('data', { ascending: false });
+
+    if (disciplina && disciplina.toUpperCase() !== 'TODAS' && disciplina.toUpperCase() !== 'GERAL') {
+      query = query.eq('disciplina', disciplina);
+    }
+    if (dataInicio) {
+      query = query.gte('data', normalizarDataISO(dataInicio));
+    }
+    if (dataFim) {
+      query = query.lte('data', normalizarDataISO(dataFim));
+    }
+
+    const { data, error } = await readAllRows(query.order('id'));
+    if (error) throw error;
+
+    return (data || []).map(c => ({
+      id: c.id.toString(),
+      serverRevision: c.sync_revision,
+      disciplina: c.disciplina,
+      turmaId: c.turma_id,
+      data: c.data,
+      tempo: c.tempo,
+      objetos: c.objetos || [],
+      habilidades: c.habilidades || [],
+      descricao: c.descricao || ''
+    }));
+  },
+
+  fetchAllConteudos: async (turmaId: string | number, disciplina: string): Promise<Conteudo[]> => {
+    const tid = getTid(turmaId);
+
+    let query = supabase
+      .from('conteudos')
+      .select('id, turma_id, data, tempo, objetos, habilidades, descricao, disciplina, sync_revision')
+      .eq('turma_id', tid)
+      .order('data', { ascending: false });
+    if (disciplina && disciplina.toUpperCase() !== 'TODAS' && disciplina.toUpperCase() !== 'GERAL') {
+      query = query.eq('disciplina', disciplina);
+    }
+
+    const { data, error } = await readAllRows(query.order('id'));
+      
+    if (error) throw error;
+
+    return (data || []).map(c => ({
+      id: c.id.toString(),
+      serverRevision: c.sync_revision,
+      disciplina: c.disciplina,
+      turmaId: c.turma_id,
+      data: c.data,
+      tempo: c.tempo,
+      objetos: c.objetos || [],
+      habilidades: c.habilidades || [],
+      descricao: c.descricao || ''
+    }));
+  },
+
+  fetchDisciplinasDaTurma: async (turmaId: string | number): Promise<string[]> => {
+    const tid = getTid(turmaId);
+    const [componentesRes, avsRes, fechamentosRes] = await Promise.all([
+      supabase.rpc('disciplinas_da_turma', { p_turma_id: tid }),
+      readAllRows(supabase.from('avaliacoes').select('disciplina').eq('turma_id', tid).order('id')),
+      readAllRows(supabase.from('fechamentos_bimestres').select('disciplina').eq('turma_id', tid).order('id'))
+    ]);
+
+    const set = new Set<string>();
+    const componentes = Array.isArray(componentesRes.data) ? componentesRes.data : [];
+    componentes.forEach((componente: string) => {
+      const c = (componente || '').trim();
+      if (c && c.toUpperCase() !== 'GERAL') set.add(c);
+    });
+    (avsRes.data || []).forEach(a => {
+      const d = (a.disciplina || '').trim();
+      if (d && d.toUpperCase() !== 'GERAL') set.add(d);
+    });
+    (fechamentosRes.data || []).forEach(f => {
+      const d = (f.disciplina || '').trim();
+      if (d && d.toUpperCase() !== 'GERAL' && d.toUpperCase() !== 'TODAS') set.add(d);
+    });
+
+    if (set.size === 0) return ['POLIVALENTE'];
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  },
+
+  fetchFechamentosRaw: async (
+    turmaId: string | number,
+    disciplina?: string
+  ): Promise<{ id?: string; bimestre: string; status: string; disciplina: string; data_fechamento?: string; created_at?: string; usuario_fechamento_id?: string; sync_revision?: number }[]> => {
+    const tid = getTid(turmaId);
+    let query = supabase
+      .from('fechamentos_bimestres')
+      .select('id, bimestre, status, disciplina, data_fechamento, usuario_fechamento_id, sync_revision')
+      .eq('turma_id', tid);
+
+    if (disciplina && disciplina.toUpperCase() !== 'TODAS' && disciplina.toUpperCase() !== 'GERAL') {
+      query = query.eq('disciplina', disciplina);
+    }
+
+    const { data, error } = await readAllRows<{ id?: string; bimestre: string; status: string; disciplina: string; data_fechamento?: string; created_at?: string; usuario_fechamento_id?: string; sync_revision?: number }>(query.order('id'));
+    if (error) throw error;
+    return (data || []).map(f => ({
+      ...f,
+      created_at: f.data_fechamento || f.created_at,
+    }));
+  },
+
+  fetchFechamentos: async (turmaId: string | number, disciplina?: string): Promise<Record<string, boolean>> => {
+    const raw = await TurmaService.fetchFechamentosRaw(turmaId, disciplina);
+    const map: Record<string, boolean> = {};
+    raw.forEach(f => {
+      const isFechado = f.status === 'FECHADO';
+      if (isFechado) {
+        map[f.bimestre] = true;
+        const match = f.bimestre.match(/^[1-4]/);
+        if (match) {
+          const n = match[0];
+          map[`${n}. BIMESTRE`] = true;
+          map[`${n}º Bimestre`] = true;
+        }
+      }
+    });
+    return map;
+  },
+
+  salvarFechamento: async (
+    turmaId: string | number,
+    disciplina: string,
+    bimestre: string,
+    status: 'ABERTO' | 'FECHADO',
+    userId: string
+  ): Promise<void> => {
+    const tid = getTid(turmaId);
+    if (status === 'ABERTO') {
+      let query = supabase
+        .from('fechamentos_bimestres')
+        .delete()
+        .eq('turma_id', tid)
+        .eq('bimestre', bimestre);
+
+      if (disciplina && disciplina.toUpperCase() !== 'TODAS') {
+        query = query.eq('disciplina', disciplina);
+      }
+
+      const { error } = await query;
+      if (error) throw error;
+    } else {
+      const payload = {
+        turma_id: tid,
+        disciplina,
+        bimestre,
+        status,
+        usuario_fechamento_id: userId
+      };
+      const { error } = await supabase
+        .from('fechamentos_bimestres')
+        .upsert(payload, { onConflict: 'turma_id,disciplina,bimestre' });
+      if (error) throw error;
+    }
+  },
+
+  fetchTurmasRelatorio: async (user: { id: string; role: string; email?: string; escola_id?: string }): Promise<TurmaRelatorioInfo[]> => {
+    if (!user) return [];
+
+    if (user.role === 'ADMIN' || user.role === 'GESTOR' || user.role === 'SECRETARIO') {
+      let query = supabase
+        .from('turmas')
+        .select('id, nome, turno, ensino, turma_codigo, escola_id, escolas(nome)')
+        .order('nome');
+
+      if (user.role === 'SECRETARIO' || user.role === 'GESTOR') {
+        if (!user.escola_id) return [];
+        query = query.eq('escola_id', user.escola_id);
+      }
+
+      const { data: todasTurmas, error } = await readAllRows(query.order('id'));
+      if (error) throw error;
+      if (!todasTurmas || todasTurmas.length === 0) return [];
+
+      const turmaIds = todasTurmas.map(t => t.id);
+
+      // Buscar componentes reais dos horários e disciplinas das avaliações cadastradas em paralelo
+      const [horariosRes, avRowsRes] = await Promise.all([
+        readRowsInBatches(turmaIds, batch => supabase
+          .from('professor_horarios')
+          .select('turma_id, componente')
+          .in('turma_id', batch).order('id')),
+        readRowsInBatches(turmaIds, batch => supabase
+          .from('avaliacoes')
+          .select('turma_id, disciplina')
+          .in('turma_id', batch).order('id')),
+      ]);
+
+      const componentesPorTurma = new Map<string, Set<string>>();
+
+      (horariosRes.data || []).forEach(h => {
+        const comp = (h.componente || '').trim();
+        if (comp) {
+          if (!componentesPorTurma.has(h.turma_id)) {
+            componentesPorTurma.set(h.turma_id, new Set());
+          }
+          componentesPorTurma.get(h.turma_id)!.add(comp);
+        }
+      });
+
+      (avRowsRes.data || []).forEach(a => {
+        const disc = (a.disciplina || '').trim();
+        if (disc && disc.toUpperCase() !== 'GERAL') {
+          if (!componentesPorTurma.has(a.turma_id)) {
+            componentesPorTurma.set(a.turma_id, new Set());
+          }
+          componentesPorTurma.get(a.turma_id)!.add(disc);
+        }
+      });
+
+      const finalTurmas: TurmaRelatorioInfo[] = [];
+
+      todasTurmas.forEach(t => {
+        let fase = t.nome;
+        let numero = '01';
+
+        const match = t.nome.match(/(.+)\s+([A-Za-z0-9]+)$/);
+        if (match) {
+          fase = match[1].trim();
+          numero = match[2].trim();
+        } else {
+          const matchNum = t.nome.match(/(\d+)$/);
+          if (matchNum) numero = matchNum[1];
+        }
+
+        let comps = Array.from(componentesPorTurma.get(t.id) || []);
+        if (comps.length === 0) {
+          comps = ['POLIVALENTE'];
+        }
+        comps.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+        comps.forEach(comp => {
+          finalTurmas.push({
+            id: t.id,
+            nome: t.nome,
+            turno: t.turno,
+            componente: comp,
+            ensino: t.ensino || 'Fundamental Anos Iniciais (1° ao 5° ANO)',
+            fase: fase,
+            numero: t.turma_codigo || numero,
+            escolaId: t.escola_id,
+            escolaNome: (Array.isArray(t.escolas) ? (t.escolas[0] as { nome?: string } | undefined)?.nome : (t.escolas as { nome?: string } | null | undefined)?.nome) || 'ESCOLA NÃO IDENTIFICADA'
+          });
+        });
+      });
+
+      return finalTurmas;
+    } else {
+      const emailLimpo = (user.email || '').trim();
+      let profQuery = supabase
+        .from('professores')
+        .select('id, disciplinas');
+      if (user.id) {
+        profQuery = profQuery.or(`usuario_id.eq.${user.id},email.ilike.${emailLimpo}`);
+      } else {
+        profQuery = profQuery.ilike('email', emailLimpo);
+      }
+
+      const { data: profs, error: profError } = await profQuery;
+      if (profError) throw profError;
+
+      if (profs && profs.length > 0) {
+        let allDisciplinas: string[] = [];
+        profs.forEach(p => {
+          if (p.disciplinas && Array.isArray(p.disciplinas)) {
+            allDisciplinas = [...allDisciplinas, ...p.disciplinas];
+          }
+        });
+        let componentes = [...new Set(allDisciplinas)];
+        if (componentes.length === 0) componentes = ['POLIVALENTE'];
+
+        const profIds = profs.map(p => p.id);
+
+        const { data: alocs, error: alocError } = await supabase
+          .from('professor_alocacoes')
+          .select('escola_id, turno')
+          .in('professor_id', profIds);
+
+        if (alocError) throw alocError;
+
+        if (alocs && alocs.length > 0) {
+          const orConditions = alocs.map(a => `and(escola_id.eq.${a.escola_id},turno.eq.${a.turno})`).join(',');
+          const { data: turmasAlocadas, error: turmasError } = await supabase
+            .from('turmas')
+            .select('*, escolas(nome)')
+            .or(orConditions)
+            .order('nome');
+
+          if (turmasError) throw turmasError;
+
+          if (turmasAlocadas) {
+            const finalTurmas: TurmaRelatorioInfo[] = [];
+            turmasAlocadas.forEach(t => {
+              componentes.forEach(comp => {
+                let fase = t.nome;
+                let numero = '01';
+
+                const match = t.nome.match(/(.+)\s+([A-Za-z0-9]+)$/);
+                if (match) {
+                  fase = match[1].trim();
+                  numero = match[2].trim();
+                } else {
+                  const matchNum = t.nome.match(/(\d+)$/);
+                  if (matchNum) numero = matchNum[1];
+                }
+
+                finalTurmas.push({
+                  id: t.id,
+                  nome: t.nome,
+                  turno: t.turno,
+                  componente: comp,
+                  ensino: t.ensino || 'Fundamental Anos Iniciais (1° ao 5° ANO)',
+                  fase: fase,
+                  numero: t.turma_codigo || numero,
+                  escolaId: t.escola_id,
+                  escolaNome: t.escolas?.nome || 'ESCOLA NÃO IDENTIFICADA'
+                });
+              });
+            });
+            return finalTurmas;
+          }
+        }
+      }
+      return [];
+    }
+  }
+};

@@ -1,0 +1,187 @@
+import { useMemo } from 'react';
+import { Avaliacao, Horario, Lancamento, Turma, Aluno } from '../contexts/TurmaContext';
+import { APP_CONFIG, PeriodoLetivo } from '../config/appConfig';
+import { getBimestrePorData, formatarDataParaISO } from '../utils/dateUtils';
+import { parentIdVinculado } from '../utils/avaliacaoUtils';
+import { contarFeriados, mapaFeriados } from '../services/feriados';
+
+// Interfazes para as dependências e retornos
+interface ProgressStats {
+  pFreq: number;
+  pObj: number;
+  pAvaliacoes: number;
+  pNotas: number;
+  freqLancadas: number;
+  conteudoLancados: number;
+  totalEsperado: number;
+  barColor: (pct: number) => string;
+}
+
+/**
+ * Conta ocorrências de um dia-da-semana em um intervalo — O(1).
+ * Substitui o loop diário anterior que era O(N×dias).
+ */
+function countWeekDaysInRange(start: Date, end: Date, dayOfWeek: number): number {
+  if (start > end) return 0;
+  const totalDays = Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1;
+  const fullWeeks = Math.floor(totalDays / 7);
+  const remainder = totalDays % 7;
+  const startDay = start.getDay();
+  let extra = 0;
+  for (let i = 0; i < remainder; i++) {
+    if ((startDay + i) % 7 === dayOfWeek) { extra = 1; break; }
+  }
+  return fullWeeks + extra;
+}
+
+export function useTurmaProgress(
+  turmaAtiva: Turma | null,
+  periodoSelecionado: PeriodoLetivo | null,
+  lancamentos: Lancamento[],
+  horarioTurma: Horario[],
+  avaliacoes: Avaliacao[],
+  alunos: Aluno[],
+  feriados: Record<string, string> = {}
+): ProgressStats {
+
+  return useMemo(() => {
+    const barColor = (pct: number) => {
+      if (pct > 75) return 'bg-emerald-500';
+      if (pct > 50) return 'bg-amber-400';
+      return 'bg-red-500';
+    };
+
+    if (!turmaAtiva || !horarioTurma || !periodoSelecionado) {
+      return { 
+        pFreq: 0, pObj: 0, pAvaliacoes: 0, pNotas: 0, 
+        freqLancadas: 0, conteudoLancados: 0, totalEsperado: 0, barColor 
+      };
+    }
+
+    // Calcular intervalo válido
+    const [inicioAno, inicioMes, inicioDia] = periodoSelecionado.dataInicio.split('-').map(Number);
+    const inicio = new Date(inicioAno, inicioMes - 1, inicioDia);
+    inicio.setHours(0, 0, 0, 0);
+
+    const [fimAno, fimMes, fimDia] = periodoSelecionado.dataFim.split('-').map(Number);
+    const fimBimestre = new Date(fimAno, fimMes - 1, fimDia);
+    fimBimestre.setHours(23, 59, 59, 999);
+
+    const hoje = new Date();
+    hoje.setHours(23, 59, 59, 999);
+    const fim = hoje < fimBimestre ? hoje : fimBimestre;
+
+    const activeTurmaId = String(turmaAtiva.id).split('||')[0];
+
+    // --- O(1): calcular total de aulas esperadas agrupando por dia da semana ---
+    let totalEsperado = 0;
+    const slotsPorDia = new Map<number, number>(); // dia_semana -> quantidade de tempos
+    const temposPorDia = new Map<number, Set<string>>(); // dia_semana -> tempos válidos
+
+    horarioTurma.forEach(h => {
+      const dow = Number(h.dia_semana);
+      slotsPorDia.set(dow, (slotsPorDia.get(dow) || 0) + 1);
+      
+      if (!temposPorDia.has(dow)) temposPorDia.set(dow, new Set());
+      temposPorDia.get(dow)!.add(`${h.tempo_ordem}º TEMPO`);
+    });
+    
+    const fonteFeriados = Object.keys(feriados).length > 0 ? feriados : mapaFeriados();
+    slotsPorDia.forEach((qtd, dow) => {
+      const dias = countWeekDaysInRange(inicio, fim, dow);
+      const semAula = contarFeriados(fonteFeriados, inicio, fim, dow);
+      totalEsperado += Math.max(0, dias - semAula) * qtd;
+    });
+
+    // --- Contar lançamentos com Set para O(1) por lookup ---
+    const freqSet = new Set<string>();
+    const contSet = new Set<string>();
+
+    lancamentos.forEach(l => {
+      if (String(l.turmaId).split('||')[0] !== activeTurmaId) return;
+      
+      const [lY, lM, lD] = l.data.split('-').map(Number);
+      const lDate = new Date(lY, lM - 1, lD);
+      if (lDate < inicio || lDate > fim) return;
+      
+      const dow = lDate.getDay();
+      const temposValidos = temposPorDia.get(dow);
+      if (!temposValidos || !temposValidos.has(l.tempo)) return;
+
+      const key = `${l.data}|${l.tempo}`;
+      if (l.tipo === 'frequencia') freqSet.add(key);
+      if (l.tipo === 'conteudo') contSet.add(key);
+    });
+
+    const freqLancadas = freqSet.size;
+    const conteudoLancados = contSet.size;
+
+    const pFreq = totalEsperado > 0 ? Math.min(100, Math.round((freqLancadas / totalEsperado) * 100)) : 0;
+    const pObj  = totalEsperado > 0 ? Math.min(100, Math.round((conteudoLancados / totalEsperado) * 100)) : 0;
+
+    const avaliacoesDaTurma = avaliacoes.filter(av => {
+      const avTurmaId = String(av.turmaId).split('||')[0];
+      if (avTurmaId !== activeTurmaId) return false;
+      if (!av.data) return false;
+      const dataIso = formatarDataParaISO(av.data);
+      if (!dataIso.startsWith(APP_CONFIG.YEAR.toString())) return false;
+      const bNome = av.bimestre || getBimestrePorData(av.data);
+      return bNome === periodoSelecionado.nome;
+    });
+    
+    // Considerar apenas avaliações principais (!av.parent_id) para a soma dos 20,0 pontos do bimestre
+    const avaliacoesPrincipais = avaliacoesDaTurma.filter(av => !parentIdVinculado(av.parent_id));
+    const somaPontosCadastrados = avaliacoesPrincipais.reduce((acc, av) => {
+      const val = Number(av.valorMaximo ?? 10);
+      return acc + (isNaN(val) ? 10 : val);
+    }, 0);
+
+    // Definir a meta do bimestre: 20,0 pontos para 1º e 2º bimestres, 30,0 pontos para 3º e 4º bimestres (Total anual: 100,0 pts)
+    const strPeriodo = `${periodoSelecionado?.nome || ''} ${periodoSelecionado?.id || ''} ${periodoSelecionado?.label || ''}`.toUpperCase();
+    const isTerceiroOuQuarto = strPeriodo.includes('3') || strPeriodo.includes('4');
+
+    const META_PONTUACAO_BIMESTRE = isTerceiroOuQuarto ? 30.0 : 20.0;
+    const pAvaliacoes = Math.min(100, Math.round((somaPontosCadastrados / META_PONTUACAO_BIMESTRE) * 100));
+
+    // --- NOTAS (Progresso de Lançamento de Notas proporcional à meta de pontos do bimestre) ---
+    let somaPontosComNotaLancada = 0;
+
+    if (avaliacoesPrincipais.length > 0 && alunos.length > 0) {
+      avaliacoesPrincipais.forEach(av => {
+        const valMax = Number(av.valorMaximo ?? 10);
+        const val = isNaN(valMax) ? 10 : valMax;
+        
+        // Buscar sub-avaliações de 2ª chamada vinculadas a esta avaliação principal
+        const subAvs2CH = avaliacoes.filter(a => String(a.parent_id) === String(av.id) && a.tipo?.includes('2CH'));
+
+        let alunosComNota = 0;
+        alunos.forEach(aluno => {
+          const notaPrincipal = aluno.notas ? (aluno.notas[av.id] ?? aluno.notas[String(av.id)]) : null;
+          const temNotaPrincipal = notaPrincipal !== undefined && notaPrincipal !== null && String(notaPrincipal).trim() !== '';
+
+          // Se não tem nota na avaliação principal, verificar se possui nota em 2ª Chamada
+          let temNota2CH = false;
+          if (!temNotaPrincipal && subAvs2CH.length > 0 && aluno.notas) {
+            temNota2CH = subAvs2CH.some(ch => {
+              const nCh = aluno.notas ? (aluno.notas[ch.id] ?? aluno.notas[String(ch.id)]) : null;
+              return nCh !== undefined && nCh !== null && String(nCh).trim() !== '';
+            });
+          }
+
+          if (temNotaPrincipal || temNota2CH) {
+            alunosComNota++;
+          }
+        });
+
+        const proporcaoAlunosComNota = alunosComNota / alunos.length;
+        somaPontosComNotaLancada += val * proporcaoAlunosComNota;
+      });
+    }
+
+    const pNotas = Math.min(100, Math.round((somaPontosComNotaLancada / META_PONTUACAO_BIMESTRE) * 100));
+
+    return {
+      pFreq, pObj, pAvaliacoes, pNotas, freqLancadas, conteudoLancados, totalEsperado, barColor
+    };
+  }, [turmaAtiva, periodoSelecionado, lancamentos, horarioTurma, avaliacoes, alunos, feriados]);
+}

@@ -1,0 +1,792 @@
+import React, { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
+import { useTurma, Avaliacao, ObjetoAvaliacao } from '../../contexts/TurmaContext';
+import { APP_CONFIG } from '../../config/appConfig';
+import { useCaptcha } from '../../hooks/useCaptcha';
+import { getBimestrePorData, getBimestreNumero, formatarDataParaISO, formatarDataParaExibicao } from '../../utils/dateUtils';
+import { isAvaliacaoPendente, getMensagemPendenciaAvaliacao, getInfoPontosBimestre, parentIdVinculado } from '../../utils/avaliacaoUtils';
+import { useToast } from '../common/Toast';
+
+// Sub-componentes
+import AvaliacoesList from './avaliacoes/AvaliacoesList';
+import AvaliacaoForm from './avaliacoes/AvaliacaoForm';
+import AvaliacaoDetailsView from './avaliacoes/AvaliacaoDetailsView';
+import NotasEditor from './avaliacoes/NotasEditor';
+import SegundaChamadaEditor from './avaliacoes/SegundaChamadaEditor';
+import DeleteAvaliacaoModal from './avaliacoes/DeleteAvaliacaoModal';
+import { supabase } from '../../lib/supabase';
+import * as OfflineStorage from '../../services/offlineStorage';
+
+interface CurriculoObjeto {
+  id?: string;
+  unidade_id?: string;
+  descricao: string;
+}
+
+interface CurriculoHabilidade {
+  id?: string;
+  unidade_id?: string;
+  codigo: string;
+}
+
+interface CurriculoUnidade {
+  id: string;
+  modalidade: string;
+  ano: string;
+  bimestre: string;
+  disciplina: string;
+  nome: string;
+  objetos: CurriculoObjeto[];
+  habilidades: CurriculoHabilidade[];
+}
+
+interface AvaliacoesTabProps {
+  selectedDate?: string;
+  disabled?: boolean;
+}
+
+export default function AvaliacoesTab({ selectedDate: dataContexto = '', disabled }: AvaliacoesTabProps) {
+  const { 
+    turmaAtiva, alunos, avaliacoes, conteudos, loading, 
+    salvarAvaliacao, removerAvaliacao, salvarNotas, 
+    carregarFaltasDaData, faltasPorData, atestadosPorData
+  } = useTurma();
+  const { showWarning, showError } = useToast();
+
+  const currentBimestre = React.useMemo(() => {
+    return (dataContexto ? getBimestrePorData(dataContexto) : '') || '1º Bimestre';
+  }, [dataContexto]);
+
+  const avaliacoesDoBimestre = React.useMemo(() => {
+    const targetNum = getBimestreNumero(currentBimestre);
+    return avaliacoes.filter(av => {
+      if (parentIdVinculado(av.parent_id)) return false;
+      const avNum = getBimestreNumero(av.bimestre || '') ?? getBimestreNumero(av.data);
+      return avNum === targetNum;
+    });
+  }, [avaliacoes, currentBimestre]);
+
+  const [avaliacaoViewMode, setAvaliacaoViewMode] = useState<'list' | 'details' | 'edit' | 'grades' | 'second_call'>('list');
+  const [selectedAvaliacao, setSelectedAvaliacao] = useState<Avaliacao | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [instrumentoAvaliacao, setInstrumentoAvaliacao] = useState('AVALIACAO ESCRITA');
+  const [objetosAvaliacao, setObjetosAvaliacao] = useState<ObjetoAvaliacao[]>([]);
+  const [periodoLetivo, setPeriodoLetivo] = useState('');
+  const [unidadeDidatica, setUnidadeDidatica] = useState('');
+  const [objetoConhecimento, setObjetoConhecimento] = useState('');
+  const [valorMaximo, setValorMaximo] = useState('10,00');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [avaliacaoToDelete, setAvaliacaoToDelete] = useState<Avaliacao | null>(null);
+  const [localNotas, setLocalNotas] = useState<Record<string, string>>({});
+  const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
+  const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+  const [isSaving, setIsSaving] = useState(false);
+  const [secondCallRows, setSecondCallRows] = useState<Record<string, { selected: boolean, date: string, grade: string }>>({});
+  const notasRetiradasRef = React.useRef(new Set<string>());
+
+  const PERIODOS_LABELS: Record<string, string> = {};
+  APP_CONFIG.PERIODOS.filter(p => p.id.includes('BIMESTRE')).forEach(b => {
+    // Formata a exibição como: "1. BIMESTRE 05/02/2026 - 23/04/2026"
+    // A data oficial é uma string AAAA-MM-DD; new Date() a leria em UTC e recuaria um dia no Brasil.
+    const start = formatarDataParaExibicao(b.dataInicio);
+    const end = formatarDataParaExibicao(b.dataFim);
+    PERIODOS_LABELS[b.nome] = `${b.label} ${start} - ${end}`;
+  });
+
+  const {
+    generatedCaptcha,
+    captchaInput,
+    setCaptchaInput,
+    captchaError,
+    generateNewCaptcha
+  } = useCaptcha();
+
+  const [unidadesBD, setUnidadesBD] = useState<CurriculoUnidade[]>([]);
+  const [_loadingCurriculo, setLoadingCurriculo] = useState(false);
+
+  useEffect(() => {
+    async function loadCurriculo() {
+      if (!turmaAtiva) return;
+      setLoadingCurriculo(true);
+
+      const modalidadeRaw = turmaAtiva.ensino || '';
+      const modalidade = modalidadeRaw.split('(')[0].trim();
+      let ano = turmaAtiva.fase || '';
+      const matchAno = ano.match(/^(\d+)/);
+      if (matchAno) ano = `${matchAno[1]}º Ano`;
+
+      const bimestreAlvo = periodoLetivo || (selectedDate ? getBimestrePorData(selectedDate) : currentBimestre) || '1º Bimestre';
+
+      const chave = {
+        modalidade,
+        ano,
+        bimestre: bimestreAlvo,
+        disciplina: turmaAtiva.componente || '',
+      };
+
+      try {
+        let unidades: CurriculoUnidade[] = [];
+
+        if (navigator.onLine) {
+          const { data, error } = await supabase
+            .from('curriculo_unidades')
+            .select('*, objetos:curriculo_objetos(*), habilidades:curriculo_habilidades(*)')
+            .ilike('modalidade', `%${chave.modalidade}%`)
+            .eq('ano', chave.ano)
+            .eq('bimestre', chave.bimestre)
+            .ilike('disciplina', `%${chave.disciplina}%`);
+
+          if (error) throw error;
+          unidades = (data || []) as CurriculoUnidade[];
+          if (unidades.length > 0) {
+            await OfflineStorage.cacheCurriculo(unidades.map(unidade => ({
+              id: unidade.id,
+              modalidade: unidade.modalidade,
+              ano: unidade.ano,
+              bimestre: unidade.bimestre,
+              disciplina: unidade.disciplina,
+              nome: unidade.nome,
+              objetos: unidade.objetos || [],
+              habilidades: unidade.habilidades || [],
+            })));
+          }
+        }
+
+        if (unidades.length === 0) {
+          unidades = (await OfflineStorage.getCachedCurriculo(chave)) as unknown as CurriculoUnidade[];
+        }
+
+        setUnidadesBD(unidades || []);
+      } catch (err) {
+        console.error('Erro ao buscar currículo para avaliação:', err);
+        const unidadesCache = (await OfflineStorage.getCachedCurriculo(chave)) as unknown as CurriculoUnidade[];
+        setUnidadesBD(unidadesCache || []);
+      } finally {
+        setLoadingCurriculo(false);
+      }
+    }
+
+    loadCurriculo();
+  }, [turmaAtiva, selectedDate, periodoLetivo, currentBimestre]);
+
+  // Conteúdos ministrados até a data da avaliação
+  // Filtra para mostrar apenas conteúdos já ministrados, não todos do bimestre
+  const conteudosAteData = React.useMemo(() => {
+    if (!selectedDate || !conteudos) return [];
+    const bim = periodoLetivo || getBimestrePorData(selectedDate);
+    const dataLimiteISO = formatarDataParaISO(selectedDate);
+    return conteudos.filter(c => {
+      const dataConteudoISO = formatarDataParaISO(c.data);
+      return getBimestrePorData(c.data) === bim && dataConteudoISO <= dataLimiteISO;
+    });
+  }, [conteudos, selectedDate, periodoLetivo]);
+
+  // Memos para opções de objetos de conhecimento
+  // Mostra apenas unidades e objetos de conteúdos ministrados até a data da avaliação
+
+  // Coletar todos os objetos (conteúdos) ministrados até a data em um Set para busca rápida
+  const objetosMinistradosSet = React.useMemo(() => {
+    const set = new Set<string>();
+    conteudosAteData.forEach(c => {
+      (c.objetos || []).forEach(obj => {
+        if (obj) set.add(obj.toUpperCase());
+      });
+    });
+    return set;
+  }, [conteudosAteData]);
+
+  const unidadesOpcoes = React.useMemo(() => {
+    const list: string[] = [];
+
+    // Mostrar unidades do currículo que possuem pelo menos um objeto já ministrado até a data
+    unidadesBD.forEach(u => {
+      if (!u.nome) return;
+      const temObjetoMinistrado = u.objetos?.some((o: CurriculoObjeto | string) => {
+        const desc = typeof o === 'object' && o !== null ? (o.descricao || '') : String(o);
+        return desc && objetosMinistradosSet.has(desc.toUpperCase());
+      });
+      if (temObjetoMinistrado && !list.includes(u.nome)) {
+        list.push(u.nome);
+      }
+    });
+
+    conteudosAteData.forEach(c => {
+      const unidade = c.habilidades?.[0];
+      if (unidade && !list.includes(unidade)) list.push(unidade);
+    });
+    return list;
+  }, [unidadesBD, objetosMinistradosSet, conteudosAteData]);
+
+  const objetosOpcoes = React.useMemo(() => {
+    if (!unidadeDidatica) return [];
+    const list: string[] = [];
+
+    // Buscar a unidade do currículo correspondente
+    const matchedUnidade = unidadesBD.find(u => u.nome === unidadeDidatica);
+    if (matchedUnidade && matchedUnidade.objetos) {
+      // Mostrar apenas objetos desta unidade que foram efetivamente ministrados até a data
+      matchedUnidade.objetos.forEach((o: CurriculoObjeto | string) => {
+        const desc = typeof o === 'object' && o !== null ? (o.descricao || '') : String(o);
+        if (desc && objetosMinistradosSet.has(desc.toUpperCase()) && !list.includes(desc)) {
+          list.push(desc);
+        }
+      });
+    }
+
+    conteudosAteData.filter(c => c.habilidades?.[0] === unidadeDidatica)
+      .flatMap(c => c.objetos || []).forEach(objeto => {
+        if (objeto && !list.includes(objeto)) list.push(objeto);
+      });
+    return list;
+  }, [unidadeDidatica, unidadesBD, objetosMinistradosSet, conteudosAteData]);
+
+  // Alunos filtrados para notas:
+  // - 2ª Chamada (2CH): alunos faltosos na data original OU sem nota lançada na original OU que já tenham nota nesta 2CH
+  // - Recuperação Paralela (RP): alunos que realizaram a avaliação original e obtiveram nota abaixo de 50%
+  const alunosParaNotas = React.useMemo(() => {
+    if (!selectedAvaliacao) return [];
+    if (selectedAvaliacao.parent_id) {
+      const parentAv = avaliacoes.find(a => String(a.id) === String(selectedAvaliacao.parent_id));
+      const parentId = String(selectedAvaliacao.parent_id);
+
+      if (selectedAvaliacao.tipo?.includes('2CH')) {
+        const parentDataIso = parentAv ? formatarDataParaISO(parentAv.data) : '';
+        const faltasPai = parentDataIso ? (faltasPorData[parentDataIso] || new Set()) : new Set();
+        return alunos.filter(aluno => {
+          const jaTemNota2CH = aluno.notas?.[selectedAvaliacao.id] !== undefined && String(aluno.notas[selectedAvaliacao.id]).trim() !== '';
+          const faltouNaOrigem = faltasPai.has(aluno.id);
+          const notaPai = aluno.notas?.[parentId];
+          const semNotaOrigem = notaPai === undefined || notaPai === null || String(notaPai).trim() === '';
+          return jaTemNota2CH || faltouNaOrigem || semNotaOrigem;
+        });
+      }
+
+      // Lógica de RP: alunos com nota abaixo de 50% do valor máximo da avaliação
+      const parentMax = parentAv?.valorMaximo ? Number(parentAv.valorMaximo) : (selectedAvaliacao.valorMaximo ? Number(selectedAvaliacao.valorMaximo) : 10);
+      const mediaCorte = parentMax / 2;
+      return alunos.filter(aluno => {
+        const notaPaiStr = aluno.notas?.[parentId];
+        if (notaPaiStr === undefined || notaPaiStr === null || String(notaPaiStr).trim() === '') return false;
+        const notaPai = parseFloat(notaPaiStr.replace(',', '.'));
+        return !isNaN(notaPai) && notaPai < mediaCorte;
+      });
+    }
+    return alunos;
+  }, [selectedAvaliacao, alunos, avaliacoes, faltasPorData]);
+
+  // Carregar notas ao entrar em modo editor
+   
+  useEffect(() => {
+    if (avaliacaoViewMode === 'grades' && selectedAvaliacao) {
+      const segundaChamada = Boolean(selectedAvaliacao.tipo?.includes('2CH'));
+      const ausentes = segundaChamada
+        ? new Set<string>()
+        : (faltasPorData[formatarDataParaISO(selectedAvaliacao.data || '')] || new Set<string>());
+      const notasMap: Record<string, string> = {};
+      alunosParaNotas.forEach(aluno => {
+        notasMap[aluno.id] = ausentes.has(aluno.id) ? '' : (aluno.notas?.[selectedAvaliacao.id] || '');
+      });
+      setLocalNotas(notasMap);
+    }
+  }, [avaliacaoViewMode, selectedAvaliacao, alunosParaNotas, faltasPorData]);
+
+  useEffect(() => {
+    if (avaliacaoViewMode !== 'grades' || !selectedAvaliacao || selectedAvaliacao.tipo?.includes('2CH')) return;
+    const ausentes = faltasPorData[formatarDataParaISO(selectedAvaliacao.data || '')];
+    if (!ausentes || ausentes.size === 0) return;
+    const removidos = alunos
+      .filter(aluno => ausentes.has(aluno.id))
+      .filter(aluno => {
+        const chave = `${selectedAvaliacao.id}:${aluno.id}`;
+        if (notasRetiradasRef.current.has(chave)) return false;
+        const nota = aluno.notas?.[selectedAvaliacao.id] ?? aluno.notas?.[String(selectedAvaliacao.id)];
+        return nota !== undefined && nota !== null && String(nota).trim() !== '';
+      })
+      .map(aluno => aluno.id);
+    if (removidos.length === 0) return;
+    removidos.forEach(id => notasRetiradasRef.current.add(`${selectedAvaliacao.id}:${id}`));
+    // `salvarNotas` resolve `false` (não rejeita) quando a gravação falha, por isso
+    // a marca de "já retirada" precisa ser desfeita nesse caso para permitir nova tentativa.
+    void Promise.resolve(salvarNotas(selectedAvaliacao.id, [], removidos))
+      .then(salvo => {
+        if (salvo) return;
+        removidos.forEach(id => notasRetiradasRef.current.delete(`${selectedAvaliacao.id}:${id}`));
+        showError('Não foi possível retirar a nota de quem está com atestado ou falta nesta data.');
+      })
+      .catch(() => {
+        removidos.forEach(id => notasRetiradasRef.current.delete(`${selectedAvaliacao.id}:${id}`));
+        showError('Não foi possível retirar a nota de quem está com atestado ou falta nesta data.');
+      });
+  }, [avaliacaoViewMode, selectedAvaliacao, faltasPorData, alunos, salvarNotas, showError]);
+   
+
+  // Handlers para sincronização de período letivo e data
+  const handleSetPeriodoLetivo = (novoBim: string) => {
+    setPeriodoLetivo(novoBim);
+    setUnidadeDidatica('');
+    setObjetoConhecimento('');
+    if (novoBim) {
+      const periodoConfig = APP_CONFIG.PERIODOS.find(p => p.nome === novoBim || p.id === novoBim);
+      if (periodoConfig && getBimestrePorData(selectedDate) !== novoBim) {
+        setSelectedDate(periodoConfig.dataInicio);
+        const [y, m] = periodoConfig.dataInicio.split('-').map(Number);
+        if (y && m) {
+          setCalendarYear(y);
+          setCalendarMonth(m - 1);
+        }
+      }
+    }
+  };
+
+  const handleSetSelectedDate = (novaData: string) => {
+    setSelectedDate(novaData);
+    const novoBim = getBimestrePorData(novaData);
+    if (novoBim) {
+      setPeriodoLetivo(novoBim);
+      setUnidadeDidatica('');
+      setObjetoConhecimento('');
+    }
+  };
+
+  // Carregar faltas de cada data de avaliação automaticamente
+  useEffect(() => {
+    if (avaliacoes && avaliacoes.length > 0) {
+      avaliacoes.forEach(av => {
+        if (av.data && !parentIdVinculado(av.parent_id)) {
+          carregarFaltasDaData(av.data);
+        }
+      });
+    }
+  }, [avaliacoes, carregarFaltasDaData]);
+   
+
+  // Avaliação com notas/RP/2CH pendentes no bimestre ativo (se houver)
+  const avaliacaoPendente = React.useMemo(() => {
+    if (!avaliacoes || avaliacoes.length === 0 || !alunos || alunos.length === 0) {
+      return null;
+    }
+
+    const targetNum = getBimestreNumero(currentBimestre);
+    const avsPrincipaisDoBimestre = avaliacoes.filter(av => {
+      if (parentIdVinculado(av.parent_id)) return false;
+      const avNum = getBimestreNumero(av.bimestre || '') ?? getBimestreNumero(av.data);
+      return avNum === targetNum;
+    });
+
+    if (avsPrincipaisDoBimestre.length === 0) return null;
+
+    for (const av of avsPrincipaisDoBimestre) {
+      if (isAvaliacaoPendente(av, avaliacoes, alunos, faltasPorData)) {
+        return av;
+      }
+    }
+
+    return null;
+  }, [avaliacoes, alunos, faltasPorData, currentBimestre]);
+
+  // Handlers
+  const resetForm = () => {
+    setSelectedDate('');
+    setObjetosAvaliacao([]);
+    setSelectedAvaliacao(null);
+    setCaptchaInput('');
+    setPeriodoLetivo('');
+    setUnidadeDidatica('');
+    setObjetoConhecimento('');
+    setValorMaximo('10,00');
+    generateNewCaptcha();
+  };
+
+  const handleSaveAvaliacao = async () => {
+    if (isSaving) return;
+    if (!selectedDate) { showWarning('Selecione uma data!'); return; }
+    if (objetosAvaliacao.length === 0) { showWarning('Adicione pelo menos um Objeto de Conhecimento!'); return; }
+
+    const isEditingExisting = selectedAvaliacao && avaliacoes.some(a => String(a.id) === String(selectedAvaliacao.id));
+    const isCreatingChildEvaluation = selectedAvaliacao && !!parentIdVinculado(selectedAvaliacao.parent_id);
+
+    if (!isEditingExisting && !isCreatingChildEvaluation && avaliacaoPendente) {
+      showWarning(getMensagemPendenciaAvaliacao(avaliacaoPendente, avaliacoes, alunos, faltasPorData));
+      return;
+    }
+
+    const valMax = parseFloat(valorMaximo.replace(',', '.')) || 10;
+    const bimestre = getBimestrePorData(selectedDate);
+
+    // Validação de limite de pontos do bimestre para avaliações principais
+    if (!isCreatingChildEvaluation) {
+      const { limite, somaExistentes, pontosDisponiveis } = getInfoPontosBimestre(
+        bimestre,
+        avaliacoes,
+        isEditingExisting ? selectedAvaliacao.id : undefined
+      );
+
+      if (valMax > pontosDisponiveis) {
+        showWarning(
+          `A pontuação informada (${valMax.toFixed(2).replace('.', ',')} pts) excede o limite máximo permitido de ${limite.toFixed(2).replace('.', ',')} pontos do ${bimestre}. Pontos já utilizados: ${somaExistentes.toFixed(2).replace('.', ',')} pts. Pontos disponíveis: ${pontosDisponiveis.toFixed(2).replace('.', ',')} pts.`
+        );
+        return;
+      }
+    }
+
+    const payload: Avaliacao = {
+      id: isEditingExisting ? selectedAvaliacao.id : `temp_${Date.now()}`,
+      turmaId: turmaAtiva?.id || '',
+      tipo: selectedAvaliacao?.tipo || `AV${String(avaliacoesDoBimestre.length + 1).padStart(2, '0')}`,
+      data: selectedDate,
+      instrumento: instrumentoAvaliacao,
+      objetos: objetosAvaliacao,
+      bimestre,
+      valorMaximo: valMax,
+      parent_id: selectedAvaliacao?.parent_id
+    };
+
+    try {
+      setIsSaving(true);
+      const criada = await salvarAvaliacao(payload);
+      // `salvarAvaliacao` devolve '' quando o período está fechado ou a gravação
+      // falhou; manter o formulário aberto evita perda silenciosa do lançamento.
+      if (!criada) return;
+      setAvaliacaoViewMode('list');
+      resetForm();
+    } catch (err) {
+      console.error('Erro ao salvar avaliação:', err);
+      showError('Erro ao salvar avaliação.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleConfirmGrades = async () => {
+    if (!selectedAvaliacao) return;
+
+    const maxVal = selectedAvaliacao.valorMaximo ? Number(selectedAvaliacao.valorMaximo) : 10;
+
+    const notasToSave: { alunoId: string; valor: string }[] = [];
+    const removidos: string[] = [];
+    const segundaChamada = Boolean(selectedAvaliacao.tipo?.includes('2CH'));
+    const ausentesNaProva = segundaChamada
+      ? new Set<string>()
+      : (faltasPorData[formatarDataParaISO(selectedAvaliacao.data || '')] || new Set<string>());
+
+    Object.entries(localNotas).forEach(([alunoId, valor]) => {
+      if (ausentesNaProva.has(alunoId)) {
+        removidos.push(alunoId);
+        return;
+      }
+      if (valor !== '') {
+        notasToSave.push({ alunoId, valor });
+      } else {
+        removidos.push(alunoId);
+      }
+    });
+
+    const notaInvalida = notasToSave.find(n => {
+      const v = parseFloat(n.valor.replace(',', '.'));
+      return !isNaN(v) && v > maxVal;
+    });
+
+    if (notaInvalida) {
+      showWarning(`A nota informada (${notaInvalida.valor}) é superior ao valor máximo permitido (${maxVal.toFixed(2).replace('.', ',')}) para esta avaliação.`);
+      return;
+    }
+
+    try {
+      const salvo = await salvarNotas(selectedAvaliacao.id, notasToSave, removidos);
+      if (!salvo) return;
+      setAvaliacaoViewMode('list');
+      resetForm();
+    } catch (err) {
+      console.error('Erro ao salvar notas:', err);
+      showError('Erro ao gravar notas.');
+    }
+  };
+
+  const handleSaveSecondCall = async () => {
+    if (!selectedAvaliacao) return;
+
+    const maxVal = selectedAvaliacao.valorMaximo ? Number(selectedAvaliacao.valorMaximo) : 10;
+    const selectedAlunIds = Object.keys(secondCallRows).filter(id => secondCallRows[id].selected);
+    if (selectedAlunIds.length === 0) { showWarning('Selecione pelo menos um aluno!'); return; }
+
+    for (const id of selectedAlunIds) {
+      const g = parseFloat((secondCallRows[id].grade || '').replace(',', '.'));
+      if (!isNaN(g) && g > maxVal) {
+        showWarning(`A nota digitada (${secondCallRows[id].grade}) excede o valor máximo permitido (${maxVal.toFixed(2).replace('.', ',')}).`);
+        return;
+      }
+    }
+
+    try {
+      setIsSaving(true);
+      const dates = [...new Set(selectedAlunIds.map(id => secondCallRows[id].date))];
+
+      for (const d of dates) {
+        const payload: Avaliacao = {
+          id: `temp_2ch_${Date.now()}_${d}`,
+          turmaId: selectedAvaliacao.turmaId,
+          tipo: `2CH`,
+          data: d,
+          instrumento: selectedAvaliacao.instrumento,
+          objetos: selectedAvaliacao.objetos,
+          bimestre: selectedAvaliacao.bimestre,
+          valorMaximo: selectedAvaliacao.valorMaximo || 10,
+          parent_id: selectedAvaliacao.id
+        };
+
+        const createdId = await salvarAvaliacao(payload);
+        // Sem ID significa que a avaliação não foi gravada; abortar aqui evita
+        // que o formulário seja limpo e o usuário acredite no sucesso.
+        if (!createdId) return;
+        const notasParaData = selectedAlunIds
+          .filter(id => secondCallRows[id].date === d && secondCallRows[id].grade && secondCallRows[id].grade.trim() !== '')
+          .map(id => ({ alunoId: id, valor: secondCallRows[id].grade }));
+        
+        if (notasParaData.length > 0) {
+          const notasSalvas = await salvarNotas(createdId, notasParaData);
+          if (!notasSalvas) return;
+        }
+      }
+
+      setAvaliacaoViewMode('list');
+      resetForm();
+    } catch (err) {
+      console.error('Erro ao salvar segunda chamada:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleNotaChange = (alunoId: string, val: string) => {
+    const numStr = val.replace(/\D/g, '');
+    if (!numStr) { setLocalNotas(prev => ({ ...prev, [alunoId]: '' })); return; }
+    const numVal = parseInt(numStr, 10);
+    const maxVal = selectedAvaliacao?.valorMaximo ? Number(selectedAvaliacao.valorMaximo) : 10;
+    const maxPermitido = Math.round(maxVal * 100);
+    if (numVal > maxPermitido) return;
+    const formatted = (numVal / 100).toFixed(2).replace('.', ',');
+    setLocalNotas(prev => ({ ...prev, [alunoId]: formatted }));
+  };
+
+  if (loading) {
+    return (
+      <div className="py-20 flex flex-col items-center justify-center text-slate-400">
+        <Loader2 className="w-10 h-10 animate-spin mb-4" />
+        <p className="font-medium">Carregando dados da turma...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+
+      {avaliacaoViewMode === 'list' && (
+        <AvaliacoesList 
+          avaliacoes={avaliacoes}
+          todasAvaliacoes={avaliacoes}
+          currentBimestre={currentBimestre}
+          alunos={alunos}
+          faltasPorData={faltasPorData}
+          onViewDetails={(av) => { setSelectedAvaliacao(av); setAvaliacaoViewMode('details'); }}
+          onEdit={(av) => { 
+            setSelectedAvaliacao(av); 
+            setSelectedDate(av.data); 
+            setPeriodoLetivo(av.bimestre || getBimestrePorData(av.data));
+            const [y, m] = av.data.split('-').map(Number);
+            if (y && m) {
+              setCalendarYear(y);
+              setCalendarMonth(m - 1);
+            }
+            setInstrumentoAvaliacao(av.instrumento || 'AVALIACAO ESCRITA'); 
+            setObjetosAvaliacao(av.objetos || []); 
+            setValorMaximo(av.valorMaximo ? av.valorMaximo.toString().replace('.', ',') : '10,00');
+            setAvaliacaoViewMode('edit'); 
+          }}
+          onDelete={(av) => { setAvaliacaoToDelete(av); setShowDeleteModal(true); }}
+          onAddRP={(av) => {
+            const dataIso = formatarDataParaISO(av.data);
+            const faltasNoDia = faltasPorData[dataIso] || new Set();
+            const alunosPresentes = alunos.filter(a => !faltasNoDia.has(a.id));
+            const temNotasPendentes = alunosPresentes.length > 0 && alunosPresentes.some(a => {
+              const nota = a.notas?.[av.id] ?? a.notas?.[String(av.id)];
+              return nota === undefined || nota === null || String(nota).trim() === '';
+            });
+
+            if (temNotasPendentes) {
+              showWarning(`Não é possível adicionar Recuperação Paralela. A avaliação ${av.tipo} possui notas pendentes. Lance todas as notas da avaliação antes de prosseguir.`);
+              return;
+            }
+
+            const novoRP: Avaliacao = {
+              id: '',
+              turmaId: av.turmaId,
+              tipo: av.tipo.includes('AV') ? av.tipo.replace('AV', 'RP') : `RP - ${av.tipo}`,
+              data: av.data,
+              instrumento: av.instrumento,
+              objetos: av.objetos,
+              bimestre: av.bimestre,
+              valorMaximo: av.valorMaximo || 10,
+              parent_id: av.id
+            };
+            setSelectedAvaliacao(novoRP);
+            setSelectedDate(novoRP.data);
+            setPeriodoLetivo(novoRP.bimestre || getBimestrePorData(novoRP.data));
+            const [y, m] = novoRP.data.split('-').map(Number);
+            if (y && m) {
+              setCalendarYear(y);
+              setCalendarMonth(m - 1);
+            }
+            setInstrumentoAvaliacao(novoRP.instrumento);
+            setObjetosAvaliacao(novoRP.objetos || []);
+            setValorMaximo(novoRP.valorMaximo ? novoRP.valorMaximo.toString().replace('.', ',') : '10,00');
+            setAvaliacaoViewMode('edit');
+          }}
+          onShowGrades={(av) => { setSelectedAvaliacao(av); carregarFaltasDaData(av.data); setAvaliacaoViewMode('grades'); }}
+          onSecondCall={(av) => {
+            setSelectedAvaliacao(av);
+            carregarFaltasDaData(av.data);
+            const rows: Record<string, { selected: boolean; date: string; grade: string }> = {};
+            alunos.forEach(a => {
+              rows[a.id] = { selected: !a.notas?.[av.id], date: av.data, grade: '' };
+            });
+            setSecondCallRows(rows);
+            setAvaliacaoViewMode('second_call');
+            generateNewCaptcha();
+          }}
+          onAddAvaliacao={() => { 
+            if (avaliacaoPendente) {
+              showWarning(getMensagemPendenciaAvaliacao(avaliacaoPendente, avaliacoes, alunos, faltasPorData));
+              return;
+            }
+            const periodoConfig = APP_CONFIG.PERIODOS.find(p => p.nome === currentBimestre || p.id === currentBimestre);
+            let dataPadrao = dataContexto;
+            if (!dataPadrao || getBimestrePorData(dataPadrao) !== currentBimestre) {
+              dataPadrao = periodoConfig?.dataInicio || new Date().toISOString().split('T')[0];
+            }
+            const { limite, pontosDisponiveis } = getInfoPontosBimestre(currentBimestre, avaliacoes);
+
+            if (pontosDisponiveis <= 0) {
+              showWarning(`A pontuação máxima do ${currentBimestre} (${limite.toFixed(2).replace('.', ',')} pontos) já foi totalmente distribuída entre as avaliações cadastradas.`);
+              return;
+            }
+
+            resetForm(); 
+            setSelectedDate(dataPadrao);
+            setPeriodoLetivo(currentBimestre);
+            const [pY, pM] = dataPadrao.split('-').map(Number);
+            if (pY && pM) {
+              setCalendarYear(pY);
+              setCalendarMonth(pM - 1);
+            }
+            const maxSugerido = Math.min(10, pontosDisponiveis);
+            setValorMaximo(maxSugerido.toFixed(2).replace('.', ','));
+            setAvaliacaoViewMode('edit'); 
+          }}
+          disabled={disabled}
+        />
+      )}
+
+      {avaliacaoViewMode === 'edit' && (
+        <AvaliacaoForm 
+          selectedAvaliacao={selectedAvaliacao}
+          selectedDate={selectedDate}
+          instrumentoAvaliacao={instrumentoAvaliacao}
+          objetosAvaliacao={objetosAvaliacao}
+          periodoLetivo={periodoLetivo}
+          unidadeDidatica={unidadeDidatica}
+          objetoConhecimento={objetoConhecimento}
+          valorMaximo={valorMaximo}
+          unidadesOpcoes={unidadesOpcoes}
+          objetosOpcoes={objetosOpcoes}
+          generatedCaptcha={generatedCaptcha}
+          captchaInput={captchaInput}
+          captchaError={captchaError}
+          isDatePickerOpen={isDatePickerOpen}
+          calendarMonth={calendarMonth}
+          calendarYear={calendarYear}
+          PERIODOS_LABELS={PERIODOS_LABELS}
+          onSave={handleSaveAvaliacao}
+          onCancel={() => { setAvaliacaoViewMode('list'); resetForm(); }}
+          onAddObjeto={() => {
+            const u = unidadeDidatica.trim() || 'Conteúdo da Avaliação';
+            const o = objetoConhecimento.trim();
+            if (!o) return showWarning('Por favor, informe o Objeto de Conhecimento!');
+            if (objetosAvaliacao.some(item => item.unidade === u && item.objeto === o)) {
+              return showWarning('Este objeto de conhecimento já foi adicionado à avaliação!');
+            }
+            setObjetosAvaliacao(prev => [...prev, { unidade: u, objeto: o }]);
+            setObjetoConhecimento('');
+          }}
+          onRemoveObjeto={(idx) => setObjetosAvaliacao(prev => prev.filter((_, i) => i !== idx))}
+          onSetSelectedDate={handleSetSelectedDate}
+          onSetIsDatePickerOpen={setIsDatePickerOpen}
+          onSetInstrumentoAvaliacao={setInstrumentoAvaliacao}
+          onSetPeriodoLetivo={handleSetPeriodoLetivo}
+          onSetUnidadeDidatica={setUnidadeDidatica}
+          onSetObjetoConhecimento={setObjetoConhecimento}
+          onSetValorMaximo={setValorMaximo}
+          onSetCaptchaInput={setCaptchaInput}
+          onGenerateNewCaptcha={generateNewCaptcha}
+          onSetCalendarMonth={setCalendarMonth}
+          onSetCalendarYear={setCalendarYear}
+          isSaving={isSaving}
+        />
+      )}
+
+      {avaliacaoViewMode === 'details' && (
+        <AvaliacaoDetailsView 
+          selectedAvaliacao={selectedAvaliacao}
+          onBack={() => { setAvaliacaoViewMode('list'); setSelectedAvaliacao(null); }}
+        />
+      )}
+
+      {avaliacaoViewMode === 'grades' && (
+        <NotasEditor 
+          selectedAvaliacao={selectedAvaliacao}
+          alunosParaNotas={alunosParaNotas}
+          localNotas={localNotas}
+          faltasPorData={faltasPorData}
+          atestadosPorData={atestadosPorData}
+          generatedCaptcha={generatedCaptcha}
+          captchaInput={captchaInput}
+          captchaError={captchaError}
+          onNotaChange={handleNotaChange}
+          onConfirm={handleConfirmGrades}
+          onCancel={() => { setAvaliacaoViewMode('list'); resetForm(); }}
+          onSetCaptchaInput={setCaptchaInput}
+          onGenerateNewCaptcha={generateNewCaptcha}
+          disabled={disabled}
+        />
+      )}
+
+      {avaliacaoViewMode === 'second_call' && (
+        <SegundaChamadaEditor 
+          selectedAvaliacao={selectedAvaliacao}
+          alunos={alunos.filter(a => faltasPorData[formatarDataParaISO(selectedAvaliacao?.data || '')]?.has(a.id))}
+          secondCallRows={secondCallRows}
+          isSaving={isSaving}
+          generatedCaptcha={generatedCaptcha}
+          captchaInput={captchaInput}
+          captchaError={captchaError}
+          onSetSecondCallRows={setSecondCallRows}
+          onSave={handleSaveSecondCall}
+          onCancel={() => { setAvaliacaoViewMode('list'); resetForm(); }}
+          onSetCaptchaInput={setCaptchaInput}
+          onGenerateNewCaptcha={generateNewCaptcha}
+        />
+      )}
+
+      {showDeleteModal && (
+        <DeleteAvaliacaoModal 
+          onConfirm={async () => {
+            if (avaliacaoToDelete) await removerAvaliacao(avaliacaoToDelete.id);
+            setShowDeleteModal(false);
+            setAvaliacaoToDelete(null);
+          }}
+          onCancel={() => { setShowDeleteModal(false); setAvaliacaoToDelete(null); }}
+        />
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,202 @@
+// @vitest-environment happy-dom
+import React from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import CalendarWidget from '../components/common/CalendarWidget';
+
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => mockNavigate,
+}));
+
+describe('CalendarWidget - Abertura do Diário com apenas um clique', () => {
+  const mockOnDaySelect = vi.fn();
+  const mockOnMonthChange = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  const turmaAtivaExemplo = {
+    id: 'turma-1',
+    nome: '1º ANO A',
+  };
+
+  // Segunda-feira (dia 1)
+  const horarioTurma = [
+    { dia_semana: 1, tempo_ordem: 1, componente: 'MATEMÁTICA' },
+  ];
+
+  it('deve navegar diretamente para a tela de frequência e notas ao clicar UMA ÚNICA VEZ em um dia de aula', () => {
+    render(
+      <CalendarWidget
+        year={2026}
+        currentMonth={4} // Maio 2026 (Maio 4, 2026 é Segunda-feira)
+        onMonthChange={mockOnMonthChange}
+        turmaAtiva={turmaAtivaExemplo}
+        lancamentos={[]}
+        avaliacoes={[]}
+        alunos={[]}
+        horarioTurma={horarioTurma}
+        periodoStart="2026-05-01"
+        periodoEnd="2026-05-31"
+        selectedDay={null}
+        onDaySelect={mockOnDaySelect}
+      />
+    );
+
+    // O dia 4 de maio de 2026 é uma segunda-feira letiva
+    const botaoDia4 = screen.getByLabelText(/4 de Maio, Segunda-feira/i);
+    expect(botaoDia4).toBeDefined();
+
+    // Dispara UM ÚNICO clique
+    fireEvent.click(botaoDia4);
+
+    // onDaySelect deve ser invocado
+    expect(mockOnDaySelect).toHaveBeenCalledTimes(1);
+
+    // navigate deve ser chamado imediatamente para /frequencia com a data e turma corretas
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith('/frequencia?date=2026-05-04&turmaId=turma-1');
+  });
+
+  it('deve exibir o tooltip indicando clique único para abrir frequência e notas', () => {
+    render(
+      <CalendarWidget
+        year={2026}
+        currentMonth={4}
+        onMonthChange={mockOnMonthChange}
+        turmaAtiva={turmaAtivaExemplo}
+        lancamentos={[]}
+        avaliacoes={[]}
+        alunos={[]}
+        horarioTurma={horarioTurma}
+        periodoStart="2026-05-01"
+        periodoEnd="2026-05-31"
+        selectedDay={null}
+        onDaySelect={mockOnDaySelect}
+      />
+    );
+
+    const cell = screen.getByLabelText(/4 de Maio, Segunda-feira/i);
+    expect(cell.getAttribute('title')).toBe('Clique para abrir Frequência e notas');
+    expect(cell.getAttribute('title')).not.toContain('duas vezes');
+  });
+
+  it('deve abrir o diário ao pressionar Enter em um dia de aula', () => {
+    render(
+      <CalendarWidget
+        year={2026}
+        currentMonth={4}
+        onMonthChange={mockOnMonthChange}
+        turmaAtiva={turmaAtivaExemplo}
+        lancamentos={[]}
+        avaliacoes={[]}
+        alunos={[]}
+        horarioTurma={horarioTurma}
+        periodoStart="2026-05-01"
+        periodoEnd="2026-05-31"
+        selectedDay={null}
+        onDaySelect={mockOnDaySelect}
+      />
+    );
+
+    const botaoDia4 = screen.getByLabelText(/4 de Maio, Segunda-feira/i);
+    fireEvent.keyDown(botaoDia4, { key: 'Enter' });
+
+    expect(mockNavigate).toHaveBeenCalledWith('/frequencia?date=2026-05-04&turmaId=turma-1');
+  });
+
+  it('mostra R no dia que só tem recuperação paralela', () => {
+    render(
+      <CalendarWidget
+        year={2026}
+        currentMonth={4}
+        onMonthChange={mockOnMonthChange}
+        turmaAtiva={turmaAtivaExemplo}
+        lancamentos={[]}
+        avaliacoes={[{ id: '9', data: '2026-05-13', turmaId: 'turma-1', tipo: 'RP01' }]}
+        alunos={[]}
+        horarioTurma={[{ dia_semana: 3, tempo_ordem: 4, componente: 'MATEMÁTICA' }]}
+        periodoStart="2026-05-01"
+        periodoEnd="2026-05-31"
+        selectedDay={null}
+        onDaySelect={mockOnDaySelect}
+      />
+    );
+
+    const dia13 = screen.getByLabelText(/13 de Maio, Quarta-feira/i);
+    expect(dia13.querySelector('[aria-label^="Recuperação paralela"]')).toBeTruthy();
+    expect(dia13.querySelector('[aria-label^="Avaliação"]')).toBeNull();
+  });
+
+  it('não abre a frequência quando o dia é feriado', () => {
+    render(
+      <CalendarWidget
+        year={2026}
+        currentMonth={4}
+        onMonthChange={mockOnMonthChange}
+        turmaAtiva={turmaAtivaExemplo}
+        lancamentos={[]}
+        avaliacoes={[]}
+        alunos={[]}
+        horarioTurma={horarioTurma}
+        periodoStart="2026-05-01"
+        periodoEnd="2026-05-31"
+        selectedDay={null}
+        onDaySelect={mockOnDaySelect}
+        feriados={{ '2026-05-04': 'Aniversário da cidade' }}
+      />
+    );
+
+    const feriado = screen.getByLabelText(/4 de Maio, feriado: Aniversário da cidade/i);
+    fireEvent.click(feriado);
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockOnDaySelect).toHaveBeenCalled();
+  });
+
+  it('esconde aulas futuras e mantém o feriado visível', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 14, 15, 0, 0));
+
+    render(
+      <CalendarWidget
+        year={2026}
+        currentMonth={9}
+        onMonthChange={mockOnMonthChange}
+        turmaAtiva={turmaAtivaExemplo}
+        lancamentos={[]}
+        avaliacoes={[]}
+        alunos={[]}
+        horarioTurma={[
+          { dia_semana: 3, tempo_ordem: 1, componente: 'MATEMÁTICA' },
+          { dia_semana: 3, tempo_ordem: 2, componente: 'MATEMÁTICA' },
+          { dia_semana: 4, tempo_ordem: 1, componente: 'MATEMÁTICA' },
+        ]}
+        periodoStart="2026-09-25"
+        periodoEnd="2026-12-14"
+        selectedDay={15}
+        onDaySelect={mockOnDaySelect}
+        feriados={{ '2026-10-15': 'Dia dos Professores' }}
+      />
+    );
+
+    const hoje = screen.getByLabelText(/14 de Outubro, Quarta-feira/i);
+    expect(hoje.textContent).toContain('hoje');
+    expect(screen.queryByText('Programado')).toBeNull();
+    expect(screen.queryByLabelText(/21 de Outubro/i)).toBeNull();
+
+    const feriado = screen.getByLabelText(/15 de Outubro, feriado: Dia dos Professores/i);
+    fireEvent.click(feriado);
+    expect(mockNavigate).not.toHaveBeenCalled();
+
+    fireEvent.click(hoje);
+    expect(mockNavigate).toHaveBeenCalledWith('/frequencia?date=2026-10-14&turmaId=turma-1');
+
+    vi.useRealTimers();
+  });
+});

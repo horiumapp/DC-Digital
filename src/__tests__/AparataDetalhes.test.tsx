@@ -1,0 +1,206 @@
+// @vitest-environment happy-dom
+import React from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import AparataDetalhes from '../pages/AparataDetalhes';
+import * as OfflineTurmaService from '../services/turmaServiceOffline';
+
+const mockUseTurma = vi.fn();
+const mockUseAuth = vi.fn();
+const mockFrequenciasHistoricas = vi.fn();
+
+vi.mock('../contexts/TurmaContext', () => ({
+  useTurma: () => mockUseTurma(),
+}));
+
+vi.mock('../contexts/AuthContext', () => ({
+  useAuth: () => mockUseAuth(),
+}));
+
+// Cadeia fluente mínima: qualquer método devolve o próprio builder e o await
+// resolve com o resultado controlado por `mockFrequenciasHistoricas`.
+vi.mock('../lib/supabase', () => {
+  const builder: Record<string, unknown> = {};
+  const encadeavel = () => builder;
+  builder.select = encadeavel;
+  builder.in = encadeavel;
+  builder.eq = encadeavel;
+  builder.gte = encadeavel;
+  builder.lte = encadeavel;
+  builder.maybeSingle = encadeavel;
+  builder.then = (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
+    Promise.resolve(mockFrequenciasHistoricas()).then(resolve, reject);
+  return { supabase: { from: () => builder } };
+});
+
+vi.mock('../services/turmaServiceOffline', () => ({
+  fetchAllFrequencias: vi.fn(),
+  fetchFechamentos: vi.fn().mockResolvedValue({}),
+  fetchDisciplinasDaTurma: vi.fn().mockResolvedValue(['Matemática']),
+  fetchAvaliacoes: vi.fn().mockResolvedValue({ avaliacoes: [], notasData: [] }),
+}));
+
+vi.mock('../components/common/TurmaHeaderInfo', () => ({
+  default: () => <div data-testid="turma-header" />,
+}));
+
+vi.mock('react-router-dom', () => ({
+  Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
+  useNavigate: () => vi.fn(),
+  useSearchParams: () => [new URLSearchParams('periodo=1. BIMESTRE')],
+}));
+
+const turmaAtiva = {
+  id: 'turma-1',
+  ensino: 'Fundamental',
+  fase: '5º Ano A',
+  componente: 'Matemática',
+  professor: 'Professora Teste',
+  escola: 'Escola Teste',
+  turno: 'Matutino',
+  metricas: { frequencia: 0, objetosMinistrados: 0, objetosPlanejados: 0, avaliacoesCadastradas: 0, avaliacoesPrevistas: 0, notasLancadas: 0, notasPrevistas: 0 },
+  diasDeAula: [1],
+  tempos: ['1'],
+};
+
+describe('AparataDetalhes', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFrequenciasHistoricas.mockReturnValue({ data: null, error: null });
+    mockUseAuth.mockReturnValue({ user: { role: 'PROFESSOR' } });
+    mockUseTurma.mockReturnValue({
+      turmaAtiva,
+      alunos: [{ id: 'aluno-1', nome: 'Aluno Pendente', matricula: '123', freq: 'F', part: 'Presencial', notas: {} }],
+      avaliacoes: [],
+      lancamentos: [],
+      fechamentos: {},
+      salvarFechamento: vi.fn(),
+    });
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('inclui falta local pendente no total da Aparata, mesmo sem acesso ao Supabase', async () => {
+    vi.mocked(OfflineTurmaService.fetchAllFrequencias).mockResolvedValue([
+      {
+        aluno_id: 'aluno-1',
+        status: 'F',
+        data: '2026-03-10',
+        disciplina: 'Matemática',
+        syncStatus: 'pending',
+      } as Awaited<ReturnType<typeof OfflineTurmaService.fetchAllFrequencias>>[number],
+      { aluno_id: 'aluno-fora', status: 'F', data: '2026-03-10', disciplina: 'Matemática' } as Awaited<ReturnType<typeof OfflineTurmaService.fetchAllFrequencias>>[number],
+      { aluno_id: 'aluno-1', status: 'F', data: '2026-05-10', disciplina: 'Matemática' } as Awaited<ReturnType<typeof OfflineTurmaService.fetchAllFrequencias>>[number],
+      { aluno_id: 'aluno-1', status: 'F', data: '2026-03-10', disciplina: 'Português' } as Awaited<ReturnType<typeof OfflineTurmaService.fetchAllFrequencias>>[number],
+    ]);
+
+    render(<AparataDetalhes />);
+
+    await waitFor(() => {
+      expect(OfflineTurmaService.fetchAllFrequencias).toHaveBeenCalledWith('turma-1', 'Matemática');
+    });
+
+    const row = screen.getByText('Aluno Pendente', { selector: 'td.cursor-pointer' }).closest('tr');
+    expect(row?.textContent).toContain('1');
+  });
+
+  it('não descarta a falta pendente local quando o servidor responde com outro registro', async () => {
+    vi.mocked(OfflineTurmaService.fetchAllFrequencias).mockResolvedValue([
+      {
+        aluno_id: 'aluno-1',
+        status: 'F',
+        data: '2026-03-10',
+        tempo: '1',
+        disciplina: 'Matemática',
+        syncStatus: 'pending',
+      } as Awaited<ReturnType<typeof OfflineTurmaService.fetchAllFrequencias>>[number],
+    ]);
+    // O servidor já conhece apenas o registro de 11/03 — antes, a resposta do
+    // servidor substituía a lista local e a falta de 10/03 desaparecia do total.
+    mockFrequenciasHistoricas.mockReturnValue({
+      data: [{ aluno_id: 'aluno-1', status: 'F', data: '2026-03-11', tempo: '1', disciplina: 'Matemática' }],
+      error: null,
+    });
+
+    render(<AparataDetalhes />);
+
+    await waitFor(() => {
+      expect(OfflineTurmaService.fetchAllFrequencias).toHaveBeenCalledWith('turma-1', 'Matemática');
+    });
+
+    const row = await waitFor(() => {
+      const found = screen.getByText('Aluno Pendente', { selector: 'td.cursor-pointer' }).closest('tr');
+      if (!found) throw new Error('linha do aluno não renderizada');
+      return found;
+    });
+    // A coluna "Faltas" é a última célula da linha; a matrícula também contém
+    // dígitos, então a asserção precisa olhar a célula exata.
+    const celulas = row.querySelectorAll('td');
+    expect(celulas[celulas.length - 1]?.textContent).toBe('2');
+  });
+
+  it('calcula corretamente somaParcial considerando nota de 2ª Chamada (2CH)', async () => {
+    vi.mocked(OfflineTurmaService.fetchAllFrequencias).mockResolvedValue([]);
+
+    mockUseTurma.mockReturnValue({
+      turmaAtiva,
+      alunos: [
+        {
+          id: 'aluno-1',
+          nome: 'Bruna Teste',
+          matricula: '12345',
+          freq: 'P',
+          part: 'Presencial',
+          notas: {
+            'av-1': '', // Faltou na AV1 (sem nota)
+            'ch-1': '8,5', // Fez 2ª Chamada da AV1 e tirou 8,5
+            'av-2': '7,0', // AV2 tirou 7,0
+          },
+        },
+      ],
+      avaliacoes: [
+        { id: 'av-1', tipo: 'AV01', bimestre: '1º BIMESTRE', data: '2026-03-01' },
+        { id: 'ch-1', tipo: '2ª CH (AV01)', bimestre: '1º BIMESTRE', data: '2026-03-05', parent_id: 'av-1' },
+        { id: 'av-2', tipo: 'AV02', bimestre: '1º BIMESTRE', data: '2026-03-15' },
+      ],
+      lancamentos: [],
+      fechamentos: {},
+      salvarFechamento: vi.fn(),
+    });
+
+    render(<AparataDetalhes />);
+
+    // AV1 considerou 2ª CH = 8.5, AV2 = 7.0 => Soma = 15.50
+    const row = screen.getByText('Bruna Teste', { selector: 'td.cursor-pointer' }).closest('tr');
+    expect(row?.textContent).toContain('15,50');
+  });
+
+  it('exibe a quantidade real de avaliações feitas no bimestre (não exibindo valor fixo 3)', async () => {
+    vi.mocked(OfflineTurmaService.fetchAllFrequencias).mockResolvedValue([]);
+
+    mockUseTurma.mockReturnValue({
+      turmaAtiva,
+      alunos: [],
+      avaliacoes: [
+        { id: 'av-1', tipo: 'AV01', bimestre: '1º BIMESTRE', data: '2026-02-27', disciplina: 'Matemática' },
+        { id: 'av-2', tipo: 'AV02', bimestre: '1º BIMESTRE', data: '2026-04-21', disciplina: 'Matemática' },
+        // Avaliação derivada não deve ser somada
+        { id: 'ch-1', tipo: '2ª CH', bimestre: '1º BIMESTRE', data: '2026-04-25', parent_id: 'av-1', disciplina: 'Matemática' },
+        // Avaliação de outro bimestre não deve ser somada no 1º bimestre
+        { id: 'av-3', tipo: 'AV01', bimestre: '2º BIMESTRE', data: '2026-05-10', disciplina: 'Matemática' },
+      ],
+      lancamentos: [],
+      fechamentos: {},
+      salvarFechamento: vi.fn(),
+    });
+
+    render(<AparataDetalhes />);
+
+    // Deve exibir 2 e não o antigo valor fixo de 3
+    const avsLabel = screen.getByText('Qtde de AVs Feitas');
+    const avsValue = avsLabel.nextElementSibling;
+    expect(avsValue?.textContent).toBe('2');
+  });
+});

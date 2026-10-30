@@ -1,0 +1,702 @@
+import { PortalBrand, PageHeading, Metric } from '../components/common/PortalUI';
+import { readAllRows } from '../services/pagination';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
+import { BookOpen, CalendarCheck, BarChart3, Loader2, LogOut, User, ChevronRight, ChevronDown, Calendar, Shield } from 'lucide-react';
+import PrivacyLinksFooter from '../components/PrivacyLinksFooter';
+import { APP_CONFIG } from '../config/appConfig';
+import { formatMatriculaCpf } from '../utils/formatters';
+import { retratoPorSexo } from '../utils/retratoAluno';
+import { calcularFrequenciaLdb, classificarEtapaFrequencia } from '../utils/regraFrequenciaLdb';
+import { classeElipseNota } from '../utils/corNota';
+
+import BoletimTab from '../components/portal/BoletimTab';
+
+interface AlunoData {
+  id: string;
+  nome: string;
+  escola_nome: string;
+  escola_inep: string;
+  escola_diretor: string;
+  escola_secretario?: string;
+  escola_endereco: string;
+  turma_nome: string;
+  turma_turno: string;
+  turma_ano: string;
+  matricula: string;
+  data_nascimento: string;
+  nome_responsavel: string;
+  endereco: string;
+  sexo: string;
+  numero_aluno: number;
+  ensino_modalidade: string;
+  escola_logo_url?: string;
+}
+
+interface NotaItem {
+  disciplina: string;
+  tipo: string;
+  valor: number;
+  valor_maximo: number;
+  bimestre: string;
+}
+
+interface FrequenciaItem {
+  data: string;
+  disciplina: string;
+  status: string;
+  participacao: string;
+}
+
+export default function PortalAluno() {
+  const { user, logout } = useAuth();
+  const [alunoData, setAlunoData] = useState<AlunoData | null>(null);
+  const [notas, setNotas] = useState<NotaItem[]>([]);
+  const [frequencias, setFrequencias] = useState<FrequenciaItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'notas' | 'frequencia' | 'boletim'>('notas');
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+  const [expandedDisciplinas, setExpandedDisciplinas] = useState<Set<string>>(new Set());
+
+  const toggleDisciplina = (disciplina: string) => {
+    setExpandedDisciplinas(atual => {
+      const proximo = new Set(atual);
+      if (proximo.has(disciplina)) proximo.delete(disciplina);
+      else proximo.add(disciplina);
+      return proximo;
+    });
+  };
+
+  const toggleMonth = (monthKey: string) => {
+    const newExpanded = new Set(expandedMonths);
+    if (newExpanded.has(monthKey)) {
+      newExpanded.delete(monthKey);
+    } else {
+      newExpanded.add(monthKey);
+    }
+    setExpandedMonths(newExpanded);
+  };
+
+  const NOMES_MESES = [
+    'JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
+    'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'
+  ];
+
+  useEffect(() => {
+    if (user?.id) {
+       
+      fetchAlunoData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  async function fetchAlunoData() {
+    if (!alunoData) setLoading(true);
+    
+    // O email do aluno é {cpf_digits}@aluno.dcdigital.local
+    // Extrair os dígitos do CPF do email para buscar o aluno
+    const emailParts = user?.email?.split('@') || [];
+    const cpfDigits = emailParts[0] || '';
+
+    if (!cpfDigits) {
+      setLoading(false);
+      return;
+    }
+    
+    // CORREÇÃO LGPD: Filtrar no servidor usando correspondência exata.
+    // Tentamos o CPF formatado (123.456.789-00) e o CPF só com dígitos.
+    // O limite .limit(5) garante que nunca retornamos dados de toda a tabela.
+    const cpfFormatado = cpfDigits.length === 11
+      ? `${cpfDigits.substring(0,3)}.${cpfDigits.substring(3,6)}.${cpfDigits.substring(6,9)}-${cpfDigits.substring(9,11)}`
+      : cpfDigits;
+
+    const { data: alunos, error: alunoError } = await supabase
+      .from('alunos')
+      .select('id, nome, cpf, data_nascimento, sexo, nome_responsavel, endereco, turma_id, escola_id, status, matricula, escolas(id, nome, logo_url, inep, diretor, distrito, secretario), turmas(id, nome, turno, escola_id, ano_letivo)')
+      .or(`cpf.eq.${cpfFormatado},cpf.eq.${cpfDigits}`)
+      .limit(5);
+
+    if (alunoError || !alunos || alunos.length === 0) {
+      setLoading(false);
+      return;
+    }
+
+    // Validação secundária no cliente: confirmar que o CPF retornado pertence ao usuário logado
+    const alunoEncontrado = alunos.find(a => {
+      const cpfLimpo = a.cpf?.replace(/\D/g, '') || '';
+      return cpfLimpo === cpfDigits;
+    });
+
+    if (!alunoEncontrado) {
+      setLoading(false);
+      return;
+    }
+
+    const escolaData = (Array.isArray(alunoEncontrado.escolas) ? alunoEncontrado.escolas[0] : alunoEncontrado.escolas) as { id?: string; nome?: string; logo_url?: string; inep?: string; diretor?: string; distrito?: string; secretario?: string } | null;
+    const turmaData = (Array.isArray(alunoEncontrado.turmas) ? alunoEncontrado.turmas[0] : alunoEncontrado.turmas) as { nome?: string; turno?: string; escola_id?: string; ensino?: string; ano_letivo?: string | number } | null;
+
+    // Buscar número de chamada do aluno via RPC segura no banco (sem violar RLS dos colegas)
+    let numeroAluno = 1;
+    try {
+      const { data: numChamada } = await supabase.rpc('get_aluno_numero_chamada', {
+        p_aluno_id: alunoEncontrado.id,
+      });
+      if (typeof numChamada === 'number' && numChamada > 0) {
+        numeroAluno = numChamada;
+      }
+    } catch {
+      numeroAluno = 1;
+    }
+
+    // Determinar Modalidade de Ensino pelo campo ensino da tabela turmas
+    const modalidade = turmaData?.ensino || 'ENSINO FUNDAMENTAL I (EF1) 1º AO 5º ANO';
+
+    // Helper para verificar se um nome é válido (não é vazio nem placeholder como 'Não localizado', 'Não informado', etc.)
+    const isNomeValido = (nome?: string | null): boolean => {
+      if (!nome) return false;
+      const clean = nome.trim().toLowerCase();
+      if (!clean) return false;
+      const placeholders = [
+        'não localizado',
+        'nao localizado',
+        'não informado',
+        'nao informado',
+        'não cadastrado',
+        'nao cadastrado',
+        'n/d',
+        'nd',
+        '---',
+        '--',
+        '-',
+        'null',
+        'undefined',
+        'diretor n/d',
+        'secretario n/d',
+        'secretário n/d'
+      ];
+      return !placeholders.includes(clean);
+    };
+
+    const escolaId = alunoEncontrado.escola_id || escolaData?.id;
+
+    // Buscar Secretário(a) e Gestor(a) alocados na escola de forma segura e resiliente
+    let secretarioNome = '';
+    let diretorNome = '';
+
+    if (escolaId) {
+      // 1. Prioridade máxima: Buscar diretamente os usuários alocados na escola (GESTOR e SECRETARIO)
+      try {
+        const { data: equipeUsers } = await supabase
+          .from('usuarios')
+          .select('nome_completo, cargo')
+          .eq('escola_id', escolaId)
+          .in('cargo', ['GESTOR', 'SECRETARIO'])
+          .order('criado_em', { ascending: true });
+
+        if (equipeUsers && equipeUsers.length > 0) {
+          const gestorUser = equipeUsers.find(u => u.cargo === 'GESTOR');
+          if (gestorUser?.nome_completo && isNomeValido(gestorUser.nome_completo)) {
+            diretorNome = gestorUser.nome_completo.trim();
+          }
+
+          const secUser = equipeUsers.find(u => u.cargo === 'SECRETARIO');
+          if (secUser?.nome_completo && isNomeValido(secUser.nome_completo)) {
+            secretarioNome = secUser.nome_completo.trim();
+          }
+        }
+      } catch (err) {
+        console.warn('Erro ao consultar usuarios da equipe escolar:', err);
+      }
+
+      // 2. Se algum ainda não foi encontrado, tentar via RPCs seguras (SECURITY DEFINER)
+      if (!secretarioNome || !diretorNome) {
+        try {
+          const [secRpc, dirRpc] = await Promise.all([
+            !secretarioNome ? supabase.rpc('get_secretario_escola', { p_escola_id: escolaId }) : Promise.resolve({ data: null, error: null }),
+            !diretorNome ? supabase.rpc('get_diretor_escola', { p_escola_id: escolaId }) : Promise.resolve({ data: null, error: null }),
+          ]);
+
+          if (!secretarioNome && secRpc.data && typeof secRpc.data === 'string' && isNomeValido(secRpc.data)) {
+            secretarioNome = secRpc.data.trim();
+          }
+          if (!diretorNome && dirRpc.data && typeof dirRpc.data === 'string' && isNomeValido(dirRpc.data)) {
+            diretorNome = dirRpc.data.trim();
+          }
+        } catch {
+          // Fallback silencioso
+        }
+      }
+    }
+
+    // 3. Fallback: campos textuais da tabela escolas (apenas se válidos e NÃO forem placeholders)
+    if (!diretorNome && isNomeValido(escolaData?.diretor)) {
+      diretorNome = escolaData!.diretor!.trim();
+    }
+    if (!secretarioNome && isNomeValido(escolaData?.secretario)) {
+      secretarioNome = escolaData!.secretario!.trim();
+    }
+
+    setAlunoData({
+      id: alunoEncontrado.id,
+      nome: alunoEncontrado.nome,
+      escola_nome: escolaData?.nome || 'N/D',
+      escola_inep: escolaData?.inep || '---',
+      escola_diretor: diretorNome,
+      escola_secretario: secretarioNome,
+      escola_endereco: escolaData?.distrito || '---',
+      turma_nome: turmaData?.nome || 'Sem turma',
+      turma_turno: turmaData?.turno || '',
+      turma_ano: String(turmaData?.ano_letivo || APP_CONFIG.YEAR),
+      matricula: formatMatriculaCpf(alunoEncontrado.cpf),
+      data_nascimento: alunoEncontrado.data_nascimento || '---',
+      nome_responsavel: alunoEncontrado.nome_responsavel || '---',
+      endereco: alunoEncontrado.endereco || '---',
+      sexo: alunoEncontrado.sexo || '---',
+      numero_aluno: numeroAluno,
+      ensino_modalidade: modalidade,
+      escola_logo_url: escolaData?.logo_url || '',
+    });
+
+    // Buscar notas do aluno
+    const { data: notasData } = await readAllRows(supabase
+      .from('notas')
+      .select('valor, avaliacao_id, avaliacoes(tipo, disciplina, bimestre, valor_maximo)')
+      .eq('aluno_id', alunoEncontrado.id).order('id'));
+
+    if (notasData) {
+      interface NotaRowSelect {
+        valor: number;
+        avaliacoes?: { tipo?: string; disciplina?: string; bimestre?: string; valor_maximo?: number };
+      }
+      setNotas(notasData.map((n: unknown) => {
+        const item = n as NotaRowSelect;
+        return {
+          disciplina: item.avaliacoes?.disciplina || 'N/D',
+          tipo: item.avaliacoes?.tipo || 'N/D',
+          valor: item.valor,
+          valor_maximo: item.avaliacoes?.valor_maximo || 10,
+          bimestre: item.avaliacoes?.bimestre || '1º',
+        };
+      }));
+    }
+
+    // Buscar frequências do aluno (histórico completo para cálculo preciso de faltas no boletim)
+    const { data: freqData } = await readAllRows(supabase
+      .from('frequencias')
+      .select('data, disciplina, status, participacao')
+      .eq('aluno_id', alunoEncontrado.id)
+      .order('data', { ascending: false }).order('id'));
+
+    if (freqData) {
+      setFrequencias(freqData);
+    }
+
+    setLoading(false);
+  }
+
+  // Cada registro é um tempo de aula. O percentual acompanha a carga já realizada e não declara reprovação.
+  const avaliacaoFrequencia = calcularFrequenciaLdb({
+    etapa: classificarEtapaFrequencia(alunoData?.ensino_modalidade, alunoData?.turma_nome),
+    momento: 'acompanhamento',
+    registros: frequencias.map(f => ({ cargaHoraria: 1, status: f.status })),
+  });
+  const totalAulas = avaliacaoFrequencia.cargaLetivaTotal;
+  const presencas = avaliacaoFrequencia.cargaFrequentada - avaliacaoFrequencia.cargaAbonadaPelaEscola;
+  const faltas = avaliacaoFrequencia.cargaFaltas - avaliacaoFrequencia.cargaJustificadaNaoAbonada;
+  const faltasJustificadas = avaliacaoFrequencia.cargaJustificadaNaoAbonada;
+  const frequenciaEmAlerta = Boolean(avaliacaoFrequencia.alerta);
+
+  // Agrupar notas por disciplina
+  const notasPorDisciplina = notas.reduce((acc, nota) => {
+    if (!acc[nota.disciplina]) acc[nota.disciplina] = [];
+    acc[nota.disciplina].push(nota);
+    return acc;
+  }, {} as Record<string, NotaItem[]>);
+
+  // Ordenar notas por Bimestre (1º, 2º, 3º, 4º) e dentro de cada bimestre por tipo (AV01, 2ª CH, RP01, AV02...)
+  const getBimestreNum = (bimestreStr: string): number => {
+    const match = String(bimestreStr || '').match(/(\d+)/);
+    return match ? parseInt(match[1], 10) : 99;
+  };
+
+  const getBimestreEstilo = (bimestreStr: string) => {
+    const num = getBimestreNum(bimestreStr);
+    switch (num) {
+      case 1:
+        return {
+          rowBg: 'bg-emerald-50/50 hover:bg-emerald-100/70',
+          badge: 'bg-emerald-100 text-emerald-900 border border-emerald-300/70',
+        };
+      case 2:
+        return {
+          rowBg: 'bg-red-50/50 hover:bg-red-100/70',
+          badge: 'bg-red-100 text-red-900 border border-red-300/70',
+        };
+      case 3:
+        return {
+          rowBg: 'bg-amber-50/50 hover:bg-amber-100/70',
+          badge: 'bg-amber-100 text-amber-900 border border-amber-300/70',
+        };
+      case 4:
+        return {
+          rowBg: 'bg-blue-50/50 hover:bg-blue-100/70',
+          badge: 'bg-blue-100 text-blue-900 border border-blue-300/70',
+        };
+      default:
+        return {
+          rowBg: 'hover:bg-slate-50',
+          badge: 'bg-slate-100 text-slate-700 border border-slate-200',
+        };
+    }
+  };
+
+  const getPesoTipo = (tipo: string): number => {
+    const t = String(tipo || '').toUpperCase().trim();
+
+    // Extrair o número da avaliação principal (ex: AV01 -> 1, 2ª CH (AV01) -> 1, RP01 -> 1, AV02 -> 2)
+    let avNum = 0;
+    const avMatch = t.match(/AV\s*0*(\d+)/i);
+    if (avMatch) {
+      avNum = parseInt(avMatch[1], 10);
+    } else {
+      const isSecondCall = t.includes('2CH') || t.includes('CH') || t.includes('CHAMADA');
+      if (!isSecondCall) {
+        const numMatch = t.match(/(\d+)/);
+        if (numMatch) avNum = parseInt(numMatch[1], 10);
+      }
+    }
+
+    // Sub-ordem:
+    // AV principal = 1
+    // 2ª Chamada (2CH) = 2
+    // Recuperação Paralela (RP) = 3
+    // Outros = 4
+    let subOrdem = 4;
+    if (t.startsWith('AV')) {
+      subOrdem = 1;
+    } else if (t.includes('2CH') || t.includes('CH') || t.includes('CHAMADA')) {
+      subOrdem = 2;
+    } else if (t.startsWith('RP') || t.includes('RECUPERA')) {
+      subOrdem = 3;
+    }
+
+    if (avNum > 0) {
+      return avNum * 10 + subOrdem;
+    }
+
+    return 900 + subOrdem;
+  };
+
+  Object.keys(notasPorDisciplina).forEach(disciplina => {
+    notasPorDisciplina[disciplina].sort((a, b) => {
+      const bimA = getBimestreNum(a.bimestre);
+      const bimB = getBimestreNum(b.bimestre);
+      if (bimA !== bimB) {
+        return bimA - bimB;
+      }
+      return getPesoTipo(a.tipo) - getPesoTipo(b.tipo);
+    });
+  });
+
+  // Agrupar frequências por mês
+  const frequenciasPorMes = frequencias.reduce((acc, freq) => {
+    const date = new Date(freq.data + 'T00:00:00');
+    const mesKey = `${date.getFullYear()}-${date.getMonth()}`;
+    if (!acc[mesKey]) acc[mesKey] = [];
+    acc[mesKey].push(freq);
+    return acc;
+  }, {} as Record<string, FrequenciaItem[]>);
+
+  // Ordenar meses decrescente
+  const mesesOrdenados = Object.keys(frequenciasPorMes).sort((a, b) => b.localeCompare(a));
+
+  const retrato = retratoPorSexo(alunoData?.sexo);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-[#6354c7] animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="portal-student min-h-screen bg-slate-50">
+      <header className="portal-student-top"><PortalBrand/><div className="portal-student-account">            <Link
+              to="/minha-privacidade"
+              className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/10 flex items-center justify-center text-white"
+              title="Minha Privacidade"
+            >
+              <Shield className="w-5 h-5" />
+            </Link>
+            <button
+              onClick={logout}
+              className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/10 cursor-pointer"
+              title="Sair"
+            >
+              <LogOut className="w-5 h-5" />
+            </button></div></header>
+
+      <main className="portal-page portal-student-page">
+        <PageHeading eyebrow="SUA JORNADA DE APRENDIZAGEM" title={'Você está construindo o futuro, '+(alunoData?.nome||user?.name||'estudante').split(' ')[0]+'.'} description="Cada presença, cada descoberta e cada conquista têm seu lugar aqui."/>
+        {alunoData&&<><section className="portal-student-identity"><div><span className="portal-eyebrow">SEU ESPAÇO ACADÊMICO</span><h2>{alunoData.nome}</h2><p>{alunoData.escola_nome}</p></div>{retrato ? <img className="portal-student-portrait" src={retrato} alt="" /> : <span className="portal-student-flower" aria-hidden="true">✳</span>}</section><div className="portal-metrics"><Metric label="Sua presença" value={avaliacaoFrequencia.frequenciaExibicao} detail={avaliacaoFrequencia.calculada ? presencas+' de '+totalAulas+' tempos de aula' : 'Frequência não calculada'} tone="mint"/><Metric label="Componentes" value={Object.keys(notasPorDisciplina).length} detail="Com avaliações registradas" tone="violet"/><Metric label="Minha turma" value={alunoData.turma_nome} detail={'Matrícula: '+(alunoData.matricula||'—')} tone="apricot"/></div></>}
+        {!alunoData && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-12 shadow-sm text-center">
+            <User className="w-16 h-16 text-slate-200 mx-auto mb-4" />
+            <h2 className="text-lg font-bold text-slate-600 mb-2">Dados não encontrados</h2>
+            <p className="text-sm text-slate-400">Não foi possível localizar seus dados acadêmicos. Contate a secretaria da sua escola.</p>
+          </div>
+        )}
+
+        {/* Tabs */}
+        {alunoData && (
+          <>
+            <div className="portal-student-tabs no-print">
+              <button
+                aria-pressed={activeTab === 'notas'} onClick={() => setActiveTab('notas')}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+                  activeTab === 'notas'
+                    ? 'bg-[#6354c7] text-white shadow-md'
+                    : 'text-slate-500 hover:text-[#6354c7] hover:bg-slate-50'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4" />
+                Minhas Notas
+              </button>
+              <button
+                aria-pressed={activeTab === 'frequencia'} onClick={() => setActiveTab('frequencia')}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+                  activeTab === 'frequencia'
+                    ? 'bg-[#6354c7] text-white shadow-md'
+                    : 'text-slate-500 hover:text-[#6354c7] hover:bg-slate-50'
+                }`}
+              >
+                <CalendarCheck className="w-4 h-4" />
+                Minha Frequência
+              </button>
+              <button
+                aria-pressed={activeTab === 'boletim'} onClick={() => setActiveTab('boletim')}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+                  activeTab === 'boletim'
+                    ? 'bg-[#6354c7] text-white shadow-md'
+                    : 'text-slate-500 hover:text-[#6354c7] hover:bg-slate-50'
+                }`}
+              >
+                <BookOpen className="w-4 h-4" />
+                Boletim
+              </button>
+            </div>
+
+            {/* Notas */}
+            {activeTab === 'notas' && (
+              <div className="space-y-4">
+                {Object.keys(notasPorDisciplina).length > 0 ? (
+                  Object.entries(notasPorDisciplina).map(([disciplina, notasDisc]: [string, NotaItem[]]) => {
+                    const aberta = expandedDisciplinas.has(disciplina);
+                    return (
+                    <div key={disciplina} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                      <button
+                        type="button"
+                        onClick={() => toggleDisciplina(disciplina)}
+                        aria-expanded={aberta}
+                        className={`w-full px-5 py-4 bg-gradient-to-r from-blue-50/50 to-white flex items-center justify-between gap-3 cursor-pointer text-left ${aberta ? 'border-b border-slate-100' : ''}`}
+                      >
+                        <span className="flex items-center gap-3 min-w-0">
+                          <BookOpen className="w-5 h-5 text-[#6354c7] shrink-0" />
+                          <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">{disciplina}</h3>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{notasDisc.length} {notasDisc.length === 1 ? 'nota' : 'notas'}</span>
+                        </span>
+                        <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${aberta ? 'rotate-180' : ''}`} aria-hidden="true" />
+                      </button>
+                      {aberta && <div className="p-4">
+                        <table className="w-full">
+                          <thead>
+                            <tr>
+                              <th className="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3 px-3">Avaliação</th>
+                              <th className="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3 px-3">Bimestre</th>
+                              <th className="text-right text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3 px-3">Nota</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {notasDisc.map((nota, i) => {
+                              const estilo = getBimestreEstilo(nota.bimestre);
+
+                              return (
+                                <tr key={i} className={`group transition-colors ${estilo.rowBg}`}>
+                                  <td className="py-2.5 px-3 text-sm font-semibold text-slate-700 first:rounded-l-lg">{nota.tipo}</td>
+                                  <td className="py-2.5 px-3">
+                                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-md ${estilo.badge}`}>
+                                      {nota.bimestre}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right last:rounded-r-lg">
+                                    <span className={`inline-flex min-w-[44px] justify-center text-white text-sm font-black px-2.5 py-0.5 rounded-full ${classeElipseNota(nota.valor, nota.valor_maximo)}`}>
+                                      {nota.valor.toFixed(1)}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 font-medium"> / {nota.valor_maximo}</span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>}
+                    </div>
+                    );
+                  })
+                ) : (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-12 shadow-sm text-center">
+                    <BarChart3 className="w-12 h-12 text-slate-200 mx-auto mb-3" />
+                    <p className="text-sm text-slate-400 font-medium italic">Nenhuma nota lançada ainda.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Frequência */}
+            {activeTab === 'frequencia' && (
+              <div className="space-y-4">
+                {/* Resumo */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4 text-center shadow-sm">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total</span>
+                    <p className="text-2xl font-black text-slate-800 mt-1">{totalAulas}</p>
+                  </div>
+                  <div className="bg-emerald-50 rounded-2xl border border-emerald-100 p-4 text-center">
+                    <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Presenças</span>
+                    <p className="text-2xl font-black text-emerald-600 mt-1">{presencas}</p>
+                  </div>
+                  <div className="bg-red-50 rounded-2xl border border-red-100 p-4 text-center">
+                    <span className="text-[10px] font-black text-red-400 uppercase tracking-widest">Faltas</span>
+                    <p className="text-2xl font-black text-red-500 mt-1">{faltas}</p>
+                  </div>
+                  <div className="bg-amber-50 rounded-2xl border border-amber-100 p-4 text-center">
+                    <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Justificadas</span>
+                    <p className="text-2xl font-black text-amber-600 mt-1">{faltasJustificadas}</p>
+                  </div>
+                  <div className={`rounded-2xl border p-4 text-center ${!avaliacaoFrequencia.calculada ? 'bg-slate-50 border-slate-200' : frequenciaEmAlerta ? 'bg-orange-50 border-orange-100' : 'bg-blue-50 border-blue-100'}`}>
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${!avaliacaoFrequencia.calculada ? 'text-slate-400' : frequenciaEmAlerta ? 'text-orange-500' : 'text-blue-500'}`}>Frequência</span>
+                    <p className={`text-2xl font-black mt-1 ${!avaliacaoFrequencia.calculada ? 'text-slate-500 text-sm' : frequenciaEmAlerta ? 'text-orange-600' : 'text-blue-600'}`}>{avaliacaoFrequencia.frequenciaExibicao}</p>
+                    {avaliacaoFrequencia.alerta && <p className="mt-2 text-[10px] font-bold leading-snug text-orange-700">{avaliacaoFrequencia.alerta}</p>}
+                    {avaliacaoFrequencia.calculada && <p className="mt-2 text-[10px] font-bold text-slate-400">Ausência {avaliacaoFrequencia.ausenciaExibicao}</p>}
+                  </div>
+                </div>
+
+                {/* Lista de frequências agrupadas por mês */}
+                {mesesOrdenados.length > 0 ? (
+                  <div className="space-y-3">
+                    {mesesOrdenados.map((mesKey) => {
+                      const [_ano, mesIdx] = mesKey.split('-').map(Number);
+                      const mesNome = NOMES_MESES[mesIdx];
+                      const freqsDoMes = frequenciasPorMes[mesKey];
+                      const isExpanded = expandedMonths.has(mesKey);
+
+                      // Estatísticas do mês
+                      const presencasMes = freqsDoMes.filter(f => f.status === 'P').length;
+                      const faltasMes = freqsDoMes.filter(f => f.status === 'F').length;
+                      const justificadasMes = freqsDoMes.filter(f => f.status === 'FJ').length;
+
+                      return (
+                        <div key={mesKey} className="space-y-2">
+                          <button
+                            onClick={() => toggleMonth(mesKey)}
+                            className={`w-full flex items-center justify-between p-4 bg-white border rounded-2xl transition-all hover:shadow-md ${
+                              isExpanded ? 'border-blue-200 shadow-sm ring-1 ring-blue-50' : 'border-slate-100 hover:border-slate-200'
+                            }`}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                                isExpanded ? 'bg-[#6354c7] text-white' : 'bg-slate-50 text-slate-400'
+                              }`}>
+                                <Calendar className="w-5 h-5" />
+                              </div>
+                              <div className="text-left">
+                                <h4 className="font-black text-[#6354c7] text-sm uppercase tracking-wider">{mesNome}</h4>
+                                <p className="text-[10px] font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1.5">
+                                  <span className="text-blue-400">{freqsDoMes.length.toString().padStart(2, '0')} Aulas</span>
+                                  <span className="text-slate-300">•</span>
+                                  <span className="text-emerald-500">{presencasMes.toString().padStart(2, '0')} Presenças</span>
+                                  <span className="text-slate-300">•</span>
+                                  <span className="text-red-400">{faltasMes.toString().padStart(2, '0')} Faltas</span>
+                                  {justificadasMes > 0 && (
+                                    <>
+                                      <span className="text-slate-300">•</span>
+                                      <span className="text-amber-500">{justificadasMes.toString().padStart(2, '0')} Justificadas</span>
+                                    </>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                            <div className={`p-2 rounded-lg transition-transform duration-300 ${isExpanded ? 'rotate-180 bg-blue-50 text-blue-600' : 'text-slate-300'}`}>
+                              <ChevronRight className="w-5 h-5" />
+                            </div>
+                          </button>
+
+                          {isExpanded && (
+                            <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                              <div className="overflow-x-auto">
+                                <table className="w-full">
+                                  <thead className="bg-slate-50/50">
+                                    <tr>
+                                      <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</th>
+                                      <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Disciplina</th>
+                                      <th className="px-5 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-50">
+                                    {freqsDoMes.map((freq, i) => (
+                                      <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-5 py-3 text-sm font-medium text-slate-700 tabular-nums">
+                                          {freq.data ? new Date(freq.data + 'T00:00:00').toLocaleDateString('pt-BR') : '---'}
+                                        </td>
+                                        <td className="px-5 py-3 text-sm font-medium text-slate-600">{freq.disciplina || '---'}</td>
+                                        <td className="px-5 py-3 text-center">
+                                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-colors ${
+                                            freq.status === 'P'
+                                              ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                                              : freq.status === 'F'
+                                              ? 'bg-red-50 text-red-500 border-red-200'
+                                              : freq.status === 'FJ'
+                                              ? 'bg-amber-50 text-amber-600 border-amber-200'
+                                              : 'bg-slate-50 text-slate-400 border-slate-200'
+                                          }`}>
+                                            {freq.status || '-'}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-12 shadow-sm text-center">
+                    <CalendarCheck className="w-12 h-12 text-slate-200 mx-auto mb-3" />
+                    <p className="text-sm text-slate-400 font-medium italic">Nenhum registro de frequência encontrado.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'boletim' && (
+              <BoletimTab 
+                alunoData={alunoData} 
+                notas={notas} 
+                frequencias={frequencias} 
+              />
+            )}
+          </>
+        )}
+      </main>
+
+      <PrivacyLinksFooter className="py-6" />
+    </div>
+  );
+}

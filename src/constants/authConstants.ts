@@ -1,0 +1,40 @@
+import type { UserRole } from '../contexts/AuthContext';
+
+/**
+ * Roles com acesso administrativo ao sistema.
+ * Centralizado aqui para evitar strings mágicas espalhadas no código.
+ */
+export const ADMIN_ROLES: UserRole[] = ['ADMIN', 'GESTOR', 'SECRETARIO'];
+
+/** Gestor da secretaria municipal: escolas, turmas, professores e alunos de toda a rede. */
+export const SEMEC_ROLE: UserRole = 'GESTOR_SEMEC';
+
+/**
+ * Roles com acesso de leitura a relatórios administrativos gerais.
+ */
+export const REPORT_ROLES: UserRole[] = ['ADMIN', 'GESTOR', 'SECRETARIO', 'PROFESSOR'];
+
+/**
+ * Roles com acesso exclusivo para visualizar e imprimir boletins escolares oficiais.
+ * Apenas secretário escolar, gestor e administrador. Professores não possuem acesso.
+ */
+export const BOLETIM_ROLES: UserRole[] = ['ADMIN', 'GESTOR', 'SECRETARIO'];
+
+/**
+ * Roles com acesso ao painel de servidores (qualquer role exceto ALUNO).
+ */
+export const STAFF_ROLES: UserRole[] = ['ADMIN', 'GESTOR', 'GESTOR_SEMEC', 'SECRETARIO', 'PROFESSOR'];
+
+/**
+ * FIX #19: Status de aluno centralizado para evitar strings mágicas.
+ * O filtro é case-insensitive para compatibilidade com variações do banco.
+ */
+export const ALUNO_STATUS_ATIVO = 'ativo';
+
+/**
+ * Verifica se o status de um aluno é considerado ativo.
+ * Aceita null/undefined (padrão: ativo) e faz comparação case-insensitive.
+ */
+export function isAlunoAtivo(status: string | null | undefined): boolean {
+  return !status || status.toLowerCase() === ALUNO_STATUS_ATIVO;
+}

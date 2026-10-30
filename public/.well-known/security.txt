@@ -1,0 +1,15 @@
+# DC Digital — Política de Divulgação de Vulnerabilidades
+# Seguindo o padrão RFC 9116 (https://www.rfc-editor.org/rfc/rfc9116)
+
+Contact: mailto:seguranca@dcdigital.com.br
+Preferred-Languages: pt-BR, en
+Policy: Agradecemos relatos responsáveis de vulnerabilidades de segurança.
+        Por favor, não explore a vulnerabilidade e nos dê tempo razoável para corrigir
+        antes de qualquer divulgação pública. Não realizamos ações legais contra
+        pesquisadores que seguem esta política de divulgação responsável.
+
+# Para reportar:
+# 1. Descreva a vulnerabilidade com detalhes técnicos
+# 2. Inclua passos para reprodução (PoC)
+# 3. Indique o impacto estimado
+# 4. Aguarde nossa resposta em até 5 dias úteis

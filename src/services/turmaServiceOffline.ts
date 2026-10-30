@@ -1,0 +1,1300 @@
+import { offlineOwner } from './offlineIdentity';
+import { hidePendingDeletes, hasPendingMutation, keepTransactionAlive, pruneSyncedMissing } from './syncProtocol';
+/**
+ * turmaServiceOffline.ts — Wrapper offline-first para o TurmaService
+ * 
+ * Intercepta todas as operações CRUD:
+ * - Escritas: salva no IndexedDB + enfileira para sync
+ * - Leituras: tenta servidor primeiro, fallback para IndexedDB
+ * 
+ * Este módulo substitui as chamadas diretas ao turmaService original
+ * na camada de contexto (TurmaContext).
+ */
+import { getBimestrePorData } from '../utils/dateUtils';
+import { parentIdVinculado } from '../utils/parentId';
+import type { Aluno, Avaliacao, Conteudo, Horario, Lancamento } from '../contexts/TurmaContext';
+import type { FrequenciaRecord, NotaRecord, TurmaRelatorioInfo } from './turmaService';
+export type { TurmaRelatorioInfo };
+import { TurmaService } from './turmaService';
+import * as OfflineStorage from './offlineStorage';
+import * as Queue from './offlineQueue';
+import * as SyncEngine from './syncEngine';
+import { db, hashOperation, now, type LocalAnotacao } from '../lib/db';
+import { supabase } from '../lib/supabase';
+
+import { getTid, normalizarDataISO } from '../utils/turmaUtils';
+
+// ============================================================
+// Erro tipado: offline sem cache local
+// ============================================================
+
+/**
+ * U1 FIX: Lançado quando o dispositivo está offline e não há dados locais
+ * em cache para a entidade solicitada. Permite que o componente exiba uma
+ * mensagem contextualizada em vez de apenas um estado vazio sem explicacao.
+ *
+ * Exemplo de tratamento no componente:
+ *   } catch (err) {
+ *     if (err instanceof OfflineNoCacheError) {
+ *       showToast({ type: 'warning', message: err.message });
+ *     }
+ *   }
+ */
+export class OfflineNoCacheError extends Error {
+  constructor(entity: string) {
+    super(
+      `Você está offline e não há dados de ${entity} no dispositivo. ` +
+      'Conecte-se à internet para carregar os dados.'
+    );
+    this.name = 'OfflineNoCacheError';
+  }
+}
+
+// ============================================================
+// Flag de conectividade (atualizada externamente pelo OfflineContext)
+// ============================================================
+function assertReadOwner(owner: string | null): void {
+  if (offlineOwner() !== owner) throw new Error('Sessão alterada durante consulta');
+}
+let _isOnline = navigator.onLine;
+
+export function setOnlineStatus(online: boolean): void {
+  _isOnline = online;
+}
+
+// ============================================================
+// LEITURAS — Servidor primeiro, fallback local
+// ============================================================
+
+export async function fetchTurmasRelatorio(user: { id: string; role: string; email?: string; escola_id?: string }): Promise<TurmaRelatorioInfo[]> {
+  try {
+    if (!_isOnline) throw new Error('Offline');
+    const result = await TurmaService.fetchTurmasRelatorio(user);
+    if (result.length > 0) {
+      const uniqueTurmasMap = new Map<string, { id: string; nome: string; turno: string; ensino: string; escola_id: string; escola_nome?: string }>();
+      result.forEach(t => {
+        if (!uniqueTurmasMap.has(t.id)) {
+          uniqueTurmasMap.set(t.id, {
+            id: t.id,
+            nome: t.nome,
+            turno: t.turno,
+            ensino: t.ensino,
+            escola_id: t.escolaId,
+            escola_nome: t.escolaNome
+          });
+        }
+      });
+      await OfflineStorage.cacheTurmas(Array.from(uniqueTurmasMap.values()));
+    }
+    return result;
+  } catch {
+    // Fallback offline a partir do IndexedDB
+    try {
+      let localTurmas = await db.turmas.toArray();
+      if (user.role === 'SECRETARIO' || user.role === 'GESTOR') {
+        if (!user.escola_id) return [];
+        localTurmas = localTurmas.filter(t => t.escola_id === user.escola_id);
+      }
+      if (localTurmas.length === 0) return [];
+
+      const localHorarios = await db.horarios.toArray();
+      const localAvs = await db.avaliacoes.toArray();
+
+      const componentesPorTurma = new Map<string, Set<string>>();
+      localHorarios.forEach(h => {
+        const comp = (h.componente || '').trim();
+        if (comp) {
+          if (!componentesPorTurma.has(h.turma_id)) componentesPorTurma.set(h.turma_id, new Set());
+          componentesPorTurma.get(h.turma_id)!.add(comp);
+        }
+      });
+      localAvs.forEach(a => {
+        const disc = (a.disciplina || '').trim();
+        if (disc && disc.toUpperCase() !== 'GERAL') {
+          if (!componentesPorTurma.has(a.turma_id)) componentesPorTurma.set(a.turma_id, new Set());
+          componentesPorTurma.get(a.turma_id)!.add(disc);
+        }
+      });
+
+      const finalTurmas: TurmaRelatorioInfo[] = [];
+      localTurmas.forEach(t => {
+        let fase = t.nome;
+        let numero = '01';
+
+        const match = t.nome.match(/(.+)\s+([A-Za-z0-9]+)$/);
+        if (match) {
+          fase = match[1].trim();
+          numero = match[2].trim();
+        } else {
+          const matchNum = t.nome.match(/(\d+)$/);
+          if (matchNum) numero = matchNum[1];
+        }
+
+        let comps = Array.from(componentesPorTurma.get(t.id) || []);
+        if (comps.length === 0) comps = ['POLIVALENTE'];
+        comps.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+        comps.forEach(comp => {
+          finalTurmas.push({
+            id: t.id,
+            nome: t.nome,
+            turno: t.turno,
+            componente: comp,
+            ensino: t.ensino || 'Fundamental Anos Iniciais (1° ao 5° ANO)',
+            fase: fase,
+            numero: numero,
+            escolaId: t.escola_id || '',
+            escolaNome: t.escola_nome || 'ESCOLA LOCAL'
+          });
+        });
+      });
+      return finalTurmas;
+    } catch {
+      return [];
+    }
+  }
+}
+
+export async function fetchHorario(turmaId: string | number, disciplina: string): Promise<Horario[]> {
+  const tid = getTid(turmaId);
+  const requestOwner = offlineOwner();
+  try {
+    if (!_isOnline) throw new Error('Offline');
+    const result = await TurmaService.fetchHorario(turmaId, disciplina);
+    // Cache local
+    assertReadOwner(requestOwner);
+    await OfflineStorage.cacheHorarios(tid, result.map(h => ({
+      turma_id: tid,
+      dia_semana: h.dia_semana,
+      tempo_ordem: h.tempo_ordem,
+      componente: disciplina,
+    })), disciplina);
+    return result;
+  } catch {
+    // Fallback local
+    const local = await OfflineStorage.getHorariosLocal(tid);
+    // Filtra no cliente local: incluir quando o componente bate com a disciplina OU está vazio/null
+    const filtered = local.filter(h => {
+      const comp = (h.componente || '').trim();
+      return comp === '' || comp.toLowerCase() === disciplina.toLowerCase();
+    });
+    return filtered.map(h => ({ dia_semana: h.dia_semana, tempo_ordem: h.tempo_ordem }));
+  }
+}
+
+export async function fetchAlunos(turmaId: string | number): Promise<Aluno[]> {
+  const tid = getTid(turmaId);
+  const requestOwner = offlineOwner();
+  try {
+    if (!_isOnline) throw new Error('Offline');
+    const result = await TurmaService.fetchAlunos(turmaId);
+    // Cache local
+    assertReadOwner(requestOwner);
+    await OfflineStorage.cacheAlunos(result.map(a => ({
+      id: a.id,
+      nome: a.nome,
+      cpf: a.cpf,
+      turma_id: tid,
+      escola_id: (a as unknown as Record<string, unknown>).escola_id as string | undefined,
+      telefone: (a as unknown as Record<string, unknown>).telefone as string | undefined,
+      endereco: (a as unknown as Record<string, unknown>).endereco as string | undefined,
+      nome_responsavel: (a as unknown as Record<string, unknown>).nome_responsavel as string | undefined,
+    })));
+    return result;
+  } catch {
+    // Fallback local (stale data)
+    const { alunos: local, decryptionFailed } = await OfflineStorage.getCachedAlunos(tid);
+
+    // FIX: Se a chave de criptografia foi perdida (troca de dispositivo, limpeza de browser),
+    // avisar o usuário claramente em vez de exibir '[DADOS PROTEGIDOS - RECONECTE PARA ATUALIZAR]'.
+    if (decryptionFailed) {
+      console.error('[turmaServiceOffline] Chave de criptografia perdida — dados de alunos offline inacessíveis. Reconecte à internet para re-sincronizar.');
+    }
+
+    // U1 FIX: Quando offline e sem cache local (primeira visita à turma),
+    // lançar erro tipado para que o componente possa exibir mensagem
+    // contextualizada em vez de uma lista vazia sem explicação.
+    if (!_isOnline && local.length === 0 && !decryptionFailed) {
+      throw new OfflineNoCacheError('alunos desta turma');
+    }
+
+    // FIX P1-#6: Stale-while-revalidate — retorna dados locais imediatamente
+    // e tenta revalidar em background se online (erro pode ser intermitente)
+    if (_isOnline && !decryptionFailed) {
+      TurmaService.fetchAlunos(turmaId).then(async (fresh) => {
+        try {
+          assertReadOwner(requestOwner);
+          await OfflineStorage.cacheAlunos(fresh.map(a => ({
+            id: a.id,
+            nome: a.nome,
+            cpf: a.cpf,
+            turma_id: tid,
+            escola_id: (a as unknown as Record<string, unknown>).escola_id as string | undefined,
+            telefone: (a as unknown as Record<string, unknown>).telefone as string | undefined,
+            endereco: (a as unknown as Record<string, unknown>).endereco as string | undefined,
+            nome_responsavel: (a as unknown as Record<string, unknown>).nome_responsavel as string | undefined,
+          })));
+          console.info('[turmaServiceOffline] Cache de alunos revalidado em background.');
+        } catch (cacheErr) {
+          console.warn('[turmaServiceOffline] Falha ao re-cachear alunos em background:', cacheErr);
+        }
+      }).catch(() => { /* silencioso — já retornamos stale data */ });
+    }
+
+    return local.map(a => {
+      const cpfClean = a.cpf ? a.cpf.replace(/\D/g, '') : '';
+      const matriculaDisplay = cpfClean.length === 11
+        ? `${cpfClean.substring(0, 3)}.${cpfClean.substring(3, 6)}.${cpfClean.substring(6, 9)}-${cpfClean.substring(9, 11)}`
+        : 'CPF Pendente';
+      return {
+        id: a.id,
+        nome: decryptionFailed ? '⚠️ Dados protegidos — reconecte para visualizar' : a.nome,
+        cpf: a.cpf,
+        matricula: matriculaDisplay,
+        freq: 'P',
+        part: 'Presencial',
+        notas: {},
+      };
+    });
+  }
+}
+
+export async function fetchLancamentos(turmaId: string | number, disciplina: string): Promise<Lancamento[]> {
+  try {
+    if (!_isOnline || await hasPendingMutation('frequencias',getTid(turmaId),disciplina) || await hasPendingMutation('conteudos',getTid(turmaId),disciplina)) throw new Error('Offline');
+    return await TurmaService.fetchLancamentos(turmaId, disciplina);
+  } catch {
+    // Construir lançamentos a partir dos dados locais
+    const tid = getTid(turmaId);
+    const [freqs, conts] = await Promise.all([
+      OfflineStorage.getAllFrequenciasLocal(tid, disciplina),
+      OfflineStorage.getAllConteudosLocal(tid, disciplina),
+    ]);
+    
+    const lancamentos: Lancamento[] = [];
+    const uniqueFreqs = new Set(freqs.map(f => `${f.data}|${f.tempo}`));
+    uniqueFreqs.forEach(val => {
+      const [data, tempo] = val.split('|');
+      lancamentos.push({ turmaId: tid, data, tempo, tipo: 'frequencia' });
+    });
+    conts.forEach(c => {
+      lancamentos.push({ turmaId: tid, data: c.data, tempo: c.tempo, tipo: 'conteudo' });
+    });
+    return lancamentos;
+  }
+}
+
+export async function fetchAvaliacoes(turmaId: string | number, disciplina: string): Promise<{ avaliacoes: Avaliacao[], notasData: NotaRecord[] }> {
+  const tid = getTid(turmaId);
+  const requestOwner = offlineOwner();
+  try {
+    if (!_isOnline || await hasPendingMutation('avaliacoes', tid, disciplina) || await hasPendingMutation('notas')) throw new Error('Leitura local com alterações pendentes');
+    const result = await TurmaService.fetchAvaliacoes(turmaId, disciplina);
+    result.avaliacoes = await hidePendingDeletes('avaliacoes', result.avaliacoes, a => ({id:a.id}));
+    result.notasData = await hidePendingDeletes('notas', result.notasData, n => ({...n}));
+    
+    assertReadOwner(requestOwner);
+    await pruneSyncedMissing('avaliacoes', result.avaliacoes.map(a=>({id:a.id})), r=>r.turma_id===tid && (!disciplina || ['TODAS','GERAL'].includes(disciplina.toUpperCase()) || r.disciplina===disciplina));
+    // Cache avaliações
+    if (result.avaliacoes.length > 0) {
+      assertReadOwner(requestOwner);
+    await OfflineStorage.cacheAvaliacoes(result.avaliacoes.map(av => ({
+        id: av.id,
+        serverRevision: av.serverRevision,
+        turma_id: tid,
+        tipo: av.tipo,
+        data: av.data,
+        instrumento: av.instrumento,
+        objetos: av.objetos,
+        bimestre: av.bimestre || getBimestrePorData(av.data),
+        valor_maximo: av.valorMaximo || 10,
+        disciplina: av.disciplina || disciplina,
+        parent_id: av.parent_id,
+      })));
+    }
+    
+    // Cache notas
+    if (result.notasData.length > 0) {
+      assertReadOwner(requestOwner);
+    await OfflineStorage.cacheNotas(result.notasData.map(n => ({
+        avaliacao_id: n.avaliacao_id.toString(),
+        aluno_id: n.aluno_id.toString(),
+        valor: n.valor,
+        serverRevision: ('sync_revision' in n ? Number(n.sync_revision) : n.serverRevision),
+      })));
+    }
+    
+    // Mesclar com avaliações locais salvas no IndexedDB (inclusive criadas recentemente)
+    const localAvs = await OfflineStorage.getAvaliacoesLocal(tid, disciplina);
+    const mergedAvaliacoes = [...result.avaliacoes];
+    const remoteIds = new Set(result.avaliacoes.map(a => String(a.id)));
+
+    for (const local of localAvs) {
+      const formatted: Avaliacao = {
+        id: local.id || local.serverId || local.clientTempId || `local_${local.localId}`,
+        turmaId: local.turma_id,
+        disciplina: local.disciplina,
+        tipo: local.tipo,
+        data: local.data,
+        instrumento: local.instrumento,
+        objetos: local.objetos,
+        bimestre: local.bimestre,
+        valorMaximo: local.valor_maximo,
+        parent_id: parentIdVinculado(local.parent_id),
+      };
+
+      const idToCheck = String(formatted.id);
+      const isRemote = remoteIds.has(idToCheck) || (local.id && remoteIds.has(String(local.id))) || (local.serverId && remoteIds.has(String(local.serverId)));
+
+      // FIX CONC-01: Se não é remoto, OU se é remoto mas possui alterações locais pendentes de sincronização,
+      // a versão local deve prevalecer sobre o snapshot do servidor para não descartar edições do usuário.
+      if (!isRemote || local.syncStatus === 'pending') {
+        const existingIdx = mergedAvaliacoes.findIndex(a => 
+          String(a.id) === idToCheck || 
+          (local.id && String(a.id) === String(local.id)) ||
+          (local.serverId && String(a.id) === String(local.serverId)) ||
+          (local.clientTempId && String(a.id) === String(local.clientTempId)) ||
+          (a.tipo === local.tipo && a.data === local.data && String(a.parent_id || '') === String(local.parent_id || ''))
+        );
+
+        if (existingIdx >= 0) {
+          const existingRemoteId = mergedAvaliacoes[existingIdx].id;
+          const hasRealServerId = existingRemoteId && !existingRemoteId.startsWith('temp_') && !existingRemoteId.startsWith('local_');
+          mergedAvaliacoes[existingIdx] = {
+            ...formatted,
+            id: hasRealServerId ? existingRemoteId : formatted.id,
+          };
+        } else {
+          mergedAvaliacoes.push(formatted);
+        }
+      }
+    }
+
+    // Deduplicação defensiva final para garantir que não haja avaliações duplicadas
+    const seenMap = new Map<string, Avaliacao>();
+    for (const av of mergedAvaliacoes) {
+      const uniqueKey = (av.id && !av.id.startsWith('temp_') && !av.id.startsWith('local_'))
+        ? `id_${av.id}`
+        : `meta_${av.tipo}_${av.data}_${av.parent_id || 'root'}`;
+
+      const existing = seenMap.get(uniqueKey);
+      if (!existing) {
+        seenMap.set(uniqueKey, av);
+      } else {
+        const existingIsReal = existing.id && !existing.id.startsWith('temp_') && !existing.id.startsWith('local_');
+        const currentIsReal = av.id && !av.id.startsWith('temp_') && !av.id.startsWith('local_');
+        if (!existingIsReal && currentIsReal) {
+          seenMap.set(uniqueKey, av);
+        }
+      }
+    }
+    const finalAvaliacoes = Array.from(seenMap.values());
+
+    // Mesclar notas do servidor com notas salvas localmente no IndexedDB (suportando IDs temporários e aliases)
+    const possibleAvIds = new Set<string>();
+    finalAvaliacoes.forEach(a => {
+      if (a.id) possibleAvIds.add(String(a.id));
+    });
+    localAvs.forEach(a => {
+      if (a.id) possibleAvIds.add(String(a.id));
+      if (a.serverId) possibleAvIds.add(String(a.serverId));
+      if (a.clientTempId) possibleAvIds.add(String(a.clientTempId));
+      if (a.localId) {
+        possibleAvIds.add(String(a.localId));
+        possibleAvIds.add(`temp_${a.localId}`);
+        possibleAvIds.add(`local_${a.localId}`);
+      }
+    });
+
+    const localNotas = await OfflineStorage.getNotasLocal(Array.from(possibleAvIds));
+
+    const aliasToCanonicalMap = new Map<string, string[]>();
+    localAvs.forEach(av => {
+      const canonical = finalAvaliacoes.find(m => 
+        m.id === av.id || m.id === av.serverId || m.id === av.clientTempId || (av.localId && (m.id === `temp_${av.localId}` || m.id === `local_${av.localId}` || m.id === String(av.localId)))
+      )?.id || av.id || av.serverId || (av.localId ? `temp_${av.localId}` : '');
+
+      if (canonical) {
+        const aliases = new Set<string>([canonical]);
+        if (av.id) aliases.add(String(av.id));
+        if (av.serverId) aliases.add(String(av.serverId));
+        if (av.clientTempId) aliases.add(String(av.clientTempId));
+        if (av.localId) {
+          aliases.add(String(av.localId));
+          aliases.add(`temp_${av.localId}`);
+          aliases.add(`local_${av.localId}`);
+        }
+        const aliasArr = Array.from(aliases);
+        aliasArr.forEach(alias => {
+          aliasToCanonicalMap.set(alias, aliasArr);
+        });
+      }
+    });
+
+    const mergedNotasMap = new Map<string, NotaRecord>();
+    const addNotaToMap = (avaliacaoId: string, alunoId: string, valor: number) => {
+      const aliases = aliasToCanonicalMap.get(avaliacaoId) || [avaliacaoId];
+      aliases.forEach(avId => {
+        mergedNotasMap.set(`${avId}_${alunoId}`, {
+          avaliacao_id: avId,
+          aluno_id: alunoId,
+          valor: valor,
+        });
+      });
+    };
+
+    result.notasData.forEach(n => {
+      addNotaToMap(n.avaliacao_id.toString(), n.aluno_id.toString(), n.valor);
+    });
+    localNotas.forEach(n => {
+      addNotaToMap(n.avaliacao_id.toString(), n.aluno_id.toString(), n.valor);
+    });
+
+    return {
+      avaliacoes: finalAvaliacoes,
+      notasData: Array.from(mergedNotasMap.values()),
+    };
+  } catch {
+    // Fallback local
+    const localAvs = await OfflineStorage.getAvaliacoesLocal(tid, disciplina);
+    const avaliacoesRaw: Avaliacao[] = localAvs.map(av => ({
+      id: av.id || av.serverId || av.clientTempId || `local_${av.localId}`,
+      turmaId: av.turma_id,
+      tipo: av.tipo,
+      data: av.data,
+      instrumento: av.instrumento,
+      objetos: av.objetos,
+      bimestre: av.bimestre,
+      valorMaximo: av.valor_maximo,
+      parent_id: parentIdVinculado(av.parent_id),
+    }));
+
+    // Deduplicar no fallback offline também
+    const seenOfflineMap = new Map<string, Avaliacao>();
+    for (const av of avaliacoesRaw) {
+      const uniqueKey = (av.id && !av.id.startsWith('temp_') && !av.id.startsWith('local_'))
+        ? `id_${av.id}`
+        : `meta_${av.tipo}_${av.data}_${av.parent_id || 'root'}`;
+      if (!seenOfflineMap.has(uniqueKey)) {
+        seenOfflineMap.set(uniqueKey, av);
+      }
+    }
+    const avaliacoes = Array.from(seenOfflineMap.values());
+
+    const avIds = avaliacoes.map(a => a.id);
+    const localNotas = await OfflineStorage.getNotasLocal(avIds);
+    const notasData: NotaRecord[] = localNotas.map(n => ({
+      avaliacao_id: n.avaliacao_id,
+      aluno_id: n.aluno_id,
+      valor: n.valor,
+    }));
+
+    return { avaliacoes, notasData };
+  }
+}
+
+export async function fetchFaltasPeriodo(
+  turmaId: string | number,
+  disciplina: string,
+  dataInicio?: string,
+  dataFim?: string,
+  statusList: string[] = ['F']
+): Promise<FrequenciaRecord[]> {
+  const tid = getTid(turmaId);
+  const requestOwner = offlineOwner();
+  try {
+    if (!_isOnline || await hasPendingMutation('frequencias', tid, disciplina)) throw new Error('Leitura local com alterações pendentes');
+    const result = await hidePendingDeletes('frequencias', await TurmaService.fetchFaltasPeriodo(turmaId, disciplina, dataInicio, dataFim, statusList), f => ({...f,turma_id:tid,disciplina:f.disciplina || disciplina}));
+    // Cache
+    assertReadOwner(requestOwner);
+    await OfflineStorage.cacheFrequencias(tid, result.map(f => ({
+      turma_id: tid,
+      aluno_id: f.aluno_id,
+      serverRevision: ('sync_revision' in f ? Number(f.sync_revision) : f.serverRevision),
+      data: f.data || '',
+      tempo: f.tempo || '',
+      status: f.status,
+      participacao: f.participacao || 'Presencial',
+      disciplina: f.disciplina || disciplina,
+    })));
+    return result;
+  } catch {
+    const local = await OfflineStorage.getAllFrequenciasLocal(tid, disciplina);
+    return local
+      .filter(f => {
+        if (!statusList.includes(f.status)) return false;
+        if (dataInicio && f.data < dataInicio) return false;
+        if (dataFim && f.data > dataFim) return false;
+        return true;
+      })
+      .map(f => ({
+        aluno_id: f.aluno_id,
+      serverRevision: ('sync_revision' in f ? Number(f.sync_revision) : f.serverRevision),
+        status: f.status,
+        data: f.data,
+        tempo: f.tempo,
+        participacao: f.participacao,
+        disciplina: f.disciplina,
+      }));
+  }
+}
+
+export async function fetchAllFrequencias(turmaId: string | number, disciplina: string): Promise<FrequenciaRecord[]> {
+  const tid = getTid(turmaId);
+  const requestOwner = offlineOwner();
+  try {
+    if (!_isOnline || await hasPendingMutation('frequencias', tid, disciplina)) throw new Error('Leitura local com alterações pendentes');
+    const result = await hidePendingDeletes('frequencias', await TurmaService.fetchAllFrequencias(turmaId, disciplina, false), f => ({...f,turma_id:tid,disciplina:f.disciplina || disciplina}));
+    assertReadOwner(requestOwner);
+    await pruneSyncedMissing('frequencias', result.map(r => ({...r,turma_id:tid,disciplina: 'disciplina' in r ? r.disciplina : disciplina})), r => r.turma_id===tid && (!disciplina || ['TODAS','GERAL'].includes(disciplina.toUpperCase()) || r.disciplina===disciplina));
+    // Cache
+    assertReadOwner(requestOwner);
+    await OfflineStorage.cacheFrequencias(tid, result.map(f => ({
+      turma_id: tid,
+      aluno_id: f.aluno_id,
+      serverRevision: ('sync_revision' in f ? Number(f.sync_revision) : f.serverRevision),
+      data: f.data || '',
+      tempo: f.tempo || '',
+      status: f.status,
+      participacao: f.participacao || 'Presencial',
+      disciplina: f.disciplina || disciplina,
+    })));
+    return result;
+  } catch {
+    const local = await OfflineStorage.getAllFrequenciasLocal(tid, disciplina);
+    return local.map(f => ({
+      aluno_id: f.aluno_id,
+      serverRevision: ('sync_revision' in f ? Number(f.sync_revision) : f.serverRevision),
+      status: f.status,
+      data: f.data,
+      tempo: f.tempo,
+      participacao: f.participacao,
+      disciplina: f.disciplina,
+    }));
+  }
+}
+
+export async function fetchConteudosPeriodo(
+  turmaId: string | number,
+  disciplina: string,
+  dataInicio?: string,
+  dataFim?: string
+): Promise<Conteudo[]> {
+  const tid = getTid(turmaId);
+  const requestOwner = offlineOwner();
+  try {
+    if (!_isOnline || await hasPendingMutation('conteudos', tid, disciplina)) throw new Error('Leitura local com alterações pendentes');
+    const result = await hidePendingDeletes('conteudos', await TurmaService.fetchConteudosPeriodo(turmaId, disciplina, dataInicio, dataFim), f => ({...f,turma_id:tid,disciplina:f.disciplina || disciplina}));
+    // Cache
+    assertReadOwner(requestOwner);
+    await OfflineStorage.cacheConteudos(tid, result.map(c => ({
+      turma_id: tid,
+      data: c.data,
+      tempo: c.tempo,
+      objetos: c.objetos,
+      habilidades: c.habilidades,
+      descricao: c.descricao,
+      serverRevision: c.serverRevision,
+      disciplina: c.disciplina || disciplina,
+    })));
+    return result;
+  } catch {
+    const local = await OfflineStorage.getAllConteudosLocal(tid, disciplina);
+    return local
+      .filter(c => {
+        if (dataInicio && c.data < dataInicio) return false;
+        if (dataFim && c.data > dataFim) return false;
+        return true;
+      })
+      .map(c => ({
+        id: c.serverId || `local_${c.localId}`,
+        turmaId: c.turma_id,
+      disciplina: c.disciplina,
+        data: c.data,
+        tempo: c.tempo,
+        objetos: c.objetos,
+        habilidades: c.habilidades,
+        descricao: c.descricao,
+      serverRevision: c.serverRevision,
+      }));
+  }
+}
+
+export async function fetchAllConteudos(turmaId: string | number, disciplina: string): Promise<Conteudo[]> {
+  const tid = getTid(turmaId);
+  const requestOwner = offlineOwner();
+  try {
+    if (!_isOnline || await hasPendingMutation('conteudos', tid, disciplina)) throw new Error('Leitura local com alterações pendentes');
+    const result = await hidePendingDeletes('conteudos', await TurmaService.fetchAllConteudos(turmaId, disciplina), f => ({...f,turma_id:tid,disciplina:f.disciplina || disciplina}));
+    assertReadOwner(requestOwner);
+    await pruneSyncedMissing('conteudos', result.map(r => ({...r,turma_id:tid,disciplina: 'disciplina' in r ? r.disciplina : disciplina})), r => r.turma_id===tid && (!disciplina || ['TODAS','GERAL'].includes(disciplina.toUpperCase()) || r.disciplina===disciplina));
+    // Cache
+    assertReadOwner(requestOwner);
+    await OfflineStorage.cacheConteudos(tid, result.map(c => ({
+      turma_id: tid,
+      data: c.data,
+      tempo: c.tempo,
+      objetos: c.objetos,
+      habilidades: c.habilidades,
+      descricao: c.descricao,
+      serverRevision: c.serverRevision,
+      disciplina: c.disciplina || disciplina,
+    })));
+    return result;
+  } catch {
+    const local = await OfflineStorage.getAllConteudosLocal(tid, disciplina);
+    return local.map(c => ({
+      id: c.serverId || `local_${c.localId}`,
+      turmaId: c.turma_id,
+      disciplina: c.disciplina,
+      data: c.data,
+      tempo: c.tempo,
+      objetos: c.objetos,
+      habilidades: c.habilidades,
+      descricao: c.descricao,
+      serverRevision: c.serverRevision,
+    }));
+  }
+}
+
+export async function fetchDisciplinasDaTurma(turmaId: string | number): Promise<string[]> {
+  const tid = getTid(turmaId);
+  try {
+    if (!_isOnline) throw new Error('Offline');
+    return await TurmaService.fetchDisciplinasDaTurma(turmaId);
+  } catch {
+    const [horarios, avs, fechamentos] = await Promise.all([
+      db.horarios.where('turma_id').equals(tid).toArray(),
+      db.avaliacoes.where('turma_id').equals(tid).toArray(),
+      db.fechamentos.where('turma_id').equals(tid).toArray(),
+    ]);
+    const set = new Set<string>();
+    horarios.forEach(h => {
+      const c = (h.componente || '').trim();
+      if (c && c.toUpperCase() !== 'GERAL') set.add(c);
+    });
+    avs.forEach(a => {
+      const d = (a.disciplina || '').trim();
+      if (d && d.toUpperCase() !== 'GERAL') set.add(d);
+    });
+    fechamentos.forEach(f => {
+      const d = (f.disciplina || '').trim();
+      if (d && d.toUpperCase() !== 'GERAL' && d.toUpperCase() !== 'TODAS') set.add(d);
+    });
+    if (set.size === 0) return ['POLIVALENTE'];
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }
+}
+
+export async function fetchFechamentosRaw(
+  turmaId: string | number,
+  disciplina?: string
+): Promise<{ id?: string; bimestre: string; status: string; disciplina: string; created_at?: string; usuario_fechamento_id?: string }[]> {
+  const tid = getTid(turmaId);
+  const requestOwner = offlineOwner();
+  try {
+    if (!_isOnline || await hasPendingMutation('fechamentos',tid,disciplina)) throw new Error('Leitura local');
+    const raw = await TurmaService.fetchFechamentosRaw(turmaId, disciplina);
+    assertReadOwner(requestOwner);
+    await OfflineStorage.cacheFechamentos(tid,disciplina || 'TODAS',raw.map(f => ({
+      turma_id:tid,disciplina:f.disciplina,bimestre:f.bimestre,serverRevision:f.sync_revision,
+      status:f.status==='FECHADO' ? 'FECHADO' as const : 'ABERTO' as const,
+    })));
+    return raw;
+  } catch {
+    const local = await db.fechamentos.where('turma_id').equals(tid).toArray();
+    let filtered = local;
+    if (disciplina && disciplina.toUpperCase() !== 'TODAS' && disciplina.toUpperCase() !== 'GERAL') {
+      filtered = local.filter(f => f.disciplina === disciplina);
+    }
+    return filtered.map(f => ({
+      id: f.serverId || String(f.localId),
+      bimestre: f.bimestre,
+      status: f.status,
+      disciplina: f.disciplina,
+      created_at: f.createdAt,
+      usuario_fechamento_id: f.usuario_fechamento_id
+    }));
+  }
+}
+
+export async function fetchFechamentos(turmaId: string | number, disciplina?: string): Promise<Record<string, boolean>> {
+  const tid = getTid(turmaId);
+  const requestOwner = offlineOwner();
+  try {
+    if (!_isOnline || await hasPendingMutation('fechamentos', tid, disciplina)) throw new Error('Leitura local com alterações pendentes');
+    const rawRecords = await hidePendingDeletes('fechamentos', await TurmaService.fetchFechamentosRaw(turmaId, disciplina), f => ({...f,turma_id:tid}));
+    // Cache: salvar registros reais no IndexedDB
+    {
+      const records = rawRecords.map(f => ({
+        turma_id: tid,
+        disciplina: f.disciplina || disciplina || 'GERAL',
+        bimestre: f.bimestre,
+        serverRevision: f.sync_revision,
+        status: (f.status === 'FECHADO' ? 'FECHADO' : 'ABERTO') as 'FECHADO' | 'ABERTO',
+      }));
+      assertReadOwner(requestOwner);
+    await OfflineStorage.cacheFechamentos(tid, disciplina || 'TODAS', records);
+    }
+    
+    const map: Record<string, boolean> = {};
+    rawRecords.forEach(f => {
+      const isFechado = f.status === 'FECHADO';
+      if (isFechado) {
+        map[f.bimestre] = true;
+        const match = f.bimestre.match(/^[1-4]/);
+        if (match) {
+          const n = match[0];
+          map[`${n}. BIMESTRE`] = true;
+          map[`${n}º Bimestre`] = true;
+        }
+      }
+    });
+    return map;
+  } catch {
+    const local = await db.fechamentos.where('turma_id').equals(tid).toArray();
+    const map: Record<string, boolean> = {};
+    const filtered = (disciplina && disciplina.toUpperCase() !== 'TODAS' && disciplina.toUpperCase() !== 'GERAL')
+      ? local.filter(f => f.disciplina === disciplina)
+      : local;
+      
+    filtered.forEach(f => {
+      const isFechado = f.status === 'FECHADO';
+      if (isFechado) {
+        map[f.bimestre] = true;
+        const match = f.bimestre.match(/^[1-4]/);
+        if (match) {
+          const n = match[0];
+          map[`${n}. BIMESTRE`] = true;
+          map[`${n}º Bimestre`] = true;
+        }
+      }
+    });
+    return map;
+  }
+}
+
+export async function buscarFrequencia(turmaId: string | number, disciplina: string, data: string, tempo: string): Promise<FrequenciaRecord[]> {
+  const tid = getTid(turmaId);
+  const requestOwner = offlineOwner();
+  const dataISO = normalizarDataISO(data);
+  try {
+    if (!_isOnline || await hasPendingMutation('frequencias', tid, disciplina)) throw new Error('Leitura local com alterações pendentes');
+    const result = await TurmaService.buscarFrequencia(turmaId, disciplina, data, tempo);
+    assertReadOwner(requestOwner);
+    await OfflineStorage.cacheFrequencias(tid,result.map(f => ({
+      turma_id:tid,aluno_id:f.aluno_id,data:dataISO,tempo,disciplina,status:f.status,
+      participacao:f.participacao || 'Presencial',serverRevision:f.sync_revision,
+    })));
+    return result;
+  } catch {
+    const local = await OfflineStorage.getFrequenciasLocal(tid, disciplina, dataISO, tempo);
+    return local.map(f => ({
+      aluno_id: f.aluno_id,
+      serverRevision: ('sync_revision' in f ? Number(f.sync_revision) : f.serverRevision),
+      status: f.status,
+      participacao: f.participacao,
+    }));
+  }
+}
+
+export async function buscarConteudo(turmaId: string | number, disciplina: string, data: string, tempo: string): Promise<Conteudo | null> {
+  const tid = getTid(turmaId);
+  const requestOwner = offlineOwner();
+  const dataISO = normalizarDataISO(data);
+  try {
+    if (!_isOnline || await hasPendingMutation('conteudos', tid, disciplina)) throw new Error('Leitura local com alterações pendentes');
+    const result = await TurmaService.buscarConteudo(turmaId, disciplina, data, tempo);
+    assertReadOwner(requestOwner);
+    if (result) await OfflineStorage.cacheConteudos(tid,[{...result,turma_id:tid,disciplina,serverRevision:result.serverRevision}]);
+    return result;
+  } catch {
+    const local = await OfflineStorage.getConteudoLocal(tid, disciplina, dataISO, tempo);
+    if (!local) return null;
+    return {
+      id: local.serverId || `local_${local.localId}`,
+      turmaId: local.turma_id,
+        disciplina: local.disciplina,
+      data: local.data,
+      tempo: local.tempo,
+      objetos: local.objetos,
+      habilidades: local.habilidades,
+      descricao: local.descricao,
+    };
+  }
+}
+
+export async function buscarFrequenciaPorDia(turmaId: string | number, disciplina: string, data: string): Promise<FrequenciaRecord[]> {
+  const tid = getTid(turmaId);
+  const dataISO = normalizarDataISO(data);
+  try {
+    if (!_isOnline) throw new Error('Offline');
+    return await TurmaService.buscarFrequenciaPorDia(turmaId, disciplina, data);
+  } catch {
+    const local = await OfflineStorage.getAllFrequenciasLocal(tid, disciplina);
+    return local
+      .filter(f => f.data === dataISO)
+      .map(f => ({
+        aluno_id: f.aluno_id,
+      serverRevision: ('sync_revision' in f ? Number(f.sync_revision) : f.serverRevision),
+        status: f.status,
+        disciplina: f.disciplina,
+      }));
+  }
+}
+
+// ============================================================
+// ESCRITAS — IndexedDB primeiro, depois enfileira sync
+// ============================================================
+
+export async function salvarFrequencia(
+  turmaId: string | number,
+  disciplina: string,
+  data: string,
+  tempo: string,
+  alunosFreq: Aluno[]
+): Promise<void> {
+  const tid = getTid(turmaId);
+  const dataISO = normalizarDataISO(data);
+
+  // 1. Salvar localmente
+  const records = alunosFreq.map(aluno => ({
+    turma_id: tid,
+    aluno_id: aluno.id,
+    data: dataISO,
+    tempo,
+    status: aluno.freq || 'P',
+    participacao: aluno.part || 'Presencial',
+    disciplina,
+  }));
+
+  // FIX A1: Salvar localmente + enfileirar em transação atômica Dexie.
+  // Sem isso, um crash/reload entre o write local e o enqueue causaria
+  // registros com syncStatus='pending' mas sem item na fila de sync
+  // (perda silenciosa — reconciliação só roda quando fila está vazia).
+  await db.transaction('rw', [db.frequencias, db.syncQueue], async () => {
+    await OfflineStorage.saveFrequenciasBulk(records);
+
+    // Enfileirar para sync (batch como um único item)
+    const upserts = records.map(r => ({
+      turma_id: r.turma_id,
+      aluno_id: r.aluno_id,
+      data: r.data,
+      tempo: r.tempo,
+      status: r.status,
+      participacao: r.participacao,
+      disciplina: r.disciplina,
+    }));
+
+    await Queue.enqueue('frequencias', 'UPSERT', { records: upserts });
+  });
+
+  // 3. Se online, tentar sincronizar imediatamente
+  if (_isOnline) {
+    SyncEngine.scheduleSync();
+  }
+}
+
+export async function salvarConteudo(
+  turmaId: string | number,
+  disciplina: string,
+  cont: Conteudo
+): Promise<void> {
+  const tid = getTid(turmaId);
+  const dataISO = normalizarDataISO(cont.data);
+
+  const payload = {
+    turma_id: tid,
+    data: dataISO,
+    tempo: cont.tempo,
+    objetos: cont.objetos,
+    habilidades: cont.habilidades,
+    descricao: cont.descricao,
+    disciplina,
+  };
+
+  // FIX A1: Salvar + enfileirar em transação atômica
+  await db.transaction('rw', [db.conteudos, db.syncQueue], async () => {
+    await OfflineStorage.saveConteudoLocal(payload);
+    await Queue.enqueue('conteudos', 'UPSERT', payload);
+  });
+
+  // Sync
+  if (_isOnline) {
+    SyncEngine.scheduleSync();
+  }
+}
+
+function isTemporaryId(id?: string): boolean {
+  return !id || id.startsWith('temp_') || id.startsWith('local_');
+}
+async function findLocalAvaliacao(id: string) {
+  return db.avaliacoes.filter(a => a.id===id || a.serverId===id || a.clientTempId===id || `local_${a.localId}`===id || `temp_${a.localId}`===id).first();
+}
+
+export async function salvarAvaliacao(
+  av: Avaliacao,
+  turmaId: string | number,
+  disciplina: string
+): Promise<string> {
+  const tid = getTid(turmaId);
+
+  const payload = {
+    ...(!isTemporaryId(av.id) ? { id: av.id } : {}),
+    turma_id: tid,
+    tipo: av.tipo,
+    data: av.data,
+    instrumento: av.instrumento,
+    objetos: av.objetos,
+    bimestre: av.bimestre || getBimestrePorData(av.data),
+    valor_maximo: av.valorMaximo || 10,
+    disciplina,
+    parent_id: av.parent_id,
+  };
+
+  // FIX C4: Propagar o id temporário da UI (temp_<Date.now>) para o registro
+  // local. Sem isso, notas enfileiradas com avaliacao_id = temp_... nunca eram
+  // resolvidas após a avaliação sincronizar (updateTempAvaliacaoId não conhecia
+  // esse id) e as notas ficavam em loop infinito até serem purgadas.
+  const localPayload = {
+    ...payload,
+    ...(av.id && isTemporaryId(av.id) ? { clientTempId: av.id } : {}),
+  };
+
+  // FIX A1: Salvar + enfileirar em transação atômica
+  const localId = await db.transaction('rw', [db.avaliacoes, db.syncQueue], async () => {
+    const existing = av.id ? await findLocalAvaliacao(av.id) : undefined;
+    const canonical = existing?.serverId || existing?.id || localPayload.id;
+    const mutation = {...localPayload,...(!isTemporaryId(canonical) ? {id:canonical} : {})};
+    const lid = await OfflineStorage.saveAvaliacaoLocal(mutation);
+    await Queue.enqueue('avaliacoes', !isTemporaryId(canonical) ? 'UPDATE' : 'INSERT', mutation, lid);
+    return lid;
+  });
+
+  // Sync
+  if (_isOnline) {
+    SyncEngine.scheduleSync();
+  }
+
+  return av.id || `temp_${localId}`;
+}
+
+export async function removerAvaliacao(id: string): Promise<void> {
+  await db.transaction('rw', [db.avaliacoes, db.notas, db.syncQueue], async () => {
+    // Preserve a tombstone even for a temporary id: an in-flight INSERT may commit.
+    const local = await findLocalAvaliacao(id);
+    const canonical = local?.serverId || local?.id || id;
+    const inflight = local?.localId && await db.syncQueue.filter(i => i.table==='avaliacoes' && i.localId===local.localId && (i.attempted || i.status==='processing')).first();
+    if (!isTemporaryId(canonical) || inflight) {
+      await Queue.enqueue('avaliacoes','DELETE',{id:canonical},local?.localId);
+    }
+    await OfflineStorage.deleteAvaliacaoLocal(id);
+  });
+  if (_isOnline) SyncEngine.scheduleSync();
+}
+
+/**
+ * Tira alunos removidos de UPSERTs de nota que ainda não foram enviados.
+ * Devolve true se algum envio já saiu e precisa de DELETE compensatório.
+ */
+async function retractPendingNotaUpserts(avaliacaoIds: Set<string>, alunoIds: string[]): Promise<boolean> {
+  const removed = new Set(alunoIds.map(String));
+  const items = await db.syncQueue.where('table').equals('notas').toArray();
+  let inflight = false;
+
+  for (const item of items) {
+    if (item.ownerUserId !== offlineOwner() || !item.id) continue;
+    if (item.operation !== 'UPSERT' && item.operation !== 'INSERT') continue;
+    let payload: Record<string, unknown>;
+    try {
+      payload = JSON.parse(item.payload) as Record<string, unknown>;
+    } catch {
+      continue;
+    }
+    const records = Array.isArray(payload.records)
+      ? payload.records as Record<string, unknown>[]
+      : payload.avaliacao_id ? [payload] : [];
+    const hit = records.some((record) =>
+      avaliacaoIds.has(String(record.avaliacao_id)) && removed.has(String(record.aluno_id)));
+    if (!hit) continue;
+    if (item.attempted || item.status === 'processing') {
+      inflight = true;
+      continue;
+    }
+    const kept = records.filter((record) =>
+      !(avaliacaoIds.has(String(record.avaliacao_id)) && removed.has(String(record.aluno_id))));
+    if (kept.length === 0) {
+      await db.syncQueue.delete(item.id);
+      continue;
+    }
+    const next = Array.isArray(payload.records) ? { ...payload, records: kept } : kept[0];
+    const hash = await keepTransactionAlive(hashOperation(item.table, item.operation, next));
+    await db.syncQueue.update(item.id, {
+      payload: JSON.stringify(next),
+      hash,
+      updatedAt: now(),
+    });
+  }
+
+  return inflight;
+}
+
+export async function salvarNotas(
+  avaliacaoId: string,
+  notas: { alunoId: string; valor: string }[],
+  alunoIdsRemovidos?: string[]
+): Promise<void> {
+  let avIdStr = String(avaliacaoId);
+
+  // Preparar listas fora da transação (leitura pura)
+  const preenchidas = notas.filter(n => n.valor !== undefined && n.valor !== null && n.valor.trim() !== '');
+  const removidos = alunoIdsRemovidos && alunoIdsRemovidos.length > 0
+    ? alunoIdsRemovidos
+    : notas.filter(n => !n.valor || n.valor.trim() === '').map(n => String(n.alunoId));
+
+  // FIX A1: Salvar + enfileirar em transação atômica (incluindo db.avaliacoes para consultas de aliases em deleteNotasLocal)
+  await db.transaction('rw', [db.notas, db.syncQueue, db.avaliacoes], async () => {
+    const local = await findLocalAvaliacao(avIdStr);
+    const aliases = new Set(
+      [avIdStr, local?.serverId, local?.id, local?.clientTempId]
+        .filter((id): id is string => Boolean(id))
+        .map(String),
+    );
+    avIdStr = local?.serverId || local?.id || avIdStr;
+    aliases.add(avIdStr);
+    // Processar notas preenchidas
+    if (preenchidas.length > 0) {
+      const records = preenchidas.map(n => ({
+        avaliacao_id: avIdStr,
+        aluno_id: String(n.alunoId),
+        valor: parseFloat(n.valor.replace(',', '.')),
+      }));
+
+      await OfflineStorage.saveNotasLocal(records);
+      await Queue.enqueue('notas', 'UPSERT', { records });
+    }
+
+    // Processar notas removidas (em branco)
+    if (removidos.length > 0) {
+      const temporary = avIdStr.startsWith('temp_') || avIdStr.startsWith('local_');
+      const inflight = await retractPendingNotaUpserts(aliases, removidos);
+      if (!temporary || inflight) {
+        await Queue.enqueue('notas', 'DELETE', {
+          avaliacao_id: avIdStr,
+          aluno_ids: removidos,
+        });
+      }
+      await OfflineStorage.deleteNotasLocal(avIdStr, removidos);
+    }
+  });
+
+  // Sync
+  if (_isOnline) {
+    SyncEngine.scheduleSync();
+  }
+}
+
+export async function removerFrequencia(
+  turmaId: string | number,
+  disciplina: string,
+  data: string,
+  tempo: string
+): Promise<void> {
+  const tid = getTid(turmaId);
+  const dataISO = normalizarDataISO(data);
+
+  await db.transaction('rw', [db.frequencias, db.syncQueue], async () => {
+    await Queue.enqueue('frequencias', 'DELETE', {turma_id:tid,disciplina,data:dataISO,tempo});
+    await OfflineStorage.deleteFrequenciasLocal(tid,disciplina,dataISO,tempo);
+  });
+
+  if (_isOnline) {
+    SyncEngine.scheduleSync();
+  }
+}
+
+export async function removerConteudo(
+  turmaId: string | number,
+  disciplina: string,
+  data: string,
+  tempo: string
+): Promise<void> {
+  const tid = getTid(turmaId);
+  const dataISO = normalizarDataISO(data);
+
+  await db.transaction('rw', [db.conteudos, db.syncQueue], async () => {
+    await Queue.enqueue('conteudos','DELETE',{turma_id:tid,disciplina,data:dataISO,tempo});
+    await OfflineStorage.deleteConteudoLocal(tid,disciplina,dataISO,tempo);
+  });
+
+  if (_isOnline) {
+    SyncEngine.scheduleSync();
+  }
+}
+
+export async function salvarFechamento(
+  turmaId: string | number,
+  disciplina: string,
+  bimestre: string,
+  status: 'ABERTO' | 'FECHADO',
+  userId: string
+): Promise<void> {
+  const tid = getTid(turmaId);
+
+  const payload = {
+    turma_id: tid,
+    disciplina,
+    bimestre,
+    status,
+    usuario_fechamento_id: userId,
+  };
+
+  // Salvar/remover localmente + enfileirar em transação atômica
+  await db.transaction('rw', [db.fechamentos, db.syncQueue], async () => {
+    if (status === 'ABERTO') {
+      await Queue.enqueue('fechamentos','DELETE',{...payload, disciplina: ['TODAS','GERAL'].includes(disciplina.toUpperCase()) ? undefined : disciplina});
+      if (disciplina && disciplina.toUpperCase() === 'TODAS') {
+        await db.fechamentos
+          .where('turma_id')
+          .equals(tid)
+          .filter(f => f.bimestre === bimestre)
+          .delete();
+      } else {
+        await db.fechamentos
+          .where('[turma_id+disciplina+bimestre]')
+          .equals([tid, disciplina, bimestre])
+          .delete();
+      }
+    } else {
+      await OfflineStorage.saveFechamentoLocal(payload);
+      await Queue.enqueue('fechamentos','UPSERT',payload);
+    }
+
+  });
+
+  if (_isOnline) {
+    SyncEngine.scheduleSync();
+  }
+}
+
+export async function listarAnotacoes(
+  turmaId: string | number,
+  data: string,
+  tempo: string,
+  disciplina: string,
+): Promise<LocalAnotacao[]> {
+  const tid = getTid(turmaId);
+  const dataISO = normalizarDataISO(data);
+  const locais = await db.anotacoes
+    .where('[turma_id+data+tempo+disciplina]')
+    .equals([tid, dataISO, tempo, disciplina])
+    .toArray();
+
+  if (!_isOnline) return locais;
+
+  const { data: rows, error } = await supabase
+    .from('anotacoes_pedagogicas')
+    .select('id, turma_id, data, tempo, disciplina, texto, sync_revision')
+    .eq('turma_id', tid)
+    .eq('data', dataISO)
+    .eq('tempo', tempo)
+    .eq('disciplina', disciplina)
+    .order('id');
+  if (error) return locais;
+
+  const recebidas = rows || [];
+  const fila = await db.syncQueue.where('table').equals('anotacoes').toArray();
+  const apagandoIds = new Set(
+    fila
+      .filter(item => item.operation === 'DELETE')
+      .map(item => String((JSON.parse(item.payload) as { id?: unknown }).id)),
+  );
+  await db.transaction('rw', db.anotacoes, async () => {
+    for (const row of recebidas) {
+      const id = String(row.id);
+      if (apagandoIds.has(id)) continue;
+      const existente = await db.anotacoes.where('turma_id').equals(tid).filter(a => a.id === id).first();
+      if (existente?.syncStatus === 'pending') continue;
+      const gravada: LocalAnotacao = {
+        localId: existente?.localId,
+        id,
+        turma_id: tid,
+        data: row.data,
+        tempo: row.tempo,
+        disciplina: row.disciplina,
+        texto: row.texto,
+        syncStatus: 'synced',
+        createdAt: existente?.createdAt || now(),
+        updatedAt: now(),
+        version: existente?.version || 1,
+        serverRevision: Number(row.sync_revision),
+      };
+      if (existente?.localId) await db.anotacoes.put(gravada);
+      else await db.anotacoes.add(gravada);
+    }
+  });
+
+  const atualizadas = await db.anotacoes
+    .where('[turma_id+data+tempo+disciplina]')
+    .equals([tid, dataISO, tempo, disciplina])
+    .toArray();
+  const idsServidor = new Set(recebidas.map(row => String(row.id)));
+  return atualizadas.filter(item => item.syncStatus === 'pending' || (item.id && idsServidor.has(item.id)));
+}
+
+export async function salvarAnotacao(
+  turmaId: string | number,
+  data: string,
+  tempo: string,
+  disciplina: string,
+  texto: string,
+): Promise<void> {
+  const tid = getTid(turmaId);
+  const dataISO = normalizarDataISO(data);
+  const limpo = texto.replace(/<[^>]+>/g, '').trim();
+  if (!limpo) throw new Error('Descreva a anotação.');
+  const timestamp = now();
+  await db.transaction('rw', [db.anotacoes, db.syncQueue], async () => {
+    const localId = await db.anotacoes.add({
+      turma_id: tid,
+      data: dataISO,
+      tempo,
+      disciplina,
+      texto: limpo,
+      syncStatus: 'pending',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      version: 1,
+    });
+    await Queue.enqueue('anotacoes', 'INSERT', {
+      turma_id: tid,
+      data: dataISO,
+      tempo,
+      disciplina,
+      texto: limpo,
+    }, localId);
+  });
+  if (_isOnline) SyncEngine.scheduleSync();
+}
+
+export async function removerAnotacao(localId: number): Promise<void> {
+  const atual = await db.anotacoes.get(localId);
+  if (!atual) return;
+  await db.transaction('rw', [db.anotacoes, db.syncQueue], async () => {
+    if (!atual.id) {
+      const fila = await db.syncQueue.where('table').equals('anotacoes').toArray();
+      for (const item of fila) {
+        const corpo = JSON.parse(item.payload) as { _local_id?: number };
+        if (corpo._local_id === localId && item.id) await db.syncQueue.delete(item.id);
+      }
+      await db.anotacoes.delete(localId);
+      return;
+    }
+    await Queue.enqueue('anotacoes', 'DELETE', {
+      id: Number(atual.id),
+      turma_id: atual.turma_id,
+    }, localId);
+    await db.anotacoes.delete(localId);
+  });
+  if (_isOnline) SyncEngine.scheduleSync();
+}
