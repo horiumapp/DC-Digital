@@ -1,5 +1,20 @@
-import { describe, it, expect } from 'vitest';
+import { beforeAll, describe, it, expect } from 'vitest';
 import { parseAlunosCsv } from '../utils/csvImportExport';
+import {
+  ensureDcRulesWasm,
+  getDcRulesWasmStatus,
+  setDcRulesEngine,
+} from '../utils/dcRulesEngine';
+
+beforeAll(async () => {
+  const loaded = await ensureDcRulesWasm();
+  setDcRulesEngine(loaded ? 'dual' : 'ts');
+  if (!loaded) {
+    console.warn(
+      `[dc_rules] WASM indisponível (${getDcRulesWasmStatus().error ?? 'módulo ausente'}).`
+    );
+  }
+});
 
 describe('parseAlunosCsv', () => {
   const turmasMock = [

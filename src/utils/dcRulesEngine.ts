@@ -1,5 +1,5 @@
 /**
- * Motor de regras LDB com dual-run TS ↔ WASM (Fase 1).
+ * Motor de regras/parsers com dual-run TS ↔ WASM (Fases 1–2).
  *
  * - `ts` (padrão): só TypeScript — funciona sem Rust instalado.
  * - `wasm`: só WASM (fallback automático para TS se o módulo não carregar).
@@ -9,6 +9,8 @@
  */
 
 import * as tsImpl from './regraFrequenciaLdb.tsImpl';
+import * as curriculoTs from './curriculoParser.tsImpl';
+import * as csvTs from './csvDelimited.tsImpl';
 import type {
   AlteracaoFrequencia,
   AvaliacaoFrequencia,
@@ -16,6 +18,10 @@ import type {
   MomentoFrequencia,
   RegistroCargaHoraria,
 } from './regraFrequenciaLdb.tsImpl';
+import type {
+  CurriculoExportSource,
+  CurriculoParseResult,
+} from './curriculoParser.tsImpl';
 
 export type {
   AlteracaoFrequencia,
@@ -34,6 +40,15 @@ type WasmApi = {
   calcularFrequenciaLdb: (entradaJson: string) => string;
   definirSituacaoPeriodo: (entradaJson: string) => string;
   historicoAposAlteracao: (anteriorJson: string, novoJson: string, em: string) => string;
+  normalizeDisciplina: (raw: string) => string;
+  normalizeAno: (raw: string) => string;
+  normalizeBimestre: (raw: string) => string;
+  getModalidadeForAno: (ano: string) => string;
+  cleanContentText: (value: string) => string;
+  parseCurriculoText: (rawText: string) => string;
+  exportCurriculoToCsv: (unidadesJson: string) => string;
+  parseDelimitedText: (text: string) => string;
+  sanitizeFormulaValue: (value: string) => string;
   default?: (moduleOrPath?: unknown) => Promise<unknown>;
   initSync?: (module: unknown) => unknown;
 };
@@ -183,5 +198,82 @@ export function historicoAposAlteracao(
     )
   ) as AlteracaoFrequencia[];
   if (mode === 'dual') assertParity('historicoAposAlteracao', fromTs, fromWasm);
+  return mode === 'wasm' ? fromWasm : fromTs;
+}
+
+// --- Fase 2: currículo + CSV delimitado ---
+
+export function normalizeDisciplina(raw: string): string {
+  const fromTs = curriculoTs.normalizeDisciplina(raw);
+  if (mode === 'ts' || !wasmApi) return fromTs;
+  const fromWasm = wasmApi.normalizeDisciplina(raw);
+  if (mode === 'dual') assertParity('normalizeDisciplina', fromTs, fromWasm);
+  return mode === 'wasm' ? fromWasm : fromTs;
+}
+
+export function normalizeAno(raw: string): string {
+  const fromTs = curriculoTs.normalizeAno(raw);
+  if (mode === 'ts' || !wasmApi) return fromTs;
+  const fromWasm = wasmApi.normalizeAno(raw);
+  if (mode === 'dual') assertParity('normalizeAno', fromTs, fromWasm);
+  return mode === 'wasm' ? fromWasm : fromTs;
+}
+
+export function normalizeBimestre(raw: string): string {
+  const fromTs = curriculoTs.normalizeBimestre(raw);
+  if (mode === 'ts' || !wasmApi) return fromTs;
+  const fromWasm = wasmApi.normalizeBimestre(raw);
+  if (mode === 'dual') assertParity('normalizeBimestre', fromTs, fromWasm);
+  return mode === 'wasm' ? fromWasm : fromTs;
+}
+
+export function getModalidadeForAno(ano: string): string {
+  const fromTs = curriculoTs.getModalidadeForAno(ano);
+  if (mode === 'ts' || !wasmApi) return fromTs;
+  const fromWasm = wasmApi.getModalidadeForAno(ano);
+  if (mode === 'dual') assertParity('getModalidadeForAno', fromTs, fromWasm);
+  return mode === 'wasm' ? fromWasm : fromTs;
+}
+
+export function cleanContentText(str: string): string {
+  const fromTs = curriculoTs.cleanContentText(str);
+  if (mode === 'ts' || !wasmApi) return fromTs;
+  const fromWasm = wasmApi.cleanContentText(str);
+  if (mode === 'dual') assertParity('cleanContentText', fromTs, fromWasm);
+  return mode === 'wasm' ? fromWasm : fromTs;
+}
+
+export function parseCurriculoText(rawText: string): CurriculoParseResult {
+  const fromTs = curriculoTs.parseCurriculoText(rawText);
+  if (mode === 'ts' || !wasmApi) return fromTs;
+  const fromWasm = JSON.parse(wasmApi.parseCurriculoText(rawText)) as CurriculoParseResult;
+  if (mode === 'dual') assertParity('parseCurriculoText', fromTs, fromWasm);
+  return mode === 'wasm' ? fromWasm : fromTs;
+}
+
+export function exportCurriculoToCsv(unidades: CurriculoExportSource[]): string {
+  const fromTs = curriculoTs.exportCurriculoToCsv(unidades);
+  if (mode === 'ts' || !wasmApi) return fromTs;
+  const fromWasm = wasmApi.exportCurriculoToCsv(JSON.stringify(unidades));
+  if (mode === 'dual') assertParity('exportCurriculoToCsv', fromTs, fromWasm);
+  return mode === 'wasm' ? fromWasm : fromTs;
+}
+
+export function parseDelimitedText(text: string): { headers: string[]; rows: string[][] } {
+  const fromTs = csvTs.parseDelimitedText(text);
+  if (mode === 'ts' || !wasmApi) return fromTs;
+  const fromWasm = JSON.parse(wasmApi.parseDelimitedText(text)) as {
+    headers: string[];
+    rows: string[][];
+  };
+  if (mode === 'dual') assertParity('parseDelimitedText', fromTs, fromWasm);
+  return mode === 'wasm' ? fromWasm : fromTs;
+}
+
+export function sanitizeFormulaValueString(value: string): string {
+  const fromTs = csvTs.sanitizeFormulaValue(value);
+  if (mode === 'ts' || !wasmApi) return fromTs;
+  const fromWasm = wasmApi.sanitizeFormulaValue(value);
+  if (mode === 'dual') assertParity('sanitizeFormulaValue', fromTs, fromWasm);
   return mode === 'wasm' ? fromWasm : fromTs;
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { beforeAll, describe, it, expect } from 'vitest';
 import {
   parseCurriculoText,
   normalizeDisciplina,
@@ -8,8 +8,32 @@ import {
   cleanContentText,
   exportCurriculoToCsv
 } from '../utils/curriculoParser';
+import {
+  ensureDcRulesWasm,
+  getDcRulesEngine,
+  getDcRulesWasmStatus,
+  setDcRulesEngine,
+} from '../utils/dcRulesEngine';
+
+beforeAll(async () => {
+  const loaded = await ensureDcRulesWasm();
+  if (loaded) {
+    setDcRulesEngine('dual');
+  } else {
+    setDcRulesEngine('ts');
+    console.warn(
+      `[dc_rules] WASM indisponível (${getDcRulesWasmStatus().error ?? 'módulo ausente'}). ` +
+        'Rode `npm run build:dc-rules` para dual-run TS↔Rust.'
+    );
+  }
+});
 
 describe('curriculoParser', () => {
+  it('ativa dual-run TS↔Rust quando o artefato WASM existe', () => {
+    if (!getDcRulesWasmStatus().loaded) return;
+    expect(getDcRulesEngine()).toBe('dual');
+  });
+
   describe('Funções utilitárias de normalização', () => {
     it('deve normalizar nomes de disciplinas corretamente', () => {
       expect(normalizeDisciplina('PORTUGUÊS 6º ANO')).toBe('Português');

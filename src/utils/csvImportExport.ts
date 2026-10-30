@@ -1,7 +1,14 @@
 /**
  * Utilitários para exportação e importação de dados em formato CSV
  * com compatibilidade para Excel (UTF-8 com BOM) e detecção inteligente de delimitadores.
+ *
+ * Fase 2: `parseDelimitedText` passa pelo motor TS↔WASM; download e parsers de
+ * domínio (escolas/turmas/…) permanecem em TypeScript.
  */
+
+import { parseDelimitedText, sanitizeFormulaValueString } from './dcRulesEngine';
+
+export { parseDelimitedText };
 
 export function downloadCsvFile(content: string, fileName: string): void {
   // \uFEFF é o Byte Order Mark (BOM) UTF-8, garantindo que o Excel abra acentos corretamente
@@ -16,69 +23,14 @@ export function downloadCsvFile(content: string, fileName: string): void {
   URL.revokeObjectURL(url);
 }
 
-import { sanitizeFormulaValue } from './sanitizeUtils';
-
 function escapeCsvField(val: unknown): string {
   if (val === null || val === undefined) return '';
   let str = String(val).trim();
-  str = sanitizeFormulaValue(str);
+  str = sanitizeFormulaValueString(str);
   if (str.includes(';') || str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
     return `"${str.replace(/"/g, '""')}"`;
   }
   return str;
-}
-
-/**
- * Analisador robusto de texto delimitado (CSV / TSV)
- * Suporta separadores comuns (; , \t) e campos delimitados por aspas duplas.
- */
-export function parseDelimitedText(text: string): { headers: string[]; rows: string[][] } {
-  const clean = text.replace(/^\uFEFF/, '').trim();
-  if (!clean) return { headers: [], rows: [] };
-
-  const lines = clean.split(/\r?\n/).filter(l => l.trim().length > 0);
-  if (lines.length === 0) return { headers: [], rows: [] };
-
-  // Detecta o melhor delimitador na primeira linha (; ou , ou \t)
-  const firstLine = lines[0];
-  const countSemi = (firstLine.match(/;/g) || []).length;
-  const countComma = (firstLine.match(/,/g) || []).length;
-  const countTab = (firstLine.match(/\t/g) || []).length;
-
-  let delimiter = ';';
-  if (countTab > countSemi && countTab > countComma) delimiter = '\t';
-  else if (countComma > countSemi) delimiter = ',';
-
-  function splitLine(line: string): string[] {
-    const entries: string[] = [];
-    let cur = '';
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          cur += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === delimiter && !inQuotes) {
-        entries.push(cur.trim());
-        cur = '';
-      } else {
-        cur += char;
-      }
-    }
-    entries.push(cur.trim());
-    return entries;
-  }
-
-  const parsedLines = lines.map(splitLine);
-  const headers = parsedLines[0].map(h => h.replace(/^["']|["']$/g, '').trim());
-  const rows = parsedLines.slice(1).filter(r => r.some(c => c.length > 0));
-
-  return { headers, rows };
 }
 
 // ============================================================

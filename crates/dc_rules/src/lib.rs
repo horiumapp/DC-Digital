@@ -1,10 +1,14 @@
-//! Regras pedagógicas puras do DC Digital.
+//! Regras pedagógicas e parsers puros do DC Digital.
 //!
-//! Fase 1: frequência conforme a LDB (Lei nº 9.394/1996).
+//! Fase 1: frequência LDB · Fase 2: currículo + CSV delimitado.
 //! Exposto via WASM para dual-run com a implementação TypeScript.
 
+mod csv;
+mod curriculo;
 mod ldb;
 
+pub use csv::*;
+pub use curriculo::*;
 pub use ldb::*;
 
 use serde::de::DeserializeOwned;
@@ -23,10 +27,7 @@ fn to_json<T: Serialize>(value: &T) -> Result<String, JsValue> {
 #[wasm_bindgen(js_name = classificarEtapaFrequencia)]
 pub fn wasm_classificar_etapa_frequencia(partes_json: &str) -> Result<String, JsValue> {
     let partes: Vec<Option<String>> = parse_json(partes_json)?;
-    let refs: Vec<Option<&str>> = partes
-        .iter()
-        .map(|p| p.as_deref())
-        .collect();
+    let refs: Vec<Option<&str>> = partes.iter().map(|p| p.as_deref()).collect();
     Ok(classificar_etapa_frequencia(refs).as_str().to_string())
 }
 
@@ -69,4 +70,52 @@ pub fn wasm_historico_apos_alteracao(
     };
     let novo: FrequenciaNova = parse_json(novo_json)?;
     to_json(&historico_apos_alteracao(anterior.as_ref(), &novo, em))
+}
+
+// --- Fase 2: currículo + CSV ---
+
+#[wasm_bindgen(js_name = normalizeDisciplina)]
+pub fn wasm_normalize_disciplina(raw: &str) -> String {
+    normalize_disciplina(raw)
+}
+
+#[wasm_bindgen(js_name = normalizeAno)]
+pub fn wasm_normalize_ano(raw: &str) -> String {
+    normalize_ano(raw)
+}
+
+#[wasm_bindgen(js_name = normalizeBimestre)]
+pub fn wasm_normalize_bimestre(raw: &str) -> String {
+    normalize_bimestre(raw)
+}
+
+#[wasm_bindgen(js_name = getModalidadeForAno)]
+pub fn wasm_get_modalidade_for_ano(ano: &str) -> String {
+    get_modalidade_for_ano(ano)
+}
+
+#[wasm_bindgen(js_name = cleanContentText)]
+pub fn wasm_clean_content_text(value: &str) -> String {
+    clean_content_text(value)
+}
+
+#[wasm_bindgen(js_name = parseCurriculoText)]
+pub fn wasm_parse_curriculo_text(raw_text: &str) -> Result<String, JsValue> {
+    to_json(&parse_curriculo_text(raw_text))
+}
+
+#[wasm_bindgen(js_name = exportCurriculoToCsv)]
+pub fn wasm_export_curriculo_to_csv(unidades_json: &str) -> Result<String, JsValue> {
+    let unidades: Vec<CurriculoExportSource> = parse_json(unidades_json)?;
+    Ok(export_curriculo_to_csv(&unidades))
+}
+
+#[wasm_bindgen(js_name = parseDelimitedText)]
+pub fn wasm_parse_delimited_text(text: &str) -> Result<String, JsValue> {
+    to_json(&parse_delimited_text(text))
+}
+
+#[wasm_bindgen(js_name = sanitizeFormulaValue)]
+pub fn wasm_sanitize_formula_value(value: &str) -> String {
+    sanitize_formula_value(value)
 }

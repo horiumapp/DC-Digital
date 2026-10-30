@@ -14,7 +14,7 @@
     "lint:fix": "eslint . --fix",
     "build:dc-rules": "node scripts/build-dc-rules.mjs",
     "test": "vitest run",
-    "test:dc-rules": "cargo test -p dc_rules && vitest run src/__tests__/regraFrequenciaLdb.test.ts",
+    "test:dc-rules": "cargo test -p dc_rules && vitest run src/__tests__/regraFrequenciaLdb.test.ts src/__tests__/curriculoParser.test.ts src/__tests__/parseAlunosCsv.test.ts",
     "test:watch": "vitest",
     "test:db": "node scripts/test-database.mjs"
   },
