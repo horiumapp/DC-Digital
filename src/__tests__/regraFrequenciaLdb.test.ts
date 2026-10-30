@@ -1,13 +1,29 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import {
   arredondarPercentualParaExibicao,
   calcularFrequenciaLdb,
   classificarEtapaFrequencia,
   definirSituacaoPeriodo,
+  ensureDcRulesWasm,
+  getDcRulesWasmStatus,
   historicoAposAlteracao,
   momentoDoAnoLetivo,
+  setDcRulesEngine,
   type RegistroCargaHoraria,
 } from '../utils/regraFrequenciaLdb';
+
+beforeAll(async () => {
+  const loaded = await ensureDcRulesWasm();
+  if (loaded) {
+    setDcRulesEngine('dual');
+  } else {
+    setDcRulesEngine('ts');
+    console.warn(
+      `[dc_rules] WASM indisponível (${getDcRulesWasmStatus().error ?? 'módulo ausente'}). ` +
+        'Rode `npm run build:dc-rules` para dual-run TS↔Rust.'
+    );
+  }
+});
 
 function tempos(presentes: number, faltas: number, justificadas = 0, abonadas = 0): RegistroCargaHoraria[] {
   return [

@@ -1,0 +1,18 @@
+{
+  "name": "dc_rules",
+  "type": "module",
+  "description": "Regras pedagógicas puras do DC Digital (LDB frequência) para WASM",
+  "version": "0.1.0",
+  "license": "UNLICENSED",
+  "files": [
+    "dc_rules_bg.wasm",
+    "dc_rules.js",
+    "dc_rules.d.ts"
+  ],
+  "main": "dc_rules.js",
+  "types": "dc_rules.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ],
+  "private": true
+}

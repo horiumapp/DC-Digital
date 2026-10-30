@@ -12,7 +12,9 @@
     "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
     "lint": "eslint . && tsc --noEmit",
     "lint:fix": "eslint . --fix",
+    "build:dc-rules": "node scripts/build-dc-rules.mjs",
     "test": "vitest run",
+    "test:dc-rules": "cargo test -p dc_rules && vitest run src/__tests__/regraFrequenciaLdb.test.ts",
     "test:watch": "vitest",
     "test:db": "node scripts/test-database.mjs"
   },
