@@ -23,5 +23,6 @@ Fechar o gap da Fase 7: `beforeunload` não cobria navegação SPA (menu, Trocar
 
 ## Validação
 
-- Vitest (stability hooks + guard)
-- `npm run lint` / `npm run build`
+- Vitest **45 arquivos / 301 testes** OK
+- Lint: 0 erros (warnings pré-existentes)
+- Build Vite OK

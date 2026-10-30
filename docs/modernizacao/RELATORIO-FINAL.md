@@ -15,7 +15,7 @@
 | 6 | Internet lenta | Economia de dados + ping/batch adaptativos |
 | 7 | Sync offline | Wake visibility/pageshow; fila existente preservada |
 | 8 | Sem perda silenciosa | Aviso troca de usuário; beforeunload; anti duplo-clique; blocker SPA (Fase 10) |
-| 9 | Regressão | Vitest **45 arquivos / 299 testes** OK |
+| 9 | Regressão | Vitest **45 arquivos / 301 testes** OK |
 | 10 | Build | Vite build OK |
 | 11 | Documentado | `docs/modernizacao/FASE-*.md` |
 
