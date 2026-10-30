@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { WifiOff, RefreshCw, AlertCircle, Check, Trash2, X, AlertTriangle } from 'lucide-react';
 import { useOffline } from '../../contexts/OfflineContext';
+import { isConflictError } from '../../utils/syncErrors';
 
 export default function ConnectionStatus() {
   const {
@@ -23,6 +24,13 @@ export default function ConnectionStatus() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [isDiscarding, setIsDiscarding] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+
+  const conflictCount = useMemo(
+    () => deadLetterItems.filter((item) => isConflictError(item.lastError)).length,
+    [deadLetterItems],
+  );
+  const retryableDeadLetterCount = deadLetterCount - conflictCount;
+  const onlyConflicts = deadLetterCount > 0 && retryableDeadLetterCount === 0;
 
   useEffect(() => {
     if (connectionState === 'OFFLINE' || connectionState === 'SYNCING' || connectionState === 'ERROR' || deadLetterCount > 0) {
@@ -74,7 +82,9 @@ export default function ConnectionStatus() {
       bg: deadLetterCount > 0 ? 'bg-amber-600/95' : 'bg-emerald-600/95',
       icon: deadLetterCount > 0 ? <AlertTriangle className="w-4 h-4" /> : <Check className="w-4 h-4" />,
       text: deadLetterCount > 0
-        ? `Falha na sincronização: ${deadLetterCount} item(ns) requerem atenção`
+        ? onlyConflicts
+          ? `Conflito entre dispositivos: ${conflictCount} item(ns) requerem revisão`
+          : `Falha na sincronização: ${deadLetterCount} item(ns) requerem atenção`
         : pendingCount > 0 
         ? `Aguardando sincronização • ${pendingCount} alteração(ões) pendente(s)` 
         : 'Sincronizado • Todos os registros atualizados com a nuvem',
@@ -83,7 +93,7 @@ export default function ConnectionStatus() {
           onClick={() => setShowDeadLetterModal(true)}
           className="ml-2 px-2.5 py-0.5 bg-white/20 hover:bg-white/30 rounded text-xs font-bold transition-colors cursor-pointer"
         >
-          Ver erros
+          {onlyConflicts ? 'Revisar' : 'Ver erros'}
         </button>
       ) : pendingCount > 0 ? (
         <button
@@ -195,7 +205,13 @@ export default function ConnectionStatus() {
             <div className="bg-amber-600 text-white p-5 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5" />
-                <h3 className="text-sm font-bold">Erros Permanentes de Sincronização</h3>
+                <h3 className="text-sm font-bold">
+                  {onlyConflicts
+                    ? 'Conflitos entre dispositivos'
+                    : conflictCount > 0
+                    ? 'Pendências de sincronização'
+                    : 'Erros permanentes de sincronização'}
+                </h3>
               </div>
               <button
                 onClick={() => setShowDeadLetterModal(false)}
@@ -207,27 +223,47 @@ export default function ConnectionStatus() {
 
             <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
               <p className="text-xs text-slate-600 leading-relaxed">
-                Os itens abaixo encontraram impedimentos que impedem a gravação automática no servidor (ex: violação de permissão, regra de negócio ou duplicidade).
+                {onlyConflicts
+                  ? 'Estes registros foram alterados em outro dispositivo e não podem ser reenviados automaticamente.'
+                  : 'Os itens abaixo encontraram impedimentos que impedem a gravação automática no servidor (ex: violação de permissão, regra de negócio ou duplicidade).'}
               </p>
 
-              <p className="text-xs text-slate-600">Conflitos entre dispositivos não são reenviados automaticamente. Exporte uma cópia, revise os dados e descarte a pendência para carregar a versão do servidor antes de lançar novamente.</p>
+              {conflictCount > 0 && (
+                <p className="text-xs text-slate-600">
+                  Conflitos entre dispositivos não são reenviados automaticamente. Exporte uma cópia, revise os dados e descarte a pendência para carregar a versão do servidor antes de lançar novamente.
+                </p>
+              )}
               <button type="button" className="text-xs font-bold underline" onClick={() => {
                 const url = URL.createObjectURL(new Blob([JSON.stringify(deadLetterItems, null, 2)], {type:'application/json'}));
                 const link = document.createElement('a'); link.href=url; link.download='pendencias-diario.json'; link.click();
                 setTimeout(() => URL.revokeObjectURL(url),1000);
               }}>Exportar cópia das pendências</button>
               <div className="space-y-2">
-                {deadLetterItems.map((item, idx) => (
-                  <div key={item.id || idx} className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1">
-                    <div className="flex justify-between font-bold text-slate-800">
-                      <span>{item.table.toUpperCase()} • {item.operation}</span>
-                      <span className="text-slate-400 font-mono text-[10px]">ID local: #{item.id}</span>
+                {deadLetterItems.map((item, idx) => {
+                  const conflict = isConflictError(item.lastError);
+                  return (
+                    <div key={item.id || idx} className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1">
+                      <div className="flex justify-between font-bold text-slate-800 gap-2">
+                        <span className="flex items-center gap-2 flex-wrap">
+                          {item.table.toUpperCase()} • {item.operation}
+                          <span
+                            className={`px-1.5 py-0.5 rounded font-semibold text-[10px] ${
+                              conflict
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-rose-100 text-rose-700'
+                            }`}
+                          >
+                            {conflict ? 'Conflito entre dispositivos' : 'Erro permanente'}
+                          </span>
+                        </span>
+                        <span className="text-slate-400 font-mono text-[10px] shrink-0">ID local: #{item.id}</span>
+                      </div>
+                      <p className="text-red-600 font-mono text-[11px] break-all">
+                        {item.lastError}
+                      </p>
                     </div>
-                    <p className="text-red-600 font-mono text-[11px] break-all">
-                      {item.lastError}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -269,15 +305,17 @@ export default function ConnectionStatus() {
                   >
                     Fechar
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleRetry}
-                    disabled={isRetrying || isDiscarding}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-bold rounded-lg text-xs transition-all shadow-sm cursor-pointer"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isRetrying ? 'animate-spin' : ''}`} />
-                    {isRetrying ? 'Reenviando...' : 'Tentar Novamente'}
-                  </button>
+                  {retryableDeadLetterCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleRetry}
+                      disabled={isRetrying || isDiscarding}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-bold rounded-lg text-xs transition-all shadow-sm cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isRetrying ? 'animate-spin' : ''}`} />
+                      {isRetrying ? 'Reenviando...' : 'Tentar Novamente'}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setConfirmDiscard(true)}

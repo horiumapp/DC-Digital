@@ -1,9 +1,9 @@
 import { PublicDocumentLayout } from './components/common/ModuleWorkspace';
 import React, { Suspense, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Outlet, Link } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, Link } from 'react-router-dom';
 import { getSavedConsent } from './utils/lgpdConsent';
 import Layout from './components/Layout';
-// Importamos o Fallback e os Providers de forma direta, pois são a base
+import UnsavedNavigationGuard from './components/UnsavedNavigationGuard';
 import LoadingFallback from './components/common/LoadingFallback';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { OfflineProvider } from './contexts/OfflineContext';
@@ -16,7 +16,6 @@ import RouteErrorBoundary from './components/common/RouteErrorBoundary';
 import MissingEnvScreen from './components/common/MissingEnvScreen';
 import { isSupabaseConfigured } from './lib/supabase';
 
-// Lazy loading das páginas principais para dividir o peso do javascript
 const Login = React.lazy(() => import('./pages/Login'));
 const RecuperarSenha = React.lazy(() => import('./pages/RecuperarSenha'));
 const RedefinirSenha = React.lazy(() => import('./pages/RedefinirSenha'));
@@ -38,16 +37,12 @@ const AparataDetalhes = React.lazy(() => import('./pages/AparataDetalhes'));
 const PortalAluno = React.lazy(() => import('./pages/PortalAluno'));
 const Curriculo = React.lazy(() => import('./pages/Curriculo'));
 
-// Novas páginas LGPD
 const PoliticaPrivacidade = React.lazy(() => import('./pages/PoliticaPrivacidade'));
 const TermosUso = React.lazy(() => import('./pages/TermosUso'));
 const SolicitacaoLgpd = React.lazy(() => import('./pages/SolicitacaoLgpd'));
 const MinhaPrivacidade = React.lazy(() => import('./pages/MinhaPrivacidade'));
 
-// FIX #10: CookieBanner convertido para lazy import para reduzir o bundle inicial.
-// Só é necessário para visitantes não logados.
 const CookieBanner = React.lazy(() => import('./components/CookieBanner'));
-
 
 /** FIX #17: Página 404 com redirect por role para evitar loop ALUNO → /turmas → redirect */
 function NotFoundPage() {
@@ -81,9 +76,118 @@ function StaffProvidersWrapper() {
   );
 }
 
-export default function App() {
+function RootLayout() {
   const [showCookieBanner] = useState(() => !getSavedConsent());
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <Outlet />
+      {showCookieBanner && <CookieBanner />}
+    </Suspense>
+  );
+}
 
+const router = createBrowserRouter([
+  {
+    element: <RootLayout />,
+    children: [
+      {
+        element: <ProtectedRoute publicOnly />,
+        children: [
+          { path: '/', element: <Login /> },
+          { path: '/recuperar-senha', element: <RecuperarSenha /> },
+          { path: '/redefinir-senha', element: <RedefinirSenha /> },
+        ],
+      },
+      {
+        path: '/politica-de-privacidade',
+        element: <PublicDocumentLayout><PoliticaPrivacidade /></PublicDocumentLayout>,
+      },
+      {
+        path: '/termos-de-uso',
+        element: <PublicDocumentLayout><TermosUso /></PublicDocumentLayout>,
+      },
+      {
+        path: '/solicitacao-lgpd',
+        element: <PublicDocumentLayout><SolicitacaoLgpd /></PublicDocumentLayout>,
+      },
+      {
+        element: <ProtectedRoute />,
+        children: [
+          {
+            path: '/minha-privacidade',
+            element: (
+              <RouteErrorBoundary>
+                <PublicDocumentLayout><MinhaPrivacidade /></PublicDocumentLayout>
+              </RouteErrorBoundary>
+            ),
+          },
+        ],
+      },
+      {
+        element: <ProtectedRoute allowedRoles={['ALUNO']} />,
+        children: [
+          {
+            path: '/portal-aluno',
+            element: <RouteErrorBoundary><PortalAluno /></RouteErrorBoundary>,
+          },
+        ],
+      },
+      {
+        element: <ProtectedRoute allowedRoles={STAFF_ROLES} />,
+        children: [
+          {
+            element: <StaffProvidersWrapper />,
+            children: [
+              {
+                element: <UnsavedNavigationGuard />,
+                children: [
+                  {
+                    element: <Layout />,
+                    children: [
+                      { path: '/turmas', element: <RouteErrorBoundary><Turmas /></RouteErrorBoundary> },
+                      { path: '/diario', element: <RouteErrorBoundary><Diario /></RouteErrorBoundary> },
+                      { path: '/relatorio-notas', element: <RouteErrorBoundary><RelatorioNotas /></RouteErrorBoundary> },
+                      { path: '/relatorio-medias', element: <RouteErrorBoundary><RelatorioMedias /></RouteErrorBoundary> },
+                      { path: '/relatorio-conteudos', element: <RouteErrorBoundary><RelatorioConteudos /></RouteErrorBoundary> },
+                      { path: '/relatorio-frequencia', element: <RouteErrorBoundary><RelatorioFrequencia /></RouteErrorBoundary> },
+                      { path: '/frequencia', element: <RouteErrorBoundary><Frequencia /></RouteErrorBoundary> },
+                      { path: '/aparata', element: <RouteErrorBoundary><Aparata /></RouteErrorBoundary> },
+                      { path: '/aparata-detalhes', element: <RouteErrorBoundary><AparataDetalhes /></RouteErrorBoundary> },
+                      {
+                        element: <ProtectedRoute allowedRoles={[...ADMIN_ROLES, SEMEC_ROLE]} />,
+                        children: [
+                          { path: '/administracao', element: <RouteErrorBoundary><Administracao /></RouteErrorBoundary> },
+                        ],
+                      },
+                      {
+                        element: <ProtectedRoute allowedRoles={ADMIN_ROLES} />,
+                        children: [
+                          { path: '/relatorio-boletins', element: <RouteErrorBoundary><RelatorioBoletins /></RouteErrorBoundary> },
+                          { path: '/estatisticas', element: <RouteErrorBoundary><Estatisticas /></RouteErrorBoundary> },
+                          { path: '/pendencias-lancamento', element: <RouteErrorBoundary><PendenciasLancamento /></RouteErrorBoundary> },
+                          { path: '/pendencias-frequencia', element: <RouteErrorBoundary><PendenciasFrequencia /></RouteErrorBoundary> },
+                        ],
+                      },
+                      {
+                        element: <ProtectedRoute allowedRoles={['ADMIN']} />,
+                        children: [
+                          { path: '/curriculo', element: <RouteErrorBoundary><Curriculo /></RouteErrorBoundary> },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      { path: '*', element: <NotFoundPage /> },
+    ],
+  },
+]);
+
+export default function App() {
   if (!isSupabaseConfigured) {
     return <MissingEnvScreen />;
   }
@@ -92,72 +196,7 @@ export default function App() {
     <ErrorBoundary>
       <ToastProvider>
         <AuthProvider>
-          <Router>
-            {/* Suspense isola e exibe a tela de carregamento para as páginas fatiadas serem importadas */}
-            <Suspense fallback={<LoadingFallback />}>
-              <Routes>
-                {/* Rotas Públicas Apenas (Visitantes) */}
-                <Route element={<ProtectedRoute publicOnly />}>
-                  <Route path="/" element={<Login />} />
-                  <Route path="/recuperar-senha" element={<RecuperarSenha />} />
-                  <Route path="/redefinir-senha" element={<RedefinirSenha />} />
-                </Route>
-                
-                {/* Rotas Legais Públicas (Acessíveis a qualquer visitante) */}
-                <Route path="/politica-de-privacidade" element={<PublicDocumentLayout><PoliticaPrivacidade /></PublicDocumentLayout>} />
-                <Route path="/termos-de-uso" element={<PublicDocumentLayout><TermosUso /></PublicDocumentLayout>} />
-                <Route path="/solicitacao-lgpd" element={<PublicDocumentLayout><SolicitacaoLgpd /></PublicDocumentLayout>} />
-
-                {/* Rota Privada de Privacidade (Acessível a qualquer usuário logado) */}
-                <Route element={<ProtectedRoute />}>
-                  <Route path="/minha-privacidade" element={<RouteErrorBoundary><PublicDocumentLayout><MinhaPrivacidade /></PublicDocumentLayout></RouteErrorBoundary>} />
-                </Route>
-
-                {/* Rota exclusiva do Portal do Aluno (sem Layout/sidebar) */}
-                <Route element={<ProtectedRoute allowedRoles={['ALUNO']} />}>
-                  <Route path="/portal-aluno" element={<RouteErrorBoundary><PortalAluno /></RouteErrorBoundary>} />
-                </Route>
-
-                {/* Rotas Privadas (Servidores - qualquer logado exceto ALUNO) */}
-                <Route element={<ProtectedRoute allowedRoles={STAFF_ROLES} />}>
-                  <Route element={<StaffProvidersWrapper />}>
-                    <Route element={<Layout />}>
-                      <Route path="/turmas" element={<RouteErrorBoundary><Turmas /></RouteErrorBoundary>} />
-                      <Route path="/diario" element={<RouteErrorBoundary><Diario /></RouteErrorBoundary>} />
-                      <Route path="/relatorio-notas" element={<RouteErrorBoundary><RelatorioNotas /></RouteErrorBoundary>} />
-                      <Route path="/relatorio-medias" element={<RouteErrorBoundary><RelatorioMedias /></RouteErrorBoundary>} />
-                      <Route path="/relatorio-conteudos" element={<RouteErrorBoundary><RelatorioConteudos /></RouteErrorBoundary>} />
-                      <Route path="/relatorio-frequencia" element={<RouteErrorBoundary><RelatorioFrequencia /></RouteErrorBoundary>} />
-                      <Route path="/frequencia" element={<RouteErrorBoundary><Frequencia /></RouteErrorBoundary>} />
-                      <Route path="/aparata" element={<RouteErrorBoundary><Aparata /></RouteErrorBoundary>} />
-                      <Route path="/aparata-detalhes" element={<RouteErrorBoundary><AparataDetalhes /></RouteErrorBoundary>} />
-                      
-                      <Route element={<ProtectedRoute allowedRoles={[...ADMIN_ROLES, SEMEC_ROLE]} />}>
-                        <Route path="/administracao" element={<RouteErrorBoundary><Administracao /></RouteErrorBoundary>} />
-                      </Route>
-
-                      {/* Rotas da escola: diretor, secretário e administrador */}
-                      <Route element={<ProtectedRoute allowedRoles={ADMIN_ROLES} />}>
-                        <Route path="/relatorio-boletins" element={<RouteErrorBoundary><RelatorioBoletins /></RouteErrorBoundary>} />
-                        <Route path="/estatisticas" element={<RouteErrorBoundary><Estatisticas /></RouteErrorBoundary>} />
-                        <Route path="/pendencias-lancamento" element={<RouteErrorBoundary><PendenciasLancamento /></RouteErrorBoundary>} />
-                        <Route path="/pendencias-frequencia" element={<RouteErrorBoundary><PendenciasFrequencia /></RouteErrorBoundary>} />
-                      </Route>
-
-                      {/* Rota Exclusiva do Administrador */}
-                      <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-                        <Route path="/curriculo" element={<RouteErrorBoundary><Curriculo /></RouteErrorBoundary>} />
-                      </Route>
-                    </Route>
-                  </Route>
-                </Route>
-
-                {/* Rota 404 — Página não encontrada (FIX #17: redireciona por role) */}
-                <Route path="*" element={<NotFoundPage />} />
-              </Routes>
-              {showCookieBanner && <CookieBanner />}
-            </Suspense>
-          </Router>
+          <RouterProvider router={router} />
         </AuthProvider>
       </ToastProvider>
     </ErrorBoundary>
