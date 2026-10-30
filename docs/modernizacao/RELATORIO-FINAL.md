@@ -1,6 +1,6 @@
-# DC Digital — Relatório final da modernização (Fases 2–9)
+# DC Digital — Relatório final da modernização (Fases 2–10)
 
-**Branch:** `modernizacao/fase-2-3-regras-e-seguranca`  
+**Branch atual:** `modernizacao/fase-10-protecao-saida`  
 **Período:** 2026-10-29
 
 ## Critérios de aceitação
@@ -14,7 +14,7 @@
 | 5 | Sistema mais leve | Sim (Admin ~204→4,7 KB; Frequência ~111→6,4 KB) |
 | 6 | Internet lenta | Economia de dados + ping/batch adaptativos |
 | 7 | Sync offline | Wake visibility/pageshow; fila existente preservada |
-| 8 | Sem perda silenciosa | Aviso troca de usuário; beforeunload; anti duplo-clique |
+| 8 | Sem perda silenciosa | Aviso troca de usuário; beforeunload; anti duplo-clique; blocker SPA (Fase 10) |
 | 9 | Regressão | Vitest **45 arquivos / 299 testes** OK |
 | 10 | Build | Vite build OK |
 | 11 | Documentado | `docs/modernizacao/FASE-*.md` |
@@ -30,14 +30,14 @@
 | 7 | Estabilidade (timeout, Sentry rota, locks, erros PT) |
 | 8 | Mobile UX pontual |
 | 9 | Validação lint/test/build |
+| 10 | Proteção saída SPA + clareza CONFLICT |
 
 ## Pendências futuras (não bloqueantes)
 
 - Prefetch controlado de turmas
-- UI completa de conflitos CONFLICT
+- UI completa de conflitos CONFLICT (merge keep-local/server)
 - Paginação/virtualização TabProfessores/TabAlunos
 - Abort real das fetches offline (timeout já cobre loading)
-- Blocker de navegação SPA além do beforeunload
 
 ## Como validar em produção
 
@@ -46,3 +46,5 @@
 3. Edge Function `admin-create-user` deployada  
 4. Ativar Economia de Internet em Privacidade  
 5. Abrir frequência no celular: botão Gravar permanece acessível  
+6. Com lançamento em andamento, tentar Trocar turma — deve pedir confirmação  
+

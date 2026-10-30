@@ -1,10 +1,18 @@
-import { useEffect } from 'react';
+import { useEffect, useId } from 'react';
+import { setUnsavedDirty } from '../utils/unsavedChangesStore';
 
 /**
- * Avisa antes de fechar/recarregar a aba quando há alterações não salvas.
- * Não cobre navegação SPA (React Router) — apenas beforeunload.
+ * Avisa antes de fechar/recarregar a aba e registra dirty no store
+ * para o UnsavedNavigationGuard bloquear navegação SPA (React Router).
  */
 export function useUnsavedChangesWarning(isDirty: boolean): void {
+  const autoKey = useId();
+
+  useEffect(() => {
+    setUnsavedDirty(autoKey, isDirty);
+    return () => setUnsavedDirty(autoKey, false);
+  }, [autoKey, isDirty]);
+
   useEffect(() => {
     if (!isDirty) return;
 
