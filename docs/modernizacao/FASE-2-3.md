@@ -32,7 +32,10 @@ Criados em `.cursor/rules/`:
 
 ## Aplicação da migration
 
-A migration só entra no banco quando autorizada e aplicada (Supabase CLI / dashboard).  
+Migration `20261029000001` aplicada no projeto remoto via SQL Editor (`Success. No rows returned`).
+
+Edge Function `admin-create-user` implantada em `mvdujggtjbchufecmtap` (2026-10-29) com `--no-verify-jwt`.
+
 Confirmar no painel Auth: `enable_signup = false`.
 
 ## Pendências seguintes (não feitas nesta entrega)
