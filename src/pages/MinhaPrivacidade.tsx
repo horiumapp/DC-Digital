@@ -441,6 +441,17 @@ export default function MinhaPrivacidade() {
           </div>
         </div>
 
+        {/* Economia de Internet */}
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
+          <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
+            Conexão e Dados
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Em regiões com internet lenta ou limitada, ative a economia para priorizar o essencial do diário e da sincronização.
+          </p>
+          <DataSaverToggle />
+        </div>
+
         {/* Alterar Senha (Segurança) */}
         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
           <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
