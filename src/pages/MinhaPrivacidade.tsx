@@ -10,6 +10,7 @@ import { getSavedConsent, saveConsentLocal } from '../utils/lgpdConsent';
 import { translateSupabaseError } from '../utils/supabaseErrors';
 import DataExportButton from '../components/DataExportButton';
 import ConsentToggle from '../components/ConsentToggle';
+import DataSaverToggle from '../components/DataSaverToggle';
 
 interface RelationWithName {
   nome: string;

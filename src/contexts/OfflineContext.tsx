@@ -82,6 +82,30 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     wasOffline.current = !isOnline;
   }, [isOnline, pendingCount]);
 
+  // Wake de sync ao voltar à aba / restaurar página (sem depender de Background Sync).
+  useEffect(() => {
+    const wakeIfNeeded = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!navigator.onLine) return;
+      if (pendingCount <= 0 && !wasOffline.current) return;
+      SyncEngine.scheduleSync();
+    };
+
+    const onPageShow = (event: PageTransitionEvent) => {
+      // bfcache restore também deve tentar descarregar a fila
+      if (event.persisted || document.visibilityState === 'visible') {
+        wakeIfNeeded();
+      }
+    };
+
+    document.addEventListener('visibilitychange', wakeIfNeeded);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      document.removeEventListener('visibilitychange', wakeIfNeeded);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, [pendingCount]);
+
   // FIX #7: Limpeza periódica com localStorage para rastrear último cleanup.
   useEffect(() => {
     const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h

@@ -12,6 +12,7 @@ import { acknowledgeMutation, isPartialMutation, keepConflictRecords, normalizeM
 import { offlineOwner } from './offlineIdentity';
 import { pingInternet, pingSupabase } from '../utils/network';
 import { getTid } from '../utils/turmaUtils';
+import { getSyncBatchSize } from '../utils/dataSaver';
 
 import { reportWarning } from '../utils/errorReporting';
 
@@ -193,8 +194,9 @@ async function _runSyncAll(ownerId: string): Promise<SyncResult> {
 
 
   // FIX #15: Limite de itens por ciclo para evitar bloqueio longo em filas grandes.
+  // Em economia de internet / rede fraca o lote é menor (ver dataSaver.getSyncBatchSize).
   // Se a fila tiver mais itens, um próximo ciclo será agendado automaticamente.
-  const MAX_ITEMS_PER_CYCLE = 200;
+  const MAX_ITEMS_PER_CYCLE = getSyncBatchSize();
   let itemsProcessed = 0;
 
   try {

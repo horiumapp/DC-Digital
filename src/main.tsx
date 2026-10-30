@@ -9,6 +9,10 @@ import './modules.css';
 import './refined.css';
 import SWUpdatePrompt from './components/common/SWUpdatePrompt';
 import InstallPrompt from './components/common/InstallPrompt';
+import { applyDataSaverDocumentClass, subscribeDataSaverChange } from './utils/dataSaver';
+
+applyDataSaverDocumentClass();
+subscribeDataSaverChange(() => applyDataSaverDocumentClass());
 
 function Root() {
   const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
