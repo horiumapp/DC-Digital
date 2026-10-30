@@ -15,6 +15,7 @@ import {
 
 import { useToast } from '../../components/common/Toast';
 import { getEscolaLogo } from '../../utils/escolaUtils';
+import { translateSupabaseError } from '../../utils/supabaseErrors';
 
 export interface EscolaRow {
   id: string;
@@ -83,7 +84,7 @@ export default function TabEscolas() {
 
       if (error) {
         console.error("Erro ao atualizar:", error);
-        showError("Erro ao atualizar escola: " + error.message);
+        showError(translateSupabaseError(error));
       } else {
         fetchEscolas();
         setEscolaParaEditar(null);
@@ -104,7 +105,7 @@ export default function TabEscolas() {
 
       if (error) {
         console.error("Erro ao inserir:", error);
-        showError("Erro ao criar escola: " + error.message);
+        showError(translateSupabaseError(error));
       } else {
         fetchEscolas();
         setEscolaParaEditar(null);
@@ -170,7 +171,7 @@ export default function TabEscolas() {
     const { error } = await supabase.from('escolas').insert(payload);
     if (error) {
       console.error('Erro ao importar escolas:', error);
-      throw new Error(error.message || 'Erro ao salvar escolas importadas.');
+      throw new Error(translateSupabaseError(error));
     }
     await fetchEscolas();
   };

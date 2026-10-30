@@ -186,7 +186,42 @@ export default function TabUsuarios() {
             <p className="font-medium">Nenhum usuário encontrado com este filtro.</p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <>
+          {/* Cards no mobile */}
+          <div className="md:hidden space-y-3">
+            {usuariosFiltrados.map((u) => {
+              const config = getCargoConfig(u.cargo);
+              return (
+                <article key={u.id} className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center border font-bold text-xs shrink-0 ${config.color}`}>
+                      {u.nome_completo ? u.nome_completo.substring(0, 2).toUpperCase() : 'US'}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-slate-800 text-sm truncate">{u.nome_completo || 'Sem nome'}</h3>
+                      <p className="text-xs text-slate-500 truncate">{u.email || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black border ${config.color}`}>
+                      {config.icon}
+                      {u.cargo}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+                      <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                      {getEscolaNome(u.escola_id, u.cargo)}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 tabular-nums">
+                    Criado em {new Date(u.criado_em).toLocaleDateString('pt-BR')}
+                  </p>
+                </article>
+              );
+            })}
+          </div>
+
+          {/* Tabela no desktop */}
+          <div className="hidden md:block bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -243,6 +278,7 @@ export default function TabUsuarios() {
               </table>
             </div>
           </div>
+          </>
         )}
       </div>
       {cadastroAberto && (

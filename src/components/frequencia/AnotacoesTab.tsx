@@ -4,6 +4,9 @@ import { useToast } from '../common/Toast';
 import { formatarDataParaExibicao } from '../../utils/dateUtils';
 import { listarAnotacoes, removerAnotacao, salvarAnotacao } from '../../services/turmaServiceOffline';
 import type { LocalAnotacao } from '../../lib/db';
+import { useAsyncLock } from '../../hooks/useAsyncLock';
+import { useUnsavedChangesWarning } from '../../hooks/useUnsavedChangesWarning';
+import { translateSupabaseError } from '../../utils/supabaseErrors';
 
 interface AnotacoesTabProps {
   turmaAtiva: { id: string | number; componente?: string } | null;
@@ -28,7 +31,9 @@ export default function AnotacoesTab({
   const [carregando, setCarregando] = useState(false);
 
   const { showWarning, showSuccess, showError } = useToast();
+  const { locked: isSaving, runLocked } = useAsyncLock();
   const disciplina = turmaAtiva?.componente || '';
+  useUnsavedChangesWarning(isAddingAnotacao && textoAnotacao.trim().length > 0);
 
   const carregar = useCallback(async () => {
     if (!turmaAtiva || !selectedDate || !tempoAula || !disciplina) {
@@ -59,25 +64,29 @@ export default function AnotacoesTab({
       showWarning('Por favor, descreva a anotação.');
       return;
     }
-    try {
-      await salvarAnotacao(turmaAtiva.id, selectedDate, tempoAula, disciplina, textoAnotacao);
-      setIsAddingAnotacao(false);
-      setTextoAnotacao('');
-      showSuccess('Anotação guardada neste aparelho e enviada para sincronizar.');
-      await carregar();
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Não foi possível guardar a anotação.');
-    }
+    await runLocked(async () => {
+      try {
+        await salvarAnotacao(turmaAtiva.id, selectedDate, tempoAula, disciplina, textoAnotacao);
+        setIsAddingAnotacao(false);
+        setTextoAnotacao('');
+        showSuccess('Anotação guardada neste aparelho e enviada para sincronizar.');
+        await carregar();
+      } catch (err) {
+        showError(translateSupabaseError(err));
+      }
+    });
   };
 
   const handleRemove = async (localId?: number) => {
-    if (localId == null) return;
-    try {
-      await removerAnotacao(localId);
-      await carregar();
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Não foi possível excluir a anotação.');
-    }
+    if (localId == null || isSaving) return;
+    await runLocked(async () => {
+      try {
+        await removerAnotacao(localId);
+        await carregar();
+      } catch (err) {
+        showError(translateSupabaseError(err));
+      }
+    });
   };
 
   return (
@@ -184,7 +193,7 @@ export default function AnotacoesTab({
 
           <div className="pt-2">
              <div className="flex items-center gap-3">
-               <button onClick={() => void handleSave()} className="flex items-center gap-2 bg-[#eef2ff] text-[#6354c7] border border-blue-100 px-6 py-2 rounded text-sm font-bold hover:bg-[#e0e7ff] transition shadow-sm active:scale-95">
+               <button onClick={() => void handleSave()} disabled={isSaving || disabled} className="flex items-center gap-2 bg-[#eef2ff] text-[#6354c7] border border-blue-100 px-6 py-2 rounded text-sm font-bold hover:bg-[#e0e7ff] transition shadow-sm active:scale-95 disabled:opacity-60 disabled:pointer-events-none">
                  <Save className="w-4 h-4" /> Salvar anotação
                </button>
                <button

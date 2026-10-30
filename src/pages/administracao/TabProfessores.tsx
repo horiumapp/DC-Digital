@@ -24,6 +24,7 @@ const DISCIPLINAS = [
 import { useToast } from '../../components/common/Toast';
 import { readAllRows } from '../../services/pagination';
 import { getEscolaLogo } from '../../utils/escolaUtils';
+import { translateSupabaseError } from '../../utils/supabaseErrors';
 
 export interface ProfessorRow {
   id: string;
@@ -179,7 +180,7 @@ export default function TabProfessores() {
 
       if (error) {
         console.error("Erro ao atualizar:", error);
-        showError("Erro ao atualizar professor: " + error.message);
+        showError(translateSupabaseError(error));
       } else if (!updatedData || updatedData.length === 0) {
         showWarning("Nenhum registro foi atualizado. Verifique suas permissões.");
       } else {

@@ -10,6 +10,7 @@ import ConfirmActionModal from '../../components/ConfirmActionModal';
 import NovaEscolaModal from '../../components/NovaEscolaModal';
 import { useToast } from '../../components/common/Toast';
 import { getEscolaLogo } from '../../utils/escolaUtils';
+import { translateSupabaseError } from '../../utils/supabaseErrors';
 
 import { type EscolaRow, type EscolaFormData } from './TabEscolas';
 
@@ -99,7 +100,7 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
         .eq('id', usuarioParaExcluir.id);
 
       if (error) {
-        showError('Erro ao remover vínculo: ' + error.message);
+        showError(translateSupabaseError(error));
       } else {
         showSuccess(`${usuarioParaExcluir.nome_completo} foi desvinculado(a) desta escola.`);
         fetchUsuarios();
@@ -125,7 +126,7 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
       .eq('id', escola.id);
 
     if (error) {
-      showError('Erro ao atualizar escola: ' + error.message);
+      showError(translateSupabaseError(error));
     } else {
       showSuccess('Dados da escola atualizados!');
       onEscolaAtualizada();
@@ -246,11 +247,13 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           <button
+                            type="button"
                             onClick={() => setUsuarioParaExcluir(gestor)}
-                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Desvincular"
+                            className="p-2 min-w-11 min-h-11 inline-flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Desvincular gestor"
+                            aria-label={`Desvincular gestor ${gestor.nome_completo || ''}`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -313,11 +316,13 @@ export default function EscolaDetalhes({ escola, onVoltar, onEscolaAtualizada }:
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           <button
+                            type="button"
                             onClick={() => setUsuarioParaExcluir(sec)}
-                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Desvincular"
+                            className="p-2 min-w-11 min-h-11 inline-flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Desvincular secretário"
+                            aria-label={`Desvincular secretário ${sec.nome_completo || ''}`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
