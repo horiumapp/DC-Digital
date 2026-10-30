@@ -249,12 +249,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const previous = localStorage.getItem('dc_last_user_id');
         if (previous && previous !== authUser.id) {
           // Não apagar silenciosamente pendências do usuário anterior (PC compartilhado).
-          let previousPending = 0;
-          try {
-            previousPending = await getPendingCountForOwner(previous);
-          } catch {
-            previousPending = 0;
-          }
+          const previousPending = await getPendingCountForOwner(previous).catch(() => 0);
           if (previousPending > 0) {
             const confirmed = await askConfirmation('switch', previousPending);
             if (!confirmed) {
@@ -437,7 +432,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       activeAbortController?.abort();
       subscription.unsubscribe();
     };
-  }, []);
+  }, [askConfirmation]);
 
 
   // LOGOUT — Revoga sessão no servidor ANTES de limpar o state da UI
