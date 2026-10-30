@@ -55,13 +55,6 @@ vi.mock('react-router-dom', () => ({
   useSearchParams: () => [mockSearchParams, vi.fn()],
 }));
 
-vi.mock('motion/react', () => ({
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  motion: {
-    div: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => <div {...props}>{children}</div>,
-  },
-}));
-
 const turmaMock = {
   id: 'turma-1',
   ensino: 'Fundamental Anos Iniciais',

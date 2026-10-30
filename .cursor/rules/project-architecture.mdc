@@ -1,0 +1,28 @@
+---
+description: Arquitetura e evolução incremental do DC Digital
+alwaysApply: true
+---
+
+# Arquitetura do Projeto
+
+DC Digital é gestão escolar / diário digital (React, TypeScript, Vite, Supabase, Dexie, PWA).
+
+## Preservar o existente
+
+- Evoluir incrementalmente. Não recriar o sistema nem substituir a arquitetura sem justificativa.
+- Não remover funcionalidades, módulos, arquivos ou tabelas sem autorização explícita.
+- Não sobrescrever alterações locais do desenvolvedor.
+- Não alterar regras pedagógicas sem autorização.
+- Antes de mudar: localizar código relacionado, dependências, impacto em offline/sync/RLS.
+
+## Anti-overengineering
+
+- Preferir a solução mais simples que preserve segurança e manutenção.
+- Não adicionar dependências, abstrações ou tabelas sem necessidade real.
+- Evitar duplicação; reutilizar serviços, hooks e componentes existentes.
+
+## Deploy e Git
+
+- Não fazer deploy em produção sem autorização expressa.
+- Não executar comandos destrutivos (`reset --hard`, `clean -fd`, force push) sem autorização.
+- Commits apenas quando o usuário solicitar.

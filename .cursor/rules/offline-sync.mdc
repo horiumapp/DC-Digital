@@ -1,0 +1,25 @@
+---
+description: Offline-first, fila de sync, PWA e internet fraca
+globs: "{src/services/offline*.ts,src/services/sync*.ts,src/contexts/OfflineContext.tsx,src/hooks/useOnlineStatus.ts,vite.config.ts}"
+alwaysApply: false
+---
+
+# Offline e sincronização
+
+## Princípios
+
+- Toda gravação acadêmica deve definir comportamento online, offline e de sync.
+- Fila com `operationId` idempotente; não sobrescrever silenciosamente revisão mais nova com versão antiga.
+- Não sincronizar sem sessão/autorização válida.
+- Não guardar senhas nem tokens desnecessários no IndexedDB.
+
+## Integridade
+
+- Purge de fila ao deletar local deve incluir `pending` e `error` não tentados, filtrando `ownerUserId`.
+- Troca de usuário: avisar se houver pendências do usuário anterior antes de limpar.
+- Não assumir Background Sync em todos os dispositivos — manter sync em foreground + wake (`visibilitychange`).
+
+## Internet fraca
+
+- Preferir economia de dados quando ativada (menos imagens, menos polling, batches menores).
+- Ping real (`/ping.txt`); não usar só `navigator.onLine`.

@@ -1,0 +1,25 @@
+---
+description: Performance, bundle e uso eficiente de recursos
+globs: "{src/**/*.{ts,tsx},vite.config.ts,package.json}"
+alwaysApply: false
+---
+
+# Performance
+
+## Bundle e carregamento
+
+- Preferir `React.lazy` / dynamic import para rotas e abas pesadas (Admin, Frequência, PDF).
+- Não adicionar dependências pesadas sem medir benefício; remover não usadas.
+- Imagens: comprimir, lazy load; evitar downloads automáticos desnecessários.
+
+## React e dados
+
+- Evitar carregar todos os alunos/professores/turmas de uma vez — paginar no servidor.
+- Virtualizar listas grandes quando o volume justificar.
+- Debounce em buscas; cancelar requisições obsoletas (`AbortController`).
+- `memo` / `useMemo` / `useCallback` só com ganho comprovado — sem otimização artificial.
+
+## Métricas
+
+- Não declarar ganho de LCP/INP/CLS sem medição.
+- Após mudanças relevantes: comparar tamanho de chunks (`dist/`) e rodar `npm run build`.

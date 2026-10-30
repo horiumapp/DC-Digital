@@ -613,6 +613,44 @@ describe('offlineStorage Service', () => {
     expect(store.syncQueue).toHaveLength(0);
   });
 
+  it('purga UPSERT em status error ao deletar conteúdo local (evita ressurreição)', async () => {
+    const store = getMockStore();
+    store.conteudos.push({
+      localId: 3,
+      turma_id: 't-123',
+      data: '2026-04-16',
+      tempo: '2',
+      disciplina: 'História',
+      descricao: 'Aula com erro',
+      syncStatus: 'pending',
+    });
+
+    store.syncQueue.push({
+      id: 101,
+      table: 'conteudos',
+      operation: 'UPSERT',
+      payload: JSON.stringify({
+        turma_id: 't-123',
+        data: '2026-04-16',
+        tempo: '2',
+        disciplina: 'História',
+        descricao: 'Aula com erro',
+      }),
+      status: 'error',
+      attempted: false,
+      hash: 'h-cont-err',
+      createdAt: '2026-04-16',
+      updatedAt: '2026-04-16',
+      retryCount: 1,
+      ownerUserId: 'user-a',
+    });
+
+    await deleteConteudoLocal('t-123', 'História', '2026-04-16', '2');
+
+    expect(store.conteudos).toHaveLength(0);
+    expect(store.syncQueue).toHaveLength(0);
+  });
+
   it('atualiza avaliação existente se coincidir com clientTempId em saveAvaliacaoLocal (DATA-01)', async () => {
     const store = getMockStore();
     // 1. Inserir avaliação offline pela primeira vez

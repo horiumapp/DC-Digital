@@ -224,9 +224,11 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
         setConteudos([]);
         setFechamentos({});
 
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
         try {
           const rawId = getTid(turmaAtiva.id);
-          const [ls, hs, alumnosData, conts, freqs, fechamentosData] = await Promise.all([
+          const TURMA_LOAD_TIMEOUT_MS = 20_000;
+          const loadPromise = Promise.all([
             OfflineTurmaService.fetchLancamentos(rawId, turmaAtiva.componente),
             OfflineTurmaService.fetchHorario(rawId, turmaAtiva.componente),
             OfflineTurmaService.fetchAlunos(rawId),
@@ -234,7 +236,19 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
             OfflineTurmaService.fetchFaltasPeriodo(rawId, turmaAtiva.componente, undefined, undefined, ['F', 'FJ', 'Ausente']),
             OfflineTurmaService.fetchFechamentos(rawId, turmaAtiva.componente)
           ]);
-          
+          const [ls, hs, alumnosData, conts, freqs, fechamentosData] = await Promise.race([
+            loadPromise.finally(() => {
+              if (timeoutId !== undefined) clearTimeout(timeoutId);
+            }),
+            new Promise<never>((_, reject) => {
+              timeoutId = setTimeout(() => reject(new Error('timeout')), TURMA_LOAD_TIMEOUT_MS);
+              signal.addEventListener('abort', () => {
+                if (timeoutId !== undefined) clearTimeout(timeoutId);
+                reject(new DOMException('Aborted', 'AbortError'));
+              }, { once: true });
+            }),
+          ]);
+
           if (signal.aborted) return;
 
           setLancamentos(ls);
@@ -257,20 +271,27 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
           });
           setFaltasPorData(faltasMap);
           setAtestadosPorData(atestadosMap);
-          
+
           await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alumnosData, signal);
         } catch (err) {
+          if (signal.aborted || (err instanceof DOMException && err.name === 'AbortError')) {
+            return;
+          }
           // U1 FIX: Tratar OfflineNoCacheError com mensagem específica em vez de
           // mensagem genérica, pois o problema é cachê vazio (primeira visita offline),
           // não necessariamente um erro de conexão.
           if (err instanceof OfflineNoCacheError) {
             console.warn('[TurmaContext] Offline sem cache local:', err.message);
             showErrorRef.current(err.message);
+          } else if (err instanceof Error && err.message === 'timeout') {
+            console.warn('[TurmaContext] Timeout ao carregar turma');
+            showErrorRef.current('A turma demorou demais para abrir. Verifique a conexão e tente novamente.');
           } else {
             console.error('Erro ao carregar dados da turma:', err);
             showErrorRef.current('Não foi possível carregar todos os dados desta turma. Verifique sua conexão.');
           }
         } finally {
+          if (timeoutId !== undefined) clearTimeout(timeoutId);
           if (!signal.aborted) setLoading(false);
         }
       }

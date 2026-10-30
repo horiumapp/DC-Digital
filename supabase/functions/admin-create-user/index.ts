@@ -218,7 +218,30 @@ Deno.serve(async (req: Request) => {
       }
       if (!hasNetworkScope(effectiveRole)) {
         const { data: caller } = await supabaseAdmin.from("usuarios").select("escola_id").eq("id", callerUser.id).maybeSingle();
-        if (!caller?.escola_id || caller.escola_id !== target.escola_id) {
+        if (!caller?.escola_id) {
+          return new Response(JSON.stringify({ error: "Você só pode redefinir senhas de professores da própria escola." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        // Autoriza por usuarios.escola_id OU lotação ativa na escola do chamador
+        // (professores multi-escola frequentemente têm usuarios.escola_id nulo/desatualizado).
+        let sameSchool = caller.escola_id === target.escola_id;
+        if (!sameSchool) {
+          const { data: profRow } = await supabaseAdmin
+            .from("professores")
+            .select("id")
+            .ilike("email", targetEmail)
+            .maybeSingle();
+          if (profRow?.id) {
+            const { data: aloc } = await supabaseAdmin
+              .from("professor_alocacoes")
+              .select("id")
+              .eq("professor_id", profRow.id)
+              .eq("escola_id", caller.escola_id)
+              .limit(1)
+              .maybeSingle();
+            sameSchool = Boolean(aloc?.id);
+          }
+        }
+        if (!sameSchool) {
           return new Response(JSON.stringify({ error: "Você só pode redefinir senhas de professores da própria escola." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
       }

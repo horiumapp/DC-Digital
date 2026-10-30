@@ -167,7 +167,9 @@ describe('admin-create-user delete-user Authorization Rules (SEC-01 IDOR Prevent
 function evaluateResetProfessorPasswordAuthorization(
   caller: CallerUser,
   targetUserData: TargetUser | null,
-  senha: string
+  senha: string,
+  /** Lotação do professor na escola do chamador (multi-escola). */
+  hasAlocacaoNaEscolaDoCaller = false
 ): { status: number; error?: string; authorized: boolean } {
   const effectiveRole = caller.role;
   if (!['ADMIN', 'GESTOR', 'GESTOR_SEMEC', 'SECRETARIO'].includes(effectiveRole)) {
@@ -182,7 +184,12 @@ function evaluateResetProfessorPasswordAuthorization(
     return { status: 404, error: 'Conta de professor não encontrada.', authorized: false };
   }
   if (effectiveRole !== 'ADMIN' && effectiveRole !== 'GESTOR_SEMEC') {
-    if (!caller.escola_id || caller.escola_id !== targetUserData.escola_id) {
+    if (!caller.escola_id) {
+      return { status: 403, error: 'Você só pode redefinir senhas de professores da própria escola.', authorized: false };
+    }
+    const sameSchool =
+      caller.escola_id === targetUserData.escola_id || hasAlocacaoNaEscolaDoCaller;
+    if (!sameSchool) {
       return { status: 403, error: 'Você só pode redefinir senhas de professores da própria escola.', authorized: false };
     }
   }
@@ -228,6 +235,24 @@ describe('admin-create-user reset-professor-password Authorization Rules', () =>
     const res = evaluateResetProfessorPasswordAuthorization(semec, profEscolaB, '@prof123');
     expect(res.authorized).toBe(true);
     expect(res.status).toBe(200);
+  });
+
+  it('deve autorizar gestor A quando professor tem usuarios.escola_id nulo mas lotação na escola A', () => {
+    const profMulti: TargetUser = {
+      id: 'prof-multi',
+      email: 'multi@rede.gov.br',
+      cargo: 'PROFESSOR',
+      escola_id: undefined as unknown as string,
+    };
+    const res = evaluateResetProfessorPasswordAuthorization(gestorEscolaA, profMulti, '@prof123', true);
+    expect(res.authorized).toBe(true);
+    expect(res.status).toBe(200);
+  });
+
+  it('deve rejeitar gestor A quando professor de B não tem lotação em A', () => {
+    const res = evaluateResetProfessorPasswordAuthorization(gestorEscolaA, profEscolaB, '@prof123', false);
+    expect(res.authorized).toBe(false);
+    expect(res.status).toBe(403);
   });
 });
 

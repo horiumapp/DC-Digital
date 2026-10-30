@@ -1,15 +1,24 @@
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 import { useTurma } from '../contexts/TurmaContext';
 import { APP_CONFIG } from '../config/appConfig';
-import { getDayOfWeek } from '../utils/dateUtils';
-
-import FrequenciaTab from '../components/frequencia/FrequenciaTab';
-import ObjetoConhecimentoTab from '../components/frequencia/ObjetoConhecimentoTab';
-import AnotacoesTab from '../components/frequencia/AnotacoesTab';
-import AvaliacoesTab from '../components/frequencia/AvaliacoesTab';
-import { formatarDataParaExibicao } from '../utils/dateUtils';
+import { getDayOfWeek, formatarDataParaExibicao } from '../utils/dateUtils';
 import { carregarFeriados, nomeFeriado } from '../services/feriados';
+
+const FrequenciaTab = React.lazy(() => import('../components/frequencia/FrequenciaTab'));
+const ObjetoConhecimentoTab = React.lazy(() => import('../components/frequencia/ObjetoConhecimentoTab'));
+const AnotacoesTab = React.lazy(() => import('../components/frequencia/AnotacoesTab'));
+const AvaliacoesTab = React.lazy(() => import('../components/frequencia/AvaliacoesTab'));
+
+function TabLoading() {
+  return (
+    <div className="flex items-center justify-center gap-2 py-12 text-slate-500" role="status">
+      <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+      <span className="text-sm font-medium">Carregando…</span>
+    </div>
+  );
+}
 
 export default function Frequencia() {
   const { turmaAtiva, horarioTurma, lancamentos, verificarPeriodoFechado } = useTurma();
@@ -125,7 +134,9 @@ export default function Frequencia() {
         )}
 
 
-    <div className="portal-lesson-workspace"><nav className="portal-lesson-steps" aria-label="Etapas do registro">{steps.map((step,index)=><button key={step.id} aria-pressed={activeTab===step.id} onClick={()=>handleTabChange(step.id)}><span>{String(index+1).padStart(2,'0')}</span><div><strong>{step.title}</strong><small>{step.id==='frequencia'||step.id==='objeto'?`${registeredTimes(step.id==='frequencia'?'frequencia':'conteudo')} de ${temposValidosDoDia.length} tempos registrados`:step.hint}</small></div></button>)}</nav><section className="portal-lesson-content"><header><span className="portal-eyebrow">REGISTRO DA AULA · {formatarDataParaExibicao(selectedDate)}</span><h2>{steps.find(s=>s.id===activeTab)?.title}</h2></header><details className="portal-step-help"><summary>Como usar esta etapa</summary><p>{activeTab==='frequencia'?'Abra o lançamento, confira as presenças de cada estudante e confirme a gravação. As marcações só são salvas após confirmar.':activeTab==='objeto'?'Selecione o tempo da aula e registre os objetos de conhecimento e as habilidades trabalhadas.':activeTab==='anotacoes'?'Registre as observações pedagógicas relacionadas à aula e confirme a gravação.':'Cadastre as avaliações e confira as notas de cada estudante nos controles desta etapa.'}</p></details><div className="portal-lesson-form">              {activeTab === 'frequencia' && (
+    <div className="portal-lesson-workspace"><nav className="portal-lesson-steps" aria-label="Etapas do registro">{steps.map((step,index)=><button key={step.id} aria-pressed={activeTab===step.id} onClick={()=>handleTabChange(step.id)}><span>{String(index+1).padStart(2,'0')}</span><div><strong>{step.title}</strong><small>{step.id==='frequencia'||step.id==='objeto'?`${registeredTimes(step.id==='frequencia'?'frequencia':'conteudo')} de ${temposValidosDoDia.length} tempos registrados`:step.hint}</small></div></button>)}</nav><section className="portal-lesson-content"><header><span className="portal-eyebrow">REGISTRO DA AULA · {formatarDataParaExibicao(selectedDate)}</span><h2>{steps.find(s=>s.id===activeTab)?.title}</h2></header><details className="portal-step-help"><summary>Como usar esta etapa</summary><p>{activeTab==='frequencia'?'Abra o lançamento, confira as presenças de cada estudante e confirme a gravação. As marcações só são salvas após confirmar.':activeTab==='objeto'?'Selecione o tempo da aula e registre os objetos de conhecimento e as habilidades trabalhadas.':activeTab==='anotacoes'?'Registre as observações pedagógicas relacionadas à aula e confirme a gravação.':'Cadastre as avaliações e confira as notas de cada estudante nos controles desta etapa.'}</p></details><div className="portal-lesson-form">
+              <Suspense fallback={<TabLoading />}>
+              {activeTab === 'frequencia' && (
                 <FrequenciaTab
                   selectedDate={selectedDate}
                   tempoAula={tempoAula}
@@ -160,5 +171,7 @@ export default function Frequencia() {
                   selectedDate={selectedDate}
                   disabled={somenteLeitura} 
                 />
-              )}</div></section></div></div>;
+              )}
+              </Suspense>
+              </div></section></div></div>;
 }

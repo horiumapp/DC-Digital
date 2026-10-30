@@ -7,6 +7,7 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { pingInternet } from '../utils/network';
+import { getPingIntervals, subscribeDataSaverChange } from '../utils/dataSaver';
 
 interface OnlineStatusResult {
   /** Se o dispositivo tem conexão real com a internet */
@@ -17,13 +18,10 @@ interface OnlineStatusResult {
   checkNow: () => Promise<boolean>;
 }
 
-// Intervalo de ping (ms)
-const PING_INTERVAL_ONLINE = 60_000;   // 60s quando online
-const PING_INTERVAL_OFFLINE = 15_000;  // 15s quando offline (tenta reconectar mais rápido)
-
 export function useOnlineStatus(): OnlineStatusResult {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
+  const [pingProfileTick, setPingProfileTick] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const isOnlineRef = useRef(isOnline);
 
@@ -64,12 +62,18 @@ export function useOnlineStatus(): OnlineStatusResult {
     };
   }, [checkNow]);
 
+  // Recalcular intervalos quando economia de dados / rede mudar.
+  useEffect(() => subscribeDataSaverChange(() => {
+    setPingProfileTick(t => t + 1);
+  }), []);
+
   // Ping periódico para validação real — separated from the listener
   // effect so toggling isOnline doesn't re-register event listeners.
   useEffect(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
 
-    const interval = isOnline ? PING_INTERVAL_ONLINE : PING_INTERVAL_OFFLINE;
+    const { onlineMs, offlineMs } = getPingIntervals();
+    const interval = isOnline ? onlineMs : offlineMs;
 
     // FIX (CWE-94): Always pass an arrow function to setInterval.
     // Passing `checkNow` directly could be flagged because its return
@@ -82,7 +86,7 @@ export function useOnlineStatus(): OnlineStatusResult {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isOnline, checkNow]);
+  }, [isOnline, checkNow, pingProfileTick]);
 
   return { isOnline, lastCheckedAt, checkNow };
 }

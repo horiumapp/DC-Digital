@@ -1,0 +1,25 @@
+---
+description: Testes, lint, build e critério de conclusão
+globs: "{src/**/*.{ts,tsx},src/__tests__/**/*}"
+alwaysApply: false
+---
+
+# Testes e qualidade
+
+## Após alterações relevantes
+
+1. `npm run lint`
+2. `npm run test`
+3. `npm run build` quando o risco atingir bundle/rotas/PWA
+4. Não declarar correção concluída sem validação
+
+## Escopo dos testes
+
+- Regressão dos fluxos tocados (auth, RLS logic unitária, offline/sync, diário).
+- Não alterar scripts só para forçar aprovação artificial.
+- Se um script não existir, documentar — não inventar sucesso.
+
+## Erros
+
+- Não engolir falhas silenciosas em operações importantes.
+- Error Boundaries já existem — preservar isolamento por rota.

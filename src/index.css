@@ -545,3 +545,21 @@
   }
   .dd-badge { font-size: 0.625rem; padding: 0.1rem 0.3rem; }
 }
+/* Fase 6 — Economia de Internet / conexão fraca */
+html.dc-data-saver *,
+html.dc-data-saver *::before,
+html.dc-data-saver *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+html.dc-data-saver img[data-decorative="true"],
+html.dc-data-saver .dc-decorative-media {
+  display: none !important;
+}
+
+html.dc-data-saver img:not([data-essential="true"]) {
+  content-visibility: auto;
+}

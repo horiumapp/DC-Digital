@@ -1,0 +1,26 @@
+---
+description: Segurança, RLS, autenticação e isolamento entre escolas
+globs: "{src/**/*.{ts,tsx},supabase/**/*}"
+alwaysApply: false
+---
+
+# Segurança
+
+## Regras absolutas
+
+- Nunca desabilitar RLS, triggers ou validações de servidor para “resolver” erros.
+- Nunca expor service_role nem chaves administrativas no frontend.
+- Nunca confiar só em validação do navegador; permissões devem existir no backend/RLS/RPC.
+- Cargo efetivo vem de `usuarios.cargo` / helpers SECURITY DEFINER — não do JWT editável pelo cliente.
+
+## Isolamento entre escolas
+
+- Toda consulta/mutação sensível deve respeitar `p_escola_permitida`, lotação ou vínculo do aluno.
+- Políticas são PERMISSIVE (OR): ao endurecer, DROP + CREATE a política ampla; não deixar OR permissivo coexistindo.
+- Impedir IDOR entre escolas (professores, lotações, horários, avaliações, conteúdos, fechamentos, PII).
+
+## Autenticação
+
+- Cadastro público permanece bloqueado (`reject_public_signup` fail-closed).
+- Logout e troca de usuário devem proteger dados locais privados.
+- Mensagens de erro não devem vazar detalhes internos do banco.
