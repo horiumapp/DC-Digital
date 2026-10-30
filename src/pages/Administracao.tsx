@@ -1,16 +1,26 @@
 import { PageHeading } from '../components/common/PortalUI';
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { SEMEC_ROLE } from '../constants/authConstants';
-import { Building2, Users, User, GraduationCap, ShieldAlert, CalendarDays } from 'lucide-react';
-import TabEscolas from './administracao/TabEscolas';
-import TabAlunos from './administracao/TabAlunos';
-import TabTurmas from './administracao/TabTurmas';
-import TabProfessores from './administracao/TabProfessores';
-import TabUsuarios from './administracao/TabUsuarios';
-import TabLgpd from './administracao/TabLgpd';
-import TabCalendario from './administracao/TabCalendario';
-import TabFeriados from './administracao/TabFeriados';
+import { Building2, Users, User, GraduationCap, ShieldAlert, CalendarDays, Loader2 } from 'lucide-react';
+
+const TabEscolas = React.lazy(() => import('./administracao/TabEscolas'));
+const TabAlunos = React.lazy(() => import('./administracao/TabAlunos'));
+const TabTurmas = React.lazy(() => import('./administracao/TabTurmas'));
+const TabProfessores = React.lazy(() => import('./administracao/TabProfessores'));
+const TabUsuarios = React.lazy(() => import('./administracao/TabUsuarios'));
+const TabLgpd = React.lazy(() => import('./administracao/TabLgpd'));
+const TabCalendario = React.lazy(() => import('./administracao/TabCalendario'));
+const TabFeriados = React.lazy(() => import('./administracao/TabFeriados'));
+
+function TabLoading() {
+  return (
+    <div className="flex items-center justify-center gap-2 py-16 text-slate-500" role="status">
+      <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+      <span className="text-sm font-medium">Carregando…</span>
+    </div>
+  );
+}
 
 export default function Administracao() {
   const { user } = useAuth();
@@ -20,23 +30,66 @@ export default function Administracao() {
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   const sections = [
-    ...(seesAllSchools?[{id:'escolas',label:'Escolas',description:'Unidades da rede',icon:Building2}]:[]),
-    {id:'turmas',label:'Turmas',description:'Organização das classes',icon:Users},
-    {id:'professores',label:'Professores',description:'Equipe pedagógica',icon:GraduationCap},
-    {id:'alunos',label:'Alunos',description:'Trajetórias de aprendizagem',icon:User},
-    ...(user?.role==='ADMIN'?[{id:'usuarios',label:'Usuários',description:'Acessos ao sistema',icon:Users},{id:'calendario',label:'Calendário',description:'Planejamento do ano',icon:CalendarDays}]:[]),
-    ...(seesAllSchools?[{id:'feriados',label:'Feriados',description:'Datas da rede',icon:CalendarDays}]:[]),
-    ...(user?.role==='ADMIN'?[{id:'lgpd',label:'LGPD',description:'Cuidado com os dados',icon:ShieldAlert}]:[]),
+    ...(seesAllSchools ? [{ id: 'escolas', label: 'Escolas', description: 'Unidades da rede', icon: Building2 }] : []),
+    { id: 'turmas', label: 'Turmas', description: 'Organização das classes', icon: Users },
+    { id: 'professores', label: 'Professores', description: 'Equipe pedagógica', icon: GraduationCap },
+    { id: 'alunos', label: 'Alunos', description: 'Trajetórias de aprendizagem', icon: User },
+    ...(user?.role === 'ADMIN' ? [{ id: 'usuarios', label: 'Usuários', description: 'Acessos ao sistema', icon: Users }, { id: 'calendario', label: 'Calendário', description: 'Planejamento do ano', icon: CalendarDays }] : []),
+    ...(seesAllSchools ? [{ id: 'feriados', label: 'Feriados', description: 'Datas da rede', icon: CalendarDays }] : []),
+    ...(user?.role === 'ADMIN' ? [{ id: 'lgpd', label: 'LGPD', description: 'Cuidado com os dados', icon: ShieldAlert }] : []),
   ];
   const shortcutIds = ['turmas', 'alunos', 'professores'];
   const shortcuts = sections.filter(section => shortcutIds.includes(section.id));
   const railRepeatsShortcuts = sections.every(section => shortcutIds.includes(section.id));
-  return <div className="portal-page portal-admin">{!railRepeatsShortcuts && <PageHeading eyebrow="CONEXÕES QUE FAZEM A ESCOLA" title="Gestão que aproxima." description={isSemec?'Uma visão integrada de todas as escolas da rede.':'Pessoas e planejamento. Tudo no seu lugar.'}/>}<nav className="portal-admin-shortcuts" aria-label="Atalhos da gestão">{shortcuts.map(({id,label,description,icon:Icon})=><button key={id} onClick={()=>setActiveTab(id)} aria-label={`Gerenciar ${label.toLowerCase()}`} aria-pressed={activeTab===id}><span><Icon size={23}/></span><div><strong>{label}</strong><small>{description}</small></div></button>)}</nav><div className={`portal-admin-workspace${railRepeatsShortcuts ? ' is-focused' : ''}`}>{!railRepeatsShortcuts && <aside className="portal-admin-rail"><span className="portal-eyebrow">EXPLORE A ESCOLA</span>{sections.map(({id,label,description,icon:Icon})=><button key={id} onClick={()=>setActiveTab(id)} aria-pressed={activeTab===id}><Icon size={19}/><span><strong>{label}</strong><small>{description}</small></span></button>)}</aside>}<section className="portal-admin-content"><header><span className="portal-eyebrow">GESTÃO ESCOLAR</span>{!(railRepeatsShortcuts && shortcutIds.includes(activeTab)) && <h2>{sections.find(s=>s.id===activeTab)?.label}</h2>}</header>          {seesAllSchools && activeTab === 'escolas' && <TabEscolas />}
-          {user?.role === 'ADMIN' && activeTab === 'calendario' && <TabCalendario />}
-          {seesAllSchools && activeTab === 'feriados' && <TabFeriados />}
-          {user?.role === 'ADMIN' && activeTab === 'usuarios' && <TabUsuarios />}
-          {user?.role === 'ADMIN' && activeTab === 'lgpd' && <TabLgpd />}
-          {activeTab === 'alunos' && <TabAlunos />}
-          {activeTab === 'turmas' && <TabTurmas />}
-          {activeTab === 'professores' && <TabProfessores />}</section></div></div>;
+
+  return (
+    <div className="portal-page portal-admin">
+      {!railRepeatsShortcuts && (
+        <PageHeading
+          eyebrow="CONEXÕES QUE FAZEM A ESCOLA"
+          title="Gestão que aproxima."
+          description={isSemec ? 'Uma visão integrada de todas as escolas da rede.' : 'Pessoas e planejamento. Tudo no seu lugar.'}
+        />
+      )}
+      <nav className="portal-admin-shortcuts" aria-label="Atalhos da gestão">
+        {shortcuts.map(({ id, label, description, icon: Icon }) => (
+          <button key={id} onClick={() => setActiveTab(id)} aria-label={`Gerenciar ${label.toLowerCase()}`} aria-pressed={activeTab === id}>
+            <span><Icon size={23} /></span>
+            <div><strong>{label}</strong><small>{description}</small></div>
+          </button>
+        ))}
+      </nav>
+      <div className={`portal-admin-workspace${railRepeatsShortcuts ? ' is-focused' : ''}`}>
+        {!railRepeatsShortcuts && (
+          <aside className="portal-admin-rail">
+            <span className="portal-eyebrow">EXPLORE A ESCOLA</span>
+            {sections.map(({ id, label, description, icon: Icon }) => (
+              <button key={id} onClick={() => setActiveTab(id)} aria-pressed={activeTab === id}>
+                <Icon size={19} />
+                <span><strong>{label}</strong><small>{description}</small></span>
+              </button>
+            ))}
+          </aside>
+        )}
+        <section className="portal-admin-content">
+          <header>
+            <span className="portal-eyebrow">GESTÃO ESCOLAR</span>
+            {!(railRepeatsShortcuts && shortcutIds.includes(activeTab)) && (
+              <h2>{sections.find(s => s.id === activeTab)?.label}</h2>
+            )}
+          </header>
+          <Suspense fallback={<TabLoading />}>
+            {seesAllSchools && activeTab === 'escolas' && <TabEscolas />}
+            {user?.role === 'ADMIN' && activeTab === 'calendario' && <TabCalendario />}
+            {seesAllSchools && activeTab === 'feriados' && <TabFeriados />}
+            {user?.role === 'ADMIN' && activeTab === 'usuarios' && <TabUsuarios />}
+            {user?.role === 'ADMIN' && activeTab === 'lgpd' && <TabLgpd />}
+            {activeTab === 'alunos' && <TabAlunos />}
+            {activeTab === 'turmas' && <TabTurmas />}
+            {activeTab === 'professores' && <TabProfessores />}
+          </Suspense>
+        </section>
+      </div>
+    </div>
+  );
 }

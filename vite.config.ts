@@ -123,11 +123,6 @@ export default defineConfig(() => {
               return 'vendor-sentry';
             }
 
-            // Motion / Framer Motion (~100KB)
-            if (id.includes('/motion/') || id.includes('/framer-motion/')) {
-              return 'vendor-motion';
-            }
-
             // Dexie (IndexedDB) (~50KB)
             if (id.includes('/dexie/') || id.includes('/dexie-react-hooks/')) {
               return 'vendor-dexie';
