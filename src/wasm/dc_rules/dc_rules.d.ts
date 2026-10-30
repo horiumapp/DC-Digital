@@ -10,11 +10,29 @@ export function calcularFrequenciaLdb(entrada_json: string): string;
  */
 export function classificarEtapaFrequencia(partes_json: string): string;
 
+export function cleanContentText(value: string): string;
+
 export function definirSituacaoPeriodo(entrada_json: string): string;
+
+export function exportCurriculoToCsv(unidades_json: string): string;
+
+export function getModalidadeForAno(ano: string): string;
 
 export function historicoAposAlteracao(anterior_json: string, novo_json: string, em: string): string;
 
 export function momentoDoAnoLetivo(hoje_iso: string, data_fim_iso: string): string;
+
+export function normalizeAno(raw: string): string;
+
+export function normalizeBimestre(raw: string): string;
+
+export function normalizeDisciplina(raw: string): string;
+
+export function parseCurriculoText(raw_text: string): string;
+
+export function parseDelimitedText(text: string): string;
+
+export function sanitizeFormulaValue(value: string): string;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
@@ -23,9 +41,18 @@ export interface InitOutput {
     readonly arredondarPercentualParaExibicao: (a: number) => [number, number];
     readonly calcularFrequenciaLdb: (a: number, b: number) => [number, number, number, number];
     readonly classificarEtapaFrequencia: (a: number, b: number) => [number, number, number, number];
+    readonly cleanContentText: (a: number, b: number) => [number, number];
     readonly definirSituacaoPeriodo: (a: number, b: number) => [number, number, number, number];
+    readonly exportCurriculoToCsv: (a: number, b: number) => [number, number, number, number];
+    readonly getModalidadeForAno: (a: number, b: number) => [number, number];
     readonly historicoAposAlteracao: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly momentoDoAnoLetivo: (a: number, b: number, c: number, d: number) => [number, number];
+    readonly normalizeAno: (a: number, b: number) => [number, number];
+    readonly normalizeBimestre: (a: number, b: number) => [number, number];
+    readonly normalizeDisciplina: (a: number, b: number) => [number, number];
+    readonly parseCurriculoText: (a: number, b: number) => [number, number, number, number];
+    readonly parseDelimitedText: (a: number, b: number) => [number, number, number, number];
+    readonly sanitizeFormulaValue: (a: number, b: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
