@@ -91,6 +91,7 @@ vi.mock('../services/offlineStorage', () => ({
   clearAllLocalData: mockClearAllLocalData,
   getPendingCount: async () => 0,
   getLocalPendingCount: async () => 0,
+  getPendingCountForOwner: async () => 0,
 }));
 
 // ---------- Mock crypto ----------

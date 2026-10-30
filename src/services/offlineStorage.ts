@@ -314,6 +314,9 @@ export async function getAllFrequenciasLocal(turmaId: string, disciplina?: strin
 
 export async function deleteFrequenciasLocal(turmaId: string, disciplina: string, data: string, tempo: string): Promise<void> {
   const tid = getTid(turmaId);
+  const owner = (() => {
+    try { return offlineOwner(); } catch { return null; }
+  })();
   await db.transaction('rw', [db.frequencias, db.syncQueue], async () => {
     const records = await db.frequencias
       .where('turma_id').equals(tid)
@@ -330,7 +333,12 @@ export async function deleteFrequenciasLocal(turmaId: string, disciplina: string
     // "Tentar novamente" recriaria a chamada apagada no servidor.
     const pendingQueueItems = await db.syncQueue
       .where('table').equals('frequencias')
-      .filter(item => (item.status === 'pending' || item.status === 'error') && !item.attempted && item.operation !== 'DELETE')
+      .filter(item =>
+        (item.status === 'pending' || item.status === 'error') &&
+        !item.attempted &&
+        item.operation !== 'DELETE' &&
+        (!owner || !item.ownerUserId || item.ownerUserId === owner)
+      )
       .toArray();
 
     for (const item of pendingQueueItems) {
@@ -483,6 +491,9 @@ export async function getAllConteudosLocal(turmaId: string, disciplina?: string)
 
 export async function deleteConteudoLocal(turmaId: string, disciplina: string, data: string, tempo: string): Promise<void> {
   const tid = getTid(turmaId);
+  const owner = (() => {
+    try { return offlineOwner(); } catch { return null; }
+  })();
   await db.transaction('rw', [db.conteudos, db.syncQueue], async () => {
     const record = await db.conteudos
       .where('[turma_id+data+tempo+disciplina]')
@@ -490,10 +501,16 @@ export async function deleteConteudoLocal(turmaId: string, disciplina: string, d
       .first();
     if (!record?.localId) return;
 
-    // Purgar qualquer operação pendente de UPSERT para este conteúdo na fila
+    // Alinhado a deleteFrequenciasLocal: purgar pending e error não tentados
+    // para o owner atual, evitando ressuscitar conteúdo via "Tentar novamente".
     const pendingQueueItems = await db.syncQueue
       .where('table').equals('conteudos')
-      .filter(item => item.status === 'pending' && !item.attempted && item.operation !== 'DELETE')
+      .filter(item =>
+        (item.status === 'pending' || item.status === 'error') &&
+        !item.attempted &&
+        item.operation !== 'DELETE' &&
+        (!owner || !item.ownerUserId || item.ownerUserId === owner)
+      )
       .toArray();
 
     for (const item of pendingQueueItems) {
@@ -1168,6 +1185,28 @@ export async function getLocalPendingCount(): Promise<number> {
   const queued = owner
     ? await db.syncQueue.filter(i => i.ownerUserId === owner).count()
     : 0;
+  return Math.max(freq + cont + anots + aval + notas + fech, queued);
+}
+
+/**
+ * Pendências do usuário anterior no dispositivo (troca de conta).
+ * Conta fila do owner + registros locais ainda `pending` (escopo do aparelho).
+ */
+export async function getPendingCountForOwner(ownerId: string): Promise<number> {
+  const [freq, cont, anots, aval, notas, fech, queued] = await Promise.all([
+    db.frequencias.where('syncStatus').equals('pending').count(),
+    db.conteudos.where('syncStatus').equals('pending').count(),
+    db.anotacoes.where('syncStatus').equals('pending').count(),
+    db.avaliacoes.where('syncStatus').equals('pending').count(),
+    db.notas.where('syncStatus').equals('pending').count(),
+    db.fechamentos.where('syncStatus').equals('pending').count(),
+    db.syncQueue
+      .filter(i =>
+        (!i.ownerUserId || i.ownerUserId === ownerId) &&
+        (i.status === 'pending' || i.status === 'processing' || i.status === 'error')
+      )
+      .count(),
+  ]);
   return Math.max(freq + cont + anots + aval + notas + fech, queued);
 }
 

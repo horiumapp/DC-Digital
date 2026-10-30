@@ -1,0 +1,24 @@
+---
+description: Migrations, RLS, RPCs e PostgreSQL/Supabase
+globs: "supabase/**/*"
+alwaysApply: false
+---
+
+# Banco de dados e Supabase
+
+## Migrations
+
+- Sempre criar migration nova; nunca editar migration já aplicada em produção.
+- Não executar migrations destrutivas (DROP TABLE, wipe) sem revisão e autorização.
+- Após schema: atualizar tipos TS, consultas, offline e sync quando aplicável.
+
+## Consultas
+
+- Filtrar e paginar no banco; evitar N+1 e `SELECT *` desnecessários.
+- Índices só com justificativa; não criar índices redundantes.
+- Funções SECURITY DEFINER: `search_path` fixo; validar `auth.uid()` / cargo / escola.
+
+## RLS
+
+- Validar efeito combinado das políticas (OR permissivo).
+- RPCs e GRANTs de coluna devem alinhar com a intenção do produto (ex.: currículo ADMIN-only).

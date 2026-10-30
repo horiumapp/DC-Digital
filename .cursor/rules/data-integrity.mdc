@@ -1,0 +1,24 @@
+---
+description: Integridade de dados acadêmicos e proteção LGPD
+globs: "{src/services/**/*.{ts,tsx},supabase/migrations/**/*.sql}"
+alwaysApply: false
+---
+
+# Integridade de dados
+
+## Operações acadêmicas
+
+- Notas, frequências, conteúdos e fechamentos não podem ser perdidos silenciosamente.
+- Conflitos: nunca aplicar automaticamente versão antiga sobre revisão mais nova.
+- Fechamento de bimestre e períodos respeitam triggers/guards do servidor.
+
+## Dados pessoais (LGPD)
+
+- Não logar senhas, tokens, CPF completo ou PII desnecessária.
+- Cache local sensível permanece criptografado; limpeza na troca/logout de usuário.
+- Não modificar dados de produção sem autorização.
+
+## Operações destrutivas
+
+- Não executar exclusões em massa, remoção de tabelas ou wipe automático.
+- Preferir soft-guards e confirmação do usuário antes de descartar pendências.

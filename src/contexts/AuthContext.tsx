@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import LoadingFallback from '../components/common/LoadingFallback';
-import { cacheUser, getCachedUser, clearAllLocalData, getLocalPendingCount } from '../services/offlineStorage';
+import { cacheUser, getCachedUser, clearAllLocalData, getLocalPendingCount, getPendingCountForOwner } from '../services/offlineStorage';
 import { setOfflineOwner } from '../services/offlineIdentity';
 import { syncAll, cancelSync } from '../services/syncEngine';
 import { clearKeyCache } from '../lib/crypto';
@@ -59,8 +59,8 @@ interface AuthContextType {
 // ============================================================
 interface LogoutModalState {
   open: boolean;
-  /** 'pending' = tem dados pendentes | 'offline' = signOut falhou por falta de internet */
-  reason: 'pending' | 'offline';
+  /** 'pending' = logout com pendências | 'offline' = signOut offline | 'switch' = troca de usuário com pendências */
+  reason: 'pending' | 'offline' | 'switch';
   pendingCount: number;
   resolve: ((confirmed: boolean) => void) | null;
 }
@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ============================================================
   // Helper: abre modal de confirmação e aguarda resposta via Promise
   // ============================================================
-  const askConfirmation = useCallback((reason: 'pending' | 'offline', pendingCount: number): Promise<boolean> => {
+  const askConfirmation = useCallback((reason: 'pending' | 'offline' | 'switch', pendingCount: number): Promise<boolean> => {
     return new Promise<boolean>((resolve) => {
       setLogoutModal({ open: true, reason, pendingCount, resolve });
     });
@@ -244,31 +244,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         alocacoes: alocacoesSessao,
       };
 
-      const isolate = async () => {
+      /** @returns false se a troca de usuário foi cancelada (sessão local encerrada). */
+      const isolate = async (): Promise<boolean> => {
         const previous = localStorage.getItem('dc_last_user_id');
         if (previous && previous !== authUser.id) {
+          // Não apagar silenciosamente pendências do usuário anterior (PC compartilhado).
+          let previousPending = 0;
+          try {
+            previousPending = await getPendingCountForOwner(previous);
+          } catch {
+            previousPending = 0;
+          }
+          if (previousPending > 0) {
+            const confirmed = await askConfirmation('switch', previousPending);
+            if (!confirmed) {
+              try {
+                await supabase.auth.signOut({ scope: 'local' });
+              } catch {
+                /* ignore */
+              }
+              setUser(null);
+              return false;
+            }
+          }
           await clearAllLocalData(true, false);
           clearKeyCache();
         }
-        if (isCancelled()) return;
+        if (isCancelled()) return false;
         localStorage.setItem('dc_last_user_id',authUser.id);
         setOfflineOwner(authUser.id);
+        return true;
       };
       cancelSync();
+      let isolationOk = true;
       if (typeof navigator !== 'undefined' && navigator.locks && typeof navigator.locks.request === 'function') {
         const lockController = new AbortController();
         const lockTimeout = setTimeout(() => lockController.abort(), 2000);
         try {
-          await navigator.locks.request('dc-digital-sync-lock', { signal: lockController.signal }, isolate);
+          isolationOk = await navigator.locks.request('dc-digital-sync-lock', { signal: lockController.signal }, isolate);
         } catch {
-          await isolate();
+          isolationOk = await isolate();
         } finally {
           clearTimeout(lockTimeout);
         }
       } else {
-        await isolate();
+        isolationOk = await isolate();
       }
-      if (isCancelled()) return;
+      if (!isolationOk || isCancelled()) return;
       setUser(userObj);
 
       // 3. Salvar/Atualizar no cache (reutiliza resultado do passo 1)
@@ -490,6 +512,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       </span>
     ),
     confirmLabel: 'Sair mesmo assim',
+    icon: <AlertTriangle className="w-6 h-6" />,
+  } : logoutModal.reason === 'switch' ? {
+    title: 'Dados de outro usuário',
+    message: (
+      <span>
+        Há <strong>{logoutModal.pendingCount}</strong> alteração(ões) pendente(s) de outro usuário neste dispositivo.
+        Continuar o login irá <strong>apagar esses dados locais</strong>.
+        Cancele para manter os dados e encerrar esta sessão, ou confirme para limpar e entrar.
+      </span>
+    ),
+    confirmLabel: 'Limpar e entrar',
     icon: <AlertTriangle className="w-6 h-6" />,
   } : {
     title: 'Sem conexão com a internet',

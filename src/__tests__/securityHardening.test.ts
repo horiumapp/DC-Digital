@@ -178,3 +178,72 @@ describe('Security Hardening — User Signup Role Assignment', () => {
     expect(resolveNewUserRole({})).toBe('PENDENTE');
   });
 });
+
+// ============================================================
+// 4. reject_public_signup fail-closed (modernização 20261029000001)
+// ============================================================
+const ALLOWED_SIGNUP_ROLES = new Set([
+  'ADMIN', 'GESTOR', 'GESTOR_SEMEC', 'SECRETARIO', 'PROFESSOR', 'ALUNO', 'PENDENTE', 'REVOGADO',
+]);
+
+function evaluateRejectPublicSignup(input: {
+  appRole?: string;
+  userMetaRole?: string;
+  userMetaCargo?: string;
+}): 'allow' | 'deny' {
+  if ((input.userMetaRole || '') !== '' || (input.userMetaCargo || '') !== '') return 'deny';
+  const cargo = (input.appRole || '').trim().toUpperCase();
+  if (!ALLOWED_SIGNUP_ROLES.has(cargo)) return 'deny';
+  return 'allow';
+}
+
+describe('Security Hardening — reject_public_signup fail-closed', () => {
+  it('permite createUser administrativo com app_metadata.role válido', () => {
+    expect(evaluateRejectPublicSignup({ appRole: 'PROFESSOR' })).toBe('allow');
+    expect(evaluateRejectPublicSignup({ appRole: 'PENDENTE' })).toBe('allow');
+  });
+
+  it('BLOQUEIO: cargo vazio não passa (sem atalho IF cargo = \'\')', () => {
+    expect(evaluateRejectPublicSignup({ appRole: '' })).toBe('deny');
+    expect(evaluateRejectPublicSignup({})).toBe('deny');
+  });
+
+  it('BLOQUEIO: role/cargo em user_metadata é rejeitado', () => {
+    expect(evaluateRejectPublicSignup({ appRole: 'PROFESSOR', userMetaRole: 'ADMIN' })).toBe('deny');
+    expect(evaluateRejectPublicSignup({ appRole: 'PENDENTE', userMetaCargo: 'GESTOR' })).toBe('deny');
+  });
+});
+
+// ============================================================
+// 5. auth_select_turmas sem OR amplo por escola_id do cargo
+// ============================================================
+function evaluateTurmaSelect(opts: {
+  pEscolaPermitida: boolean;
+  professorTemAcesso: boolean;
+  alunoTemAcesso: boolean;
+}): boolean {
+  return opts.pEscolaPermitida || opts.professorTemAcesso || opts.alunoTemAcesso;
+}
+
+describe('Security Hardening — turmas SELECT escopo', () => {
+  it('ALUNO só vê turma própria (alunoTemAcesso), não a escola inteira', () => {
+    expect(evaluateTurmaSelect({
+      pEscolaPermitida: false,
+      professorTemAcesso: false,
+      alunoTemAcesso: true,
+    })).toBe(true);
+    expect(evaluateTurmaSelect({
+      pEscolaPermitida: false,
+      professorTemAcesso: false,
+      alunoTemAcesso: false,
+    })).toBe(false);
+  });
+
+  it('GESTOR/ADMIN via p_escola_permitida continua autorizado', () => {
+    expect(evaluateTurmaSelect({
+      pEscolaPermitida: true,
+      professorTemAcesso: false,
+      alunoTemAcesso: false,
+    })).toBe(true);
+  });
+});

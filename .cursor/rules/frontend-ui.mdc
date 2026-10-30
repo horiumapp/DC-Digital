@@ -1,0 +1,20 @@
+---
+description: Interface, responsividade e experiência mobile
+globs: "src/{pages,components}/**/*.{tsx,css}"
+alwaysApply: false
+---
+
+# Frontend e UI
+
+## Identidade
+
+- Modernizar sem descaracterizar a identidade visual do DC Digital.
+- Não redesenhar o sistema inteiro em uma tarefa pontual.
+- Reutilizar componentes existentes (`Layout`, `PortalUI`, modais, toasts).
+
+## UX
+
+- Priorizar clareza, poucos cliques, feedback imediato e uso em celular básico.
+- Menos animações pesadas; preservar acessibilidade básica (foco, contraste, labels).
+- Mensagens compreensíveis para usuários não técnicos.
+- Experiência consistente para ADMIN, GESTOR, SECRETARIO e PROFESSOR.
