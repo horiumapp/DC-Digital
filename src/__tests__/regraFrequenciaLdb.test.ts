@@ -5,6 +5,7 @@ import {
   classificarEtapaFrequencia,
   definirSituacaoPeriodo,
   ensureDcRulesWasm,
+  getDcRulesEngine,
   getDcRulesWasmStatus,
   historicoAposAlteracao,
   momentoDoAnoLetivo,

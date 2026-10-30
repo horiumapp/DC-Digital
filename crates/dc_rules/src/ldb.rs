@@ -8,9 +8,7 @@
 //! Cada registro é um tempo de aula (carga horária), nunca um dia inteiro.
 //! Falta justificada continua na ausência até a escola validar situação especial.
 
-use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::sync::OnceLock;
 use unicode_normalization::UnicodeNormalization;
 
 const TEXTO_NAO_CALCULADA: &str = "Frequência não calculada";
@@ -132,39 +130,86 @@ fn normalizar(valor: &str) -> String {
         .to_lowercase()
 }
 
-fn re_creche() -> &'static Regex {
-    static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| Regex::new(r"(?i)\b(creche|bercario|maternal)\b").unwrap())
+fn is_word_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || c == '_'
 }
 
-fn re_pre_escola() -> &'static Regex {
-    static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| Regex::new(r"(?i)\bpre[\s-]?escola\b").unwrap())
+/// Equivalente a `\bneedle\b` em texto já normalizado (minúsculo, sem acento).
+fn contem_palavra(texto: &str, needle: &str) -> bool {
+    let bytes = texto.as_bytes();
+    let needle_bytes = needle.as_bytes();
+    if needle_bytes.is_empty() || bytes.len() < needle_bytes.len() {
+        return false;
+    }
+    let last = bytes.len() - needle_bytes.len();
+    for i in 0..=last {
+        if &bytes[i..i + needle_bytes.len()] != needle_bytes {
+            continue;
+        }
+        let antes_ok = i == 0 || !is_word_char(texto[i - 1..].chars().next().unwrap_or(' '));
+        let depois_idx = i + needle_bytes.len();
+        let depois_ok = depois_idx >= texto.len()
+            || !is_word_char(texto[depois_idx..].chars().next().unwrap_or(' '));
+        if antes_ok && depois_ok {
+            return true;
+        }
+    }
+    false
 }
 
-fn re_pre_romano() -> &'static Regex {
-    static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| Regex::new(r"(?i)\bpre[\s-]?i{1,3}\b").unwrap())
+/// `\bpre[\s-]?escola\b`
+fn contem_pre_escola(texto: &str) -> bool {
+    contem_palavra(texto, "pre-escola")
+        || contem_palavra(texto, "pre escola")
+        || contem_palavra(texto, "preescola")
 }
 
-fn re_jardim() -> &'static Regex {
-    static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| Regex::new(r"(?i)\bjardim\b").unwrap())
+/// `\bpre[\s-]?i{1,3}\b` — Pré I / Pré-II / Pré III
+fn contem_pre_romano(texto: &str) -> bool {
+    for roman in ["i", "ii", "iii"] {
+        if contem_palavra(texto, &format!("pre-{roman}"))
+            || contem_palavra(texto, &format!("pre {roman}"))
+            || contem_palavra(texto, &format!("pre{roman}"))
+        {
+            return true;
+        }
+    }
+    false
 }
 
-fn re_infantil() -> &'static Regex {
-    static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| Regex::new(r"(?i)\binfantil\b").unwrap())
-}
-
-fn re_fundamental() -> &'static Regex {
-    static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| Regex::new(r"(?i)\b(fundamental|medio|eja|serie)\b").unwrap())
-}
-
-fn re_ano() -> &'static Regex {
-    static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| Regex::new(r"(?i)\d\s*o?\s*ano\b").unwrap())
+/// `\d\s*o?\s*ano\b` — "1 ano", "1o ano", "1º ano" (após normalizar some o º)
+fn contem_ano_numerico(texto: &str) -> bool {
+    let chars: Vec<char> = texto.chars().collect();
+    let n = chars.len();
+    let mut i = 0;
+    while i < n {
+        if !chars[i].is_ascii_digit() {
+            i += 1;
+            continue;
+        }
+        let inicio = i;
+        while i < n && chars[i].is_ascii_digit() {
+            i += 1;
+        }
+        while i < n && chars[i].is_whitespace() {
+            i += 1;
+        }
+        if i < n && chars[i] == 'o' {
+            i += 1;
+            while i < n && chars[i].is_whitespace() {
+                i += 1;
+            }
+        }
+        if i + 2 < n && chars[i] == 'a' && chars[i + 1] == 'n' && chars[i + 2] == 'o' {
+            let depois = i + 3;
+            let antes_ok = inicio == 0 || !is_word_char(chars[inicio - 1]);
+            let depois_ok = depois >= n || !is_word_char(chars[depois]);
+            if antes_ok && depois_ok {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 pub fn classificar_etapa_frequencia<'a, I>(partes: I) -> EtapaFrequencia
@@ -182,19 +227,24 @@ where
     if texto.trim().is_empty() {
         return EtapaFrequencia::Indefinida;
     }
-    if re_creche().is_match(&texto) {
+    if contem_palavra(&texto, "creche")
+        || contem_palavra(&texto, "bercario")
+        || contem_palavra(&texto, "maternal")
+    {
         return EtapaFrequencia::Creche;
     }
-    if re_pre_escola().is_match(&texto)
-        || re_pre_romano().is_match(&texto)
-        || re_jardim().is_match(&texto)
-    {
+    if contem_pre_escola(&texto) || contem_pre_romano(&texto) || contem_palavra(&texto, "jardim") {
         return EtapaFrequencia::PreEscola;
     }
-    if re_infantil().is_match(&texto) {
+    if contem_palavra(&texto, "infantil") {
         return EtapaFrequencia::Indefinida;
     }
-    if re_fundamental().is_match(&texto) || re_ano().is_match(&texto) {
+    if contem_palavra(&texto, "fundamental")
+        || contem_palavra(&texto, "medio")
+        || contem_palavra(&texto, "eja")
+        || contem_palavra(&texto, "serie")
+        || contem_ano_numerico(&texto)
+    {
         return EtapaFrequencia::FundamentalMedio;
     }
     EtapaFrequencia::Indefinida

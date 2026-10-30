@@ -9,6 +9,17 @@ import './modules.css';
 import './refined.css';
 import SWUpdatePrompt from './components/common/SWUpdatePrompt';
 import InstallPrompt from './components/common/InstallPrompt';
+import { ensureDcRulesWasm, getDcRulesEngine } from './utils/dcRulesEngine';
+
+// Fase 1: pré-carrega WASM só quando o motor não é o TypeScript padrão.
+const dcRulesEngine = import.meta.env.VITE_DC_RULES_ENGINE;
+if (dcRulesEngine === 'wasm' || dcRulesEngine === 'dual') {
+  void ensureDcRulesWasm().then((ok) => {
+    if (!ok && import.meta.env.DEV) {
+      console.warn(`[dc_rules] falha ao carregar WASM; engine=${getDcRulesEngine()}`);
+    }
+  });
+}
 
 function Root() {
   const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
