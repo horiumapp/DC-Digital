@@ -91,6 +91,46 @@ export function cleanContentText(value) {
  * @param {string} entrada_json
  * @returns {string}
  */
+export function consolidarPendencias(entrada_json) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(entrada_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.consolidarPendencias(ptr0, len0);
+        var ptr2 = ret[0];
+        var len2 = ret[1];
+        if (ret[3]) {
+            ptr2 = 0; len2 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred3_0 = ptr2;
+        deferred3_1 = len2;
+        return getStringFromWasm0(ptr2, len2);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
+ * @param {string} start_iso
+ * @param {string} end_iso
+ * @param {number} day_of_week
+ * @returns {number}
+ */
+export function countWeekDaysInRange(start_iso, end_iso, day_of_week) {
+    const ptr0 = passStringToWasm0(start_iso, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(end_iso, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.countWeekDaysInRange(ptr0, len0, ptr1, len1, day_of_week);
+    return ret >>> 0;
+}
+
+/**
+ * @param {string} entrada_json
+ * @returns {string}
+ */
 export function definirSituacaoPeriodo(entrada_json) {
     let deferred3_0;
     let deferred3_1;

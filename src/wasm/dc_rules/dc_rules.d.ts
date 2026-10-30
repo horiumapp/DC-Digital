@@ -12,6 +12,10 @@ export function classificarEtapaFrequencia(partes_json: string): string;
 
 export function cleanContentText(value: string): string;
 
+export function consolidarPendencias(entrada_json: string): string;
+
+export function countWeekDaysInRange(start_iso: string, end_iso: string, day_of_week: number): number;
+
 export function definirSituacaoPeriodo(entrada_json: string): string;
 
 export function exportCurriculoToCsv(unidades_json: string): string;
@@ -42,6 +46,8 @@ export interface InitOutput {
     readonly calcularFrequenciaLdb: (a: number, b: number) => [number, number, number, number];
     readonly classificarEtapaFrequencia: (a: number, b: number) => [number, number, number, number];
     readonly cleanContentText: (a: number, b: number) => [number, number];
+    readonly consolidarPendencias: (a: number, b: number) => [number, number, number, number];
+    readonly countWeekDaysInRange: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly definirSituacaoPeriodo: (a: number, b: number) => [number, number, number, number];
     readonly exportCurriculoToCsv: (a: number, b: number) => [number, number, number, number];
     readonly getModalidadeForAno: (a: number, b: number) => [number, number];

@@ -95,8 +95,8 @@ pub fn count_week_days_in_range(start_iso: &str, end_iso: &str, day_of_week: u32
         return 0;
     }
     let total_days = (end - start) + 1;
-    let full_weeks = total_days / 7;
-    let remainder = total_days % 7;
+    let full_weeks = (total_days / 7) as u32;
+    let remainder = (total_days % 7) as u32;
     let start_day = weekday_sunday0(start);
     let mut extra = 0u32;
     for i in 0..remainder {
@@ -137,8 +137,8 @@ fn days_from_civil(y: i32, m: u32, d: u32) -> i64 {
 }
 
 fn weekday_sunday0(days: i64) -> u32 {
-    // 1970-01-01 was Thursday (4). Sunday=0 → (days + 4) % 7, adjust for neg.
-    (((days + 4).rem_euclid(7)) as u32)
+    // 1970-01-01 was Thursday (4). Sunday=0 → (days + 4) % 7.
+    (days + 4).rem_euclid(7) as u32
 }
 
 fn normalize_data_field(d: &str) -> Option<String> {

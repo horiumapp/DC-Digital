@@ -46,8 +46,6 @@ struct SupabaseClaims {
     sub: String,
     #[serde(default)]
     role: Option<String>,
-    #[serde(default)]
-    exp: Option<i64>,
 }
 
 #[derive(Clone)]
