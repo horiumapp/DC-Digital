@@ -16,23 +16,18 @@ interface Turma {
   nome: string;
 }
 
-// Simula a função SQL p_escola_permitida(p_escola_id)
+// Simula p_escola_permitida após 20261009000000 (GESTOR escolar; rede = ADMIN/GESTOR_SEMEC).
 function p_escola_permitida(user: UserContext, targetEscolaId: string): boolean {
-  if (user.role === 'ADMIN' || user.role === 'GESTOR') {
-    return true; // Visão e escrita sistêmica na rede municipal
-  }
-  if (user.role === 'SECRETARIO') {
+  if (user.role === 'ADMIN') return true;
+  if (user.role === 'GESTOR' || user.role === 'SECRETARIO') {
     return !!user.escola_id && user.escola_id === targetEscolaId;
   }
   return false;
 }
 
-// Simula a função SQL p_acesso_por_turma(p_turma_id)
 function _p_acesso_por_turma(user: UserContext, targetTurma: Turma): boolean {
-  if (user.role === 'ADMIN' || user.role === 'GESTOR') {
-    return true; // Administradores e Gestores podem gerenciar turmas da rede
-  }
-  if (user.role === 'SECRETARIO') {
+  if (user.role === 'ADMIN') return true;
+  if (user.role === 'GESTOR' || user.role === 'SECRETARIO') {
     return !!user.escola_id && user.escola_id === targetTurma.escola_id;
   }
   return false;
@@ -51,9 +46,9 @@ describe('Regras de Escrita Sistêmica do GESTOR (SEC-03)', () => {
   const escola1 = 'escola-norte-1';
   const escola2 = 'escola-sul-2';
 
-  const gestorMunicipal: UserContext = {
+  const gestorEscola1: UserContext = {
     role: 'GESTOR',
-    escola_id: undefined, // Gestor municipal não tem escola fixa ou atua em todas
+    escola_id: escola1,
   };
 
   const secretarioEscola1: UserContext = {
@@ -71,9 +66,9 @@ describe('Regras de Escrita Sistêmica do GESTOR (SEC-03)', () => {
     escola_id: escola1,
   };
 
-  it('GESTOR deve ter permissão de escrita (INSERT/UPDATE/DELETE de turmas/alunos) em qualquer escola', () => {
-    expect(p_escola_permitida(gestorMunicipal, escola1)).toBe(true);
-    expect(p_escola_permitida(gestorMunicipal, escola2)).toBe(true);
+  it('GESTOR deve ter permissão apenas na escola vinculada (não é escopo de rede)', () => {
+    expect(p_escola_permitida(gestorEscola1, escola1)).toBe(true);
+    expect(p_escola_permitida(gestorEscola1, escola2)).toBe(false);
   });
 
   it('SECRETARIO deve ter permissão de escrita apenas na sua respectiva escola', () => {
