@@ -65,7 +65,16 @@ vi.mock('../components/common/Toast', () => ({
   useToast: () => ({
     showError: vi.fn(),
     showSuccess: vi.fn(),
+    showWarning: vi.fn(),
+    showInfo: vi.fn(),
   }),
+}));
+
+vi.mock('../services/sessionGuard', () => ({
+  claimActiveSession: vi.fn(async () => 'test-session-id'),
+  clearLocalSessaoAtivaId: vi.fn(),
+  getLocalSessaoAtivaId: vi.fn(() => 'test-session-id'),
+  isLocalSessionStillActive: vi.fn(async () => true),
 }));
 
 // ---------- Mock LoadingFallback ----------
