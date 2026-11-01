@@ -4,7 +4,19 @@ import { ArrowUpRight, BookOpen, Search, LayoutGrid, List, Building2, ArrowRight
 import type { Turma } from '../../contexts/TurmaContext';
 
 export function PortalBrand() {
-  return <span className="portal-brand"><span className="portal-brand-mark"><BookOpen size={23} strokeWidth={2.2} /></span><span>dc<span className="portal-brand-light">digital</span><small>EDUCAÇÃO EM MOVIMENTO</small></span></span>;
+  return (
+    <span className="portal-brand">
+      <span className="portal-brand-mark" aria-hidden="true">
+        <img src="/brand/dc-digital-icon.svg" alt="" width={28} height={28} decoding="async" />
+      </span>
+      <span className="portal-brand-copy">
+        <span className="portal-brand-name">
+          DC <span className="portal-brand-light">Digital</span>
+        </span>
+        <small>EDUCAÇÃO EM MOVIMENTO</small>
+      </span>
+    </span>
+  );
 }
 export function PageHeading({eyebrow,title,description,actions}: {eyebrow:string;title:string;description?:string;actions?:ReactNode}) {
   return <header className="portal-page-heading"><div><span className="portal-eyebrow">{eyebrow}</span><h1>{title}</h1>{description && <p>{description}</p>}</div>{actions && <div className="portal-heading-actions">{actions}</div>}</header>;

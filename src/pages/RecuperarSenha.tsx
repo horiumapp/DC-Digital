@@ -174,7 +174,7 @@ export default function RecuperarSenha() {
         <section className="dd-auth-card bg-white p-8 md:p-10 border rounded-2xl">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-6">
-              <img src="/logo.png" alt="Logo Diário Digital" className="h-20 w-auto object-contain" />
+              <img src="/brand/dc-digital-logo.svg" alt="DC Digital" className="h-16 w-auto max-w-full object-contain" />
             </div>
             <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Recuperar Senha</h1>
             <p className="text-slate-500 mt-2 text-sm">

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="DC Digital">
+  <title>DC Digital</title>
+  <rect width="128" height="128" rx="28" fill="#6354C7"/>
+  <path d="M64 34c-1.8 3.2-8.2 7.8-18 9.6v52.2c9.4-2.2 16.2-7.4 18-11.2 1.8 3.8 8.6 9 18 11.2V43.6C72.2 41.8 65.8 37.2 64 34Z" fill="#5345B0"/>
+  <path d="M64 38c-2 3.6-9.4 8.4-20 10.2v48.6c10.2-2.4 17.6-7.8 20-12 2.4 4.2 9.8 9.6 20 12V48.2C73.4 46.4 66 41.6 64 38Z" fill="#FFFFFF"/>
+  <path d="M64 40v47" stroke="#E4DFF7" stroke-width="3" stroke-linecap="round"/>
+  <path d="M42 58h14M42 68h12M42 78h14" stroke="#C8BFF0" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M72 58h14M74 68h12M72 78h14" stroke="#C8BFF0" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M86 30c0 0 10 4.5 10 14.5S86 61 86 61V30Z" fill="#B8E7D0"/>
+  <circle cx="91" cy="36" r="2.4" fill="#6354C7"/>
+</svg>
