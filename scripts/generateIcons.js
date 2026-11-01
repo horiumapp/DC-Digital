@@ -11,7 +11,8 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const ICONS_DIR = path.join(ROOT, 'public', 'icons');
-const BRAND_ICON = path.join(ROOT, 'public', 'brand', 'dc-digital-icon.svg');
+const BRAND_ICON_SVG = path.join(ROOT, 'public', 'brand', 'dc-digital-icon.svg');
+const BRAND_ICON_PNG = path.join(ROOT, 'public', 'brand', 'dc-digital-icon.ref.png');
 const LOGO_PATH = path.join(ROOT, 'public', 'logo.png');
 const BRAND_PURPLE = { r: 99, g: 84, b: 199, alpha: 1 }; // #6354C7
 
@@ -22,7 +23,12 @@ async function main() {
     fs.mkdirSync(ICONS_DIR, { recursive: true });
   }
 
-  const sourcePath = fs.existsSync(BRAND_ICON) ? BRAND_ICON : LOGO_PATH;
+  // Preferência: PNG de referência oficial → SVG → logo.png
+  const sourcePath = fs.existsSync(BRAND_ICON_PNG)
+    ? BRAND_ICON_PNG
+    : fs.existsSync(BRAND_ICON_SVG)
+      ? BRAND_ICON_SVG
+      : LOGO_PATH;
   if (!fs.existsSync(sourcePath)) {
     throw new Error('Nenhuma arte de marca encontrada (brand/dc-digital-icon.svg ou logo.png).');
   }
@@ -32,7 +38,7 @@ async function main() {
     const sourceBuffer = fs.readFileSync(sourcePath);
 
     // Atualiza logo.png do produto (favicon) a partir do ícone — não mexe em logos de escola.
-    if (sourcePath === BRAND_ICON) {
+    if (sourcePath === BRAND_ICON_PNG || sourcePath === BRAND_ICON_SVG) {
       await sharp(sourceBuffer)
         .resize(512, 512, { fit: 'contain', background: BRAND_PURPLE })
         .png()
