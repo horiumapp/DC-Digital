@@ -119,8 +119,10 @@ Deno.serve(async (req: Request) => {
     );
 
     if (callerError || !callerUser) {
+      // Não devolver callerError ao cliente — evita vazamento de detalhes internos do Auth.
+      console.error("[admin-create-user] Falha ao validar JWT do chamador");
       return new Response(
-        JSON.stringify({ error: "Não foi possível verificar sua identidade", details: callerError }),
+        JSON.stringify({ error: "Não foi possível verificar sua identidade" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -183,8 +185,10 @@ Deno.serve(async (req: Request) => {
       }
       const targetEmail = typeof bodyRecord.email === "string" ? bodyRecord.email.trim().toLowerCase() : "";
       const novaSenha = typeof bodyRecord.senha === "string" ? bodyRecord.senha : "";
-      if (!EMAIL_REGEX.test(targetEmail) || novaSenha.length < 10) {
-        return new Response(JSON.stringify({ error: "Dados inválidos para redefinição." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const hasLetter = /[a-zA-Z]/.test(novaSenha);
+      const hasDigit = /\d/.test(novaSenha);
+      if (!EMAIL_REGEX.test(targetEmail) || novaSenha.length < 10 || !hasLetter || !hasDigit || novaSenha.length > 128) {
+        return new Response(JSON.stringify({ error: "A senha do aluno deve ter no mínimo 10 caracteres, incluindo letras e números." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       const { data: target } = await supabaseAdmin.from("usuarios").select("id,cargo,escola_id").eq("email", targetEmail).maybeSingle();
       if (!target || target.cargo !== "ALUNO") {
@@ -311,11 +315,38 @@ Deno.serve(async (req: Request) => {
           );
         }
 
-        // Não-admin só pode deletar PROFESSOR ou ALUNO da sua própria escola
-        if (
-          targetUserData.escola_id !== callerData.escola_id ||
-          !["PROFESSOR", "ALUNO"].includes(targetUserData.cargo)
-        ) {
+        // Não-admin só pode deletar PROFESSOR ou ALUNO da própria escola.
+        // Professores multi-escola: autoriza por usuarios.escola_id OU lotação ativa.
+        if (!["PROFESSOR", "ALUNO"].includes(targetUserData.cargo)) {
+          return new Response(
+            JSON.stringify({ error: "Você não tem permissão para excluir este usuário" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        let sameSchool = targetUserData.escola_id === callerData.escola_id;
+        if (!sameSchool && targetUserData.cargo === "PROFESSOR") {
+          const emailForLookup = targetUserData.email || targetEmail;
+          if (emailForLookup) {
+            const { data: profRow } = await supabaseAdmin
+              .from("professores")
+              .select("id")
+              .ilike("email", emailForLookup)
+              .maybeSingle();
+            if (profRow?.id) {
+              const { data: aloc } = await supabaseAdmin
+                .from("professor_alocacoes")
+                .select("id")
+                .eq("professor_id", profRow.id)
+                .eq("escola_id", callerData.escola_id)
+                .limit(1)
+                .maybeSingle();
+              sameSchool = Boolean(aloc?.id);
+            }
+          }
+        }
+
+        if (!sameSchool) {
           return new Response(
             JSON.stringify({ error: "Você não tem permissão para excluir este usuário" }),
             { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }

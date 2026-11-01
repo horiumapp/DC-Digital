@@ -12,7 +12,12 @@ export default function LoadingFallback() {
   }, []);
 
   const handleClearAndReload = () => {
+    const confirmed = window.confirm(
+      'Isso limpa preferências e sessão salvas neste navegador e volta ao login. Dados offline no IndexedDB não são apagados por este atalho. Continuar?',
+    );
+    if (!confirmed) return;
     try {
+      // Preferências e tokens de sessão no Web Storage — não mexe na fila IndexedDB.
       localStorage.clear();
       sessionStorage.clear();
     } catch {
