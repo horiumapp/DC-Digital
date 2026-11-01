@@ -154,6 +154,22 @@ Deno.serve(async (req: Request) => {
 
     const bodyRecord = (body && typeof body === "object") ? (body as Record<string, unknown>) : {};
 
+    // Throttle durable também em reset/delete/change-password (criação já limita mais abaixo).
+    const rateLimitedActions = new Set([
+      "change-own-password",
+      "reset-student-password",
+      "reset-professor-password",
+      "delete-user",
+    ]);
+    if (typeof bodyRecord.action === "string" && rateLimitedActions.has(bodyRecord.action)) {
+      if (!(await checkRateLimit(supabaseAdmin, callerUser.id))) {
+        return new Response(
+          JSON.stringify({ error: "Limite de requisições excedido. Aguarde 60 segundos." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" } },
+        );
+      }
+    }
+
     if (bodyRecord.action === "change-own-password") {
       const novaSenha = typeof bodyRecord.senha === "string" ? bodyRecord.senha : "";
       const hasLetter = /[a-zA-Z]/.test(novaSenha);

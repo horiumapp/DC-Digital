@@ -3,6 +3,7 @@ import { Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 
 export default function LoadingFallback() {
   const [showTroubleshoot, setShowTroubleshoot] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -11,13 +12,21 @@ export default function LoadingFallback() {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleClearAndReload = () => {
+  const handleClearAndReload = async () => {
     const confirmed = window.confirm(
-      'Isso limpa preferências e sessão salvas neste navegador e volta ao login. Dados offline no IndexedDB não são apagados por este atalho. Continuar?',
+      'Isso encerra a sessão neste navegador, limpa dados offline (IndexedDB) e preferências locais, e volta ao login. Continuar?',
     );
-    if (!confirmed) return;
+    if (!confirmed || clearing) return;
+    setClearing(true);
     try {
-      // Preferências e tokens de sessão no Web Storage — não mexe na fila IndexedDB.
+      // Evita vazamento cross-user: sem isto, limpar só localStorage apaga
+      // dc_last_user_id e o próximo login não purgeia o IndexedDB do usuário anterior.
+      const { clearAllLocalData } = await import('../../services/offlineStorage');
+      await clearAllLocalData(true, false);
+    } catch {
+      // IndexedDB pode estar indisponível; segue com limpeza de Web Storage.
+    }
+    try {
       localStorage.clear();
       sessionStorage.clear();
     } catch {
@@ -44,6 +53,7 @@ export default function LoadingFallback() {
           </p>
           <div className="flex items-center justify-center gap-2">
             <button
+              type="button"
               onClick={() => window.location.reload()}
               className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-white text-slate-700 border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 transition cursor-pointer"
             >
@@ -51,10 +61,12 @@ export default function LoadingFallback() {
               Recarregar
             </button>
             <button
-              onClick={handleClearAndReload}
-              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg shadow-sm hover:bg-blue-700 transition cursor-pointer"
+              type="button"
+              onClick={() => { void handleClearAndReload(); }}
+              disabled={clearing}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg shadow-sm hover:bg-blue-700 transition cursor-pointer disabled:opacity-60"
             >
-              Ir para o Login
+              {clearing ? 'Limpando…' : 'Ir para o Login'}
             </button>
           </div>
         </div>
