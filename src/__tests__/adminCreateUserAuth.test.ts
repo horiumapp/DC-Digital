@@ -256,3 +256,76 @@ describe('admin-create-user reset-professor-password Authorization Rules', () =>
   });
 });
 
+function evaluateDeleteProfessorMultiEscola(opts: {
+  callerEscolaId: string;
+  targetCargo: string;
+  targetEscolaId: string | null;
+  lotacaoEscolas: string[];
+}): { status: number; authorized: boolean; error?: string } {
+  if (!['PROFESSOR', 'ALUNO'].includes(opts.targetCargo)) {
+    return { status: 403, authorized: false, error: 'Você não tem permissão para excluir este usuário' };
+  }
+  let sameSchool = opts.targetEscolaId === opts.callerEscolaId;
+  if (opts.targetCargo === 'PROFESSOR') {
+    const lotadoAqui = opts.lotacaoEscolas.includes(opts.callerEscolaId);
+    const outras = opts.lotacaoEscolas.some((id) => id !== opts.callerEscolaId);
+    if (lotadoAqui && outras) {
+      return {
+        status: 409,
+        authorized: false,
+        error: 'Este professor está lotado em outras escolas. Desvincule-o desta unidade em vez de excluir a conta.',
+      };
+    }
+    if (!sameSchool && lotadoAqui && !outras) sameSchool = true;
+  }
+  if (!sameSchool) {
+    return { status: 403, authorized: false, error: 'Você não tem permissão para excluir este usuário' };
+  }
+  return { status: 200, authorized: true };
+}
+
+describe('admin-create-user delete-user multi-escola (proteção de conta)', () => {
+  const escolaA = 'escola-a';
+  const escolaB = 'escola-b';
+
+  it('bloqueia exclusão total quando professor tem lotação em outra escola', () => {
+    const res = evaluateDeleteProfessorMultiEscola({
+      callerEscolaId: escolaA,
+      targetCargo: 'PROFESSOR',
+      targetEscolaId: escolaA,
+      lotacaoEscolas: [escolaA, escolaB],
+    });
+    expect(res.authorized).toBe(false);
+    expect(res.status).toBe(409);
+  });
+
+  it('autoriza exclusão quando lotação existe só na escola do chamador (mesmo com escola_id nulo)', () => {
+    const res = evaluateDeleteProfessorMultiEscola({
+      callerEscolaId: escolaA,
+      targetCargo: 'PROFESSOR',
+      targetEscolaId: null,
+      lotacaoEscolas: [escolaA],
+    });
+    expect(res.authorized).toBe(true);
+    expect(res.status).toBe(200);
+  });
+});
+
+function evaluateStudentPassword(senha: string): boolean {
+  const hasLetter = /[a-zA-Z]/.test(senha);
+  const hasDigit = /\d/.test(senha);
+  return senha.length >= 10 && senha.length <= 128 && hasLetter && hasDigit;
+}
+
+describe('reset-student-password complexidade', () => {
+  it('rejeita senha curta ou sem letra/número', () => {
+    expect(evaluateStudentPassword('abc12345')).toBe(false); // 8 chars
+    expect(evaluateStudentPassword('abcdefghij')).toBe(false);
+    expect(evaluateStudentPassword('1234567890')).toBe(false);
+  });
+
+  it('aceita senha com 10+ chars, letra e número', () => {
+    expect(evaluateStudentPassword('aluno12345')).toBe(true);
+  });
+});
+
