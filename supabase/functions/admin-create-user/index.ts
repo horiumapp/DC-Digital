@@ -316,7 +316,8 @@ Deno.serve(async (req: Request) => {
         }
 
         // Não-admin só pode deletar PROFESSOR ou ALUNO da própria escola.
-        // Professores multi-escola: autoriza por usuarios.escola_id OU lotação ativa.
+        // Conta Auth é removida por completo: para professor multi-escola, exigir
+        // desvinculação por unidade (RPC) em vez de exclusão total da conta.
         if (!["PROFESSOR", "ALUNO"].includes(targetUserData.cargo)) {
           return new Response(
             JSON.stringify({ error: "Você não tem permissão para excluir este usuário" }),
@@ -325,7 +326,7 @@ Deno.serve(async (req: Request) => {
         }
 
         let sameSchool = targetUserData.escola_id === callerData.escola_id;
-        if (!sameSchool && targetUserData.cargo === "PROFESSOR") {
+        if (targetUserData.cargo === "PROFESSOR") {
           const emailForLookup = targetUserData.email || targetEmail;
           if (emailForLookup) {
             const { data: profRow } = await supabaseAdmin
@@ -334,14 +335,24 @@ Deno.serve(async (req: Request) => {
               .ilike("email", emailForLookup)
               .maybeSingle();
             if (profRow?.id) {
-              const { data: aloc } = await supabaseAdmin
+              const { data: alocs } = await supabaseAdmin
                 .from("professor_alocacoes")
-                .select("id")
-                .eq("professor_id", profRow.id)
-                .eq("escola_id", callerData.escola_id)
-                .limit(1)
-                .maybeSingle();
-              sameSchool = Boolean(aloc?.id);
+                .select("escola_id")
+                .eq("professor_id", profRow.id);
+              const escolaIds = [...new Set((alocs || []).map((a) => a.escola_id).filter(Boolean))];
+              const lotadoAqui = escolaIds.includes(callerData.escola_id);
+              const outrasEscolas = escolaIds.some((id) => id !== callerData.escola_id);
+              if (lotadoAqui && outrasEscolas) {
+                return new Response(
+                  JSON.stringify({
+                    error: "Este professor está lotado em outras escolas. Desvincule-o desta unidade em vez de excluir a conta.",
+                  }),
+                  { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
+              }
+              if (!sameSchool && lotadoAqui && !outrasEscolas) {
+                sameSchool = true;
+              }
             }
           }
         }
@@ -429,14 +440,15 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // FIX M1: Exigir senha forte — mínimo 8 caracteres, com letra e número.
-    // Antes aceitava 6 caracteres sem regra de complexidade, permitindo senhas
-    // triviais como "123456". Alinhado com o minLength={8} da tela de login.
+    // Senha forte: mínimo 8 (10 para ALUNO), com letra e número.
     const hasLetter = /[a-zA-Z]/.test(senha);
     const hasDigit = /\d/.test(senha);
-    if (senha.length < 8 || !hasLetter || !hasDigit) {
+    const minPasswordLength = cargoTrimmed === "ALUNO" ? 10 : 8;
+    if (senha.length < minPasswordLength || !hasLetter || !hasDigit) {
       return new Response(
-        JSON.stringify({ error: "A senha deve ter no mínimo 8 caracteres, incluindo letras e números" }),
+        JSON.stringify({
+          error: `A senha deve ter no mínimo ${minPasswordLength} caracteres, incluindo letras e números`,
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
