@@ -23,11 +23,11 @@ async function main() {
     fs.mkdirSync(ICONS_DIR, { recursive: true });
   }
 
-  // Preferência: PNG de referência oficial → SVG → logo.png
-  const sourcePath = fs.existsSync(BRAND_ICON_PNG)
-    ? BRAND_ICON_PNG
-    : fs.existsSync(BRAND_ICON_SVG)
-      ? BRAND_ICON_SVG
+  // Preferência: SVG aprovado → PNG de referência → logo.png
+  const sourcePath = fs.existsSync(BRAND_ICON_SVG)
+    ? BRAND_ICON_SVG
+    : fs.existsSync(BRAND_ICON_PNG)
+      ? BRAND_ICON_PNG
       : LOGO_PATH;
   if (!fs.existsSync(sourcePath)) {
     throw new Error('Nenhuma arte de marca encontrada (brand/dc-digital-icon.svg ou logo.png).');

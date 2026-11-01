@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">DC Digital</title>
+  <desc id="desc">Livro aberto centralizado, com linhas de leitura, marcador e brilho menta.</desc>
+  <rect x="20" y="20" width="472" height="472" rx="112" fill="#6354C7"/>
+  <g transform="translate(34.6 34.6) scale(2.7)">
+    <path d="m82 31 3.5 8.5 8.5 3.5-8.5 3.5-3.5 8.5-3.5-8.5-8.5-3.5 8.5-3.5L82 31Z" fill="#B8E7D0"/>
+    <path d="M82 60c-14-10-34-10-48-2v60c17-7 34-6 48 4V60Z" fill="#fffdfd" stroke="#fff" stroke-linejoin="round" stroke-width="2.5"/>
+    <path d="M82 60c14-10 34-10 48-2v60c-17-7-34-6-48 4V60Z" fill="#f4f1ff" stroke="#fff" stroke-linejoin="round" stroke-width="2.5"/>
+    <path d="M82 60v62M43 70c11-5 23-4 31 1M43 82c11-4 23-3 31 2M43 94c10-3 22-2 31 3M91 71c8-5 20-6 30-1M91 83c9-5 20-5 30-2M91 95c9-4 19-4 30-2" fill="none" stroke="#a99de8" stroke-linecap="round" stroke-width="3"/>
+    <path d="M76 104v19l6-4 6 4v-19" fill="#B8E7D0"/>
+    <path d="M34 120c17-8 33-6 48 3 15-9 31-11 48-3M38 129c14-5 28-3 44 5 16-8 30-10 44-5" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="3.5"/>
+  </g>
+</svg>

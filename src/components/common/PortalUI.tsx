@@ -3,11 +3,27 @@ import { Link } from 'react-router-dom';
 import { ArrowUpRight, BookOpen, Search, LayoutGrid, List, Building2, ArrowRight, GraduationCap, Star, CalendarDays, ClipboardCheck, FileBarChart } from 'lucide-react';
 import type { Turma } from '../../contexts/TurmaContext';
 
-export function PortalBrand() {
+/** `full` = logo horizontal (login/entrada); `mark` = ícone + wordmark (menu/chrome). */
+export function PortalBrand({ variant = 'mark' }: { variant?: 'mark' | 'full' }) {
+  if (variant === 'full') {
+    return (
+      <span className="portal-brand portal-brand-full">
+        <img
+          src="/brand/dc-digital-logo.svg"
+          alt="DC Digital — Educação em Movimento"
+          className="portal-brand-logo"
+          width={280}
+          height={65}
+          decoding="async"
+        />
+      </span>
+    );
+  }
+
   return (
     <span className="portal-brand">
       <span className="portal-brand-mark" aria-hidden="true">
-        <img src="/brand/dc-digital-icon.ref.png" alt="" width={40} height={40} decoding="async" />
+        <img src="/brand/dc-digital-icon.svg" alt="" width={40} height={40} decoding="async" />
       </span>
       <span className="portal-brand-copy">
         <span className="portal-brand-name">
