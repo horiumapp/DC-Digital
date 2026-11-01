@@ -10,6 +10,7 @@ import PrivacyLinksFooter from '../components/PrivacyLinksFooter';
 import { logSecurityEvent } from '../services/securityLogService';
 import { validarCPF } from '../utils/cpfUtils';
 import { ADMIN_ROLES, SEMEC_ROLE } from '../constants/authConstants';
+import { claimActiveSession } from '../services/sessionGuard';
 
 const ALUNO_EMAIL_DOMAIN = 'aluno.dcdigital.local';
 
@@ -128,6 +129,15 @@ export default function Login() {
       });
 
       if (signInError) throw signInError;
+
+      // Invalida refresh tokens de outros navegadores/dispositivos.
+      const { error: othersError } = await supabase.auth.signOut({ scope: 'others' });
+      if (othersError) {
+        console.warn('[Login] Não foi possível encerrar outras sessões:', othersError.message);
+      }
+
+      // Carimbo no banco para derrubar clientes que ainda tenham access token válido.
+      await claimActiveSession();
       
       if (signInData?.user) {
         await logSecurityEvent({

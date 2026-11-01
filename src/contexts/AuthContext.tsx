@@ -14,6 +14,12 @@ import { useToast } from '../components/common/Toast';
 import ConfirmActionModal from '../components/ConfirmActionModal';
 import { AlertTriangle, WifiOff } from 'lucide-react';
 import { CHAVE_LOTACAO_CONFIRMADA, CHAVE_LOTACAO_QUANTIDADE, lotacaoConfirmadaNaSessao } from '../utils/lotacaoProfessor';
+import {
+  claimActiveSession,
+  clearLocalSessaoAtivaId,
+  getLocalSessaoAtivaId,
+  isLocalSessionStillActive,
+} from '../services/sessionGuard';
 
 export type UserRole = 'ADMIN' | 'GESTOR' | 'GESTOR_SEMEC' | 'SECRETARIO' | 'PROFESSOR' | 'ALUNO';
 
@@ -70,12 +76,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const { showError: showToastError } = useToast();
+  const { showError: showToastError, showWarning: showToastWarning } = useToast();
   // FIX B1: Ref para expor refreshUser via contexto sem causar re-renders
   const refreshUserRef = useRef<(() => Promise<void>) | null>(null);
   // FIX: Guard de concorrência — impede chamadas paralelas a refreshUser/fetchUserData
   // que causariam race condition no setUser (análogo ao _isSyncing do SyncEngine).
   const _isFetchingRef = useRef(false);
+  const sessionWatchBusyRef = useRef(false);
+  const showToastWarningRef = useRef(showToastWarning);
+  useEffect(() => { showToastWarningRef.current = showToastWarning; }, [showToastWarning]);
 
   // FIX: Modal de logout no lugar de window.confirm() bloqueante
   const [logoutModal, setLogoutModal] = useState<LogoutModalState>({
@@ -288,6 +297,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!isolationOk || isCancelled()) return;
       setUser(userObj);
 
+      // Sessão antiga sem carimbo local: assume esta sessão (derruba outros carimbos).
+      // Login já faz claim; isto cobre refresh de página / app aberto antes da feature.
+      if (isReallyOnline && !getLocalSessaoAtivaId()) {
+        await claimActiveSession().catch(() => null);
+      }
+
       // 3. Salvar/Atualizar no cache (reutiliza resultado do passo 1)
       try {
         const alocacoes = (cached && cached.id === authUser.id) ? cached.alocacoes : undefined;
@@ -404,6 +419,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_OUT') {
         cancelSync();
         setOfflineOwner(null);
+        clearLocalSessaoAtivaId();
         activeAbortController?.abort();
         setUser(null);
         setLoading(false);
@@ -433,6 +449,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe();
     };
   }, [askConfirmation]);
+
+  // Sessão única: se outro dispositivo fez claim, encerra esta sessão (sem apagar IndexedDB).
+  useEffect(() => {
+    if (!user) return;
+
+    const enforceSingleSession = async () => {
+      if (sessionWatchBusyRef.current) return;
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+      sessionWatchBusyRef.current = true;
+      try {
+        const stillActive = await isLocalSessionStillActive();
+        if (stillActive === false) {
+          showToastWarningRef.current(
+            'Sua conta foi acessada em outro dispositivo. Esta sessão foi encerrada.',
+          );
+          cancelSync();
+          await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+          clearLocalSessaoAtivaId();
+          setUser(null);
+        }
+      } finally {
+        sessionWatchBusyRef.current = false;
+      }
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void enforceSingleSession();
+      }
+    };
+
+    void enforceSingleSession();
+    const intervalId = window.setInterval(() => {
+      void enforceSingleSession();
+    }, 35_000);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [user]);
 
 
   // LOGOUT — Revoga sessão no servidor ANTES de limpar o state da UI
@@ -485,6 +543,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionStorage.removeItem(CHAVE_LOTACAO_CONFIRMADA);
         sessionStorage.removeItem(CHAVE_LOTACAO_QUANTIDADE);
         localStorage.removeItem('dc_last_user_id');
+        clearLocalSessaoAtivaId();
       }
 
       setUser(null);
