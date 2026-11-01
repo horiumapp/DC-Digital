@@ -1,11 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="DC Digital">
   <title>DC Digital</title>
   <rect width="128" height="128" rx="28" fill="#6354C7"/>
-  <!-- Livro aberto em traco branco (estilo da marca) -->
-  <g fill="none" stroke="#FFFFFF" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round">
-    <path d="M64 42c-2.5 5-12 11-26 13.5v45c13.5-3 23.5-10 26-16 2.5 6 12.5 13 26 16v-45C76 53 66.5 47 64 42Z"/>
-    <path d="M64 44.5v39"/>
-  </g>
-  <!-- Detalhe menta: marcador no canto superior direito da pagina -->
-  <rect x="82" y="38" width="14" height="14" rx="3.5" fill="#B8E7D0"/>
+  <!-- Livro aberto: traco branco continuo (referencia oficial) -->
+  <path
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="7"
+    stroke-linejoin="round"
+    stroke-linecap="round"
+    d="M64 40
+       C58 48 46 54 34 56
+       V98
+       C46 93 56 88 64 94
+       C72 88 82 93 94 98
+       V56
+       C82 54 70 48 64 40
+       Z"
+  />
+  <path fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" d="M64 44 V90"/>
+  <!-- Detalhe menta: quadrado no canto superior direito da pagina -->
+  <rect x="84" y="40" width="15" height="15" rx="3.5" fill="#B8E7D0"/>
 </svg>

@@ -7,7 +7,7 @@ export function PortalBrand() {
   return (
     <span className="portal-brand">
       <span className="portal-brand-mark" aria-hidden="true">
-        <img src="/brand/dc-digital-icon.svg" alt="" width={28} height={28} decoding="async" />
+        <img src="/brand/dc-digital-icon.ref.png" alt="" width={40} height={40} decoding="async" />
       </span>
       <span className="portal-brand-copy">
         <span className="portal-brand-name">
