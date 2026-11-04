@@ -170,10 +170,18 @@ export default function RelatorioListaAlunos() {
         console.warn('Falha ao carregar alunos online, tentando cache local:', err);
         const { alunos: localAlunos, decryptionFailed } = await getCachedAlunos(turma.id);
         if (decryptionFailed) {
-          throw new Error('cache-criptografado');
+          setErroAlunos(
+            'Os dados locais desta turma estão protegidos e não puderam ser lidos. Reconecte à internet para atualizar a lista.'
+          );
+          showError('Erro ao carregar a lista de alunos.');
+          return;
         }
         if (!navigator.onLine && localAlunos.length === 0) {
-          throw new Error('offline-sem-cache');
+          setErroAlunos(
+            'Você está offline e ainda não há dados desta turma salvos neste dispositivo. Conecte-se à internet e tente novamente.'
+          );
+          showError('Erro ao carregar a lista de alunos.');
+          return;
         }
         lista = localAlunos.map((a) => ({
           id: a.id,
@@ -188,18 +196,7 @@ export default function RelatorioListaAlunos() {
       setAlunos(ordenados);
     } catch (err) {
       console.error('Erro ao buscar alunos da turma:', err);
-      const msg = err instanceof Error ? err.message : '';
-      if (msg === 'offline-sem-cache') {
-        setErroAlunos(
-          'Você está offline e ainda não há dados desta turma salvos neste dispositivo. Conecte-se à internet e tente novamente.'
-        );
-      } else if (msg === 'cache-criptografado') {
-        setErroAlunos(
-          'Os dados locais desta turma estão protegidos e não puderam ser lidos. Reconecte à internet para atualizar a lista.'
-        );
-      } else {
-        setErroAlunos('Não foi possível carregar os alunos desta turma. Tente novamente.');
-      }
+      setErroAlunos('Não foi possível carregar os alunos desta turma. Tente novamente.');
       showError('Erro ao carregar a lista de alunos.');
     } finally {
       setLoadingAlunos(false);
