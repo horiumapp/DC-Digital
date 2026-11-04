@@ -540,9 +540,9 @@ export default function RelatorioListaAlunos() {
               vertical-align: middle;
             }
             #printable-relatorio .logo-cell {
-              width: 20%;
+              width: 18%;
               text-align: center;
-              padding: 6px 4px;
+              padding: 8px 4px;
             }
             #printable-relatorio .school-cell {
               width: 55%;
@@ -578,12 +578,6 @@ export default function RelatorioListaAlunos() {
               text-transform: uppercase;
               line-height: 1.25;
               color: #111;
-            }
-            #printable-relatorio .org-name {
-              font-size: 7.5px;
-              font-weight: 700;
-              line-height: 1.2;
-              text-transform: uppercase;
             }
             #printable-relatorio .title-bar {
               border: 1px solid #111;
@@ -640,11 +634,7 @@ export default function RelatorioListaAlunos() {
               <tbody>
                 <tr>
                   <td className="logo-cell">
-                    <img src="/semed.png" alt="Logo SEMED" style={{ width: 48, height: 48, objectFit: 'contain', margin: '0 auto 4px' }} />
-                    <div className="org-name">
-                      Secretaria Municipal de Educação<br />
-                      Lábrea - AM
-                    </div>
+                    <img src="/semed.png" alt="Logo SEMED" style={{ width: 78, height: 78, objectFit: 'contain', margin: '0 auto' }} />
                   </td>
                   <td className="school-cell">
                     <div className="field">
