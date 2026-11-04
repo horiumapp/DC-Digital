@@ -38,6 +38,7 @@ import { nomeFeriado } from '../services/feriados';
 type Item = { label: string; to: string; icon: typeof Home; end?: boolean };
 const reports: Item[] = [
   { label: 'Boletins escolares', to: '/relatorio-boletins', icon: Printer },
+  { label: 'Lista de alunos', to: '/relatorio-lista-alunos', icon: Users },
   { label: 'Conteúdos ministrados', to: '/relatorio-conteudos', icon: BookOpenCheck },
   { label: 'Frequência da turma', to: '/relatorio-frequencia', icon: ClipboardCheck },
   { label: 'Médias do componente', to: '/relatorio-medias', icon: BarChart3 },
@@ -91,7 +92,7 @@ export default function Layout() {
 
   const availableReports = reports.filter(item => {
     if (isSemec) return false;
-    if (item.to === '/relatorio-boletins') {
+    if (item.to === '/relatorio-boletins' || item.to === '/relatorio-lista-alunos') {
       return canManage;
     }
     return true;

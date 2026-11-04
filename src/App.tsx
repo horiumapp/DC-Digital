@@ -27,6 +27,7 @@ const RelatorioMedias = React.lazy(() => import('./pages/RelatorioMedias'));
 const RelatorioConteudos = React.lazy(() => import('./pages/RelatorioConteudos'));
 const RelatorioFrequencia = React.lazy(() => import('./pages/RelatorioFrequencia'));
 const RelatorioBoletins = React.lazy(() => import('./pages/RelatorioBoletins'));
+const RelatorioListaAlunos = React.lazy(() => import('./pages/RelatorioListaAlunos'));
 const Frequencia = React.lazy(() => import('./pages/Frequencia'));
 const Estatisticas = React.lazy(() => import('./pages/Estatisticas'));
 const PendenciasLancamento = React.lazy(() => import('./pages/PendenciasLancamento'));
@@ -163,6 +164,7 @@ const router = createBrowserRouter([
                         element: <ProtectedRoute allowedRoles={ADMIN_ROLES} />,
                         children: [
                           { path: '/relatorio-boletins', element: <RouteErrorBoundary><RelatorioBoletins /></RouteErrorBoundary> },
+                          { path: '/relatorio-lista-alunos', element: <RouteErrorBoundary><RelatorioListaAlunos /></RouteErrorBoundary> },
                           { path: '/estatisticas', element: <RouteErrorBoundary><Estatisticas /></RouteErrorBoundary> },
                           { path: '/pendencias-lancamento', element: <RouteErrorBoundary><PendenciasLancamento /></RouteErrorBoundary> },
                           { path: '/pendencias-frequencia', element: <RouteErrorBoundary><PendenciasFrequencia /></RouteErrorBoundary> },
