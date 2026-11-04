@@ -568,7 +568,7 @@ export default function RelatorioListaAlunos() {
               justify-content: space-between;
               align-items: flex-start;
               gap: 12px;
-              margin-top: 4px;
+              margin-bottom: 5px;
             }
             #printable-relatorio .field-row .field {
               margin-bottom: 0;
@@ -655,16 +655,6 @@ export default function RelatorioListaAlunos() {
                     <img src="/semed.png" alt="Logo SEMED" style={{ width: 78, height: 78, objectFit: 'contain', margin: '0 auto' }} />
                   </td>
                   <td className="school-cell">
-                    <div className="field">
-                      <span className="label">Escola</span>
-                      <span className="value">{escolaNome}</span>
-                    </div>
-                    {enderecoEscola ? (
-                      <div className="field">
-                        <span className="label">Endereço</span>
-                        <span className="value">{enderecoEscola}</span>
-                      </div>
-                    ) : null}
                     <div className="field-row">
                       {inepEscola ? (
                         <div className="field field-inep">
@@ -677,6 +667,16 @@ export default function RelatorioListaAlunos() {
                         <span className="value">{dataEmissao}</span>
                       </div>
                     </div>
+                    <div className="field">
+                      <span className="label">Escola</span>
+                      <span className="value">{escolaNome}</span>
+                    </div>
+                    {enderecoEscola ? (
+                      <div className="field">
+                        <span className="label">Endereço</span>
+                        <span className="value">{enderecoEscola}</span>
+                      </div>
+                    ) : null}
                   </td>
                   <td className="school-logo-cell">
                     <img
