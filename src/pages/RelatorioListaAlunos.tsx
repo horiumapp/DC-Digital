@@ -544,22 +544,18 @@ export default function RelatorioListaAlunos() {
               border: 1px solid #111;
               vertical-align: middle;
             }
-            #printable-relatorio .logo-cell {
+            #printable-relatorio .logo-cell,
+            #printable-relatorio .school-logo-cell {
               width: 18%;
               text-align: center;
               padding: 8px 4px;
+              vertical-align: middle;
             }
             #printable-relatorio .school-cell {
-              width: 62%;
+              width: 64%;
               padding: 6px 8px;
               text-align: left;
               vertical-align: top;
-            }
-            #printable-relatorio .school-logo-cell {
-              width: 20%;
-              padding: 6px 4px;
-              text-align: center;
-              vertical-align: middle;
             }
             #printable-relatorio .field {
               margin-bottom: 5px;
@@ -569,12 +565,20 @@ export default function RelatorioListaAlunos() {
             }
             #printable-relatorio .field-row {
               display: flex;
-              gap: 16px;
+              justify-content: space-between;
+              align-items: flex-start;
+              gap: 12px;
               margin-top: 4px;
             }
             #printable-relatorio .field-row .field {
-              flex: 1;
               margin-bottom: 0;
+            }
+            #printable-relatorio .field-row .field-inep {
+              text-align: left;
+            }
+            #printable-relatorio .field-row .field-emissao {
+              text-align: right;
+              margin-left: auto;
             }
             #printable-relatorio .label {
               display: block;
@@ -663,12 +667,12 @@ export default function RelatorioListaAlunos() {
                     ) : null}
                     <div className="field-row">
                       {inepEscola ? (
-                        <div className="field">
+                        <div className="field field-inep">
                           <span className="label">INEP</span>
                           <span className="value">{inepEscola}</span>
                         </div>
                       ) : null}
-                      <div className="field">
+                      <div className="field field-emissao">
                         <span className="label">Data emissão</span>
                         <span className="value">{dataEmissao}</span>
                       </div>
@@ -678,7 +682,7 @@ export default function RelatorioListaAlunos() {
                     <img
                       src={logoEscola}
                       alt={`Logo ${escolaNome}`}
-                      style={{ width: 72, height: 72, objectFit: 'contain', margin: '0 auto' }}
+                      style={{ width: 78, height: 78, objectFit: 'contain', margin: '0 auto' }}
                     />
                   </td>
                 </tr>
