@@ -8,6 +8,7 @@ import {
   formatarNumeroLista,
   linhasEmBrancoLista,
   mapearSituacaoAluno,
+  textoCampoOpcional,
   turmaPermitida,
 } from '../utils/relatorioListaAlunos';
 
@@ -91,15 +92,29 @@ describe('Relatório Lista de alunos — filtros e acesso', () => {
     expect(mapearSituacaoAluno('Inativo')).toBe('INATIVO');
   });
 
-  it('formata código, data, número e linhas em branco do PDF', () => {
+  it('formata código, data, número e campos opcionais do PDF', () => {
     expect(formatarCodigoAluno('2676986-7')).toBe('2676986-7');
     expect(formatarCodigoAluno('')).toBe('—');
     expect(formatarDataNascimentoLista('2011-03-15')).toBe('15/03/2011');
     expect(formatarDataNascimentoLista(null)).toBe('—');
     expect(formatarNumeroLista(1)).toBe('001');
     expect(formatarNumeroLista(12)).toBe('012');
-    expect(linhasEmBrancoLista(5, 40)).toBe(35);
-    expect(linhasEmBrancoLista(29, 40)).toBe(11);
-    expect(linhasEmBrancoLista(45, 40)).toBe(0);
+    expect(textoCampoOpcional('  CENTRO  ')).toBe('CENTRO');
+    expect(textoCampoOpcional('')).toBe('');
+    expect(textoCampoOpcional(null)).toBe('');
+  });
+
+  it('usa poucas linhas em branco para turmas pequenas e nenhuma para listas longas', () => {
+    const poucas = linhasEmBrancoLista(5);
+    expect(poucas).toBeGreaterThan(0);
+    expect(poucas).toBeLessThanOrEqual(6);
+
+    const medias = linhasEmBrancoLista(11);
+    expect(medias).toBeGreaterThan(0);
+    expect(medias).toBeLessThanOrEqual(6);
+
+    expect(linhasEmBrancoLista(28)).toBe(0);
+    expect(linhasEmBrancoLista(45)).toBe(0);
+    expect(linhasEmBrancoLista(0)).toBe(0);
   });
 });

@@ -16,6 +16,7 @@ import {
   formatarNumeroLista,
   linhasEmBrancoLista,
   mapearSituacaoAluno,
+  textoCampoOpcional,
   turmaPermitida,
   type AlunoListaRelatorio,
   type EscolaListaAlunosInfo,
@@ -257,7 +258,9 @@ export default function RelatorioListaAlunos() {
   };
 
   const homePath = '/administracao';
-  const escolaNome = escolaInfo?.nome || turmaSelecionada?.escolaNome || 'Escola';
+  const escolaNome = textoCampoOpcional(escolaInfo?.nome) || turmaSelecionada?.escolaNome || 'Escola';
+  const enderecoEscola = textoCampoOpcional(escolaInfo?.distrito);
+  const inepEscola = textoCampoOpcional(escolaInfo?.inep);
   const linhasVazias = linhasEmBrancoLista(alunos.length);
   const codigoTurma = turmaSelecionada?.numero || turmaSelecionada?.nome || '—';
 
@@ -485,13 +488,15 @@ export default function RelatorioListaAlunos() {
         <div id="printable-relatorio" aria-hidden="true" style={{ display: 'none' }}>
           <style dangerouslySetInnerHTML={{ __html: `
             @media print {
-              @page { margin: 10mm; size: A4 portrait; }
+              @page { margin: 12mm 10mm; size: A4 portrait; }
               html, body {
                 background: white !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 height: auto !important;
                 overflow: visible !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
               }
               body.printing-lista-alunos #root {
                 display: none !important;
@@ -506,85 +511,128 @@ export default function RelatorioListaAlunos() {
                 padding: 0 !important;
                 background: white !important;
               }
+              #printable-relatorio thead {
+                display: table-header-group;
+              }
+              #printable-relatorio tfoot {
+                display: table-footer-group;
+              }
+              #printable-relatorio tr {
+                break-inside: avoid;
+                page-break-inside: avoid;
+              }
             }
             #printable-relatorio {
               font-family: Arial, Helvetica, sans-serif;
-              color: #000;
+              color: #111;
+              font-size: 10px;
             }
             #printable-relatorio table {
               width: 100%;
               border-collapse: collapse;
               table-layout: fixed;
             }
+            #printable-relatorio .doc-header {
+              border: 1px solid #111;
+            }
             #printable-relatorio .doc-header td {
-              border: 1px solid #000;
+              border: 1px solid #111;
               vertical-align: middle;
             }
             #printable-relatorio .logo-cell {
-              width: 18%;
+              width: 20%;
               text-align: center;
-              padding: 4px 3px;
+              padding: 6px 4px;
             }
             #printable-relatorio .school-cell {
-              width: 57%;
-              padding: 3px 6px;
-              text-align: left;
-            }
-            #printable-relatorio .meta-cell {
-              width: 25%;
-              padding: 3px 6px;
+              width: 55%;
+              padding: 6px 8px;
               text-align: left;
               vertical-align: top;
             }
+            #printable-relatorio .meta-cell {
+              width: 25%;
+              padding: 6px 8px;
+              text-align: left;
+              vertical-align: top;
+            }
+            #printable-relatorio .field {
+              margin-bottom: 5px;
+            }
+            #printable-relatorio .field:last-child {
+              margin-bottom: 0;
+            }
             #printable-relatorio .label {
+              display: block;
               font-size: 7px;
-              font-weight: bold;
+              font-weight: 700;
               text-transform: uppercase;
+              letter-spacing: 0.02em;
+              color: #333;
+              margin-bottom: 1px;
             }
             #printable-relatorio .value {
+              display: block;
               font-size: 10px;
-              font-weight: bold;
+              font-weight: 700;
               text-transform: uppercase;
+              line-height: 1.25;
+              color: #111;
+            }
+            #printable-relatorio .org-name {
+              font-size: 7.5px;
+              font-weight: 700;
               line-height: 1.2;
+              text-transform: uppercase;
             }
             #printable-relatorio .title-bar {
-              border: 1px solid #000;
+              border: 1px solid #111;
               border-top: none;
               text-align: center;
-              font-weight: bold;
-              font-size: 13px;
-              padding: 4px;
+              font-weight: 700;
+              font-size: 14px;
+              padding: 7px 4px;
               text-transform: uppercase;
-              letter-spacing: 0.04em;
+              letter-spacing: 0.06em;
             }
             #printable-relatorio .filters-table td {
-              border: 1px solid #000;
+              border: 1px solid #111;
               border-top: none;
-              padding: 2px 5px;
+              padding: 4px 6px;
               vertical-align: top;
             }
             #printable-relatorio .content-table {
               margin-top: 0;
+              border: 1px solid #111;
+              border-top: none;
             }
             #printable-relatorio .content-table th,
             #printable-relatorio .content-table td {
-              border: 1px solid #000;
-              padding: 2px 4px;
+              border: 1px solid #111;
+              padding: 3px 5px;
               font-size: 9px;
-              line-height: 1.2;
+              line-height: 1.25;
+              vertical-align: middle;
             }
             #printable-relatorio .content-table th {
-              background: #e5e5e5;
+              background: #ececec;
               text-align: center;
-              font-weight: bold;
+              font-weight: 700;
               text-transform: uppercase;
+              font-size: 8px;
             }
-            #printable-relatorio .col-num { width: 5%; text-align: center; }
-            #printable-relatorio .col-cod { width: 13%; text-align: center; }
-            #printable-relatorio .col-nome { width: 50%; text-align: left; text-transform: uppercase; }
+            #printable-relatorio .col-num { width: 6%; text-align: center; }
+            #printable-relatorio .col-cod { width: 14%; text-align: center; word-break: break-all; }
+            #printable-relatorio .col-nome { width: 48%; text-align: left; text-transform: uppercase; }
             #printable-relatorio .col-nasc { width: 16%; text-align: center; }
             #printable-relatorio .col-sit { width: 16%; text-align: center; text-transform: uppercase; }
-            #printable-relatorio .empty-row td { height: 16px; }
+            #printable-relatorio .empty-row td { height: 15px; }
+            #printable-relatorio .print-note {
+              margin-top: 6px;
+              font-size: 7px;
+              color: #555;
+              text-align: right;
+            }
           `}} />
 
           <div className="sheet">
@@ -592,24 +640,35 @@ export default function RelatorioListaAlunos() {
               <tbody>
                 <tr>
                   <td className="logo-cell">
-                    <img src="/semed.png" alt="Logo SEMED" style={{ width: 42, height: 42, objectFit: 'contain', margin: '0 auto 2px' }} />
-                    <div style={{ fontSize: 7, fontWeight: 700, lineHeight: 1.15, textTransform: 'uppercase' }}>
+                    <img src="/semed.png" alt="Logo SEMED" style={{ width: 48, height: 48, objectFit: 'contain', margin: '0 auto 4px' }} />
+                    <div className="org-name">
                       Secretaria Municipal de Educação<br />
                       Lábrea - AM
                     </div>
                   </td>
                   <td className="school-cell">
-                    <div><span className="label">Escola: </span><span className="value">{escolaNome}</span></div>
-                    <div style={{ marginTop: 2 }}>
-                      <span className="label">Endereço: </span>
-                      <span className="value">{escolaInfo?.distrito?.trim() || '—'}</span>
+                    <div className="field">
+                      <span className="label">Escola</span>
+                      <span className="value">{escolaNome}</span>
                     </div>
+                    {enderecoEscola ? (
+                      <div className="field">
+                        <span className="label">Endereço</span>
+                        <span className="value">{enderecoEscola}</span>
+                      </div>
+                    ) : null}
                   </td>
                   <td className="meta-cell">
-                    <div><span className="label">INEP:</span></div>
-                    <div className="value" style={{ marginBottom: 4 }}>{escolaInfo?.inep?.trim() || '—'}</div>
-                    <div><span className="label">Data emissão:</span></div>
-                    <div className="value">{dataEmissao}</div>
+                    {inepEscola ? (
+                      <div className="field">
+                        <span className="label">INEP</span>
+                        <span className="value">{inepEscola}</span>
+                      </div>
+                    ) : null}
+                    <div className="field">
+                      <span className="label">Data emissão</span>
+                      <span className="value">{dataEmissao}</span>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -621,24 +680,24 @@ export default function RelatorioListaAlunos() {
               <tbody>
                 <tr>
                   <td style={{ width: '12%' }}>
-                    <div className="label">Ano</div>
-                    <div className="value">{APP_CONFIG.YEAR}</div>
+                    <span className="label">Ano</span>
+                    <span className="value">{APP_CONFIG.YEAR}</span>
                   </td>
-                  <td style={{ width: '36%' }}>
-                    <div className="label">Ensino / Projeto</div>
-                    <div className="value">{turmaSelecionada.ensino || '—'}</div>
+                  <td style={{ width: '34%' }}>
+                    <span className="label">Ensino / Projeto</span>
+                    <span className="value">{turmaSelecionada.ensino || '—'}</span>
                   </td>
                   <td style={{ width: '20%' }}>
-                    <div className="label">Fase</div>
-                    <div className="value">{turmaSelecionada.fase || '—'}</div>
+                    <span className="label">Fase</span>
+                    <span className="value">{turmaSelecionada.fase || '—'}</span>
                   </td>
-                  <td style={{ width: '14%' }}>
-                    <div className="label">Turma</div>
-                    <div className="value">{codigoTurma}</div>
+                  <td style={{ width: '16%' }}>
+                    <span className="label">Turma</span>
+                    <span className="value">{codigoTurma}</span>
                   </td>
                   <td style={{ width: '18%' }}>
-                    <div className="label">Turno</div>
-                    <div className="value">{turmaSelecionada.turno || '—'}</div>
+                    <span className="label">Turno</span>
+                    <span className="value">{turmaSelecionada.turno || '—'}</span>
                   </td>
                 </tr>
               </tbody>
@@ -675,6 +734,9 @@ export default function RelatorioListaAlunos() {
                 ))}
               </tbody>
             </table>
+            <div className="print-note">
+              Total: {alunos.length} {alunos.length === 1 ? 'aluno' : 'alunos'}
+            </div>
           </div>
         </div>
       )}

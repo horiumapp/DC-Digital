@@ -111,9 +111,24 @@ export function formatarNumeroLista(indice: number): string {
 }
 
 /**
- * Quantidade de linhas em branco para preencher a grade do PDF em retrato.
- * Turmas grandes (≥ minimo) não ganham linhas extras — a lista segue naturalmente.
+ * Linhas em branco residuais no PDF (espaço para anotações / aspecto de formulário).
+ * Turmas pequenas não recebem dezenas de linhas vazias; listas longas não são
+ * preenchidas artificialmente e fluem para páginas seguintes.
  */
-export function linhasEmBrancoLista(totalAlunos: number, minimo = 40): number {
-  return Math.max(0, minimo - totalAlunos);
+export function linhasEmBrancoLista(
+  totalAlunos: number,
+  maxVazias = 6,
+  limiarSemPadding = 28
+): number {
+  if (totalAlunos <= 0) return 0;
+  if (totalAlunos >= limiarSemPadding) return 0;
+  // Poucas linhas extras, sem tentar “lotar” a página inteira.
+  const proporcional = Math.min(maxVazias, Math.max(2, Math.ceil(totalAlunos * 0.35) + 1));
+  return proporcional;
+}
+
+/** Texto de campo opcional do cabeçalho: vazio se o dado não existir. */
+export function textoCampoOpcional(valor?: string | null): string {
+  const limpo = (valor || '').trim();
+  return limpo;
 }
