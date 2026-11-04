@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase';
 import { readAllRows } from '../services/pagination';
 import { getCachedAlunos } from '../services/offlineStorage';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
+import { getEscolaLogo } from '../utils/escolaUtils';
 import {
   deduplicarTurmasRelatorio,
   filtrarTurmasPorTurno,
@@ -261,6 +262,10 @@ export default function RelatorioListaAlunos() {
   const escolaNome = textoCampoOpcional(escolaInfo?.nome) || turmaSelecionada?.escolaNome || 'Escola';
   const enderecoEscola = textoCampoOpcional(escolaInfo?.distrito);
   const inepEscola = textoCampoOpcional(escolaInfo?.inep);
+  const logoEscola = getEscolaLogo({
+    nome: escolaNome,
+    logo_url: escolaInfo?.logo_url,
+  });
   const linhasVazias = linhasEmBrancoLista(alunos.length);
   const codigoTurma = turmaSelecionada?.numero || turmaSelecionada?.nome || '—';
 
@@ -545,21 +550,30 @@ export default function RelatorioListaAlunos() {
               padding: 8px 4px;
             }
             #printable-relatorio .school-cell {
-              width: 55%;
+              width: 62%;
               padding: 6px 8px;
               text-align: left;
               vertical-align: top;
             }
-            #printable-relatorio .meta-cell {
-              width: 25%;
-              padding: 6px 8px;
-              text-align: left;
-              vertical-align: top;
+            #printable-relatorio .school-logo-cell {
+              width: 20%;
+              padding: 6px 4px;
+              text-align: center;
+              vertical-align: middle;
             }
             #printable-relatorio .field {
               margin-bottom: 5px;
             }
             #printable-relatorio .field:last-child {
+              margin-bottom: 0;
+            }
+            #printable-relatorio .field-row {
+              display: flex;
+              gap: 16px;
+              margin-top: 4px;
+            }
+            #printable-relatorio .field-row .field {
+              flex: 1;
               margin-bottom: 0;
             }
             #printable-relatorio .label {
@@ -647,18 +661,25 @@ export default function RelatorioListaAlunos() {
                         <span className="value">{enderecoEscola}</span>
                       </div>
                     ) : null}
-                  </td>
-                  <td className="meta-cell">
-                    {inepEscola ? (
+                    <div className="field-row">
+                      {inepEscola ? (
+                        <div className="field">
+                          <span className="label">INEP</span>
+                          <span className="value">{inepEscola}</span>
+                        </div>
+                      ) : null}
                       <div className="field">
-                        <span className="label">INEP</span>
-                        <span className="value">{inepEscola}</span>
+                        <span className="label">Data emissão</span>
+                        <span className="value">{dataEmissao}</span>
                       </div>
-                    ) : null}
-                    <div className="field">
-                      <span className="label">Data emissão</span>
-                      <span className="value">{dataEmissao}</span>
                     </div>
+                  </td>
+                  <td className="school-logo-cell">
+                    <img
+                      src={logoEscola}
+                      alt={`Logo ${escolaNome}`}
+                      style={{ width: 72, height: 72, objectFit: 'contain', margin: '0 auto' }}
+                    />
                   </td>
                 </tr>
               </tbody>
