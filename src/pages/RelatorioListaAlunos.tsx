@@ -487,7 +487,7 @@ export default function RelatorioListaAlunos() {
         <div id="printable-relatorio" aria-hidden="true" style={{ display: 'none' }}>
           <style dangerouslySetInnerHTML={{ __html: `
             @media print {
-              @page { margin: 8mm; size: A4 landscape; }
+              @page { margin: 10mm; size: A4 portrait; }
               html, body {
                 background: white !important;
                 margin: 0 !important;
@@ -508,10 +508,6 @@ export default function RelatorioListaAlunos() {
                 padding: 0 !important;
                 background: white !important;
               }
-              #printable-relatorio .sheet {
-                break-inside: avoid;
-                page-break-inside: avoid;
-              }
             }
             #printable-relatorio {
               font-family: Arial, Helvetica, sans-serif;
@@ -527,17 +523,17 @@ export default function RelatorioListaAlunos() {
               vertical-align: middle;
             }
             #printable-relatorio .logo-cell {
-              width: 16%;
+              width: 18%;
               text-align: center;
               padding: 4px 3px;
             }
             #printable-relatorio .school-cell {
-              width: 64%;
+              width: 57%;
               padding: 3px 6px;
               text-align: left;
             }
             #printable-relatorio .meta-cell {
-              width: 20%;
+              width: 25%;
               padding: 3px 6px;
               text-align: left;
               vertical-align: top;
@@ -585,9 +581,9 @@ export default function RelatorioListaAlunos() {
               font-weight: bold;
               text-transform: uppercase;
             }
-            #printable-relatorio .col-num { width: 6%; text-align: center; }
-            #printable-relatorio .col-cod { width: 14%; text-align: center; }
-            #printable-relatorio .col-nome { width: 48%; text-align: left; text-transform: uppercase; }
+            #printable-relatorio .col-num { width: 8%; text-align: center; }
+            #printable-relatorio .col-cod { width: 16%; text-align: center; }
+            #printable-relatorio .col-nome { width: 44%; text-align: left; text-transform: uppercase; }
             #printable-relatorio .col-nasc { width: 16%; text-align: center; }
             #printable-relatorio .col-sit { width: 16%; text-align: center; text-transform: uppercase; }
             #printable-relatorio .empty-row td { height: 14px; }
