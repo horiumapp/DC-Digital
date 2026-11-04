@@ -584,7 +584,7 @@ export default function RelatorioListaAlunos() {
             #printable-relatorio .col-nome { width: 44%; text-align: left; text-transform: uppercase; }
             #printable-relatorio .col-nasc { width: 16%; text-align: center; }
             #printable-relatorio .col-sit { width: 16%; text-align: center; text-transform: uppercase; }
-            #printable-relatorio .empty-row td { height: 14px; }
+            #printable-relatorio .empty-row td { height: 16px; }
           `}} />
 
           <div className="sheet">

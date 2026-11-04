@@ -110,7 +110,10 @@ export function formatarNumeroLista(indice: number): string {
   return String(indice).padStart(3, '0');
 }
 
-/** Quantidade de linhas em branco para manter a grade visual no PDF (sem forçar 2ª página). */
-export function linhasEmBrancoLista(totalAlunos: number, minimo = 12): number {
+/**
+ * Quantidade de linhas em branco para preencher a grade do PDF em retrato.
+ * Turmas grandes (≥ minimo) não ganham linhas extras — a lista segue naturalmente.
+ */
+export function linhasEmBrancoLista(totalAlunos: number, minimo = 40): number {
   return Math.max(0, minimo - totalAlunos);
 }

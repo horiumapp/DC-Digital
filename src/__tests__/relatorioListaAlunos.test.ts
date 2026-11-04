@@ -98,7 +98,8 @@ describe('Relatório Lista de alunos — filtros e acesso', () => {
     expect(formatarDataNascimentoLista(null)).toBe('—');
     expect(formatarNumeroLista(1)).toBe('001');
     expect(formatarNumeroLista(12)).toBe('012');
-    expect(linhasEmBrancoLista(5, 12)).toBe(7);
-    expect(linhasEmBrancoLista(25, 12)).toBe(0);
+    expect(linhasEmBrancoLista(5, 40)).toBe(35);
+    expect(linhasEmBrancoLista(29, 40)).toBe(11);
+    expect(linhasEmBrancoLista(45, 40)).toBe(0);
   });
 });
