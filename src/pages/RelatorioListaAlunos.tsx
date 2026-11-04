@@ -8,7 +8,6 @@ import { supabase } from '../lib/supabase';
 import { readAllRows } from '../services/pagination';
 import { getCachedAlunos } from '../services/offlineStorage';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
-import { getEscolaLogo } from '../utils/escolaUtils';
 import {
   deduplicarTurmasRelatorio,
   filtrarTurmasPorTurno,
@@ -259,7 +258,6 @@ export default function RelatorioListaAlunos() {
 
   const homePath = '/administracao';
   const escolaNome = escolaInfo?.nome || turmaSelecionada?.escolaNome || 'Escola';
-  const logoEscola = getEscolaLogo({ nome: escolaNome, logo_url: escolaInfo?.logo_url });
   const linhasVazias = linhasEmBrancoLista(alunos.length);
   const codigoTurma = turmaSelecionada?.numero || turmaSelecionada?.nome || '—';
 
@@ -596,25 +594,15 @@ export default function RelatorioListaAlunos() {
                   <td className="logo-cell">
                     <img src="/semed.png" alt="Logo SEMED" style={{ width: 42, height: 42, objectFit: 'contain', margin: '0 auto 2px' }} />
                     <div style={{ fontSize: 7, fontWeight: 700, lineHeight: 1.15, textTransform: 'uppercase' }}>
-                      Estado do Amazonas<br />
                       Secretaria Municipal de Educação<br />
                       Lábrea - AM
                     </div>
                   </td>
                   <td className="school-cell">
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                      <div style={{ flex: 1 }}>
-                        <div><span className="label">Escola: </span><span className="value">{escolaNome}</span></div>
-                        <div style={{ marginTop: 2 }}>
-                          <span className="label">Endereço: </span>
-                          <span className="value">{escolaInfo?.distrito?.trim() || '—'}</span>
-                        </div>
-                      </div>
-                      <img
-                        src={logoEscola}
-                        alt=""
-                        style={{ width: 40, height: 40, objectFit: 'contain', flexShrink: 0 }}
-                      />
+                    <div><span className="label">Escola: </span><span className="value">{escolaNome}</span></div>
+                    <div style={{ marginTop: 2 }}>
+                      <span className="label">Endereço: </span>
+                      <span className="value">{escolaInfo?.distrito?.trim() || '—'}</span>
                     </div>
                   </td>
                   <td className="meta-cell">
