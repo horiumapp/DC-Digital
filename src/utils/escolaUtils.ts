@@ -15,6 +15,7 @@ const MAPA_LOGOS_NOMES: Array<{ pattern: RegExp; file: string }> = [
   { pattern: /FILAD[EÉ]LFIA/i, file: '/Filadelfia.png' },
   { pattern: /TURMA\s+DA\s+M[OÔ]NICA|M[OÔ]NICA/i, file: '/Turma da Monica.png' },
   { pattern: /S[AÃ]O\s+FRANCISCO/i, file: '/São Francisco.png' },
+  { pattern: /CENTRO\s+ESPERAN[CÇ]A/i, file: '/Centro_Esperança.png' },
 ];
 
 export const LOGO_PADRAO_SEMED = '/semed.png';
