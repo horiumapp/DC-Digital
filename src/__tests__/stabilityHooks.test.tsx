@@ -75,6 +75,19 @@ describe('useUnsavedChangesWarning', () => {
     expect(window.removeEventListener).toHaveBeenCalledWith('beforeunload', expect.any(Function));
     expect(hasUnsavedChanges()).toBe(false);
   });
+
+  it('clearDirty limpa o store de forma síncrona', () => {
+    const { result } = renderHook(
+      ({ dirty }) => useUnsavedChangesWarning(dirty),
+      { initialProps: { dirty: true } }
+    );
+    expect(hasUnsavedChanges()).toBe(true);
+
+    act(() => {
+      result.current();
+    });
+    expect(hasUnsavedChanges()).toBe(false);
+  });
 });
 
 describe('UnsavedNavigationGuard', () => {

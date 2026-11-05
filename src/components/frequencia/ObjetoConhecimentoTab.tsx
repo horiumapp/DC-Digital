@@ -66,7 +66,7 @@ export default function ObjetoConhecimentoTab({
   const [objetoSalvo, setObjetoSalvo] = useState(false);
   const [objetoData, setObjetoData] = useState<{ descricao: string; observacao: string; status: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  useUnsavedChangesWarning(isAddingObjeto);
+  const clearUnsavedWarning = useUnsavedChangesWarning(isAddingObjeto);
 
   const {
     generatedCaptcha,
@@ -309,7 +309,9 @@ export default function ObjetoConhecimentoTab({
         setObjetoSalvo(false);
         setObjetoData(null);
       } else {
-        // Redireciona para o Diário apenas quando não houver mais pendências de lançamento no dia
+        // Limpa o dirty de forma síncrona antes do navigate — senão o
+        // UnsavedNavigationGuard ainda vê alterações pendentes e mostra o modal.
+        clearUnsavedWarning();
         navigate(`/diario?date=${selectedDate}${turmaAtiva?.id ? `&turmaId=${turmaAtiva.id}` : ''}`);
       }
     } catch (err) {
