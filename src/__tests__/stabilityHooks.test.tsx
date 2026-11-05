@@ -135,6 +135,41 @@ describe('UnsavedNavigationGuard', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Sair sem gravar' }));
     expect(await screen.findByText('Lista de turmas')).toBeTruthy();
   });
+
+  it('permite navegar no mesmo tick após limpar o store (pós-gravação)', async () => {
+    setUnsavedDirty('conteudo-form', true);
+
+    const router = createMemoryRouter(
+      [
+        {
+          element: <UnsavedNavigationGuard />,
+          children: [
+            {
+              path: '/frequencia',
+              element: (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUnsavedDirty('conteudo-form', false);
+                    void router.navigate('/diario');
+                  }}
+                >
+                  Gravar e ir ao diário
+                </button>
+              ),
+            },
+            { path: '/diario', element: <div>Diário</div> },
+          ],
+        },
+      ],
+      { initialEntries: ['/frequencia'] },
+    );
+
+    render(<RouterProvider router={router} />);
+    fireEvent.click(screen.getByText('Gravar e ir ao diário'));
+    expect(await screen.findByText('Diário')).toBeTruthy();
+    expect(screen.queryByText('Alterações não salvas')).toBeNull();
+  });
 });
 
 describe('isConflictError', () => {

@@ -12,7 +12,10 @@ import {
  * Requer data router (createBrowserRouter / createMemoryRouter).
  */
 export default function UnsavedNavigationGuard() {
-  const isDirty = useSyncExternalStore(
+  // Mantém o componente inscrito no store (re-render ao mudar dirty).
+  // O blocker NÃO deve fechar sobre `isDirty` do render — após gravar,
+  // clearDirty() + navigate() ocorrem no mesmo tick, antes do re-render.
+  useSyncExternalStore(
     subscribeUnsavedChanges,
     hasUnsavedChanges,
     () => false,
@@ -20,7 +23,7 @@ export default function UnsavedNavigationGuard() {
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      isDirty &&
+      hasUnsavedChanges() &&
       (currentLocation.pathname !== nextLocation.pathname ||
         currentLocation.search !== nextLocation.search),
   );
