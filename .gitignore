@@ -5,6 +5,8 @@ coverage/
 .DS_Store
 *.log
 .env*
+backups/
+*.dump
 !.env.example
 
 # ESLint reports and logs
