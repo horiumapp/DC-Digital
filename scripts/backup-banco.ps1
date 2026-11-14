@@ -7,6 +7,7 @@
     schema.sql       - estrutura do schema public (tabelas, funções, policies)
     auth-schema.sql  - estrutura do schema auth (referência)
     dados.sql        - dados de public e auth (CPF, logins: LGPD)
+    public-completo.dump - estrutura + dados de public (restaurar com pg_restore)
   Apaga pastas de backup com mais de -DiasRetencao dias.
 
   Pré-requisitos:
@@ -68,6 +69,10 @@ try {
 
   & $pgDump $dbUrl --schema-only --schema=auth --no-owner -f (Join-Path $pasta 'auth-schema.sql')
   if ($LASTEXITCODE -ne 0) { throw "pg_dump (auth) falhou com código $LASTEXITCODE" }
+
+  # Estrutura + dados juntos: avaliacoes tem FK circular, e o dump só de dados pode falhar ao restaurar.
+  & $pgDump $dbUrl --format=custom --no-owner --no-privileges --schema=public -f (Join-Path $pasta 'public-completo.dump')
+  if ($LASTEXITCODE -ne 0) { throw "pg_dump (completo) falhou com código $LASTEXITCODE" }
 
   $tamanho = [math]::Round(((Get-ChildItem $pasta | Measure-Object Length -Sum).Sum / 1MB), 2)
   Escrever-Log "OK  $pasta  ($tamanho MB)"
