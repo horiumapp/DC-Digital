@@ -18,14 +18,21 @@
 
 .EXAMPLE
   .\scripts\backup-banco.ps1 -Destino "G:\Meu Drive\Backups-DC-Digital"
+
+.EXAMPLE
+  # Vários destinos: gera no primeiro e copia para os demais.
+  .\scripts\backup-banco.ps1 -Destino "C:\Backups-DC-Digital","$env:OneDrive\Backups-DC-Digital","G:\Meu Drive\Backups-DC-Digital"
 #>
 param(
   [Parameter(Mandatory = $true)]
-  [string]$Destino,
+  [string[]]$Destino,
   [int]$DiasRetencao = 30
 )
 
 $ErrorActionPreference = 'Stop'
+
+# Via "powershell -File" a lista chega como uma string só, separada por vírgula.
+$Destino = @($Destino | ForEach-Object { $_ -split '[,;]' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 
 $dbUrl = [Environment]::GetEnvironmentVariable('DC_DIGITAL_DB_URL', 'User')
 if (-not $dbUrl) { $dbUrl = $env:DC_DIGITAL_DB_URL }
@@ -42,13 +49,14 @@ if (-not $pgDump) {
   throw 'pg_dump não encontrado. Instale as PostgreSQL command line tools (versão 17).'
 }
 
-$pasta = Join-Path $Destino ("backup-" + (Get-Date -Format 'yyyy-MM-dd_HHmm'))
+$nomePasta = "backup-" + (Get-Date -Format 'yyyy-MM-dd_HHmm')
+$principal = $Destino[0]
+$pasta = Join-Path $principal $nomePasta
 New-Item -ItemType Directory -Path $pasta -Force | Out-Null
 
-$log = Join-Path $Destino 'backup.log'
-function Escrever-Log([string]$msg) {
+function Escrever-Log([string]$destinoLog, [string]$msg) {
   $linha = "$(Get-Date -Format 's')  $msg"
-  Add-Content -Path $log -Value $linha
+  Add-Content -Path (Join-Path $destinoLog 'backup.log') -Value $linha
   Write-Host $linha
 }
 
@@ -75,17 +83,37 @@ try {
   if ($LASTEXITCODE -ne 0) { throw "pg_dump (completo) falhou com código $LASTEXITCODE" }
 
   $tamanho = [math]::Round(((Get-ChildItem $pasta | Measure-Object Length -Sum).Sum / 1MB), 2)
-  Escrever-Log "OK  $pasta  ($tamanho MB)"
+  Escrever-Log $principal "OK  $pasta  ($tamanho MB)"
 }
 catch {
-  Escrever-Log "ERRO  $($_.Exception.Message)"
+  Escrever-Log $principal "ERRO  $($_.Exception.Message)"
   Remove-Item $pasta -Recurse -Force -ErrorAction SilentlyContinue
   exit 1
 }
 
-Get-ChildItem $Destino -Directory -Filter 'backup-*' |
-  Where-Object { $_.CreationTime -lt (Get-Date).AddDays(-$DiasRetencao) } |
-  ForEach-Object {
-    Remove-Item $_.FullName -Recurse -Force
-    Escrever-Log "Removido backup antigo $($_.Name)"
+# Falha em uma cópia não invalida as outras; o código de saída sinaliza no fim.
+$falhouCopia = $false
+foreach ($extra in ($Destino | Select-Object -Skip 1)) {
+  try {
+    New-Item -ItemType Directory -Path $extra -Force | Out-Null
+    Copy-Item -Path $pasta -Destination (Join-Path $extra $nomePasta) -Recurse -Force
+    Escrever-Log $extra "OK  cópia de $pasta"
   }
+  catch {
+    $falhouCopia = $true
+    Write-Host "ERRO ao copiar para ${extra}: $($_.Exception.Message)"
+    Escrever-Log $principal "ERRO  cópia para ${extra}: $($_.Exception.Message)"
+  }
+}
+
+foreach ($d in $Destino) {
+  if (-not (Test-Path $d)) { continue }
+  Get-ChildItem $d -Directory -Filter 'backup-*' |
+    Where-Object { $_.CreationTime -lt (Get-Date).AddDays(-$DiasRetencao) } |
+    ForEach-Object {
+      Remove-Item $_.FullName -Recurse -Force
+      Escrever-Log $d "Removido backup antigo $($_.Name)"
+    }
+}
+
+if ($falhouCopia) { exit 1 }
