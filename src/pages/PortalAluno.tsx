@@ -13,6 +13,7 @@ import { calcularFrequenciaLdb, classificarEtapaFrequencia } from '../utils/regr
 import { classeElipseNota } from '../utils/corNota';
 
 import BoletimTab from '../components/portal/BoletimTab';
+import { getEscolaLogo } from '../utils/escolaUtils';
 
 interface AlunoData {
   id: string;
@@ -238,7 +239,10 @@ export default function PortalAluno() {
       sexo: alunoEncontrado.sexo || '---',
       numero_aluno: numeroAluno,
       ensino_modalidade: modalidade,
-      escola_logo_url: escolaData?.logo_url || '',
+      escola_logo_url: getEscolaLogo({
+        logo_url: escolaData?.logo_url,
+        nome: escolaData?.nome,
+      }),
     });
 
     // Buscar notas do aluno

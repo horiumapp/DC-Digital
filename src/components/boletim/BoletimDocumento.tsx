@@ -1,7 +1,7 @@
 import React from 'react';
 import { getBimestrePorData } from '../../utils/dateUtils';
 import { corNota, limitePontosBimestre } from '../../utils/corNota';
-import { isNomeValido } from '../../utils/escolaUtils';
+import { getEscolaLogo, isNomeValido } from '../../utils/escolaUtils';
 import { APP_CONFIG } from '../../config/appConfig';
 import {
   calcularFrequenciaLdb,
@@ -72,6 +72,11 @@ export default function BoletimDocumento({
 
   const diretorExibicao = isNomeValido(alunoData.escola_diretor) ? (alunoData.escola_diretor || '').trim() : '';
   const secretarioExibicao = isNomeValido(alunoData.escola_secretario) ? (alunoData.escola_secretario || '').trim() : '';
+  const logoEscola = getEscolaLogo({
+    logo_url: alunoData.escola_logo_url,
+    nome: alunoData.escola_nome,
+  });
+  const nomeEscola = (alunoData.escola_nome || '').trim() || 'Escola';
 
   // Agrupar disciplinas únicas
   const disciplinas = Array.from(new Set([
@@ -101,22 +106,29 @@ export default function BoletimDocumento({
       {/* Header Documento Oficial */}
       <div className="border-b-2 border-black pb-4 mb-6">
         <div className="flex items-center justify-between gap-4">
-          {/* Lado Esquerdo: SEMED */}
-          <div className="flex items-center gap-4">
-            <div className="w-20 h-20 flex items-center justify-center">
-              <img src="/semed.png" alt="SEMED Logo" className="w-full h-full object-contain" />
+          {/* Lado Esquerdo: Escola do aluno */}
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-20 h-20 flex-shrink-0 flex items-center justify-center">
+              <img
+                src={logoEscola}
+                alt={`Logo da ${nomeEscola}`}
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  e.currentTarget.src = '/semed.png';
+                }}
+              />
             </div>
-            <div className="space-y-0">
-              <h2 className="text-sm font-black uppercase leading-tight">SEMED</h2>
-              <h3 className="text-[10px] font-bold uppercase leading-tight text-slate-700">Secretaria Municipal de Educação</h3>
-              <h3 className="text-[10px] font-bold uppercase leading-tight text-slate-700">Lábrea - AM</h3>
+            <div className="space-y-0 min-w-0">
+              <h2 className="text-sm font-black uppercase leading-tight break-words">
+                {nomeEscola}
+              </h2>
             </div>
           </div>
 
-          <div className="self-stretch w-[1px] bg-black/20 my-1" />
+          <div className="self-stretch w-[1px] bg-black/20 my-1 flex-shrink-0" />
 
-          {/* Lado Direito: Escola */}
-          <div className="flex items-center gap-4 flex-1 justify-end">
+          {/* Lado Direito: Dados da escola */}
+          <div className="flex items-center flex-1 justify-end min-w-0">
             <div className="text-[10px] space-y-1 text-right">
               <p><strong className="text-[9px]">ESCOLA:</strong> {alunoData.escola_nome}</p>
               <p><strong className="text-[9px]">ENDEREÇO:</strong> {alunoData.escola_endereco}</p>
@@ -126,18 +138,6 @@ export default function BoletimDocumento({
               )}
               <p><strong className="text-[9px]">DATA EMISSÃO:</strong> {new Date().toLocaleDateString('pt-BR')}</p>
             </div>
-            {alunoData.escola_logo_url && (
-              <div className="w-20 h-20 flex items-center justify-center">
-                <img 
-                  src={alunoData.escola_logo_url} 
-                  alt="Logo Escola" 
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              </div>
-            )}
           </div>
         </div>
       </div>

@@ -52,7 +52,7 @@ describe('BoletimDocumento e Impressão para Secretário Escolar', () => {
     vi.clearAllMocks();
   });
 
-  it('deve renderizar o boletim individual completo com SEMED, Diretor e Secretário', () => {
+  it('deve renderizar o boletim individual completo com logo/nome da escola, Diretor e Secretário', () => {
     render(
       <BoletimDocumento
         alunoData={alunoExemplo1}
@@ -70,11 +70,11 @@ describe('BoletimDocumento e Impressão para Secretário Escolar', () => {
     // Identificação do aluno
     expect(screen.getByText('ANA CLARA SOUZA')).toBeTruthy();
     expect(screen.getByText('123.456.789-01')).toBeTruthy();
-    expect(screen.getByText('E.M. FRANCISCA GOMES MENDES')).toBeTruthy();
+    expect(screen.getAllByText('E.M. FRANCISCA GOMES MENDES').length).toBeGreaterThan(0);
 
-    // SEMED
-    expect(screen.getByText('SEMED')).toBeTruthy();
-    expect(screen.getByText(/Secretaria Municipal de Educação/i)).toBeTruthy();
+    // Identidade visual da escola (substitui SEMED no cabeçalho)
+    expect(screen.queryByText('SEMED')).toBeNull();
+    expect(screen.getByRole('img', { name: /Logo da E\.M\. FRANCISCA GOMES MENDES/i })).toBeTruthy();
 
     // Equipe escolar
     expect(screen.getAllByText('FRANCISCO LOPES DE OLIVEIRA').length).toBeGreaterThan(0);
