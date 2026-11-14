@@ -16,9 +16,8 @@ const STATIC_ALLOWED_ORIGINS = [
   'http://127.0.0.1:3000',
   'http://127.0.0.1:5173',
   'https://ddigital-lbr.vercel.app',
-  'https://dc-digital.vercel.app',
 ];
-const ALLOWED_VERCEL_REGEX = /^https:\/\/(dc-digital|ddigital-lbr)(-[a-z0-9-]+)?\.vercel\.app$/;
+const ALLOWED_VERCEL_REGEX = /^https:\/\/ddigital-lbr(-[a-z0-9-]+)?\.vercel\.app$/;
 
 function isOriginAllowed(origin: string): boolean {
   if (!origin) return false;
@@ -30,13 +29,13 @@ describe('Security Hardening — CORS Validation in Edge Functions', () => {
     expect(isOriginAllowed('https://ddigital-lbr.vercel.app')).toBe(true);
   });
 
-  it('deve autorizar o domínio secundário oficial https://dc-digital.vercel.app', () => {
-    expect(isOriginAllowed('https://dc-digital.vercel.app')).toBe(true);
+  it('deve rejeitar o site dc-digital.vercel.app, que não é este diário', () => {
+    expect(isOriginAllowed('https://dc-digital.vercel.app')).toBe(false);
+    expect(isOriginAllowed('https://dc-digital-preview-123.vercel.app')).toBe(false);
   });
 
   it('deve autorizar preview legítimo na Vercel', () => {
     expect(isOriginAllowed('https://ddigital-lbr-git-feat-sec.vercel.app')).toBe(true);
-    expect(isOriginAllowed('https://dc-digital-preview-123.vercel.app')).toBe(true);
   });
 
   it('deve autorizar origens locais de desenvolvimento', () => {

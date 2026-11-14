@@ -14,6 +14,7 @@ export default function SolicitacaoLgpd() {
   const [email, setEmail] = useState('');
   const [tipo, setTipo] = useState<'acesso' | 'correcao' | 'exclusao' | 'revogacao' | 'compartilhamento' | 'outro'>('acesso');
   const [mensagem, setMensagem] = useState('');
+  const [website, setWebsite] = useState('');
   const [declaracao, setDeclaracao] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -69,6 +70,7 @@ export default function SolicitacaoLgpd() {
         email,
         tipo,
         mensagem,
+        website,
       });
 
       if (submitError) throw submitError;
@@ -129,13 +131,26 @@ export default function SolicitacaoLgpd() {
             </button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="relative space-y-6">
             {error && (
               <div className="p-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 rounded-xl flex items-start gap-3 text-red-700 dark:text-red-300 text-xs font-medium">
                 <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
                 <p>{error}</p>
               </div>
             )}
+
+            <div className="absolute -left-[10000px] h-0 w-0 overflow-hidden" aria-hidden="true">
+              <label htmlFor="website">Site</label>
+              <input
+                type="text"
+                id="website"
+                name="website"
+                tabIndex={-1}
+                autoComplete="off"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+              />
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Nome */}

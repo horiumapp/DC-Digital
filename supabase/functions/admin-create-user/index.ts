@@ -12,14 +12,13 @@ const STATIC_ALLOWED_ORIGINS = [
   "http://127.0.0.1:3000",
   "http://127.0.0.1:5173",
   "https://ddigital-lbr.vercel.app",
-  "https://dc-digital.vercel.app",
 ];
 const ALLOWED_ORIGINS = ENV_ALLOWED_ORIGINS
   ? ENV_ALLOWED_ORIGINS.split(",").map((o) => o.trim())
   : STATIC_ALLOWED_ORIGINS;
 
 // Subdomínios oficiais na Vercel (produção e branch previews legítimos deste projeto)
-const ALLOWED_VERCEL_REGEX = /^https:\/\/(dc-digital|ddigital-lbr)(-[a-z0-9-]+)?\.vercel\.app$/;
+const ALLOWED_VERCEL_REGEX = /^https:\/\/ddigital-lbr(-[a-z0-9-]+)?\.vercel\.app$/;
 
 function getCorsHeaders(req: Request): Record<string, string> | null {
   const origin = req.headers.get("Origin") || "";

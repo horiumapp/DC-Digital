@@ -6,6 +6,7 @@ import { APP_CONFIG } from '../config/appConfig';
 import { supabase } from '../lib/supabase';
 import { db } from '../lib/db';
 import { readAllRows } from '../services/pagination';
+import { anexarCpfAlunos } from '../services/alunoCpfService';
 import { getCachedAlunos } from '../services/offlineStorage';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
 import BoletimDocumento, { AlunoBoletimData, NotaBoletimItem, FrequenciaBoletimItem } from '../components/boletim/BoletimDocumento';
@@ -206,12 +207,12 @@ export default function RelatorioBoletins() {
         const { data: alunosDb } = await readAllRows<AlunoRow>(
           supabase
             .from('alunos')
-            .select('id, nome, cpf, data_nascimento, sexo, nome_responsavel, endereco, status, matricula')
+            .select('id, nome, data_nascimento, sexo, nome_responsavel, endereco, status, matricula')
             .eq('turma_id', turmaId)
             .order('nome')
         );
         if (alunosDb && alunosDb.length > 0) {
-          alunosLista = alunosDb;
+          alunosLista = await anexarCpfAlunos(alunosDb);
         }
       } catch {
         // Fallback offline
@@ -319,7 +320,7 @@ export default function RelatorioBoletins() {
           turma_nome: turmaInfo?.nome || 'Turma',
           turma_turno: turmaInfo?.turno || 'Manhã',
           turma_ano: String(turmaInfo?.ano_letivo || APP_CONFIG.YEAR),
-          matricula: formatMatriculaCpf(aluno.cpf || aluno.matricula || ''),
+          matricula: aluno.cpf ? formatMatriculaCpf(aluno.cpf) : (aluno.matricula || '—'),
           data_nascimento: aluno.data_nascimento || '---',
           nome_responsavel: aluno.nome_responsavel || '---',
           endereco: aluno.endereco || '---',

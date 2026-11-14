@@ -86,20 +86,10 @@ export async function logSecurityEvent(input: SecurityLogInput): Promise<boolean
     // FIX M4 (LGPD): Usar hash do email em vez de texto plano no log de auditoria.
     // O hash SHA-256 permite correlacionar eventos do mesmo usuário sem expor PII.
     const emailHash = input.userEmail ? await hashEmail(input.userEmail) : null;
-    const userAgent = (navigator.userAgent || '').replace(/<[^>]*>/g, '').substring(0, 512);
 
-    // Tentativas falhas de login ocorrem sem sessão autenticada (anon).
-    // Para não expor INSERT arbitrário na tabela security_logs para anon,
-    // usamos a RPC controlada log_login_failure com rate-limit e validação.
+    // Falha de login acontece sem sessão. A função no banco não grava esse caso
+    // e o visitante não tem mais permissão de chamá-la. O login em si não depende disto.
     if (input.action === 'LOGIN_FAILED') {
-      const { error } = await supabase.rpc('log_login_failure', {
-        p_email_hash: emailHash,
-        p_user_agent: userAgent,
-      });
-      if (error) {
-        console.warn('[Security Log] Falha ao gravar log de falha de login via RPC:', error.message);
-        return false;
-      }
       return true;
     }
 

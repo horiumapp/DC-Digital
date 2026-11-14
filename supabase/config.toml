@@ -71,14 +71,15 @@ enabled = true
 sql_paths = ["./seed_curriculo.sql"]
 
 [db.network_restrictions]
-# Enable management of network restrictions.
-enabled = false
-# List of IPv4 CIDR blocks allowed to connect to the database.
-# Defaults to allow all IPv4 connections. Set empty array to block all IPs.
-allowed_cidrs = ["0.0.0.0/0"]
-# List of IPv6 CIDR blocks allowed to connect to the database.
-# Defaults to allow all IPv6 connections. Set empty array to block all IPs.
-allowed_cidrs_v6 = ["::/0"]
+# Bloqueia conexão direta no Postgres (5432/6543) a partir da internet.
+# A API HTTPS do app não usa essa porta e continua aberta.
+# Lista vazia = nenhum IP externo. Para um backup ou BI, acrescente o CIDR aqui
+# e aplique no painel do Supabase (Database → Network restrictions) ou com
+# `supabase network-restrictions update`. Não aplique isto com a CLI sem avisar:
+# quem conecta direto no banco deixa de entrar.
+enabled = true
+allowed_cidrs = []
+allowed_cidrs_v6 = []
 
 # Uncomment to reject non-secure connections to the database.
 # [db.ssl_enforcement]

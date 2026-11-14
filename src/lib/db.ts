@@ -32,6 +32,7 @@ export interface LocalAluno {
   id: string;
   nome: string;
   cpf?: string;
+  matricula?: string;
   status?: string;
   turma_id: string;
   telefone?: string;

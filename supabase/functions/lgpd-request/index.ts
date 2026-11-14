@@ -14,14 +14,13 @@ const STATIC_ALLOWED_ORIGINS = [
   "http://127.0.0.1:3000",
   "http://127.0.0.1:5173",
   "https://ddigital-lbr.vercel.app",
-  "https://dc-digital.vercel.app",
 ];
 const ALLOWED_ORIGINS = ENV_ALLOWED_ORIGINS
   ? ENV_ALLOWED_ORIGINS.split(",").map((o) => o.trim())
   : STATIC_ALLOWED_ORIGINS;
 
 // Subdomínios oficiais na Vercel (produção e branch previews legítimos deste projeto)
-const ALLOWED_VERCEL_REGEX = /^https:\/\/(dc-digital|ddigital-lbr)(-[a-z0-9-]+)?\.vercel\.app$/;
+const ALLOWED_VERCEL_REGEX = /^https:\/\/ddigital-lbr(-[a-z0-9-]+)?\.vercel\.app$/;
 
 function getCorsHeaders(req: Request): Record<string, string> | null {
   const origin = req.headers.get("Origin") || "";
@@ -257,6 +256,18 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const rawBody = (body && typeof body === "object") ? body as Record<string, unknown> : {};
+    // Campo escondido. Pessoa deixa vazio. Robô que preenche tudo é descartado sem gravar.
+    if (typeof rawBody.website === "string" && rawBody.website.trim() !== "") {
+      return new Response(
+        JSON.stringify({ success: true }),
+        {
+          status: 201,
+          headers: { ...corsHeaders, ...rateLimitHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const validation = validateInput(body);
     if (!validation.valid) {
       return new Response(
@@ -270,8 +281,16 @@ Deno.serve(async (req: Request) => {
 
     const { nome, email, tipo, mensagem } = validation.data;
 
-    // 4. Inserir no banco via service_role (bypassa RLS)
+    // 4. Inserir no banco via service_role (bypassa RLS).
+    // O IP fica só como hash. O limite de 5 pedidos em 15 minutos é da trigger.
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const ipHash = clientIp === "unknown"
+      ? null
+      : Array.from(
+          new Uint8Array(
+            await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`lgpd|${clientIp}`)),
+          ),
+        ).map((byte) => byte.toString(16).padStart(2, "0")).join("");
 
     const { data, error } = await supabaseAdmin
       .from("lgpd_requests")
@@ -280,6 +299,7 @@ Deno.serve(async (req: Request) => {
         email,
         tipo,
         mensagem,
+        ip_hash: ipHash,
         status: "recebida",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),

@@ -193,7 +193,7 @@ export async function fetchAlunos(turmaId: string | number): Promise<Aluno[]> {
     await OfflineStorage.cacheAlunos(result.map(a => ({
       id: a.id,
       nome: a.nome,
-      cpf: a.cpf,
+      matricula: a.matricula,
       turma_id: tid,
       escola_id: (a as unknown as Record<string, unknown>).escola_id as string | undefined,
       telefone: (a as unknown as Record<string, unknown>).telefone as string | undefined,
@@ -227,7 +227,7 @@ export async function fetchAlunos(turmaId: string | number): Promise<Aluno[]> {
           await OfflineStorage.cacheAlunos(fresh.map(a => ({
             id: a.id,
             nome: a.nome,
-            cpf: a.cpf,
+            matricula: a.matricula,
             turma_id: tid,
             escola_id: (a as unknown as Record<string, unknown>).escola_id as string | undefined,
             telefone: (a as unknown as Record<string, unknown>).telefone as string | undefined,
@@ -242,14 +242,10 @@ export async function fetchAlunos(turmaId: string | number): Promise<Aluno[]> {
     }
 
     return local.map(a => {
-      const cpfClean = a.cpf ? a.cpf.replace(/\D/g, '') : '';
-      const matriculaDisplay = cpfClean.length === 11
-        ? `${cpfClean.substring(0, 3)}.${cpfClean.substring(3, 6)}.${cpfClean.substring(6, 9)}-${cpfClean.substring(9, 11)}`
-        : 'CPF Pendente';
+      const matriculaDisplay = a.matricula?.trim() || '—';
       return {
         id: a.id,
         nome: decryptionFailed ? '⚠️ Dados protegidos — reconecte para visualizar' : a.nome,
-        cpf: a.cpf,
         matricula: matriculaDisplay,
         freq: 'P',
         part: 'Presencial',

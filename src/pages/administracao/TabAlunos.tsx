@@ -17,6 +17,7 @@ import {
 import { formatMatricula, getMatriculaLogin, formatCpfObscured } from '../../utils/formatters';
 
 import { readAllRows } from '../../services/pagination';
+import { anexarCpfAlunos, idsPorCpfs } from '../../services/alunoCpfService';
 import { useToast } from '../../components/common/Toast';
 import { getEscolaLogo } from '../../utils/escolaUtils';
 import { gerarSenhaTemporaria } from '../../utils/senhaTemporaria';
@@ -163,7 +164,7 @@ export default function TabAlunos() {
     const targetEscolaId = escolaId || selectedEscola?.id;
     let query = supabase
       .from('alunos')
-      .select('id, nome, cpf, turma_id, escola_id, data_nascimento, sexo, nome_responsavel, telefone, endereco, status, escolas(nome), turmas(nome, turno)')
+      .select('id, nome, turma_id, escola_id, data_nascimento, sexo, nome_responsavel, telefone, endereco, status, escolas(nome), turmas(nome, turno)')
       .order('nome');
 
     if (targetEscolaId) {
@@ -180,7 +181,7 @@ export default function TabAlunos() {
     try {
       const { data } = await readAllRows<AlunoRow>(query.order('id'));
       if (data) {
-        setAlunos(data);
+        setAlunos(await anexarCpfAlunos(data));
       }
     } catch (error) {
       console.error("Erro ao carregar alunos:", error);
@@ -202,10 +203,23 @@ export default function TabAlunos() {
     };
 
     if (alunoParaEditar) {
+      const { cpf: cpfInformado, ...dadosSemCpf } = alunoData;
       const { error } = await supabase
         .from('alunos')
-        .update(alunoData)
+        .update(dadosSemCpf)
         .eq('id', alunoParaEditar.id);
+
+      if (!error) {
+        const { error: cpfError } = await supabase.rpc('definir_cpf_aluno', {
+          p_id: alunoParaEditar.id,
+          p_cpf: cpfInformado || null,
+        });
+        if (cpfError) {
+          showError('Os dados foram salvos, mas o CPF não: ' + cpfError.message);
+          fetchAlunos();
+          return;
+        }
+      }
 
       if (error) {
         showError(translateSupabaseError(error));
@@ -240,7 +254,7 @@ export default function TabAlunos() {
       const { data: newAlunoList, error } = await supabase
         .from('alunos')
         .insert([alunoData])
-        .select();
+        .select('id, nome, escola_id');
 
       if (error) {
         console.error("Erro ao criar aluno:", error);
@@ -440,10 +454,10 @@ export default function TabAlunos() {
     if (listToExport.length === 0 && !selectedEscola) {
       const { data } = await supabase
         .from('alunos')
-        .select('id, nome, cpf, data_nascimento, sexo, nome_responsavel, telefone, endereco, status, escolas(nome), turmas(nome, turno)')
+        .select('id, nome, data_nascimento, sexo, nome_responsavel, telefone, endereco, status, escolas(nome), turmas(nome, turno)')
         .order('nome');
       if (data && data.length > 0) {
-        listToExport = data as AlunoRow[];
+        listToExport = await anexarCpfAlunos(data as AlunoRow[]);
       }
     }
 
@@ -478,24 +492,9 @@ export default function TabAlunos() {
       .filter((c): c is string => typeof c === 'string' && c.length === 11);
 
     // 2. Consultar se algum desses CPFs já existe no banco de dados para evitar erro 409 (uq_alunos_cpf_limpo)
-    const existingAlunosByCpf = new Map<string, string>(); // cpfLimpo -> alunoId
-    if (cpfsLimpos.length > 0) {
-      const { data: existingData, error: searchError } = await supabase
-        .from('alunos')
-        .select('id, cpf')
-        .not('cpf', 'is', null);
-
-      if (!searchError && existingData) {
-        existingData.forEach(al => {
-          if (al.cpf) {
-            const limpo = al.cpf.replace(/\D/g, '');
-            if (limpo && cpfsLimpos.includes(limpo)) {
-              existingAlunosByCpf.set(limpo, al.id);
-            }
-          }
-        });
-      }
-    }
+    const existingAlunosByCpf = cpfsLimpos.length > 0
+      ? await idsPorCpfs(cpfsLimpos)
+      : new Map<string, string>();
 
     // 3. Separar entre registros a atualizar e novos a inserir
     const toUpdate: Array<{ id: string; payload: Record<string, unknown> }> = [];
@@ -535,10 +534,17 @@ export default function TabAlunos() {
 
     // 4. Executa atualizações dos alunos existentes
     for (const item of toUpdate) {
+      const { cpf: cpfImportado, ...resto } = item.payload;
       const { error: updateError } = await supabase
         .from('alunos')
-        .update(item.payload)
+        .update(resto)
         .eq('id', item.id);
+      if (!updateError) {
+        await supabase.rpc('definir_cpf_aluno', {
+          p_id: item.id,
+          p_cpf: typeof cpfImportado === 'string' ? cpfImportado : null,
+        });
+      }
 
       if (updateError) {
         console.error('Erro ao atualizar aluno existente:', updateError);

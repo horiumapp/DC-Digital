@@ -95,44 +95,26 @@ export default function PortalAluno() {
   async function fetchAlunoData() {
     if (!alunoData) setLoading(true);
     
-    // O email do aluno é {cpf_digits}@aluno.dcdigital.local
-    // Extrair os dígitos do CPF do email para buscar o aluno
-    const emailParts = user?.email?.split('@') || [];
-    const cpfDigits = emailParts[0] || '';
+    const { data: sessao, error: sessaoError } = await supabase.rpc('aluno_da_sessao');
+    const proprio = (Array.isArray(sessao) ? sessao[0] : sessao) as { id: string; cpf: string | null } | undefined;
 
-    if (!cpfDigits) {
+    if (sessaoError || !proprio?.id) {
       setLoading(false);
       return;
     }
-    
-    // CORREÇÃO LGPD: Filtrar no servidor usando correspondência exata.
-    // Tentamos o CPF formatado (123.456.789-00) e o CPF só com dígitos.
-    // O limite .limit(5) garante que nunca retornamos dados de toda a tabela.
-    const cpfFormatado = cpfDigits.length === 11
-      ? `${cpfDigits.substring(0,3)}.${cpfDigits.substring(3,6)}.${cpfDigits.substring(6,9)}-${cpfDigits.substring(9,11)}`
-      : cpfDigits;
 
     const { data: alunos, error: alunoError } = await supabase
       .from('alunos')
-      .select('id, nome, cpf, data_nascimento, sexo, nome_responsavel, endereco, turma_id, escola_id, status, matricula, escolas(id, nome, logo_url, inep, diretor, distrito, secretario), turmas(id, nome, turno, escola_id, ano_letivo)')
-      .or(`cpf.eq.${cpfFormatado},cpf.eq.${cpfDigits}`)
-      .limit(5);
+      .select('id, nome, data_nascimento, sexo, nome_responsavel, endereco, turma_id, escola_id, status, matricula, escolas(id, nome, logo_url, inep, diretor, distrito, secretario), turmas(id, nome, turno, escola_id, ano_letivo)')
+      .eq('id', proprio.id)
+      .limit(1);
 
     if (alunoError || !alunos || alunos.length === 0) {
       setLoading(false);
       return;
     }
 
-    // Validação secundária no cliente: confirmar que o CPF retornado pertence ao usuário logado
-    const alunoEncontrado = alunos.find(a => {
-      const cpfLimpo = a.cpf?.replace(/\D/g, '') || '';
-      return cpfLimpo === cpfDigits;
-    });
-
-    if (!alunoEncontrado) {
-      setLoading(false);
-      return;
-    }
+    const alunoEncontrado = { ...alunos[0], cpf: proprio.cpf || '' };
 
     const escolaData = (Array.isArray(alunoEncontrado.escolas) ? alunoEncontrado.escolas[0] : alunoEncontrado.escolas) as { id?: string; nome?: string; logo_url?: string; inep?: string; diretor?: string; distrito?: string; secretario?: string } | null;
     const turmaData = (Array.isArray(alunoEncontrado.turmas) ? alunoEncontrado.turmas[0] : alunoEncontrado.turmas) as { nome?: string; turno?: string; escola_id?: string; ensino?: string; ano_letivo?: string | number } | null;

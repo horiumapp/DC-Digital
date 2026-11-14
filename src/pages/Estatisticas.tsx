@@ -15,7 +15,7 @@ export default function Estatisticas() {
     const [escolas, turmas, alunos, usuarios] = await Promise.all([
       supabase.from('escolas').select('*', { count: 'exact', head: true }),
       supabase.from('turmas').select('*', { count: 'exact', head: true }),
-      supabase.from('alunos').select('*', { count: 'exact', head: true }),
+      supabase.from('alunos').select('id', { count: 'exact', head: true }),
       supabase.from('usuarios').select('*', { count: 'exact', head: true }),
     ]);
     setTotals({

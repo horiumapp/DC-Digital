@@ -14,6 +14,8 @@ export interface LgpdRequestInput {
   email: string;
   tipo: 'acesso' | 'correcao' | 'exclusao' | 'revogacao' | 'compartilhamento' | 'outro';
   mensagem: string;
+  /** Campo escondido. Deve ir vazio. Se vier preenchido, o servidor descarta o pedido. */
+  website?: string;
 }
 
 export interface LgpdRequest {
@@ -137,7 +139,7 @@ export async function submitLgpdRequest(input: LgpdRequestInput) {
           'Content-Type': 'application/json',
           'apikey': supabaseAnonKey,
         },
-        body: JSON.stringify({ nome, email, tipo, mensagem }),
+        body: JSON.stringify({ nome, email, tipo, mensagem, website: input.website ?? '' }),
       }
     );
 

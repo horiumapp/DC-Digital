@@ -111,7 +111,7 @@ export const TurmaService = {
   fetchAlunos: async (turmaId: string | number): Promise<Aluno[]> => {
     const { data, error } = await readAllRows(supabase
       .from('alunos')
-      .select('id, nome, cpf, status, telefone, endereco, nome_responsavel, escola_id')
+      .select('id, nome, matricula, status, telefone, endereco, nome_responsavel, escola_id')
       .eq('turma_id', turmaId.toString())
       .order('nome').order('id'));
       
@@ -121,14 +121,10 @@ export const TurmaService = {
     const alunosAtivos = (data || []).filter(a => isAlunoAtivo(a.status));
     
     return alunosAtivos.map(a => {
-      const cpfClean = a.cpf ? a.cpf.replace(/\D/g, '') : '';
-      const matriculaDisplay = cpfClean.length === 11
-        ? `${cpfClean.substring(0, 3)}.${cpfClean.substring(3, 6)}.${cpfClean.substring(6, 9)}-${cpfClean.substring(9, 11)}`
-        : 'CPF Pendente';
+      const matriculaDisplay = (a.matricula && String(a.matricula).trim()) || '—';
       return {
         id: a.id.toString(),
         nome: a.nome,
-        cpf: a.cpf || undefined,
         matricula: matriculaDisplay,
         freq: 'P',
         part: 'Presencial',

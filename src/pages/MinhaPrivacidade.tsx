@@ -65,22 +65,19 @@ export default function MinhaPrivacidade() {
     setLoading(true);
     try {
       if (user.role === 'ALUNO') {
-        // Aluno - email prefix corresponds to clean CPF
-        const emailParts = user.email?.split('@') || [];
-        const cpfDigits = emailParts[0] || '';
+        const { data: sessao } = await supabase.rpc('aluno_da_sessao');
+        const proprio = (Array.isArray(sessao) ? sessao[0] : sessao) as { id: string; cpf: string | null } | undefined;
 
-        const cpfFormatado = cpfDigits.length === 11
-          ? `${cpfDigits.substring(0,3)}.${cpfDigits.substring(3,6)}.${cpfDigits.substring(6,9)}-${cpfDigits.substring(9,11)}`
-          : cpfDigits;
-
-        const { data: alunos } = await supabase
-          .from('alunos')
-          .select('nome, cpf, data_nascimento, sexo, nome_responsavel, telefone, endereco, escolas(nome), turmas(nome)')
-          .or(`cpf.eq.${cpfFormatado},cpf.eq.${cpfDigits}`)
-          .limit(1);
+        const { data: alunos } = proprio?.id
+          ? await supabase
+            .from('alunos')
+            .select('nome, data_nascimento, sexo, nome_responsavel, telefone, endereco, escolas(nome), turmas(nome)')
+            .eq('id', proprio.id)
+            .limit(1)
+          : { data: null };
 
         if (alunos && alunos.length > 0) {
-          const a = alunos[0];
+          const a = { ...alunos[0], cpf: proprio?.cpf || '' };
           setProfile({
             nome: a.nome,
             email: user.email,
