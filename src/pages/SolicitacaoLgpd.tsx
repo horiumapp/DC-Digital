@@ -140,7 +140,6 @@ export default function SolicitacaoLgpd() {
             )}
 
             <div className="absolute -left-[10000px] h-0 w-0 overflow-hidden" aria-hidden="true">
-              <label htmlFor="website">Site</label>
               <input
                 type="text"
                 id="website"
