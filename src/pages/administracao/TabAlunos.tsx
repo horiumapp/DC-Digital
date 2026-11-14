@@ -204,22 +204,11 @@ export default function TabAlunos() {
 
     if (alunoParaEditar) {
       const { cpf: cpfInformado, ...dadosSemCpf } = alunoData;
-      const { error } = await supabase
-        .from('alunos')
-        .update(dadosSemCpf)
-        .eq('id', alunoParaEditar.id);
-
-      if (!error) {
-        const { error: cpfError } = await supabase.rpc('definir_cpf_aluno', {
-          p_id: alunoParaEditar.id,
-          p_cpf: cpfInformado || null,
-        });
-        if (cpfError) {
-          showError('Os dados foram salvos, mas o CPF não: ' + cpfError.message);
-          fetchAlunos();
-          return;
-        }
-      }
+      const { error } = await supabase.rpc('atualizar_aluno_com_cpf', {
+        p_id: alunoParaEditar.id,
+        p_dados: JSON.parse(JSON.stringify(dadosSemCpf)),
+        p_cpf: cpfInformado || null,
+      });
 
       if (error) {
         showError(translateSupabaseError(error));
