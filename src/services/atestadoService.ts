@@ -68,6 +68,12 @@ type AtestadoIntervalo = Pick<AtestadoMedico, 'aluno_id' | 'data_inicio' | 'data
 type AtestadoDaTurma = Omit<AtestadoMedico, 'observacao'>;
 
 export async function alunosComAtestadoNaData(turmaId: string, dataIso: string): Promise<Set<string>> {
+  // Cache da sessão: evita refetch de todos os atestados da turma a cada salvamento.
+  const cached = cachePorTurma.get(turmaId);
+  if (cached) {
+    return idsCobertos(cached, dataIso);
+  }
+
   try {
     if (typeof navigator === 'undefined' || navigator.onLine) {
       const { data, error } = await supabase

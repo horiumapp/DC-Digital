@@ -269,27 +269,33 @@ export async function saveFrequenciasBulk(
         existingMap.set(key, r);
       }
 
-      for (const data of normalizedRecords) {
+      // Uma única gravação em lote — evita N awaits por aluno na turma.
+      const toWrite: LocalFrequencia[] = normalizedRecords.map(data => {
         const existing = existingMap.get(data.aluno_id);
-
         if (existing && existing.localId) {
-          await db.frequencias.update(existing.localId, {
+          return {
+            ...existing,
             ...data,
+            localId: existing.localId,
             historico: historicoAposAlteracao(existing, data, timestamp),
-            syncStatus: 'pending',
+            syncStatus: 'pending' as const,
+            createdAt: existing.createdAt,
             updatedAt: timestamp,
             version: (existing.version || 0) + 1,
-          });
-        } else {
-          await db.frequencias.add({
-            ...data,
-            historico: historicoAposAlteracao(undefined, data, timestamp),
-            syncStatus: 'pending',
-            createdAt: timestamp,
-            updatedAt: timestamp,
-            version: 1,
-          });
+          };
         }
+        return {
+          ...data,
+          historico: historicoAposAlteracao(undefined, data, timestamp),
+          syncStatus: 'pending' as const,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          version: 1,
+        };
+      });
+
+      if (toWrite.length > 0) {
+        await db.frequencias.bulkPut(toWrite);
       }
     });
   });
@@ -815,26 +821,32 @@ export async function saveNotasLocal(records: Omit<LocalNota, 'localId' | 'syncS
         existingMap.set(key, r);
       }
 
-      for (const data of records) {
+      const toWrite: LocalNota[] = records.map(data => {
         const key = `${data.avaliacao_id}|${data.aluno_id}`;
         const existing = existingMap.get(key);
 
         if (existing?.localId) {
-          await db.notas.update(existing.localId, {
+          return {
+            ...existing,
             ...data,
-            syncStatus: 'pending',
+            localId: existing.localId,
+            syncStatus: 'pending' as const,
+            createdAt: existing.createdAt,
             updatedAt: timestamp,
             version: (existing.version || 0) + 1,
-          });
-        } else {
-          await db.notas.add({
-            ...data,
-            syncStatus: 'pending',
-            createdAt: timestamp,
-            updatedAt: timestamp,
-            version: 1,
-          });
+          };
         }
+        return {
+          ...data,
+          syncStatus: 'pending' as const,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          version: 1,
+        };
+      });
+
+      if (toWrite.length > 0) {
+        await db.notas.bulkPut(toWrite);
       }
     });
   });

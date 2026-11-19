@@ -824,7 +824,11 @@ export async function buscarFrequenciaPorDia(turmaId: string | number, disciplin
   const tid = getTid(turmaId);
   const dataISO = normalizarDataISO(data);
   try {
-    if (!_isOnline) throw new Error('Offline');
+    // Com mutação pendente o servidor ainda está atrasado (sync com debounce) —
+    // ler local evita round-trip inútil logo após salvar.
+    if (!_isOnline || await hasPendingMutation('frequencias', tid, disciplina)) {
+      throw new Error('Leitura local com alterações pendentes');
+    }
     return await TurmaService.buscarFrequenciaPorDia(turmaId, disciplina, data);
   } catch {
     const local = await OfflineStorage.getAllFrequenciasLocal(tid, disciplina);
@@ -910,9 +914,10 @@ export async function salvarConteudo(
   };
 
   // FIX A1: Salvar + enfileirar em transação atômica
+  // Passa localId para snapshotMutation usar get(pk) em vez de varrer a tabela.
   await db.transaction('rw', [db.conteudos, db.syncQueue], async () => {
-    await OfflineStorage.saveConteudoLocal(payload);
-    await Queue.enqueue('conteudos', 'UPSERT', payload);
+    const localId = await OfflineStorage.saveConteudoLocal(payload);
+    await Queue.enqueue('conteudos', 'UPSERT', payload, localId);
   });
 
   // Sync

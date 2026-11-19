@@ -450,7 +450,8 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
         });
       });
 
-      await fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunosRef.current);
+      // Reconcilia em background — o UI já refletiu as notas otimisticamente.
+      void fetchAvaliacoesInterno(rawId, turmaAtiva.componente, alunosRef.current);
       showSuccessRef.current('Notas salvas com sucesso!');
       return true;
     } catch (err) {
@@ -495,7 +496,15 @@ export function TurmaProvider({ children }: { children: ReactNode }) {
         tempo
       });
 
-      await carregarFaltasDaData(data);
+      // Atualiza faltas da data a partir do que acabou de ser salvo (sem esperar rede).
+      // carregarFaltasDaData em background cobre atestados que possam ter mudado.
+      const normalizedDate = formatarDataParaISO(data);
+      const resp = chamada.map(a => ({ aluno_id: a.id, status: a.freq || 'P' }));
+      const { ausentes, atestados } = separarAusenciasDaProva(resp, new Set());
+      setFaltasPorData(prev => ({ ...prev, [normalizedDate]: ausentes }));
+      setAtestadosPorData(prev => ({ ...prev, [normalizedDate]: atestados }));
+      void carregarFaltasDaData(data);
+
       showSuccessRef.current('Frequência salva com sucesso!');
       return true;
     } catch (err) {

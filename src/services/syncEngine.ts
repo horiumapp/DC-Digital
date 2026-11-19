@@ -67,7 +67,8 @@ export function cancelSync(): void {
 let _debounceTimer: ReturnType<typeof setTimeout> | null = null;
 const _listeners: Set<SyncListener> = new Set();
 
-const DEBOUNCE_MS = 2000;
+// Debounce curto o suficiente para agrupar edições rápidas, sem atrasar ~2s o envio ao Supabase.
+const DEBOUNCE_MS = 800;
 
 function setState(newState: SyncState) {
   if (_state !== newState) {
@@ -112,16 +113,12 @@ export async function syncAll(): Promise<SyncResult> {
     return { synced: 0, failed: 0, total: 0, remaining: 0, errors: ['Sincronização já em andamento'] };
   }
 
-  // FIX: Verificar se realmente está online com ping real
-  // navigator.onLine pode retornar true em Wi-Fi sem rota ou portal captive
-  const isReallyOnline = await pingInternet();
+  // FIX: Verificar conectividade com ping real (em paralelo).
+  // navigator.onLine pode retornar true em Wi-Fi sem rota ou portal captive.
+  const [isReallyOnline, isSupabaseUp] = await Promise.all([pingInternet(), pingSupabase()]);
   if (!isReallyOnline) {
     return { synced: 0, failed: 0, total: 0, remaining: 0, errors: ['Sem conexão com a internet'] };
   }
-
-  // FIX P1-#5: Verificar se o Supabase está acessível antes de sincronizar.
-  // Internet pode estar ok, mas o backend pode estar fora (manutenção, deploy).
-  const isSupabaseUp = await pingSupabase();
   if (!isSupabaseUp) {
     return { synced: 0, failed: 0, total: 0, remaining: 0, errors: ['Servidor indisponível. Tentando novamente em breve.'] };
   }

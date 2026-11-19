@@ -19,6 +19,61 @@ export function matchesMutation(table: string, row: MutationRecord, payload: Mut
   return keyFields[table].every(k => payload[k] === undefined || String(row[k]) === String(payload[k]))
     && (!Array.isArray(payload.aluno_ids) || payload.aluno_ids.map(String).includes(String(row.aluno_id)));
 }
+async function loadSnapshotRows(
+  table: string,
+  localTable: NonNullable<ReturnType<typeof getOperationalTable>>,
+  payload: MutationRecord,
+  localId?: number,
+): Promise<MutationRecord[]> {
+  const records = (Array.isArray(payload.records) ? payload.records : [payload]) as MutationRecord[];
+  const sample = records[0];
+
+  // Lotes de frequência: só as linhas do mesmo dia/tempo/disciplina (não a tabela inteira).
+  if (table === 'frequencias' && sample?.turma_id != null) {
+    const tid = String(sample.turma_id);
+    const data = sample.data;
+    const tempo = sample.tempo;
+    const disciplina = sample.disciplina;
+    return (await localTable
+      .where('turma_id').equals(tid)
+      .filter((row) => {
+        const r = row as unknown as MutationRecord;
+        return r.data === data && r.tempo === tempo && r.disciplina === disciplina;
+      })
+      .toArray()) as unknown as MutationRecord[];
+  }
+
+  // Lotes de notas: só a avaliação afetada.
+  if (table === 'notas' && sample?.avaliacao_id != null) {
+    return (await localTable
+      .where('avaliacao_id').equals(String(sample.avaliacao_id))
+      .toArray()) as unknown as MutationRecord[];
+  }
+
+  // Conteúdo com chave composta conhecida.
+  if (
+    table === 'conteudos' &&
+    !Array.isArray(payload.records) &&
+    payload.turma_id != null &&
+    payload.data != null &&
+    payload.tempo != null &&
+    payload.disciplina != null
+  ) {
+    const match = await localTable
+      .where('[turma_id+data+tempo+disciplina]')
+      .equals([String(payload.turma_id), payload.data, payload.tempo, payload.disciplina])
+      .first();
+    return match ? [match as unknown as MutationRecord] : [];
+  }
+
+  if (localId !== undefined) {
+    const local = await localTable.get(localId) as unknown as MutationRecord | undefined;
+    if (local) return [local];
+  }
+
+  return (await localTable.toArray()) as unknown as MutationRecord[];
+}
+
 export async function snapshotMutation(table: string, operation: string, payload: MutationRecord, localId?: number): Promise<MutationRecord> {
   const localTable = getOperationalTable(table);
   if (!localTable) return payload;
@@ -44,13 +99,15 @@ export async function snapshotMutation(table: string, operation: string, payload
     }
   }
 
-  const all = await localTable.toArray() as unknown as MutationRecord[];
+  const all = await loadSnapshotRows(table, localTable, payload, localId);
   if (operation === 'DELETE') {
     const matching = all.filter(r => (localId !== undefined && r.localId === localId) || matchesMutation(table,r,payload));
     return { ...payload, _expected: Object.fromEntries(matching.map(r => [recordKey(table,table === 'avaliacoes' || table === 'anotacoes' ? {...r,id:payload.id} : r), Number(r.serverRevision || 0)])) };
   }
+  const localByKey = new Map(all.map(l => [recordKey(table, l), l]));
   const snapshot = (r: MutationRecord) => {
-    const local = all.find(l => (localId !== undefined && l.localId === localId) || recordKey(table,l) === recordKey(table,r));
+    const local = (localId !== undefined ? all.find(l => l.localId === localId) : undefined)
+      || localByKey.get(recordKey(table, r));
     return { ...r, _expected_revision: Number(local?.serverRevision || 0), _local_version: local?.version, _local_id: local?.localId };
   };
   return Array.isArray(payload.records) ? { ...payload, records: payload.records.map(snapshot) } : snapshot(payload);
