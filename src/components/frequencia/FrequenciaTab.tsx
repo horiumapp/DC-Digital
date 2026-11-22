@@ -42,7 +42,6 @@ export default function FrequenciaTab({
   const [showDeleteFreqModal, setShowDeleteFreqModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [presenceFilter,setPresenceFilter]=useState<'all'|'P'|'F'|'FJ'|'unmarked'>('all');
-  const [baseline, setBaseline] = useState('');
   useUnsavedChangesWarning(isLaunching);
 
   const isLancado = lancamentos.some(l => 
@@ -70,11 +69,8 @@ export default function FrequenciaTab({
   // Sincronizar estado local com os alunos
   useEffect(() => {
     setStudentData(alunos.map(a => ({ ...a })));
-    setBaseline(alunos.map(a => `${a.id}:${a.freq}:${a.part}`).join('|'));
   }, [alunos]);
 
-  const marcaAtual = studentData.map(a => `${a.id}:${a.freq}:${a.part}`).join('|');
-  const alteradoENaoGravado = isLancado && marcaAtual !== baseline;
   const dataLegivel = formatarDataParaExibicao(selectedDate);
 
   // Estatísticas pedagógicas em tempo real
@@ -240,13 +236,6 @@ export default function FrequenciaTab({
 
       {isLaunching && (
         <div className="space-y-4 animate-in fade-in slide-in-from-top-3 duration-300">
-          <p role="status" className={`text-sm rounded-xl px-4 py-3 border ${alteradoENaoGravado || !isLancado ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900'}`}>
-            {isLancado
-              ? (alteradoENaoGravado
-                ? `Há alterações ainda não gravadas em ${turmaAtiva?.fase || 'turma'}, ${dataLegivel}, ${tempoAula}.`
-                : `Frequência já gravada de ${turmaAtiva?.fase || 'turma'}, ${dataLegivel}, ${tempoAula}.`)
-              : `Seleção para lançamento de ${turmaAtiva?.fase || 'turma'}, ${turmaAtiva?.componente || 'componente'}, ${dataLegivel}, ${tempoAula}. Estes P, F e FJ só ficam gravados depois de confirmar.`}
-          </p>
           {/* Quick Metrics Bar & Actions */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             {/* Real-time counters */}
