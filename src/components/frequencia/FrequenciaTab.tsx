@@ -41,7 +41,6 @@ export default function FrequenciaTab({
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteFreqModal, setShowDeleteFreqModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [presenceFilter,setPresenceFilter]=useState<'all'|'P'|'F'|'FJ'|'unmarked'>('all');
   useUnsavedChangesWarning(isLaunching);
 
   const isLancado = lancamentos.some(l => 
@@ -111,10 +110,10 @@ export default function FrequenciaTab({
     )));
   };
 
-  const visibleStudents = studentData.filter(student => 
-    student.nome.toLocaleLowerCase().includes(searchTerm.toLocaleLowerCase()) || 
+  const visibleStudents = studentData.filter(student =>
+    student.nome.toLocaleLowerCase().includes(searchTerm.toLocaleLowerCase()) ||
     student.matricula?.includes(searchTerm)
-  ).filter(student=>presenceFilter==='all'||(presenceFilter==='unmarked'?!student.freq:student.freq===presenceFilter));
+  );
 
   const handleConfirm = async () => {
     if (isSaving) return;
@@ -324,7 +323,17 @@ export default function FrequenciaTab({
             </div>
           </div>
 
-          <div className="portal-presence-filters" aria-label="Filtrar estudantes por frequência">{([{id:'all',label:'Todos',count:stats.total},{id:'P',label:'Presentes',count:stats.presentes},{id:'F',label:'Faltas',count:stats.faltas},{id:'FJ',label:'Justificadas',count:stats.justificadas},{id:'unmarked',label:'Sem marcação',count:stats.pendentes}] as const).map(item=><button key={item.id} aria-pressed={presenceFilter===item.id} onClick={()=>setPresenceFilter(item.id)}>{item.label}<span>{item.count}</span></button>)}</div>{visibleStudents.length===0&&<p className="portal-filter-empty" role="status">Nenhum estudante neste filtro. <button onClick={()=>{setPresenceFilter('all');setSearchTerm('')}}>Limpar filtros</button></p>}
+          {visibleStudents.length === 0 && (
+            <p className="portal-filter-empty" role="status">
+              Nenhum estudante encontrado.
+              {searchTerm ? (
+                <>
+                  {' '}
+                  <button type="button" onClick={() => setSearchTerm('')}>Limpar busca</button>
+                </>
+              ) : null}
+            </p>
+          )}
 
           <div className="portal-attendance-list" role="list" aria-label={`Frequência ${tempoAula}`}>
             {visibleStudents.map((aluno, index) => {
