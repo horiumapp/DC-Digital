@@ -76,35 +76,40 @@ export default function Frequencia() {
   }, [selectedDate, temposParaMostrar, tempoAula, setTempoAula]);
    
 
+  const abrirAbaConteudo = (opts?: { aposFrequenciaSalva?: boolean; tempoRecemSalvo?: string }) => {
+    const tempoRecemSalvo = opts?.tempoRecemSalvo;
+    const temFrequencia = (tempo: string) =>
+      tempo === tempoRecemSalvo || tempoTemFrequencia(selectedDate, tempo, lancamentos);
+
+    // Clique manual na aba: só entra se já houver frequência no dia.
+    // Após salvar o último tempo, o estado de lancamentos ainda pode estar
+    // atrasado — nesse caso confiamos no fluxo "dia sem pendência".
+    if (!opts?.aposFrequenciaSalva && !temposParaMostrar.some(temFrequencia)) {
+      showWarning('Lance a frequência antes de registrar o conteúdo.');
+      setActiveTab('frequencia');
+      const pendingFreq = temposParaMostrar.find(t => !temFrequencia(t));
+      if (pendingFreq) setTempoAula(pendingFreq);
+      return;
+    }
+
+    setActiveTab('objeto');
+
+    const pendingComFrequencia = temposParaMostrar.find(t =>
+      temFrequencia(t) &&
+      !lancamentos.some(l => l.data === selectedDate && l.tempo === t && l.tipo === 'conteudo')
+    );
+    if (pendingComFrequencia) {
+      setTempoAula(pendingComFrequencia);
+      return;
+    }
+
+    const comFrequencia = temposParaMostrar.find(temFrequencia);
+    if (comFrequencia) setTempoAula(comFrequencia);
+  };
+
   const handleTabChange = (tab: string) => {
     if (tab === 'objeto') {
-      const algumTempoComFrequencia = temposParaMostrar.some(t =>
-        tempoTemFrequencia(selectedDate, t, lancamentos)
-      );
-      if (!algumTempoComFrequencia) {
-        showWarning('Lance a frequência antes de registrar o conteúdo.');
-        setActiveTab('frequencia');
-        const pendingFreq = temposParaMostrar.find(t =>
-          !tempoTemFrequencia(selectedDate, t, lancamentos)
-        );
-        if (pendingFreq) setTempoAula(pendingFreq);
-        return;
-      }
-
-      setActiveTab(tab);
-      // Preferir tempo com frequência já lançada e conteúdo ainda pendente
-      const pendingComFrequencia = temposParaMostrar.find(t =>
-        tempoTemFrequencia(selectedDate, t, lancamentos) &&
-        !lancamentos.some(l => l.data === selectedDate && l.tempo === t && l.tipo === 'conteudo')
-      );
-      if (pendingComFrequencia) {
-        setTempoAula(pendingComFrequencia);
-        return;
-      }
-      const comFrequencia = temposParaMostrar.find(t =>
-        tempoTemFrequencia(selectedDate, t, lancamentos)
-      );
-      if (comFrequencia) setTempoAula(comFrequencia);
+      abrirAbaConteudo();
       return;
     }
 
@@ -170,7 +175,7 @@ export default function Frequencia() {
                   setTempoAula={setTempoAula}
                   disponiveisTempos={temposParaMostrar}
                   disabled={somenteLeitura}
-                  onDiaSemPendencia={() => handleTabChange('objeto')}
+                  onDiaSemPendencia={() => abrirAbaConteudo({ aposFrequenciaSalva: true, tempoRecemSalvo: tempoAula })}
                 />
               )}
               {activeTab === 'objeto' && (
