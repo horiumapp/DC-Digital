@@ -9,6 +9,7 @@ const mockSalvarConteudo = vi.fn();
 const mockBuscarConteudo = vi.fn();
 const mockRemoverConteudo = vi.fn();
 const mockSetTempoAula = vi.fn();
+const mockShowWarning = vi.fn();
 
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
@@ -19,7 +20,7 @@ vi.mock('../components/common/Toast', () => ({
   useToast: () => ({
     showSuccess: vi.fn(),
     showError: vi.fn(),
-    showWarning: vi.fn(),
+    showWarning: mockShowWarning,
     showInfo: vi.fn(),
   }),
 }));
@@ -88,7 +89,30 @@ describe('ObjetoConhecimentoTab - Fluxo de tempos e navegação ao salvar', () =
     cleanup();
   });
 
+  it('bloqueia adicionar conteúdo quando a frequência do tempo ainda não foi lançada', () => {
+    render(
+      <ObjetoConhecimentoTab
+        turmaAtiva={turmaMock}
+        selectedDate="2026-04-30"
+        tempoAula="3º TEMPO"
+        setTempoAula={mockSetTempoAula}
+        disponiveisTempos={['3º TEMPO', '4º TEMPO']}
+      />
+    );
+
+    expect(screen.getByText(/ainda não foi lançada/i)).toBeTruthy();
+    const btnAdicionar = screen.getByText(/Adicionar Conteúdo/i).closest('button');
+    expect(btnAdicionar?.hasAttribute('disabled')).toBe(true);
+    fireEvent.click(btnAdicionar!);
+    expect(screen.queryByPlaceholderText(/Digite o conteúdo ministrado/i)).toBeNull();
+  });
+
   it('quando há 2 tempos e o primeiro é salvo, deve avançar para o próximo tempo sem ir para o diário', async () => {
+    mockLancamentos = [
+      { turmaId: 'turma-1', data: '2026-04-30', tipo: 'frequencia', tempo: '3º TEMPO' },
+      { turmaId: 'turma-1', data: '2026-04-30', tipo: 'frequencia', tempo: '4º TEMPO' },
+    ];
+
     render(
       <ObjetoConhecimentoTab
         turmaAtiva={turmaMock}
@@ -125,6 +149,8 @@ describe('ObjetoConhecimentoTab - Fluxo de tempos e navegação ao salvar', () =
   it('quando o último tempo pendente é salvo, deve redirecionar para o diário', async () => {
     // 3º TEMPO já está registrado em lancamentos
     mockLancamentos = [
+      { turmaId: 'turma-1', data: '2026-04-30', tipo: 'frequencia', tempo: '3º TEMPO' },
+      { turmaId: 'turma-1', data: '2026-04-30', tipo: 'frequencia', tempo: '4º TEMPO' },
       { turmaId: 'turma-1', data: '2026-04-30', tipo: 'conteudo', tempo: '3º TEMPO' },
     ];
 
@@ -159,6 +185,10 @@ describe('ObjetoConhecimentoTab - Fluxo de tempos e navegação ao salvar', () =
   });
 
   it('quando há apenas 1 tempo no dia e é salvo, deve redirecionar para o diário', async () => {
+    mockLancamentos = [
+      { turmaId: 'turma-1', data: '2026-04-30', tipo: 'frequencia', tempo: '1º TEMPO' },
+    ];
+
     render(
       <ObjetoConhecimentoTab
         turmaAtiva={turmaMock}

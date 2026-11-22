@@ -10,6 +10,7 @@ import Captcha from '../common/Captcha';
 import { useCaptcha } from '../../hooks/useCaptcha';
 import { useUnsavedChangesWarning } from '../../hooks/useUnsavedChangesWarning';
 import { translateSupabaseError } from '../../utils/supabaseErrors';
+import { tempoTemFrequencia } from '../../utils/frequenciaFluxo';
 
 interface CurriculoObjeto {
   id?: string;
@@ -61,6 +62,7 @@ export default function ObjetoConhecimentoTab({
     l.tempo === tempoAula && 
     l.tipo === 'conteudo'
   );
+  const frequenciaDoTempoLancada = tempoTemFrequencia(selectedDate, tempoAula, lancamentos);
 
   const [isAddingObjeto, setIsAddingObjeto] = useState(false);
   const [objetoSalvo, setObjetoSalvo] = useState(false);
@@ -253,8 +255,22 @@ export default function ObjetoConhecimentoTab({
     generateNewCaptcha();
   };
 
+  const abrirFormularioConteudo = () => {
+    if (!frequenciaDoTempoLancada) {
+      showWarning(`Lance a frequência do ${tempoAula} antes de registrar o conteúdo.`);
+      return;
+    }
+    generateNewCaptcha();
+    setIsAddingObjeto(true);
+  };
+
   const handleSave = async () => {
     if (isSaving) return;
+    if (!frequenciaDoTempoLancada) {
+      showWarning(`Lance a frequência do ${tempoAula} antes de registrar o conteúdo.`);
+      setIsAddingObjeto(false);
+      return;
+    }
     // Validação: todos os campos obrigatórios devem estar preenchidos
     if (!objetoConhecimento || (typeof objetoConhecimento === 'string' && objetoConhecimento.trim() === '')) {
       showWarning('Por favor, preencha o Conteúdo Ministrado antes de salvar.');
@@ -298,8 +314,10 @@ export default function ObjetoConhecimentoTab({
       const previousTempos = currentIndex >= 0 ? disponiveisTempos.slice(0, currentIndex) : disponiveisTempos;
       const orderedTempos = [...subsequentTempos, ...previousTempos];
 
-      const nextPendingTempo = orderedTempos.find(t => 
-        t !== tempoAula && !lancamentos.some(l => l.data === selectedDate && l.tempo === t && l.tipo === 'conteudo')
+      const nextPendingTempo = orderedTempos.find(t =>
+        t !== tempoAula &&
+        tempoTemFrequencia(selectedDate, t, lancamentos) &&
+        !lancamentos.some(l => l.data === selectedDate && l.tempo === t && l.tipo === 'conteudo')
       );
 
       if (nextPendingTempo) {
@@ -342,11 +360,10 @@ export default function ObjetoConhecimentoTab({
             <div className="flex flex-wrap items-center gap-3">
                 {!disabled && (
                   <button
-                    onClick={() => {
-                      generateNewCaptcha();
-                      setIsAddingObjeto(true);
-                    }}
-                    className="bg-[#eef2ff] text-[#6354c7] border border-blue-100 px-4 sm:px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] flex items-center gap-2 shadow-sm active:scale-95 whitespace-nowrap cursor-pointer"
+                    onClick={abrirFormularioConteudo}
+                    disabled={!frequenciaDoTempoLancada}
+                    title={!frequenciaDoTempoLancada ? `Lance a frequência do ${tempoAula} antes` : undefined}
+                    className="bg-[#eef2ff] text-[#6354c7] border border-blue-100 px-4 sm:px-6 py-2 rounded text-sm font-semibold hover:bg-[#e0e7ff] transition h-[38px] flex items-center gap-2 shadow-sm active:scale-95 whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                   >
                     <span className="text-lg leading-none">+</span> Adicionar Conteúdo
                   </button>
@@ -361,10 +378,16 @@ export default function ObjetoConhecimentoTab({
             </div>
           </div>
 
+          {!disabled && !frequenciaDoTempoLancada && (
+            <div role="status" className="bg-amber-50 border border-amber-200 text-amber-950 px-4 py-3 rounded-lg text-sm mb-4">
+              A frequência do <strong>{tempoAula}</strong> ainda não foi lançada. Conclua a aba Frequência deste tempo antes de registrar o conteúdo.
+            </div>
+          )}
+
           {!objetoSalvo && (
             <div role="status" className="bg-slate-50 border border-slate-200 text-slate-600 px-4 py-3 rounded-lg text-sm">
               Nenhum conteúdo registrado para o {tempoAula || 'tempo selecionado'}.
-              {!disabled && ' Use o botão acima para registrar.'}
+              {!disabled && frequenciaDoTempoLancada && ' Use o botão acima para registrar.'}
             </div>
           )}
 
@@ -391,11 +414,10 @@ export default function ObjetoConhecimentoTab({
                           {!disabled ? (
                             <>
                               <button
-                                onClick={() => { 
-                                  generateNewCaptcha();
-                                  setIsAddingObjeto(true); 
-                                }}
-                                className="flex items-center gap-1 bg-[#eef2ff] text-[#6354c7] border border-blue-100 px-3 py-1.5 rounded text-xs font-bold hover:bg-[#e0e7ff] transition"
+                                onClick={abrirFormularioConteudo}
+                                disabled={!frequenciaDoTempoLancada}
+                                title={!frequenciaDoTempoLancada ? `Lance a frequência do ${tempoAula} antes` : undefined}
+                                className="flex items-center gap-1 bg-[#eef2ff] text-[#6354c7] border border-blue-100 px-3 py-1.5 rounded text-xs font-bold hover:bg-[#e0e7ff] transition disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 <Pencil className="w-3 h-3" /> Alterar
                               </button>

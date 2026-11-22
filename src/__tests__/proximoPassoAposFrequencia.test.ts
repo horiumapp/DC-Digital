@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { proximoPassoAposFrequencia } from '../utils/frequenciaFluxo';
+import { proximoPassoAposFrequencia, tempoTemFrequencia } from '../utils/frequenciaFluxo';
 
 const tempos = ['1º TEMPO', '2º TEMPO', '5º TEMPO'];
 const data = '2026-03-05';
+
+describe('tempoTemFrequencia', () => {
+  it('retorna true só quando o tempo tem frequência na data', () => {
+    const lancamentos = [{ data, tempo: '1º TEMPO', tipo: 'frequencia' }];
+    expect(tempoTemFrequencia(data, '1º TEMPO', lancamentos)).toBe(true);
+    expect(tempoTemFrequencia(data, '2º TEMPO', lancamentos)).toBe(false);
+    expect(tempoTemFrequencia(data, '1º TEMPO', [{ data, tempo: '1º TEMPO', tipo: 'conteudo' }])).toBe(false);
+  });
+});
 
 describe('próximo passo depois de gravar a frequência', () => {
   it('abre o conteúdo quando o dia não tem mais chamada pendente', () => {

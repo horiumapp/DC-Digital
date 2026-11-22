@@ -5,6 +5,8 @@ import { useTurma } from '../contexts/TurmaContext';
 import { APP_CONFIG } from '../config/appConfig';
 import { getDayOfWeek, formatarDataParaExibicao } from '../utils/dateUtils';
 import { carregarFeriados, nomeFeriado } from '../services/feriados';
+import { tempoTemFrequencia } from '../utils/frequenciaFluxo';
+import { useToast } from '../components/common/Toast';
 
 const FrequenciaTab = React.lazy(() => import('../components/frequencia/FrequenciaTab'));
 const ObjetoConhecimentoTab = React.lazy(() => import('../components/frequencia/ObjetoConhecimentoTab'));
@@ -22,6 +24,7 @@ function TabLoading() {
 
 export default function Frequencia() {
   const { turmaAtiva, horarioTurma, lancamentos, verificarPeriodoFechado } = useTurma();
+  const { showWarning } = useToast();
   const [searchParams] = useSearchParams();
   const selectedDateParam = searchParams.get('date') || `${APP_CONFIG.YEAR}-02-06`;
   const veioDaChamadaRapida = searchParams.get('origem') === 'ultima-aula';
@@ -74,18 +77,42 @@ export default function Frequencia() {
    
 
   const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    
     if (tab === 'objeto') {
-      const pendingTempo = temposParaMostrar.find(t => 
+      const algumTempoComFrequencia = temposParaMostrar.some(t =>
+        tempoTemFrequencia(selectedDate, t, lancamentos)
+      );
+      if (!algumTempoComFrequencia) {
+        showWarning('Lance a frequência antes de registrar o conteúdo.');
+        setActiveTab('frequencia');
+        const pendingFreq = temposParaMostrar.find(t =>
+          !tempoTemFrequencia(selectedDate, t, lancamentos)
+        );
+        if (pendingFreq) setTempoAula(pendingFreq);
+        return;
+      }
+
+      setActiveTab(tab);
+      // Preferir tempo com frequência já lançada e conteúdo ainda pendente
+      const pendingComFrequencia = temposParaMostrar.find(t =>
+        tempoTemFrequencia(selectedDate, t, lancamentos) &&
         !lancamentos.some(l => l.data === selectedDate && l.tempo === t && l.tipo === 'conteudo')
       );
-      if (pendingTempo) {
-        setTempoAula(pendingTempo);
+      if (pendingComFrequencia) {
+        setTempoAula(pendingComFrequencia);
+        return;
       }
-    } else if (tab === 'frequencia') {
-      const pendingTempo = temposParaMostrar.find(t => 
-        !lancamentos.some(l => l.data === selectedDate && l.tempo === t && l.tipo === 'frequencia')
+      const comFrequencia = temposParaMostrar.find(t =>
+        tempoTemFrequencia(selectedDate, t, lancamentos)
+      );
+      if (comFrequencia) setTempoAula(comFrequencia);
+      return;
+    }
+
+    setActiveTab(tab);
+
+    if (tab === 'frequencia') {
+      const pendingTempo = temposParaMostrar.find(t =>
+        !tempoTemFrequencia(selectedDate, t, lancamentos)
       );
       if (pendingTempo) {
         setTempoAula(pendingTempo);
