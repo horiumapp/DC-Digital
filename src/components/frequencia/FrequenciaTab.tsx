@@ -87,21 +87,6 @@ export default function FrequenciaTab({
     return { total, presentes, faltas, justificadas, pendentes };
   }, [studentData]);
 
-  const toggleFreq = (id: string) => {
-    setStudentData(prev => prev.map(s => {
-      if (s.id === id) {
-        if (s.atestado) return s;
-        const nextFreq = s.freq === 'P' ? 'F' : s.freq === 'F' ? '' : 'P';
-        return { 
-          ...s, 
-          freq: nextFreq,
-          part: nextFreq && !s.part ? 'Presencial' : s.part 
-        };
-      }
-      return s;
-    }));
-  };
-
   const setDirectFreq = (id: string, freq: 'P' | 'F' | '') => {
     setStudentData(prev => prev.map(s => {
       if (s.id === id) {
@@ -350,249 +335,97 @@ export default function FrequenciaTab({
             </div>
           </div>
 
-          {/* Student Attendance List: Mobile Cards (< md) & Desktop Table (>= md) */}
-          
           <div className="portal-presence-filters" aria-label="Filtrar estudantes por frequência">{([{id:'all',label:'Todos',count:stats.total},{id:'P',label:'Presentes',count:stats.presentes},{id:'F',label:'Faltas',count:stats.faltas},{id:'FJ',label:'Justificadas',count:stats.justificadas},{id:'unmarked',label:'Sem marcação',count:stats.pendentes}] as const).map(item=><button key={item.id} aria-pressed={presenceFilter===item.id} onClick={()=>setPresenceFilter(item.id)}>{item.label}<span>{item.count}</span></button>)}</div>{visibleStudents.length===0&&<p className="portal-filter-empty" role="status">Nenhum estudante neste filtro. <button onClick={()=>{setPresenceFilter('all');setSearchTerm('')}}>Limpar filtros</button></p>}
-          {/* Mobile Attendance Cards */}
-          <div className="portal-attendance-cards">
-            {visibleStudents.map((aluno, index) => (
-              <div 
-                key={aluno.id}
-                className="portal-attendance-student bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3.5"
-              >
-                {/* Card Header: Index, Name, Registration */}
-                <div className="flex items-start justify-between gap-2.5">
-                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                    <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs flex items-center justify-center tabular-nums mt-0.5">
+
+          <div className="portal-attendance-list" role="list" aria-label={`Frequência ${tempoAula}`}>
+            {visibleStudents.map((aluno, index) => {
+              const statusLabel = aluno.freq === 'P' ? 'Presente' : aluno.freq === 'F' ? 'Falta' : aluno.freq === 'FJ' ? 'Justificada' : 'Sem marcação';
+              return (
+                <div key={aluno.id} role="listitem" className="portal-attendance-row">
+                  <div className="portal-attendance-identity">
+                    <span className="portal-attendance-index" aria-hidden="true">
                       {String(index + 1).padStart(2, '0')}
                     </span>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-snug">
-                        {aluno.nome}
-                      </h4>
-                      {aluno.matricula && (
-                        <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 font-medium mt-0.5">
-                          Matrícula: {aluno.matricula}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Status Badge */}
-                  {aluno.freq && (
-                    <span className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[11px] font-extrabold text-white shadow-xs ${
-                      aluno.freq === 'P' 
-                        ? 'bg-emerald-600' 
-                        : aluno.freq === 'F' 
-                        ? 'bg-rose-600' 
-                        : 'bg-amber-600'
-                    }`}>
-                      {aluno.freq === 'P' ? 'Presente' : aluno.freq === 'F' ? 'Falta' : 'Justificada'}
-                    </span>
-                  )}
-                </div>
-
-                {/* Frequency Selector: Circle Buttons (P / F / FJ) */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                      Frequência ({tempoAula})
-                    </label>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{aluno.atestado ? 'Atestado da secretaria' : 'Toque para selecionar'}</span>
-                  </div>
-                  {aluno.atestado ? (
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-500 text-[11px] font-black text-white" aria-label={`Falta justificada de ${aluno.nome}`}>FJ</span>
-                      <p className="text-xs font-bold text-amber-800">Falta justificada pelo atestado médico. Esta marcação não pode ser alterada.</p>
-                    </div>
-                  ) : (
-                  <div className="flex items-center gap-4 justify-start">
-                    <button
-                      type="button"
-                      disabled={disabled}
-                      onClick={() => !disabled && setDirectFreq(aluno.id, aluno.freq === 'P' ? '' : 'P')}
-                      aria-label={`Presença de ${aluno.nome}`}
-                      aria-pressed={aluno.freq === 'P'}
-                      className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-black transition-all active:scale-90 cursor-pointer disabled:cursor-not-allowed ${
-                        aluno.freq === 'P'
-                          ? 'bg-emerald-500 text-white shadow-md ring-2 ring-emerald-300/50 dark:ring-emerald-700/50'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-2 border-slate-200 dark:border-slate-700 hover:border-emerald-400 hover:text-emerald-600'
-                      }`}
-                    >
-                      P
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={disabled}
-                      onClick={() => !disabled && setDirectFreq(aluno.id, aluno.freq === 'F' ? '' : 'F')}
-                      aria-label={`Falta de ${aluno.nome}`}
-                      aria-pressed={aluno.freq === 'F'}
-                      className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-black transition-all active:scale-90 cursor-pointer disabled:cursor-not-allowed ${
-                        aluno.freq === 'F'
-                          ? 'bg-rose-500 text-white shadow-md ring-2 ring-rose-300/50 dark:ring-rose-700/50'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-2 border-slate-200 dark:border-slate-700 hover:border-rose-400 hover:text-rose-600'
-                      }`}
-                    >
-                      F
-                    </button>
-                  </div>
-                  )}
-                </div>
-
-                {/* Participation Selector: Full-Width 50%/50% Segmented Pill */}
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
-                    Participação
-                  </label>
-                  <div className={`flex w-full rounded-xl overflow-hidden border transition-all ${
-                    !aluno.freq
-                      ? 'opacity-40 grayscale pointer-events-none border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40'
-                      : 'border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 shadow-xs'
-                  }`}>
-                    <button
-                      type="button"
-                      disabled={disabled || !aluno.freq}
-                      onClick={() => togglePart(aluno.id, 'Presencial')}
-                      className={`flex-1 py-2.5 px-3 text-center text-xs font-bold transition-all cursor-pointer ${
-                        aluno.part === 'Presencial'
-                          ? 'bg-[#6354c7] text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-700'
-                      }`}
-                    >
-                      Presencial
-                    </button>
-                    <button
-                      type="button"
-                      disabled={disabled || !aluno.freq}
-                      onClick={() => togglePart(aluno.id, 'Remoto')}
-                      className={`flex-1 py-2.5 px-3 text-center text-xs font-bold transition-all border-l border-slate-200 dark:border-slate-700 cursor-pointer ${
-                        aluno.part === 'Remoto'
-                          ? 'bg-[#6354c7] text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-700'
-                      }`}
-                    >
-                      Remoto
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Desktop Attendance Table (>= md) */}
-          <div className="portal-legacy-attendance-table hidden bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider border-b border-slate-200/80 dark:border-slate-800">
-                <tr>
-                  <th className="px-4 py-3.5 w-16 text-center">Nº</th>
-                  <th className="px-4 py-3.5">Estudante</th>
-                  <th className="px-4 py-3.5 text-center w-48">{tempoAula}</th>
-                  <th className="px-4 py-3.5 text-center w-56">Participação</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                {visibleStudents.map((aluno, index) => (
-                  <tr 
-                    key={aluno.id} 
-                    className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors ${
-                      index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/30 dark:bg-slate-800/20'
-                    }`}
-                  >
-                    <td className="px-4 py-3.5 text-center text-slate-500 dark:text-slate-400 font-bold tabular-nums">
-                      {String(index + 1).padStart(2, '0')}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">
-                        {aluno.nome}
+                    <div className="portal-attendance-name-block">
+                      <p className="portal-attendance-name">{aluno.nome}</p>
+                      <p className="portal-attendance-meta">
+                        {aluno.matricula ? `Mat. ${aluno.matricula}` : 'Sem matrícula'}
+                        <span aria-hidden="true"> · </span>
+                        <span className={
+                          aluno.freq === 'P' ? 'text-emerald-700 dark:text-emerald-400'
+                            : aluno.freq === 'F' ? 'text-rose-700 dark:text-rose-400'
+                            : aluno.freq === 'FJ' ? 'text-amber-700 dark:text-amber-400'
+                            : 'text-slate-400 dark:text-slate-500'
+                        }>
+                          {statusLabel}
+                        </span>
+                        {aluno.atestado ? <span className="portal-attendance-atestado"> · Atestado</span> : null}
                       </p>
-                      {aluno.matricula && (
-                        <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 font-medium mt-0.5">
-                          Matrícula: {aluno.matricula}
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3.5 text-center">
-                      <div className="inline-flex items-center justify-center gap-2">
-                        {/* Main Touch Toggle Button */}
-                        <button
-                          type="button"
-                          onClick={() => !disabled && !aluno.atestado && toggleFreq(aluno.id)}
-                          disabled={disabled || aluno.atestado}
-                          title={aluno.atestado ? 'Falta justificada pelo atestado da secretaria' : 'Clique para alternar presença e falta'}
-                          aria-label={`Status de frequência de ${aluno.nome}: ${aluno.freq || 'não lançado'}`}
-                          className={`w-8 h-8 rounded-full text-white font-black text-xs flex items-center justify-center transition-all transform active:scale-90 shadow-sm cursor-pointer disabled:cursor-not-allowed ${
-                            aluno.freq === 'P'
-                              ? 'bg-emerald-500 ring-2 ring-emerald-300 dark:ring-emerald-700'
-                              : aluno.freq === 'F'
-                              ? 'bg-rose-500 ring-2 ring-rose-300 dark:ring-rose-700'
-                              : aluno.freq === 'FJ'
-                              ? 'bg-amber-500 ring-2 ring-amber-300 dark:ring-amber-700'
-                              : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border border-dashed border-slate-300 dark:border-slate-600 hover:bg-slate-300'
-                          }`}
-                        >
-                          {aluno.freq || '—'}
-                        </button>
+                    </div>
+                  </div>
 
-                        {/* Quick 1-click status shortcuts for desktop */}
-                        <div className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200/80 dark:border-slate-700/80">
-                          <button
-                            type="button"
-                            onClick={() => !disabled && setDirectFreq(aluno.id, 'P')}
-                            disabled={disabled || aluno.atestado}
-                            title="Presença"
-                            className={`w-6 h-6 rounded text-[11px] font-bold transition-all cursor-pointer ${aluno.freq === 'P' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 hover:text-emerald-700 hover:bg-emerald-50'}`}
-                          >
-                            P
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => !disabled && setDirectFreq(aluno.id, 'F')}
-                            disabled={disabled || aluno.atestado}
-                            title="Falta"
-                            className={`w-6 h-6 rounded text-[11px] font-bold transition-all cursor-pointer ${aluno.freq === 'F' ? 'bg-rose-600 text-white shadow-xs' : 'text-slate-500 hover:text-rose-700 hover:bg-rose-50'}`}
-                          >
-                            F
-                          </button>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 text-center">
-                      <div className={`inline-flex rounded-xl overflow-hidden border transition-all min-w-[170px] ${
-                        !aluno.freq 
-                          ? 'opacity-40 grayscale pointer-events-none border-slate-200 dark:border-slate-700' 
-                          : 'border-slate-200 dark:border-slate-700 shadow-sm'
-                      }`}>
+                  <div className="portal-attendance-controls">
+                    {aluno.atestado ? (
+                      <span
+                        className="portal-attendance-fj"
+                        title="Falta justificada pelo atestado da secretaria"
+                        aria-label={`Falta justificada de ${aluno.nome}`}
+                      >
+                        FJ
+                      </span>
+                    ) : (
+                      <div className="portal-attendance-freq" role="group" aria-label={`Frequência de ${aluno.nome}`}>
                         <button
                           type="button"
-                          disabled={disabled || !aluno.freq}
-                          onClick={() => togglePart(aluno.id, 'Presencial')}
-                          className={`px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-                            aluno.part === 'Presencial' 
-                              ? 'bg-[#6354c7] text-white' 
-                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
-                          }`}
+                          disabled={disabled}
+                          onClick={() => !disabled && setDirectFreq(aluno.id, aluno.freq === 'P' ? '' : 'P')}
+                          aria-label={`Presença de ${aluno.nome}`}
+                          aria-pressed={aluno.freq === 'P'}
+                          className={aluno.freq === 'P' ? 'is-active-p' : undefined}
                         >
-                          Presencial
+                          P
                         </button>
                         <button
                           type="button"
-                          disabled={disabled || !aluno.freq}
-                          onClick={() => togglePart(aluno.id, 'Remoto')}
-                          className={`px-3.5 py-1.5 text-xs font-bold transition-all border-l border-slate-200 dark:border-slate-700 cursor-pointer ${
-                            aluno.part === 'Remoto' 
-                              ? 'bg-[#6354c7] text-white' 
-                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
-                          }`}
+                          disabled={disabled}
+                          onClick={() => !disabled && setDirectFreq(aluno.id, aluno.freq === 'F' ? '' : 'F')}
+                          aria-label={`Falta de ${aluno.nome}`}
+                          aria-pressed={aluno.freq === 'F'}
+                          className={aluno.freq === 'F' ? 'is-active-f' : undefined}
                         >
-                          Remoto
+                          F
                         </button>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    )}
+
+                    <div
+                      className={`portal-attendance-part${!aluno.freq ? ' is-disabled' : ''}`}
+                      role="group"
+                      aria-label={`Participação de ${aluno.nome}`}
+                    >
+                      <button
+                        type="button"
+                        disabled={disabled || !aluno.freq}
+                        onClick={() => togglePart(aluno.id, 'Presencial')}
+                        aria-pressed={aluno.part === 'Presencial'}
+                        className={aluno.part === 'Presencial' ? 'is-active' : undefined}
+                      >
+                        Pres
+                      </button>
+                      <button
+                        type="button"
+                        disabled={disabled || !aluno.freq}
+                        onClick={() => togglePart(aluno.id, 'Remoto')}
+                        aria-pressed={aluno.part === 'Remoto'}
+                        className={aluno.part === 'Remoto' ? 'is-active' : undefined}
+                      >
+                        Rem
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Registration Count Info */}
