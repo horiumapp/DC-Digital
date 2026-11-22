@@ -367,6 +367,7 @@ export default function FrequenciaTab({
                         <button
                           type="button"
                           disabled={disabled}
+                          title="Presença"
                           onClick={() => !disabled && setDirectFreq(aluno.id, aluno.freq === 'P' ? '' : 'P')}
                           aria-label={`Presença de ${aluno.nome}`}
                           aria-pressed={aluno.freq === 'P'}
@@ -377,6 +378,7 @@ export default function FrequenciaTab({
                         <button
                           type="button"
                           disabled={disabled}
+                          title="Falta"
                           onClick={() => !disabled && setDirectFreq(aluno.id, aluno.freq === 'F' ? '' : 'F')}
                           aria-label={`Falta de ${aluno.nome}`}
                           aria-pressed={aluno.freq === 'F'}
@@ -395,6 +397,7 @@ export default function FrequenciaTab({
                       <button
                         type="button"
                         disabled={disabled || !aluno.freq}
+                        title="Presencial"
                         onClick={() => togglePart(aluno.id, 'Presencial')}
                         aria-pressed={aluno.part === 'Presencial'}
                         className={aluno.part === 'Presencial' ? 'is-active' : undefined}
@@ -404,6 +407,7 @@ export default function FrequenciaTab({
                       <button
                         type="button"
                         disabled={disabled || !aluno.freq}
+                        title="Remoto"
                         onClick={() => togglePart(aluno.id, 'Remoto')}
                         aria-pressed={aluno.part === 'Remoto'}
                         className={aluno.part === 'Remoto' ? 'is-active' : undefined}
