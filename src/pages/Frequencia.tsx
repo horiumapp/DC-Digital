@@ -1,10 +1,14 @@
 import React, { Suspense, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useTurma } from '../contexts/TurmaContext';
 import { APP_CONFIG } from '../config/appConfig';
 import { getDayOfWeek, formatarDataParaExibicao } from '../utils/dateUtils';
 import { carregarFeriados, nomeFeriado } from '../services/feriados';
+import {
+  buildFrequenciaUltimaAulaUrl,
+  resolverUltimaAulaBimestreAberto,
+} from '../utils/entradaFrequencia';
 import { tempoTemFrequencia } from '../utils/frequenciaFluxo';
 import { useToast } from '../components/common/Toast';
 
@@ -23,21 +27,64 @@ function TabLoading() {
 }
 
 export default function Frequencia() {
-  const { turmaAtiva, horarioTurma, lancamentos, verificarPeriodoFechado } = useTurma();
+  const { turmaAtiva, horarioTurma, lancamentos, verificarPeriodoFechado, loading } = useTurma();
   const { showWarning } = useToast();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const selectedDateParam = searchParams.get('date') || `${APP_CONFIG.YEAR}-02-06`;
+  const dateFromUrl = searchParams.get('date');
+  const precisaEntradaInteligente = !dateFromUrl;
+  const selectedDateParam = dateFromUrl || '';
   const veioDaChamadaRapida = searchParams.get('origem') === 'ultima-aula';
   const periodoDaChamada = searchParams.get('periodo');
 
   // ── Shared state ──
   const [activeTab, setActiveTab] = useState('frequencia');
   const [selectedDate, setSelectedDate] = useState(selectedDateParam);
+  const [entradaErro, setEntradaErro] = useState<string | null>(null);
   
   const [feriadosVersao, setFeriadosVersao] = useState(0);
   React.useEffect(() => {
     carregarFeriados(APP_CONFIG.YEAR).finally(() => setFeriadosVersao(valor => valor + 1));
   }, []);
+
+  // Sem ?date= na URL: abre a última aula do bimestre aberto (não o 1º bimestre fixo).
+  React.useEffect(() => {
+    if (!precisaEntradaInteligente || !turmaAtiva || loading) return;
+
+    const diasComAula = [...new Set(
+      horarioTurma.length > 0
+        ? horarioTurma.map(horario => Number(horario.dia_semana))
+        : turmaAtiva.diasDeAula
+    )];
+
+    const resultado = resolverUltimaAulaBimestreAberto({
+      diasComAula,
+      verificarPeriodoFechado,
+      isFeriado: data => Boolean(nomeFeriado(data)),
+    });
+
+    if (resultado.ok) {
+      setEntradaErro(null);
+      navigate(buildFrequenciaUltimaAulaUrl(String(turmaAtiva.id), resultado), { replace: true });
+      return;
+    }
+
+    if (resultado.motivo === 'sem-horario') {
+      setEntradaErro('Não há horários cadastrados para esta turma. Cadastre os horários antes de lançar.');
+    } else if (resultado.motivo === 'sem-bimestre-aberto') {
+      setEntradaErro('Não há bimestre aberto para esta turma. Use o Diário para consultar períodos encerrados.');
+    } else {
+      setEntradaErro(`Não há dia de aula no período ${resultado.periodoNome || 'aberto'} para esta turma.`);
+    }
+  }, [
+    precisaEntradaInteligente,
+    turmaAtiva,
+    loading,
+    horarioTurma,
+    verificarPeriodoFechado,
+    navigate,
+    feriadosVersao,
+  ]);
 
   const isPeriodoFechado = React.useMemo(() => {
     return verificarPeriodoFechado(selectedDate);
@@ -139,6 +186,36 @@ export default function Frequencia() {
     );
   }
 
+  if (precisaEntradaInteligente) {
+    if (entradaErro) {
+      return (
+        <div className="min-h-screen bg-slate-50 dark:bg-[#090e17] flex items-center justify-center p-6">
+          <div role="alert" className="bg-white border border-slate-200 rounded-2xl p-8 max-w-md w-full text-center">
+            <h2 className="text-xl font-bold text-slate-800 mb-2">Não foi possível abrir o lançamento</h2>
+            <p className="text-slate-500 mb-6">{entradaErro}</p>
+            <div className="flex flex-col gap-3">
+              <Link to="/diario" className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#6354c7] text-white font-bold rounded-xl hover:opacity-90 transition">
+                Ir ao Diário
+              </Link>
+              <Link to="/turmas" className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition">
+                Trocar turma
+              </Link>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#090e17] flex items-center justify-center p-6">
+        <div role="status" className="flex items-center gap-2 text-slate-500">
+          <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+          <span className="text-sm font-medium">Abrindo a última aula do bimestre aberto…</span>
+        </div>
+      </div>
+    );
+  }
+
   const registeredTimes=(tipo:'frequencia'|'conteudo')=>new Set(lancamentos.filter(l=>l.data===selectedDate&&l.tipo===tipo&&String(l.turmaId).split('||')[0]===String(turmaAtiva.id).split('||')[0]&&temposValidosDoDia.includes(l.tempo)).map(l=>l.tempo)).size;
   const steps = [{id:'frequencia',title:'Frequência',hint:'Quem esteve com você'},{id:'objeto',title:'Conteúdo',hint:'O que foi ensinado'},{id:'anotacoes',title:'Anotações',hint:'O que vale lembrar'},{id:'avaliacoes',title:'Avaliações',hint:'Como a turma avançou'}];
   return <div className="portal-page portal-lesson">
@@ -161,7 +238,7 @@ export default function Frequencia() {
 
         {veioDaChamadaRapida && (
           <div role="status" className="bg-sky-50 text-sky-950 border-b border-sky-200 px-4 py-2.5 sm:px-8 text-xs sm:text-sm">
-            Chamada rápida abriu a última aula do {periodoDaChamada || 'bimestre aberto'}: {formatarDataParaExibicao(selectedDate)}. Esse é o bimestre ainda aberto com dia de aula previsto.
+            Última aula do {periodoDaChamada || 'bimestre aberto'}: {formatarDataParaExibicao(selectedDate)}. Esse é o bimestre ainda aberto com dia de aula previsto.
           </div>
         )}
 

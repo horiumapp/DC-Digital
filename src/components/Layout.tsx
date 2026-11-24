@@ -2,7 +2,7 @@ import SchoolIdentity from './common/SchoolIdentity';
 import { ModuleWorkspace } from './common/ModuleWorkspace';
 import ReportsWorkspace from './common/ReportsWorkspace';
 import { PortalBrand } from './common/PortalUI';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   BarChart3, 
@@ -34,6 +34,10 @@ import { useOffline } from '../contexts/OfflineContext';
 import { ADMIN_ROLES, SEMEC_ROLE } from '../constants/authConstants';
 import { APP_CONFIG } from '../config/appConfig';
 import { nomeFeriado } from '../services/feriados';
+import {
+  buildFrequenciaUltimaAulaUrl,
+  resolverUltimaAulaBimestreAberto,
+} from '../utils/entradaFrequencia';
 
 type Item = { label: string; to: string; icon: typeof Home; end?: boolean };
 const reports: Item[] = [
@@ -110,52 +114,35 @@ export default function Layout() {
     const diasComAula = [...new Set(
       horarioTurma.length > 0 ? horarioTurma.map(horario => Number(horario.dia_semana)) : turmaAtiva.diasDeAula
     )];
-    if (diasComAula.length === 0) {
-      showWarning('Não há horários cadastrados para esta turma. Cadastre os horários antes de lançar a frequência.');
-      setScheduleOpen(true);
-      return;
-    }
+    const resultado = resolverUltimaAulaBimestreAberto({
+      diasComAula,
+      verificarPeriodoFechado,
+      isFeriado: data => Boolean(nomeFeriado(data)),
+    });
 
-    const hoje = new Date();
-    hoje.setHours(23, 59, 59, 999);
-    const bimestres = APP_CONFIG.PERIODOS.filter(periodo => periodo.id.includes('BIMESTRE'));
-    const periodosDisponiveis = [] as typeof bimestres;
-    for (let indice = 0; indice < bimestres.length; indice += 1) {
-      const periodo = bimestres[indice];
-      const [ano, mes, dia] = periodo.dataInicio.split('-').map(Number);
-      if (new Date(ano, mes - 1, dia) > hoje) break;
-      if (indice > 0 && !verificarPeriodoFechado(bimestres[indice - 1].id)) break;
-      periodosDisponiveis.push(periodo);
-    }
-    const periodoAberto = [...periodosDisponiveis].reverse().find(periodo => !verificarPeriodoFechado(periodo.id));
-    if (!periodoAberto) {
-      showWarning('Não há bimestre aberto para esta turma.');
-      return;
-    }
-
-    const [anoInicio, mesInicio, diaInicio] = periodoAberto.dataInicio.split('-').map(Number);
-    const [anoFim, mesFim, diaFim] = periodoAberto.dataFim.split('-').map(Number);
-    const inicioPeriodo = new Date(anoInicio, mesInicio - 1, diaInicio);
-    const fimPeriodo = new Date(anoFim, mesFim - 1, diaFim, 23, 59, 59, 999);
-    const limiteBusca = hoje < fimPeriodo ? hoje : fimPeriodo;
-    const ultimaAula = new Date(limiteBusca);
-    let encontrouAula = false;
-    for (let candidata = new Date(limiteBusca); candidata >= inicioPeriodo; candidata.setDate(candidata.getDate() - 1)) {
-      const dataCandidata = `${candidata.getFullYear()}-${String(candidata.getMonth() + 1).padStart(2, '0')}-${String(candidata.getDate()).padStart(2, '0')}`;
-      if (diasComAula.includes(candidata.getDay()) && !nomeFeriado(dataCandidata)) {
-        ultimaAula.setTime(candidata.getTime());
-        encontrouAula = true;
-        break;
+    if (!resultado.ok) {
+      if (resultado.motivo === 'sem-horario') {
+        showWarning('Não há horários cadastrados para esta turma. Cadastre os horários antes de lançar a frequência.');
+        setScheduleOpen(true);
+        return;
       }
-    }
-    if (!encontrouAula) {
-      showWarning(`Não há dia de aula no período ${periodoAberto.nome} para esta turma.`);
+      if (resultado.motivo === 'sem-bimestre-aberto') {
+        showWarning('Não há bimestre aberto para esta turma.');
+        return;
+      }
+      showWarning(`Não há dia de aula no período ${resultado.periodoNome || 'aberto'} para esta turma.`);
       return;
     }
 
-    const data = `${ultimaAula.getFullYear()}-${String(ultimaAula.getMonth() + 1).padStart(2, '0')}-${String(ultimaAula.getDate()).padStart(2, '0')}`;
-    showInfo(`Abrindo a última aula do ${periodoAberto.nome}: ${ultimaAula.toLocaleDateString('pt-BR')}.`);
-    navigate(`/frequencia?date=${data}&turmaId=${encodeURIComponent(String(turmaAtiva.id))}&origem=ultima-aula&periodo=${encodeURIComponent(periodoAberto.nome)}`);
+    const [ano, mes, dia] = resultado.data.split('-').map(Number);
+    showInfo(`Abrindo a última aula do ${resultado.periodoNome}: ${new Date(ano, mes - 1, dia).toLocaleDateString('pt-BR')}.`);
+    navigate(buildFrequenciaUltimaAulaUrl(String(turmaAtiva.id), resultado));
+  };
+
+  const openFrequenciaEntrada = (event: ReactMouseEvent) => {
+    event.preventDefault();
+    close();
+    openQuickAttendance();
   };
 
   const navClass = ({ isActive }: { isActive: boolean }) => `dd-nav-item ${isActive ? 'dd-nav-item-active' : ''}`;
@@ -183,7 +170,13 @@ export default function Layout() {
         <section>
           <p className="dd-nav-label">Rotina Docente</p>
           {work.filter(item => item.label.toLocaleLowerCase().includes(navQuery.toLocaleLowerCase())).map(({ label, to, icon: Icon, end }) => (
-            <NavLink key={label} to={to} end={end} onClick={close} className={navClass}>
+            <NavLink
+              key={label}
+              to={to}
+              end={end}
+              onClick={label === 'Frequência e notas' ? openFrequenciaEntrada : close}
+              className={navClass}
+            >
               <Icon aria-hidden="true" />
               <span>{label}</span>
             </NavLink>
