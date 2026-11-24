@@ -3,44 +3,20 @@ import { ArrowLeft, ChevronDown, Search, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { APP_CONFIG } from '../config/appConfig';
-import type { NotaRecord } from '../services/turmaService';
+import type { NotaRecord, TurmaRelatorioInfo } from '../services/turmaService';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
 import { Aluno, Avaliacao, useTurma } from '../contexts/TurmaContext';
 import { escolherTurmaRelatorio } from '../utils/relatorioFiltro';
 import { useToast } from '../components/common/Toast';
 import { classeElipseNota, corNota, limitePontosBimestre } from '../utils/corNota';
-
-const obterLogoEscola = (nomeEscola: string) => {
-  if (!nomeEscola) return '/logo.png';
-  const nomeUpper = nomeEscola.toUpperCase();
-  if (nomeUpper.includes('FRANCISCA')) return '/Francisca Mendes.png';
-  if (nomeUpper.includes('MAIA') || nomeUpper.includes('JOSE MAIA') || nomeUpper.includes('JOSÉ MAIA')) return '/José Maia.png';
-  if (nomeUpper.includes('PASTOR') || nomeUpper.includes('REIS')) return '/Pastor José Reis.png';
-  if (nomeUpper.includes('VARGAS') || nomeUpper.includes('PRESIDENTE')) return '/Presidente Vargas.png';
-  if (nomeUpper.includes('SOCORRO') || nomeUpper.includes('BRITO')) return '/Socorro Brito.png';
-  if (nomeUpper.includes('FILADÉLFIA') || nomeUpper.includes('FILADELFIA')) return '/Filadelfia.png';
-  if (nomeUpper.includes('MÔNICA') || nomeUpper.includes('MONICA')) return '/Turma da Monica.png';
-  if (nomeUpper.includes('SÃO FRANCISCO') || nomeUpper.includes('SAO FRANCISCO')) return '/São Francisco.png';
-  return '/logo.png';
-};
-
-interface TurmaRelatorio {
-  id: string;
-  nome: string;
-  turno: string;
-  componente: string;
-  ensino: string;
-  fase: string;
-  numero: string;
-  escolaId: string;
-  escolaNome: string;
-}
+import { getEscolaLogo, LOGO_PADRAO_SEMED } from '../utils/escolaUtils';
+import { imprimirRelatorio, PRINT_RELATORIO_MEDIA_CSS } from '../utils/printRelatorio';
 
 export default function RelatorioMedias() {
   const { user } = useAuth();
   const { turmaAtiva } = useTurma();
   const { showError } = useToast();
-  const [turmas, setTurmas] = useState<TurmaRelatorio[]>([]);
+  const [turmas, setTurmas] = useState<TurmaRelatorioInfo[]>([]);
   const [selectedTurma, setSelectedTurma] = useState('');
   const [loading, setLoading] = useState(true);
   
@@ -141,6 +117,10 @@ export default function RelatorioMedias() {
   };
 
   const selectedTurmaObj = turmas.find(t => `${t.id}|${t.componente}` === selectedTurma) || turmas.find(t => t.id === selectedTurma);
+  const logoEscola = getEscolaLogo({
+    nome: selectedTurmaObj?.escolaNome,
+    logo_url: selectedTurmaObj?.escolaLogoUrl,
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 relative">
@@ -164,7 +144,7 @@ export default function RelatorioMedias() {
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-[#6354c7]">Pesquisa</h2>
               <button 
-                onClick={() => window.print()}
+                onClick={() => imprimirRelatorio()}
                 className="px-6 py-2 bg-[#eef2ff] text-[#6354c7] border border-blue-100 rounded text-base font-semibold hover:bg-[#e0e7ff] transition shadow-sm cursor-pointer"
               >
                 Imprimir
@@ -329,24 +309,9 @@ export default function RelatorioMedias() {
 
       {/* Área de Impressão (invisível na tela, visível apenas na impressão) */}
       {selectedTurmaObj && (
-        <div id="printable-relatorio" className="hidden print:block fixed inset-0 bg-white z-[9999] overflow-y-auto">
+        <div id="printable-relatorio" aria-hidden="true" style={{ display: 'none' }}>
           <style dangerouslySetInnerHTML={{ __html: `
-            @media print {
-              @page { margin: 1cm; size: A4 landscape; }
-              html, body { height: auto !important; overflow: visible !important; background: white !important; }
-              body * { visibility: hidden; }
-              #printable-relatorio, #printable-relatorio * { visibility: visible; }
-              #printable-relatorio { 
-                visibility: visible;
-                position: absolute; 
-                left: 0; 
-                top: 0; 
-                width: 100%; 
-                display: block !important;
-                overflow: visible !important;
-              }
-              .no-print { display: none !important; }
-            }
+            ${PRINT_RELATORIO_MEDIA_CSS}
             #printable-relatorio table { width: 100%; border-collapse: collapse; table-layout: fixed; }
             #printable-relatorio th, #printable-relatorio td { border: 1px solid black; padding: 4px; text-align: left; font-size: 8px; font-family: Arial, sans-serif; }
             #printable-relatorio .header-grid { width: 100%; border: 1px solid black; border-collapse: collapse; }
@@ -363,7 +328,7 @@ export default function RelatorioMedias() {
 
           <div className="p-4 bg-white text-black h-auto">
             {/* Cabeçalho Oficial */}
-            <div className="flex border border-black overflow-hidden">
+            <div className="doc-header flex border border-black overflow-hidden">
               {/* Lado Esquerdo: SEMED */}
               <div className="w-[20%] border-r border-black p-4 flex flex-col items-center justify-center text-center">
                 <img src="/semed.png" alt="Logo SEMED" className="w-16 h-16 mb-1 object-contain" />
@@ -421,12 +386,13 @@ export default function RelatorioMedias() {
 
               {/* Lado Direito: Escola */}
               <div className="w-[20%] border-l border-black p-4 flex flex-col items-center justify-center text-center">
-                <img 
-                  src={obterLogoEscola(selectedTurmaObj.escolaNome)} 
-                  alt="School Logo"
+                <img
+                  src={logoEscola}
+                  alt={`Logo da ${selectedTurmaObj.escolaNome}`}
                   className="w-16 h-16 mb-1 object-contain"
                   onError={(e) => {
-                    e.currentTarget.src = '/logo.png';
+                    if (e.currentTarget.src.endsWith(LOGO_PADRAO_SEMED)) return;
+                    e.currentTarget.src = LOGO_PADRAO_SEMED;
                   }}
                 />
                 <div className="font-bold text-[8px] leading-tight uppercase">
