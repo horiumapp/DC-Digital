@@ -8,7 +8,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { formatarDataParaISO, getBimestrePorData, getDayOfWeek } from '../utils/dateUtils';
 import { APP_CONFIG } from '../config/appConfig';
-import { labelBimestreAtual, mesAtualRelatorio, escolherTurmaRelatorio } from '../utils/relatorioFiltro';
+import {
+  labelBimestreAtual,
+  mesAtualRelatorio,
+  escolherTurmaRelatorio,
+  escolaTrabalhoRelatorio,
+  filtrarTurmasRelatorioEscolaAtiva,
+} from '../utils/relatorioFiltro';
 import { useTurma } from '../contexts/TurmaContext';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
 import * as OfflineStorage from '../services/offlineStorage';
@@ -52,9 +58,15 @@ export default function RelatorioConteudos() {
     try {
       if (!user) return;
       const finalTurmas = await OfflineTurmaService.fetchTurmasRelatorio(user);
-      setTurmas(finalTurmas);
-      if (finalTurmas.length > 0) {
-        setSelectedTurmaId(escolherTurmaRelatorio(finalTurmas, turmaAtiva));
+      const escolaId = escolaTrabalhoRelatorio(user, turmaAtiva);
+      const turmasVisiveis = filtrarTurmasRelatorioEscolaAtiva(
+        finalTurmas,
+        escolaId,
+        user.escolaAtivaTurno,
+      );
+      setTurmas(turmasVisiveis);
+      if (turmasVisiveis.length > 0) {
+        setSelectedTurmaId(escolherTurmaRelatorio(turmasVisiveis, turmaAtiva, escolaId));
       } else {
         setSelectedTurmaId('');
       }
@@ -70,7 +82,7 @@ export default function RelatorioConteudos() {
     if (user?.email) {
       fetchTurmasProfessor();
     }
-  }, [user]);
+  }, [user, user?.escolaAtivaId, user?.escolaAtivaTurno, turmaAtiva?.id, turmaAtiva?.escola_id]);
 
   const handleExibir = async () => {
     if (!selectedTurmaId) {

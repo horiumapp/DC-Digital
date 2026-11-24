@@ -7,7 +7,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { formatarDataParaISO, formatarDiaMes } from '../utils/dateUtils';
 import { APP_CONFIG } from '../config/appConfig';
-import { labelBimestreAtual, mesAtualRelatorio, escolherTurmaRelatorio } from '../utils/relatorioFiltro';
+import {
+  labelBimestreAtual,
+  mesAtualRelatorio,
+  escolherTurmaRelatorio,
+  escolaTrabalhoRelatorio,
+  filtrarTurmasRelatorioEscolaAtiva,
+} from '../utils/relatorioFiltro';
 import {
   calcularFrequenciaLdb,
   classificarEtapaFrequencia,
@@ -72,9 +78,15 @@ export default function RelatorioFrequencia() {
     try {
       if (!user) return;
       const finalTurmas = await OfflineTurmaService.fetchTurmasRelatorio(user);
-      setTurmas(finalTurmas);
-      if (finalTurmas.length > 0) {
-        setSelectedTurmaId(escolherTurmaRelatorio(finalTurmas, turmaAtiva));
+      const escolaId = escolaTrabalhoRelatorio(user, turmaAtiva);
+      const turmasVisiveis = filtrarTurmasRelatorioEscolaAtiva(
+        finalTurmas,
+        escolaId,
+        user.escolaAtivaTurno,
+      );
+      setTurmas(turmasVisiveis);
+      if (turmasVisiveis.length > 0) {
+        setSelectedTurmaId(escolherTurmaRelatorio(turmasVisiveis, turmaAtiva, escolaId));
       } else {
         setSelectedTurmaId('');
       }
@@ -90,7 +102,7 @@ export default function RelatorioFrequencia() {
     if (user?.email) {
       fetchTurmasProfessor();
     }
-  }, [user]);
+  }, [user, user?.escolaAtivaId, user?.escolaAtivaTurno, turmaAtiva?.id, turmaAtiva?.escola_id]);
 
 
   const handleExibir = async () => {

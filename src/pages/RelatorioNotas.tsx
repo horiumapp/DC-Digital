@@ -3,7 +3,13 @@ import { ArrowLeft, ChevronDown, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { APP_CONFIG } from '../config/appConfig';
-import { labelBimestreAtual, escolherTurmaRelatorio, avaliacaoNoPeriodo } from '../utils/relatorioFiltro';
+import {
+  labelBimestreAtual,
+  escolherTurmaRelatorio,
+  avaliacaoNoPeriodo,
+  escolaTrabalhoRelatorio,
+  filtrarTurmasRelatorioEscolaAtiva,
+} from '../utils/relatorioFiltro';
 import { Aluno, Avaliacao, useTurma } from '../contexts/TurmaContext';
 import type { NotaRecord, TurmaRelatorioInfo } from '../services/turmaService';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
@@ -45,9 +51,15 @@ export default function RelatorioNotas() {
     try {
       if (!user) return;
       const finalTurmas = await OfflineTurmaService.fetchTurmasRelatorio(user);
-      setTurmas(finalTurmas);
-      if (finalTurmas.length > 0) {
-        setSelectedTurma(escolherTurmaRelatorio(finalTurmas, turmaAtiva));
+      const escolaId = escolaTrabalhoRelatorio(user, turmaAtiva);
+      const turmasVisiveis = filtrarTurmasRelatorioEscolaAtiva(
+        finalTurmas,
+        escolaId,
+        user.escolaAtivaTurno,
+      );
+      setTurmas(turmasVisiveis);
+      if (turmasVisiveis.length > 0) {
+        setSelectedTurma(escolherTurmaRelatorio(turmasVisiveis, turmaAtiva, escolaId));
       } else {
         setSelectedTurma('');
       }
@@ -59,13 +71,12 @@ export default function RelatorioNotas() {
     }
   }, [user, showError, turmaAtiva]);
 
-   
   useEffect(() => {
     if (user?.email) {
       fetchTurmasProfessor();
     }
-  }, [user, fetchTurmasProfessor]);
-   
+  }, [user, user?.escolaAtivaId, user?.escolaAtivaTurno, fetchTurmasProfessor]);
+
 
   const handleExibir = async () => {
     if (!selectedTurma) return;
