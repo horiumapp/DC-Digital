@@ -36,6 +36,20 @@ export interface TurmaRelatorioInfo {
   numero: string;
   escolaId: string;
   escolaNome: string;
+  /** URL/caminho do logo cadastrado em escolas.logo_url (quando existir). */
+  escolaLogoUrl?: string | null;
+}
+
+function extrairEscolaJoin(escolas: unknown): { nome: string; logo_url: string | null } {
+  const row = Array.isArray(escolas) ? escolas[0] : escolas;
+  const obj =
+    row && typeof row === 'object'
+      ? (row as { nome?: string | null; logo_url?: string | null })
+      : null;
+  return {
+    nome: (obj?.nome || '').trim() || 'ESCOLA NÃO IDENTIFICADA',
+    logo_url: obj?.logo_url ?? null,
+  };
 }
 
 import { getTid, normalizarDataISO } from '../utils/turmaUtils';
@@ -583,7 +597,7 @@ export const TurmaService = {
     if (user.role === 'ADMIN' || user.role === 'GESTOR' || user.role === 'SECRETARIO') {
       let query = supabase
         .from('turmas')
-        .select('id, nome, turno, ensino, turma_codigo, escola_id, escolas(nome)')
+        .select('id, nome, turno, ensino, turma_codigo, escola_id, escolas(nome, logo_url)')
         .order('nome');
 
       if (user.role === 'SECRETARIO' || user.role === 'GESTOR') {
@@ -653,6 +667,7 @@ export const TurmaService = {
         comps.sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
         comps.forEach(comp => {
+          const escola = extrairEscolaJoin(t.escolas);
           finalTurmas.push({
             id: t.id,
             nome: t.nome,
@@ -662,7 +677,8 @@ export const TurmaService = {
             fase: fase,
             numero: t.turma_codigo || numero,
             escolaId: t.escola_id,
-            escolaNome: (Array.isArray(t.escolas) ? (t.escolas[0] as { nome?: string } | undefined)?.nome : (t.escolas as { nome?: string } | null | undefined)?.nome) || 'ESCOLA NÃO IDENTIFICADA'
+            escolaNome: escola.nome,
+            escolaLogoUrl: escola.logo_url,
           });
         });
       });
@@ -705,7 +721,7 @@ export const TurmaService = {
           const orConditions = alocs.map(a => `and(escola_id.eq.${a.escola_id},turno.eq.${a.turno})`).join(',');
           const { data: turmasAlocadas, error: turmasError } = await supabase
             .from('turmas')
-            .select('*, escolas(nome)')
+            .select('*, escolas(nome, logo_url)')
             .or(orConditions)
             .order('nome');
 
@@ -727,6 +743,7 @@ export const TurmaService = {
                   if (matchNum) numero = matchNum[1];
                 }
 
+                const escola = extrairEscolaJoin(t.escolas);
                 finalTurmas.push({
                   id: t.id,
                   nome: t.nome,
@@ -736,7 +753,8 @@ export const TurmaService = {
                   fase: fase,
                   numero: t.turma_codigo || numero,
                   escolaId: t.escola_id,
-                  escolaNome: t.escolas?.nome || 'ESCOLA NÃO IDENTIFICADA'
+                  escolaNome: escola.nome,
+                  escolaLogoUrl: escola.logo_url,
                 });
               });
             });

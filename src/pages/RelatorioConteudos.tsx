@@ -15,18 +15,9 @@ import * as OfflineStorage from '../services/offlineStorage';
 import { readAllRows } from '../services/pagination';
 
 import { useToast } from '../components/common/Toast';
-
-interface TurmaRelatorio {
-  id: string;
-  nome: string;
-  turno: string;
-  componente: string;
-  ensino: string;
-  fase: string;
-  numero: string;
-  escolaId: string;
-  escolaNome: string;
-}
+import type { TurmaRelatorioInfo } from '../services/turmaService';
+import { getEscolaLogo, LOGO_PADRAO_SEMED } from '../utils/escolaUtils';
+import { imprimirRelatorio, PRINT_RELATORIO_MEDIA_CSS } from '../utils/printRelatorio';
 
 interface ConteudoLinha {
   data: string;
@@ -34,25 +25,11 @@ interface ConteudoLinha {
   descricao: string;
 }
 
-const obterLogoEscola = (nomeEscola: string) => {
-  if (!nomeEscola) return '/logo.png';
-  const nomeUpper = nomeEscola.toUpperCase();
-  if (nomeUpper.includes('FRANCISCA')) return '/Francisca Mendes.png';
-  if (nomeUpper.includes('MAIA') || nomeUpper.includes('JOSE MAIA') || nomeUpper.includes('JOSÉ MAIA')) return '/José Maia.png';
-  if (nomeUpper.includes('PASTOR') || nomeUpper.includes('REIS')) return '/Pastor José Reis.png';
-  if (nomeUpper.includes('VARGAS') || nomeUpper.includes('PRESIDENTE')) return '/Presidente Vargas.png';
-  if (nomeUpper.includes('SOCORRO') || nomeUpper.includes('BRITO')) return '/Socorro Brito.png';
-  if (nomeUpper.includes('FILADÉLFIA') || nomeUpper.includes('FILADELFIA')) return '/Filadelfia.png';
-  if (nomeUpper.includes('MÔNICA') || nomeUpper.includes('MONICA')) return '/Turma da Monica.png';
-  if (nomeUpper.includes('SÃO FRANCISCO') || nomeUpper.includes('SAO FRANCISCO')) return '/São Francisco.png';
-  return '/logo.png';
-};
-
 export default function RelatorioConteudos() {
   const { user } = useAuth();
   const { turmaAtiva } = useTurma();
   const { showError, showWarning } = useToast();
-  const [turmas, setTurmas] = useState<TurmaRelatorio[]>([]);
+  const [turmas, setTurmas] = useState<TurmaRelatorioInfo[]>([]);
   const [selectedTurmaId, setSelectedTurmaId] = useState('');
   const [buscaTurma, setBuscaTurma] = useState('');
   const [loading, setLoading] = useState(true);
@@ -241,7 +218,7 @@ export default function RelatorioConteudos() {
 
       // Pequeno timeout para garantir que o componente de impressão renderizou
       setTimeout(() => {
-        window.print();
+        imprimirRelatorio();
         document.title = oldTitle; // Restaurar título original
         setDataLoading(false);
       }, 500);
@@ -254,6 +231,10 @@ export default function RelatorioConteudos() {
   };
 
   const selectedTurmaObj = turmas.find(t => `${t.id}|${t.componente}` === selectedTurmaId) || turmas.find(t => t.id === selectedTurmaId);
+  const logoEscola = getEscolaLogo({
+    nome: selectedTurmaObj?.escolaNome,
+    logo_url: selectedTurmaObj?.escolaLogoUrl,
+  });
 
   const filteredTurmas = turmas.filter(t =>
     t.nome.toLowerCase().includes(buscaTurma.toLowerCase()) ||
