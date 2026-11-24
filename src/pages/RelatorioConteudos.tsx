@@ -404,24 +404,9 @@ export default function RelatorioConteudos() {
       </main>
 
       {/* ÁREA DE IMPRESSÃO (Oculta na tela, visível no PDF) */}
-      <div id="printable-relatorio" className="hidden print:block fixed inset-0 bg-white z-[9999] overflow-y-auto">
+      <div id="printable-relatorio" aria-hidden="true" style={{ display: 'none' }}>
         <style>{`
-          @media print {
-            @page { margin: 1cm; size: A4 landscape; }
-            html, body { height: auto !important; overflow: visible !important; background: white !important; }
-            body * { visibility: hidden; }
-            #printable-relatorio, #printable-relatorio * { visibility: visible; }
-            #printable-relatorio { 
-              visibility: visible;
-              position: absolute; 
-              left: 0; 
-              top: 0; 
-              width: 100%; 
-              display: block !important;
-              overflow: visible !important;
-            }
-            .no-print { display: none !important; }
-          }
+          ${PRINT_RELATORIO_MEDIA_CSS}
           #printable-relatorio table { width: 100%; border-collapse: collapse; table-layout: fixed; }
           #printable-relatorio th, #printable-relatorio td { border: 1px solid black; padding: 4px; text-align: left; font-size: 8px; font-family: Arial, sans-serif; }
           #printable-relatorio .header-grid { width: 100%; border: 1px solid black; border-collapse: collapse; }
@@ -438,7 +423,7 @@ export default function RelatorioConteudos() {
 
         <div className="p-4 bg-white text-black h-auto">
           {/* Header Area Oficial */}
-          <div className="flex border border-black overflow-hidden">
+          <div className="doc-header flex border border-black overflow-hidden">
             {/* Logo Box */}
             <div className="w-[20%] border-r border-black p-4 flex flex-col items-center justify-center text-center">
               <img src="/semed.png" alt="Logo SEMED" className="w-16 h-16 mb-1 object-contain" />
@@ -496,7 +481,15 @@ export default function RelatorioConteudos() {
 
             {/* School Logo Box */}
             <div className="w-[20%] border-l border-black p-4 flex flex-col items-center justify-center text-center">
-              <img src={obterLogoEscola(selectedTurmaObj?.escolaNome || '')} alt="Logo Escola" className="w-16 h-16 mb-1 object-contain" />
+              <img
+                src={logoEscola}
+                alt={`Logo da ${selectedTurmaObj?.escolaNome || 'escola'}`}
+                className="w-16 h-16 mb-1 object-contain"
+                onError={(e) => {
+                  if (e.currentTarget.src.endsWith(LOGO_PADRAO_SEMED)) return;
+                  e.currentTarget.src = LOGO_PADRAO_SEMED;
+                }}
+              />
               <div className="font-bold text-[8px] leading-tight uppercase">
                 {selectedTurmaObj?.escolaNome}
               </div>
