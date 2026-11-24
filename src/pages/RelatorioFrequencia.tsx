@@ -501,23 +501,9 @@ export default function RelatorioFrequencia() {
       </div>
 
       {/* ÁREA DE IMPRESSÃO OFICIAL */}
-      <div id="printable-relatorio" className="hidden print:block fixed inset-0 bg-white z-[9999] overflow-y-auto">
+      <div id="printable-relatorio" aria-hidden="true" style={{ display: 'none' }}>
         <style>{`
-          @media print {
-            @page { margin: 1cm; size: A4 landscape; }
-            html, body { height: auto !important; overflow: visible !important; background: white !important; }
-            body * { visibility: hidden; }
-            #printable-relatorio, #printable-relatorio * { visibility: visible; }
-            #printable-relatorio { 
-              visibility: visible;
-              position: absolute; 
-              left: 0; 
-              top: 0; 
-              width: 100%; 
-              display: block !important;
-              overflow: visible !important;
-            }
-          }
+          ${PRINT_RELATORIO_MEDIA_CSS}
           #printable-relatorio .doc-container { padding: 10px; font-family: Arial, sans-serif; color: black; }
           #printable-relatorio table { width: 100%; border-collapse: collapse; table-layout: fixed; }
           #printable-relatorio th, #printable-relatorio td { border: 1px solid black; padding: 4px; text-align: left; font-size: 8px; font-family: Arial, sans-serif; }
@@ -535,23 +521,20 @@ export default function RelatorioFrequencia() {
           #printable-relatorio .status-F { background: #fff5f5; color: #742a2a; border-color: #e53e3e; }
           #printable-relatorio .signatures { margin-top: 40px; display: flex; justify-content: space-around; page-break-inside: avoid; padding-bottom: 20px; }
           #printable-relatorio .sig-line { border-top: 1px solid black; width: 250px; text-align: center; padding-top: 4px; font-size: 8px; font-weight: bold; margin-top: 25px; }
-          #printable-relatorio .print-footer { 
-            position: fixed; 
-            bottom: 0; 
-            left: 0; 
-            right: 0; 
-            display: flex; 
-            justify-content: space-between; 
-            padding: 5px 10px;
+          #printable-relatorio .print-footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 16px;
+            padding: 5px 0;
             font-size: 7px;
             font-style: italic;
             border-top: 0.5px solid #eee;
-            background: white;
+            page-break-inside: avoid;
           }
         `}</style>
 
         <div className="doc-container">
-          <div className="flex border border-black overflow-hidden">
+          <div className="doc-header flex border border-black overflow-hidden">
             {/* Logo Box */}
             <div className="w-[20%] border-r border-black p-4 flex flex-col items-center justify-center text-center">
               <img src="/semed.png" alt="Logo SEMED" className="w-16 h-16 mb-1 object-contain" />
@@ -609,7 +592,15 @@ export default function RelatorioFrequencia() {
 
             {/* School Logo Box */}
             <div className="w-[20%] border-l border-black p-4 flex flex-col items-center justify-center text-center">
-              <img src={obterLogoEscola(selectedTurmaObj?.escolaNome || '')} alt="Logo Escola" className="w-16 h-16 mb-1 object-contain" />
+              <img
+                src={logoEscola}
+                alt={`Logo da ${selectedTurmaObj?.escolaNome || 'escola'}`}
+                className="w-16 h-16 mb-1 object-contain"
+                onError={(e) => {
+                  if (e.currentTarget.src.endsWith(LOGO_PADRAO_SEMED)) return;
+                  e.currentTarget.src = LOGO_PADRAO_SEMED;
+                }}
+              />
               <div className="font-bold text-[8px] leading-tight uppercase">
                 {selectedTurmaObj?.escolaNome}
               </div>

@@ -5,11 +5,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { APP_CONFIG } from '../config/appConfig';
 import { labelBimestreAtual, escolherTurmaRelatorio, avaliacaoNoPeriodo } from '../utils/relatorioFiltro';
 import { Aluno, Avaliacao, useTurma } from '../contexts/TurmaContext';
-import type { NotaRecord } from '../services/turmaService';
+import type { NotaRecord, TurmaRelatorioInfo } from '../services/turmaService';
 import * as OfflineTurmaService from '../services/turmaServiceOffline';
 
 import { useToast } from '../components/common/Toast';
 import { classeElipseNota, corNota, maximoDaAvaliacao, limitePontosBimestre } from '../utils/corNota';
+import { getEscolaLogo, LOGO_PADRAO_SEMED } from '../utils/escolaUtils';
+import { imprimirRelatorio, PRINT_RELATORIO_MEDIA_CSS } from '../utils/printRelatorio';
 
 function formatDiaMes(dateStr: string) {
   if (!dateStr) return '';
@@ -23,37 +25,11 @@ function formatDiaMes(dateStr: string) {
   return dateStr;
 }
 
-const obterLogoEscola = (nomeEscola: string) => {
-  if (!nomeEscola) return '/logo.png';
-  const nomeUpper = nomeEscola.toUpperCase();
-  if (nomeUpper.includes('FRANCISCA')) return '/Francisca Mendes.png';
-  if (nomeUpper.includes('MAIA') || nomeUpper.includes('JOSE MAIA') || nomeUpper.includes('JOSÉ MAIA')) return '/José Maia.png';
-  if (nomeUpper.includes('PASTOR') || nomeUpper.includes('REIS')) return '/Pastor José Reis.png';
-  if (nomeUpper.includes('VARGAS') || nomeUpper.includes('PRESIDENTE')) return '/Presidente Vargas.png';
-  if (nomeUpper.includes('SOCORRO') || nomeUpper.includes('BRITO')) return '/Socorro Brito.png';
-  if (nomeUpper.includes('FILADÉLFIA') || nomeUpper.includes('FILADELFIA')) return '/Filadelfia.png';
-  if (nomeUpper.includes('MÔNICA') || nomeUpper.includes('MONICA')) return '/Turma da Monica.png';
-  if (nomeUpper.includes('SÃO FRANCISCO') || nomeUpper.includes('SAO FRANCISCO')) return '/São Francisco.png';
-  return '/logo.png';
-};
-
-interface TurmaRelatorio {
-  id: string;
-  nome: string;
-  turno: string;
-  componente: string;
-  ensino: string;
-  fase: string;
-  numero: string;
-  escolaId: string;
-  escolaNome: string;
-}
-
 export default function RelatorioNotas() {
   const { user } = useAuth();
   const { turmaAtiva } = useTurma();
   const { showError } = useToast();
-  const [turmas, setTurmas] = useState<TurmaRelatorio[]>([]);
+  const [turmas, setTurmas] = useState<TurmaRelatorioInfo[]>([]);
   const [selectedTurma, setSelectedTurma] = useState('');
   const [loading, setLoading] = useState(true);
   const [periodo, setPeriodo] = useState(labelBimestreAtual);
@@ -159,6 +135,10 @@ export default function RelatorioNotas() {
   };
 
   const selectedTurmaObj = turmas.find(t => `${t.id}|${t.componente}` === selectedTurma) || turmas.find(t => t.id === selectedTurma);
+  const logoEscola = getEscolaLogo({
+    nome: selectedTurmaObj?.escolaNome,
+    logo_url: selectedTurmaObj?.escolaLogoUrl,
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 relative">
@@ -182,7 +162,7 @@ export default function RelatorioNotas() {
           <div className="p-6 pb-0 flex justify-between items-start">
             <h3 className="text-xl font-semibold text-[#6354c7]">Pesquisa</h3>
             <button 
-              onClick={() => window.print()}
+              onClick={() => imprimirRelatorio()}
               className="bg-[#eef2ff] text-[#6354c7] border border-blue-100 px-6 py-2 rounded text-base font-semibold hover:bg-[#e0e7ff] transition shadow-sm cursor-pointer"
             >
               Imprimir
