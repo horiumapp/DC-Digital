@@ -13,7 +13,7 @@ export default function Estatisticas() {
   const load = async () => {
     setLoading(true);
     const [escolas, turmas, alunos, usuarios] = await Promise.all([
-      supabase.from('escolas').select('*', { count: 'exact', head: true }),
+      supabase.from('escolas').select('*', { count: 'exact', head: true }).eq('status', 'Ativa'),
       supabase.from('turmas').select('*', { count: 'exact', head: true }),
       supabase.from('alunos').select('id', { count: 'exact', head: true }),
       supabase.from('usuarios').select('*', { count: 'exact', head: true }),
@@ -29,7 +29,7 @@ export default function Estatisticas() {
 
   useEffect(() => { void load(); }, []);
   const cards = [
-    { label: 'Escolas ativas', value: totals.escolas, icon: Building2, detail: 'Unidades cadastradas' },
+    { label: 'Escolas ativas', value: totals.escolas, icon: Building2, detail: 'Unidades com status ativa' },
     { label: 'Turmas', value: totals.turmas, icon: GraduationCap, detail: 'Turmas do ano letivo' },
     { label: 'Alunos', value: totals.alunos, icon: Users, detail: 'Matrículas visíveis' },
     { label: 'Usuários', value: totals.usuarios, icon: ClipboardCheck, detail: 'Acessos cadastrados' },
