@@ -27,7 +27,7 @@ export interface EscolaEditTarget {
 interface NovaEscolaModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (escola: NovaEscolaData) => void;
+  onSave: (escola: NovaEscolaData) => void | Promise<void>;
   escolaParaEditar?: EscolaEditTarget | null;
 }
 
@@ -70,20 +70,24 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
-    // Reset form
-    setFormData({
-      nome: '',
-      localizacao: '',
-      inep: '',
-      gestor: '',
-      secretario: '',
-      ativo: true,
-      logo_url: '',
-    });
-    onClose();
+    try {
+      await onSave(formData);
+      setFormData({
+        nome: '',
+        localizacao: '',
+        inep: '',
+        gestor: '',
+        secretario: '',
+        ativo: true,
+        logo_url: '',
+      });
+      // Fecha só após salvar com sucesso (o pai também fecha no sucesso)
+      onClose();
+    } catch {
+      // Erro já tratado/exibido pelo pai; mantém o modal aberto
+    }
   };
 
   return (

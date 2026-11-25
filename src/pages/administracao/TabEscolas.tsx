@@ -68,28 +68,49 @@ export default function TabEscolas() {
   };
 
   const handleSaveEscola = async (novaEscola: EscolaFormData) => {
-    if (escolaParaEditar) {
+    const status = novaEscola.ativo ? 'Ativa' : 'Inativa';
+    const escolaId = escolaParaEditar?.id;
+
+    if (escolaId) {
       const { error } = await supabase
         .from('escolas')
         .update({
           nome: novaEscola.nome,
           distrito: novaEscola.localizacao,
           inep: novaEscola.inep,
-          diretor: novaEscola.gestor,
+          diretor: novaEscola.gestor || null,
           secretario: novaEscola.secretario || null,
-          status: novaEscola.ativo ? 'Ativa' : 'Inativa',
+          status,
           logo_url: novaEscola.logo_url
         })
-        .eq('id', escolaParaEditar.id);
+        .eq('id', escolaId);
 
       if (error) {
         console.error("Erro ao atualizar:", error);
         showError(translateSupabaseError(error));
-      } else {
-        fetchEscolas();
-        setEscolaParaEditar(null);
-        setIsNovaEscolaModalOpen(false);
+        throw error;
       }
+
+      // Atualiza a lista imediatamente (status + posição) sem esperar o refetch
+      setEscolas((prev) =>
+        prev.map((e) =>
+          e.id === escolaId
+            ? {
+                ...e,
+                nome: novaEscola.nome,
+                distrito: novaEscola.localizacao,
+                inep: novaEscola.inep,
+                diretor: novaEscola.gestor || undefined,
+                secretario: novaEscola.secretario || undefined,
+                status,
+                logo_url: novaEscola.logo_url
+              }
+            : e
+        )
+      );
+      setEscolaParaEditar(null);
+      setIsNovaEscolaModalOpen(false);
+      void fetchEscolas();
     } else {
       const { error } = await supabase
         .from('escolas')
@@ -97,20 +118,21 @@ export default function TabEscolas() {
           nome: novaEscola.nome,
           distrito: novaEscola.localizacao,
           inep: novaEscola.inep,
-          diretor: novaEscola.gestor,
+          diretor: novaEscola.gestor || null,
           secretario: novaEscola.secretario || null,
-          status: novaEscola.ativo ? 'Ativa' : 'Inativa',
+          status,
           logo_url: novaEscola.logo_url
         }]);
 
       if (error) {
         console.error("Erro ao inserir:", error);
         showError(translateSupabaseError(error));
-      } else {
-        fetchEscolas();
-        setEscolaParaEditar(null);
-        setIsNovaEscolaModalOpen(false);
+        throw error;
       }
+
+      setEscolaParaEditar(null);
+      setIsNovaEscolaModalOpen(false);
+      await fetchEscolas();
     }
   };
 
