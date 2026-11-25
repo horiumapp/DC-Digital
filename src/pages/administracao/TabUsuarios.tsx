@@ -317,7 +317,7 @@ export default function TabUsuarios() {
               Usuários de Acesso
             </h2>
             <p className="text-xs text-slate-500 mt-0.5 font-medium">
-              Selecione uma escola ou o card geral para ver as contas de acesso.
+              Contas de login no sistema (não é a mesma coisa que alunos matriculados).
             </p>
           </div>
           <div className="relative w-full sm:w-64 shrink-0">
@@ -467,7 +467,7 @@ export default function TabUsuarios() {
                   </p>
                   <div className="mt-auto flex items-center justify-between">
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contas</span>
                       <span className="text-2xl font-black text-slate-700 tabular-nums">
                         {countGerais.toString().padStart(2, '0')}
                       </span>
@@ -514,7 +514,7 @@ export default function TabUsuarios() {
                     </h3>
                     <div className="mt-auto flex items-center justify-between">
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contas</span>
                         <span className="text-2xl font-black text-slate-700 tabular-nums">
                           {count.toString().padStart(2, '0')}
                         </span>
