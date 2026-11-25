@@ -118,6 +118,7 @@ export default function TabProfessores() {
     const { data, error } = await supabase
       .from('escolas')
       .select('id, nome, logo_url')
+      .eq('status', 'Ativa')
       .order('nome');
     
     // BUG-06 FIX: tratar erro silenciado anteriormente
