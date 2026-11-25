@@ -46,6 +46,8 @@ export default function TabEscolas() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [escolaParaEditar, setEscolaParaEditar] = useState<EscolaRow & EscolaFormData | null>(null);
   const [escolaParaExcluir, setEscolaParaExcluir] = useState<EscolaRow | null>(null);
+  const [escolaParaAlterarStatus, setEscolaParaAlterarStatus] = useState<EscolaRow | null>(null);
+  const [alterandoStatus, setAlterandoStatus] = useState(false);
   const [escolaSelecionada, setEscolaSelecionada] = useState<EscolaRow | null>(null);
 
   const [escolas, setEscolas] = useState<EscolaRow[]>([]);
@@ -160,6 +162,37 @@ export default function TabEscolas() {
       if (!error) fetchEscolas();
       setEscolaParaExcluir(null);
     }
+  };
+
+  const confirmToggleStatus = async () => {
+    if (!escolaParaAlterarStatus) return;
+
+    const novoStatus = escolaParaAlterarStatus.status === 'Ativa' ? 'Inativa' : 'Ativa';
+    const escolaId = escolaParaAlterarStatus.id;
+
+    setAlterandoStatus(true);
+    const { error } = await supabase
+      .from('escolas')
+      .update({ status: novoStatus })
+      .eq('id', escolaId);
+    setAlterandoStatus(false);
+
+    if (error) {
+      console.error('Erro ao alterar status:', error);
+      showError(translateSupabaseError(error));
+      return;
+    }
+
+    setEscolas((prev) =>
+      prev.map((e) => (e.id === escolaId ? { ...e, status: novoStatus } : e))
+    );
+    setEscolaParaAlterarStatus(null);
+    showSuccess(
+      novoStatus === 'Inativa'
+        ? `Escola "${escolaParaAlterarStatus.nome}" inativada.`
+        : `Escola "${escolaParaAlterarStatus.nome}" reativada.`
+    );
+    void fetchEscolas();
   };
 
   const handleExportEscolas = () => {
@@ -351,14 +384,24 @@ export default function TabEscolas() {
                     />
                   </div>
 
-                  {/* Status Badge */}
-                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest ${
-                    escola.status === 'Ativa' 
-                      ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
-                      : 'bg-slate-100 text-slate-500 border border-slate-200'
-                  }`}>
+                  {/* Status Badge — duplo clique altera Ativa/Inativa */}
+                  <button
+                    type="button"
+                    title="Clique duas vezes para alterar o status"
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setEscolaParaAlterarStatus(escola);
+                    }}
+                    className={`relative z-20 inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest transition-opacity hover:opacity-80 cursor-pointer ${
+                      escola.status === 'Ativa'
+                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                        : 'bg-slate-100 text-slate-500 border border-slate-200'
+                    }`}
+                  >
                     {escola.status}
-                  </span>
+                  </button>
                 </div>
 
                 <div className="flex items-start mb-4">
@@ -427,6 +470,27 @@ export default function TabEscolas() {
             Tem certeza que deseja excluir a escola <strong>{escolaParaExcluir?.nome}</strong>? Esta ação não pode ser desfeita.
           </>
         }
+      />
+
+      <ConfirmActionModal
+        isOpen={!!escolaParaAlterarStatus}
+        onClose={() => !alterandoStatus && setEscolaParaAlterarStatus(null)}
+        onConfirm={confirmToggleStatus}
+        title={escolaParaAlterarStatus?.status === 'Ativa' ? 'Inativar Escola' : 'Reativar Escola'}
+        message={
+          escolaParaAlterarStatus?.status === 'Ativa' ? (
+            <>
+              Deseja inativar a escola <strong>{escolaParaAlterarStatus?.nome}</strong>? Ela passará para o final da lista.
+            </>
+          ) : (
+            <>
+              Deseja reativar a escola <strong>{escolaParaAlterarStatus?.nome}</strong>?
+            </>
+          )
+        }
+        confirmLabel={escolaParaAlterarStatus?.status === 'Ativa' ? 'Sim, inativar' : 'Sim, reativar'}
+        variant="warning"
+        loading={alterandoStatus}
       />
 
       <ImportCsvModal
