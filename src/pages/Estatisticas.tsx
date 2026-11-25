@@ -38,7 +38,7 @@ export default function Estatisticas() {
   return <div className="mx-auto max-w-7xl px-4 py-6 sm:px-8 sm:py-8">
     <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div><p className="mb-2 text-xs font-bold uppercase tracking-[.14em] text-slate-500">Visão geral</p><h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Painel administrativo</h1><p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Acompanhe a estrutura escolar e priorize os lançamentos pendentes.</p></div>
-      <button onClick={() => void load()} disabled={loading} className="dd-secondary-button self-start sm:self-auto"><RefreshCw className={loading ? 'animate-spin' : ''} aria-hidden="true"/>Atualizar</button>
+      <button onClick={() => void load()} disabled={loading} className="dd-secondary-button self-start sm:self-auto !min-h-11 !px-5 !text-sm font-semibold"><RefreshCw className={`!h-5 !w-5 ${loading ? 'animate-spin' : ''}`} aria-hidden="true"/>Atualizar</button>
     </header>
 
     <section aria-label="Indicadores da rede" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
