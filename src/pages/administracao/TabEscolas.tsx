@@ -394,7 +394,7 @@ export default function TabEscolas() {
                       e.preventDefault();
                       setEscolaParaAlterarStatus(escola);
                     }}
-                    className={`relative z-20 inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest transition-opacity hover:opacity-80 cursor-pointer ${
+                    className={`relative z-20 inline-flex items-center px-1 py-px rounded text-[7px] font-bold uppercase tracking-wide leading-none transition-opacity hover:opacity-80 cursor-pointer ${
                       escola.status === 'Ativa'
                         ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
                         : 'bg-slate-100 text-slate-500 border border-slate-200'
