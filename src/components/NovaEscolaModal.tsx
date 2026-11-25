@@ -160,10 +160,15 @@ export default function NovaEscolaModal({ isOpen, onClose, onSave, escolaParaEdi
             <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
               <User className="w-4 h-4 text-slate-400" />
               Gestor
+              {!formData.ativo && (
+                <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                  opcional ao inativar
+                </span>
+              )}
             </label>
             <input
               type="text"
-              required
+              required={formData.ativo}
               value={formData.gestor}
               onChange={(e) => setFormData({ ...formData, gestor: e.target.value })}
               className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"

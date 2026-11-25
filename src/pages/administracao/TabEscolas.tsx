@@ -199,12 +199,19 @@ export default function TabEscolas() {
     }
   ];
 
-  const escolasFiltradas = escolas.filter(e => 
-    e.nome.toLowerCase().includes(buscaEscola.toLowerCase()) || 
-    (e.inep && e.inep.includes(buscaEscola)) ||
-    (e.diretor && e.diretor.toLowerCase().includes(buscaEscola.toLowerCase())) ||
-    (e.secretario && e.secretario.toLowerCase().includes(buscaEscola.toLowerCase()))
-  );
+  const escolasFiltradas = escolas
+    .filter(e =>
+      e.nome.toLowerCase().includes(buscaEscola.toLowerCase()) ||
+      (e.inep && e.inep.includes(buscaEscola)) ||
+      (e.diretor && e.diretor.toLowerCase().includes(buscaEscola.toLowerCase())) ||
+      (e.secretario && e.secretario.toLowerCase().includes(buscaEscola.toLowerCase()))
+    )
+    .sort((a, b) => {
+      const aAtiva = a.status === 'Ativa' ? 0 : 1;
+      const bAtiva = b.status === 'Ativa' ? 0 : 1;
+      if (aAtiva !== bAtiva) return aAtiva - bAtiva;
+      return (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' });
+    });
 
   if (_user?.role !== 'ADMIN') return null;
 
